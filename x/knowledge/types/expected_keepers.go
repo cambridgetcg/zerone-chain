@@ -42,7 +42,7 @@ type OntologyKeeper interface {
 	GetConfidenceCeiling(ctx context.Context, stratum string) (uint64, error)
 	// IsValidLogicZone checks if a domain is within a valid logic zone.
 	IsValidLogicZone(ctx context.Context, domain string) (bool, error)
-	// AcknowledgesIncompleteness checks if a domain acknowledges Gödelian limits.
+	// AcknowledgesIncompleteness checks if a domain acknowledges Godelian limits.
 	AcknowledgesIncompleteness(ctx context.Context, domain string) (bool, error)
 	// GetStratumForDomain returns the stratum associated with a domain.
 	GetStratumForDomain(ctx context.Context, domain string) (string, error)
@@ -61,25 +61,24 @@ type DomainQualificationKeeper interface {
 }
 
 // VestingRewardsKeeper defines the expected vesting rewards keeper interface.
+// Signatures match the actual x/vesting_rewards/keeper implementations.
 type VestingRewardsKeeper interface {
 	// CreateVestingScheduleFromKnowledge creates a vesting schedule for a knowledge reward.
-	CreateVestingScheduleFromKnowledge(ctx context.Context, recipient string, amount sdk.Coin, claimID string) error
+	CreateVestingScheduleFromKnowledge(ctx context.Context, claimID, factID, recipient, totalAmount, epistemicCategory string) error
 	// DistributeFalsificationReward distributes a falsification reward.
-	DistributeFalsificationReward(ctx context.Context, recipient string, amount sdk.Coin) error
-	// GetEpochBlockRewardPool returns the current epoch's block reward pool.
-	GetEpochBlockRewardPool(ctx context.Context) (sdk.Coin, error)
+	DistributeFalsificationReward(ctx context.Context, counterFactID, targetFactID, recipient, amount string) error
+	// GetEpochBlockRewardPool returns the estimated reward pool for an epoch (in uzrn).
+	GetEpochBlockRewardPool(ctx context.Context, epoch uint64) uint64
 	// PauseVestingByClaimId pauses vesting schedules associated with a claim.
 	PauseVestingByClaimId(ctx context.Context, claimID string) error
 	// PauseAllVestingByRecipient pauses all vesting schedules for a recipient.
-	PauseAllVestingByRecipient(ctx context.Context, recipient string) error
-	// GetResearchShareBps returns the current research fund share in BPS.
-	GetResearchShareBps(ctx context.Context) (uint64, error)
+	PauseAllVestingByRecipient(ctx context.Context, recipient string) int
 	// DepositToResearchFund deposits an amount into the research fund.
-	DepositToResearchFund(ctx context.Context, amount sdk.Coin) error
+	DepositToResearchFund(ctx context.Context, sourceModule string, amount sdk.Coins) error
 }
 
 // AutopoiesisKeeper defines the expected autopoiesis keeper interface.
 type AutopoiesisKeeper interface {
-	// GetMultiplier returns the autopoiesis reward multiplier for a path (BPS, 1,000,000 = 1.0×).
+	// GetMultiplier returns the autopoiesis reward multiplier for a path (BPS, 1,000,000 = 1.0x).
 	GetMultiplier(ctx context.Context, path string) (uint64, error)
 }

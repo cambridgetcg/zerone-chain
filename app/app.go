@@ -109,9 +109,18 @@ import (
 	zeroneauth "github.com/zerone-chain/zerone/x/auth"
 	zeroneauthkeeper "github.com/zerone-chain/zerone/x/auth/keeper"
 	zeroneauthtypes "github.com/zerone-chain/zerone/x/auth/types"
+	zeroneknowledge "github.com/zerone-chain/zerone/x/knowledge"
+	zeroneknowledgekeeper "github.com/zerone-chain/zerone/x/knowledge/keeper"
+	zeroneknowledgetypes "github.com/zerone-chain/zerone/x/knowledge/types"
+	zeroneontology "github.com/zerone-chain/zerone/x/ontology"
+	zeroneontologykeeper "github.com/zerone-chain/zerone/x/ontology/keeper"
+	zeroneontologytypes "github.com/zerone-chain/zerone/x/ontology/types"
 	zeronestaking "github.com/zerone-chain/zerone/x/staking"
 	zeronestakingkeeper "github.com/zerone-chain/zerone/x/staking/keeper"
 	zeronestakingtypes "github.com/zerone-chain/zerone/x/staking/types"
+	vestingrewards "github.com/zerone-chain/zerone/x/vesting_rewards"
+	vestingrewardskeeper "github.com/zerone-chain/zerone/x/vesting_rewards/keeper"
+	vestingrewardstypes "github.com/zerone-chain/zerone/x/vesting_rewards/types"
 
 	// Tx types (cosmos.tx.v1beta1.Tx registration)
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
@@ -164,9 +173,10 @@ var (
 		// ===== Zerone custom modules — added by batch =====
 		zeroneauth.AppModuleBasic{},
 		zeronestaking.AppModuleBasic{},
-		// R2-1: x/knowledge
-		// R2-4: x/ontology
-		// R2-6: x/vesting_rewards
+		vestingrewards.AppModuleBasic{},
+		zeroneontology.AppModuleBasic{},
+		zeroneknowledge.AppModuleBasic{},
+		// R2-2: x/knowledge wired
 		// R3-1: x/billing
 		// R3-2: x/liquiditypool
 		// R3-4: x/gov (zeronegov.AppModuleBasic{})
@@ -202,6 +212,10 @@ var (
 		// ===== Zerone custom module accounts — added by batch =====
 		zeroneauthtypes.ModuleName:    {authtypes.Minter}, // Minter for bootstrap fund
 		zeronestakingtypes.ModuleName: {authtypes.Burner, authtypes.Staking},
+		vestingrewardstypes.ModuleName:        {authtypes.Minter, authtypes.Burner}, // Minter for block rewards, Burner for burn split
+		vestingrewardstypes.ResearchFundModuleName: nil,                              // research_fund: receive-only
+		zeroneontologytypes.ModuleName:             nil,                              // ontology: receive proposal stake
+		zeroneknowledgetypes.ModuleName:            {authtypes.Burner},               // knowledge: burn slashed claim stakes
 	}
 )
 
@@ -305,11 +319,11 @@ type ZeroneApp struct {
 	ICAHostKeeper             icahostkeeper.Keeper
 
 	// ===== Zerone custom module keepers — added by batch =====
-	ZeroneAuthKeeper    zeroneauthkeeper.Keeper
-	ZeroneStakingKeeper zeronestakingkeeper.Keeper
-	// R2-1: KnowledgeKeeper
-	// R2-4: OntologyKeeper
-	// R2-6: VestingRewardsKeeper
+	ZeroneAuthKeeper        zeroneauthkeeper.Keeper
+	ZeroneStakingKeeper     zeronestakingkeeper.Keeper
+	VestingRewardsKeeper    vestingrewardskeeper.Keeper
+	ZeroneOntologyKeeper    zeroneontologykeeper.Keeper
+	KnowledgeKeeper         zeroneknowledgekeeper.Keeper
 	// R3-1: BillingKeeper
 	// R3-2: LiquidityPoolKeeper
 	// ZeroneGovKeeper (custom)
@@ -330,6 +344,9 @@ type ZeroneApp struct {
 	// R7-2: AlignmentKeeper
 	// R7-3: ResearchKeeper
 	// R7-4: TreeKeeper
+
+	// ABCI++ vote extension config (nil until validator is configured)
+	VoteExtConfig *VoteExtensionConfig
 
 	// Module manager
 	ModuleManager *module.Manager
@@ -397,6 +414,9 @@ func NewZeroneApp(
 		// ===== Zerone custom module store keys — added by batch =====
 		zeroneauthtypes.StoreKey,
 		zeronestakingtypes.StoreKey,
+		vestingrewardstypes.StoreKey,
+		zeroneontologytypes.StoreKey,
+		zeroneknowledgetypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -605,6 +625,32 @@ func NewZeroneApp(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
+	app.VestingRewardsKeeper = vestingrewardskeeper.NewKeeper(
+		appCodec,
+		sdkruntime.NewKVStoreService(keys[vestingrewardstypes.StoreKey]),
+		app.BankKeeper,
+		nil, // staking keeper set after x/staking wiring
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+	app.ZeroneOntologyKeeper = zeroneontologykeeper.NewKeeper(
+		appCodec,
+		sdkruntime.NewKVStoreService(keys[zeroneontologytypes.StoreKey]),
+		app.BankKeeper,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+	stakingAdapter := zeronestakingkeeper.NewStakingKeeperAdapter(app.ZeroneStakingKeeper)
+	app.KnowledgeKeeper = zeroneknowledgekeeper.NewKeeper(
+		sdkruntime.NewKVStoreService(keys[zeroneknowledgetypes.StoreKey]),
+		appCodec,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		app.BankKeeper,
+		stakingAdapter,
+	)
+	app.KnowledgeKeeper.SetOntologyKeeper(&app.ZeroneOntologyKeeper)
+	app.KnowledgeKeeper.SetVestingRewardsKeeper(vestingrewardskeeper.NewVestingRewardsKeeperAdapter(app.VestingRewardsKeeper))
+
 	// ---- IBC Router ----
 	ibcRouter := ibcporttypes.NewRouter()
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, ibctransfer.NewIBCModule(app.TransferKeeper))
@@ -636,6 +682,9 @@ func NewZeroneApp(
 		// ===== Zerone custom modules — added by batch =====
 		zeroneauth.NewAppModule(appCodec, app.ZeroneAuthKeeper),
 		zeronestaking.NewAppModule(app.ZeroneStakingKeeper),
+		vestingrewards.NewAppModule(appCodec, app.VestingRewardsKeeper),
+		zeroneontology.NewAppModule(appCodec, app.ZeroneOntologyKeeper),
+		zeroneknowledge.NewAppModule(appCodec, app.KnowledgeKeeper),
 	)
 
 	app.ModuleManager.SetOrderBeginBlockers(
@@ -656,8 +705,11 @@ func NewZeroneApp(
 		ibcfeetypes.ModuleName,
 		icatypes.ModuleName,
 		// ===== Zerone custom module BeginBlocker order — added by batch =====
+		vestingrewardstypes.ModuleName, // MUST run before x/distribution to intercept fees
 		zeroneauthtypes.ModuleName,
 		zeronestakingtypes.ModuleName,
+		zeroneontologytypes.ModuleName,
+		zeroneknowledgetypes.ModuleName, // LAST: depends on staking + ontology state
 	)
 
 	app.ModuleManager.SetOrderEndBlockers(
@@ -679,6 +731,9 @@ func NewZeroneApp(
 		// ===== Zerone custom module EndBlocker order — added by batch =====
 		zeroneauthtypes.ModuleName,
 		zeronestakingtypes.ModuleName,
+		vestingrewardstypes.ModuleName,
+		zeroneontologytypes.ModuleName,  // EndBlocker: expire proposals
+		zeroneknowledgetypes.ModuleName, // EndBlocker: no-op for now
 	)
 
 	genesisOrder := []string{
@@ -701,6 +756,9 @@ func NewZeroneApp(
 		// ===== Zerone custom module genesis order — added by batch =====
 		zeroneauthtypes.ModuleName,
 		zeronestakingtypes.ModuleName,
+		vestingrewardstypes.ModuleName,
+		zeroneontologytypes.ModuleName,  // Genesis: after bank (needs bank for stake escrow)
+		zeroneknowledgetypes.ModuleName, // Genesis: after ontology + staking (needs both)
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisOrder...)
@@ -723,8 +781,15 @@ func NewZeroneApp(
 
 	// Set block handlers
 	app.SetInitChainer(app.InitChainer)
+	app.SetPreBlocker(app.PotPreBlocker)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetEndBlocker(app.EndBlocker)
+
+	// ABCI++ handlers for Proof of Truth vote extensions
+	app.SetPrepareProposal(app.PrepareProposalHandler())
+	app.SetProcessProposal(app.ProcessProposalHandler())
+	app.SetExtendVoteHandler(app.ExtendVoteHandler())
+	app.SetVerifyVoteExtensionHandler(app.VerifyVoteExtensionHandler())
 
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {

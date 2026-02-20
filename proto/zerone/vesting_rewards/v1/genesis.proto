@@ -1,0 +1,51 @@
+syntax = "proto3";
+package zerone.vesting_rewards.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/vesting_rewards/types";
+
+import "zerone/vesting_rewards/v1/state.proto";
+import "zerone/common/v1/common.proto";
+
+// GenesisState defines the vesting_rewards module's genesis state.
+message GenesisState {
+  Params                       params            = 1;
+  repeated CategoryConfig      category_configs   = 2;
+  repeated VestingSchedule     vesting_schedules  = 3;
+}
+
+// Params defines the vesting_rewards module parameters.
+message Params {
+  // Block rewards
+  string block_reward = 1;                           // base block reward in uzrn (default: "10000000" = 10 ZRN)
+  uint64 reward_decay_bps = 2;                       // per-epoch decay (default: 850,000 = 0.85x on 1M scale)
+  uint64 blocks_per_reward_epoch = 3;                // blocks per decay epoch (default: 100,000)
+
+  // Revenue split (governance-adjustable)
+  zerone.common.v1.RevenueSplit revenue_split = 4;
+  zerone.common.v1.ProtocolSubSplit protocol_sub_split = 5;
+
+  // Founder share
+  uint64 founder_share_bps = 6;                      // founder's share of research fund (default: 70,000 = 7% on 1M scale)
+  string founder_address = 7;                        // bech32, empty = disabled
+  uint64 governance_activation_height = 8;           // block when founder share sunsets (0 = never)
+
+  // Category reward multipliers
+  repeated CategoryRewardConfig category_reward_configs = 9;
+
+  // Research fund
+  string research_fund_module_account = 10;          // module account name for research fund
+
+  // Vesting parameters
+  bool   vesting_enabled = 11;                       // whether truth-linked vesting is active
+  uint64 released_clawback_rate = 12;                // bps of released clawed back on falsification (default: 3300 = 33%)
+  uint32 min_validators_for_full_reward = 13;        // target validator count for full block reward (default: 22)
+  uint64 empty_block_reward_rate = 14;               // bps of reward for empty blocks (default: 0)
+  string floor_reward = 15;                          // minimum reward per block in uzrn (default: "100000" = 0.1 ZRN)
+  string initial_fund_balance = 16;                  // uzrn total fund at genesis (default: "0" = pure PoT)
+}
+
+// CategoryRewardConfig defines a per-category block reward multiplier.
+message CategoryRewardConfig {
+  string category = 1;                               // epistemic category name
+  uint64 multiplier_bps = 2;                         // 1,000,000 = 1.0x
+}

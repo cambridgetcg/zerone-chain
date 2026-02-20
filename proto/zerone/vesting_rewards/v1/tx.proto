@@ -1,0 +1,113 @@
+syntax = "proto3";
+package zerone.vesting_rewards.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/vesting_rewards/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/vesting_rewards/v1/genesis.proto";
+
+// Msg defines the vesting rewards module's transaction service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  rpc CreateVesting(MsgCreateVesting) returns (MsgCreateVestingResponse);
+  rpc ClaimVesting(MsgClaimVesting) returns (MsgClaimVestingResponse);
+  rpc PauseVesting(MsgPauseVesting) returns (MsgPauseVestingResponse);
+  rpc ResumeVesting(MsgResumeVesting) returns (MsgResumeVestingResponse);
+  rpc AccelerateVesting(MsgAccelerateVesting) returns (MsgAccelerateVestingResponse);
+  rpc FalsifyVesting(MsgFalsifyVesting) returns (MsgFalsifyVestingResponse);
+  rpc CompleteVesting(MsgCompleteVesting) returns (MsgCompleteVestingResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+message MsgCreateVesting {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string beneficiary = 2;
+  string amount = 3;
+  VestingCategory category = 4;
+  string linked_fact_id = 5;
+  uint64 start_height = 6;
+}
+
+message MsgCreateVestingResponse {
+  string vesting_id = 1;
+}
+
+message MsgClaimVesting {
+  option (cosmos.msg.v1.signer) = "claimer";
+  string claimer = 1;
+  repeated string vesting_ids = 2;
+}
+
+message MsgClaimVestingResponse {
+  string total_claimed = 1;
+  uint32 vestings_claimed = 2;
+}
+
+message MsgPauseVesting {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string vesting_id = 2;
+  string reason = 3;
+}
+
+message MsgPauseVestingResponse {}
+
+message MsgResumeVesting {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string vesting_id = 2;
+}
+
+message MsgResumeVestingResponse {}
+
+message MsgAccelerateVesting {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string vesting_id = 2;
+  uint32 acceleration_factor = 3;
+}
+
+message MsgAccelerateVestingResponse {}
+
+message MsgFalsifyVesting {
+  option (cosmos.msg.v1.signer) = "challenger";
+  string challenger = 1;
+  string vesting_id = 2;
+  string reason = 3;
+  string counter_evidence_hash = 4;
+}
+
+message MsgFalsifyVestingResponse {
+  bool vesting_paused = 1;
+}
+
+message MsgCompleteVesting {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string vesting_id = 2;
+}
+
+message MsgCompleteVestingResponse {
+  string remaining_amount = 1;
+}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params = 2;
+}
+
+message MsgUpdateParamsResponse {}
+
+// VestingCategory classifies the purpose of a vesting schedule.
+enum VestingCategory {
+  VESTING_CATEGORY_UNSPECIFIED = 0;
+  VESTING_CATEGORY_VERIFICATION_REWARD = 1;
+  VESTING_CATEGORY_BLOCK_REWARD = 2;
+  VESTING_CATEGORY_BOUNTY_REWARD = 3;
+  VESTING_CATEGORY_DISPUTE_REWARD = 4;
+  VESTING_CATEGORY_RESEARCH_GRANT = 5;
+  VESTING_CATEGORY_BOOTSTRAP = 6;
+}

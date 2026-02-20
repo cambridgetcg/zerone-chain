@@ -1,0 +1,76 @@
+syntax = "proto3";
+package zerone.ontology.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/ontology/types";
+
+import "google/api/annotations.proto";
+import "zerone/ontology/v1/state.proto";
+import "zerone/ontology/v1/genesis.proto";
+
+service Query {
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/params";
+  }
+  rpc Stratum(QueryStratumRequest) returns (QueryStratumResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/stratum/{stratum}";
+  }
+  rpc AllStrata(QueryAllStrataRequest) returns (QueryAllStrataResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/strata";
+  }
+  rpc Domain(QueryDomainRequest) returns (QueryDomainResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/domain/{name}";
+  }
+  rpc DomainsByStratum(QueryDomainsByStratumRequest) returns (QueryDomainsByStratumResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/domains/stratum/{stratum}";
+  }
+  rpc AllDomains(QueryAllDomainsRequest) returns (QueryAllDomainsResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/domains";
+  }
+  rpc Proposal(QueryProposalRequest) returns (QueryProposalResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/proposal/{proposal_id}";
+  }
+  rpc ConfidenceCeiling(QueryConfidenceCeilingRequest) returns (QueryConfidenceCeilingResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/confidence_ceiling/{domain_name}";
+  }
+  rpc LogicZone(QueryLogicZoneRequest) returns (QueryLogicZoneResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/logic_zone/{zone}";
+  }
+  rpc AllLogicZones(QueryAllLogicZonesRequest) returns (QueryAllLogicZonesResponse) {
+    option (google.api.http).get = "/zerone/ontology/v1/logic_zones";
+  }
+}
+
+message QueryParamsRequest {}
+message QueryParamsResponse { Params params = 1; }
+
+message QueryStratumRequest { uint32 stratum = 1; }
+message QueryStratumResponse { StratumProperties properties = 1; }
+
+message QueryAllStrataRequest {}
+message QueryAllStrataResponse { repeated StratumProperties strata = 1; }
+
+message QueryDomainRequest { string name = 1; }
+message QueryDomainResponse { Domain domain = 1; }
+
+message QueryDomainsByStratumRequest { uint32 stratum = 1; }
+message QueryDomainsByStratumResponse { repeated Domain domains = 1; }
+
+message QueryAllDomainsRequest {}
+message QueryAllDomainsResponse { repeated Domain domains = 1; }
+
+message QueryProposalRequest { string proposal_id = 1; }
+message QueryProposalResponse { DomainProposal proposal = 1; }
+
+message QueryConfidenceCeilingRequest { string domain_name = 1; }
+message QueryConfidenceCeilingResponse {
+  uint64 max_confidence = 1;
+  uint64 decay_rate     = 2;
+  string domain_name    = 3;
+  string stratum_name   = 4;
+}
+
+message QueryLogicZoneRequest { string zone = 1; }
+message QueryLogicZoneResponse { LogicZoneProperties properties = 1; }
+
+message QueryAllLogicZonesRequest {}
+message QueryAllLogicZonesResponse { repeated LogicZoneProperties zones = 1; }

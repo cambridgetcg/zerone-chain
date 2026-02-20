@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"cosmossdk.io/core/store"
+	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
@@ -14,6 +16,16 @@ type Keeper struct {
 	storeService store.KVStoreService
 	cdc          codec.BinaryCodec
 	authority    string // governance authority address
+
+	// External keeper dependencies (core — set at construction)
+	bankKeeper    types.BankKeeper
+	stakingKeeper types.StakingKeeper
+
+	// External keeper dependencies (post-init setters to break circular deps)
+	ontologyKeeper            types.OntologyKeeper
+	vestingRewardsKeeper      types.VestingRewardsKeeper
+	domainQualificationKeeper types.DomainQualificationKeeper // nil until R6-5
+	autopoiesisKeeper         types.AutopoiesisKeeper         // nil until R7-1
 }
 
 // NewKeeper creates a new knowledge Keeper.
@@ -21,11 +33,15 @@ func NewKeeper(
 	storeService store.KVStoreService,
 	cdc codec.BinaryCodec,
 	authority string,
+	bankKeeper types.BankKeeper,
+	stakingKeeper types.StakingKeeper,
 ) Keeper {
 	return Keeper{
-		storeService: storeService,
-		cdc:          cdc,
-		authority:    authority,
+		storeService:  storeService,
+		cdc:           cdc,
+		authority:     authority,
+		bankKeeper:    bankKeeper,
+		stakingKeeper: stakingKeeper,
 	}
 }
 
@@ -34,14 +50,33 @@ func (k Keeper) GetAuthority() string {
 	return k.authority
 }
 
-// InitGenesis initialises module state from a genesis state.
-// Full implementation in R2-2.
-func (k Keeper) InitGenesis(_ context.Context, _ *types.GenesisState) error {
-	return nil
+// GetStakingKeeper returns the staking keeper dependency.
+func (k Keeper) GetStakingKeeper() types.StakingKeeper {
+	return k.stakingKeeper
 }
 
-// ExportGenesis exports the current module state as a genesis state.
-// Full implementation in R2-2.
-func (k Keeper) ExportGenesis(_ context.Context) *types.GenesisState {
-	return types.DefaultGenesis()
+// SetOntologyKeeper sets the ontology keeper (post-init to break circular dep).
+func (k *Keeper) SetOntologyKeeper(ok types.OntologyKeeper) {
+	k.ontologyKeeper = ok
+}
+
+// SetVestingRewardsKeeper sets the vesting rewards keeper (post-init).
+func (k *Keeper) SetVestingRewardsKeeper(vk types.VestingRewardsKeeper) {
+	k.vestingRewardsKeeper = vk
+}
+
+// SetDomainQualificationKeeper sets the domain qualification keeper (post-init, R6-5).
+func (k *Keeper) SetDomainQualificationKeeper(dk types.DomainQualificationKeeper) {
+	k.domainQualificationKeeper = dk
+}
+
+// SetAutopoiesisKeeper sets the autopoiesis keeper (post-init, R7-1).
+func (k *Keeper) SetAutopoiesisKeeper(ak types.AutopoiesisKeeper) {
+	k.autopoiesisKeeper = ak
+}
+
+// Logger returns a module-scoped logger.
+func (k Keeper) Logger(ctx context.Context) log.Logger {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	return sdkCtx.Logger().With("module", "x/"+types.ModuleName)
 }

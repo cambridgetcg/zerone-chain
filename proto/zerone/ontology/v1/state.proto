@@ -1,0 +1,64 @@
+syntax = "proto3";
+package zerone.ontology.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/ontology/types";
+
+// StratumProperties defines the logical properties of a knowledge stratum.
+message StratumProperties {
+  uint32 stratum           = 1;
+  string name              = 2;
+  string description       = 3;
+  bool   complete          = 4;  // Goedel: is the system complete?
+  bool   decidable         = 5;  // is there an algorithm to decide all statements?
+  bool   goedel_applies    = 6;  // does Goedel's incompleteness apply?
+  string consistency_proof = 7;  // "internal", "assumed", "external"
+  uint64 max_confidence    = 8;  // basis points (1000000 = 1.0)
+  uint64 decay_rate        = 9;  // confidence decay rate per day (basis points)
+}
+
+// Domain represents a knowledge domain within a stratum.
+message Domain {
+  string name         = 1;
+  string display_name = 2;
+  string description  = 3;
+  uint32 stratum      = 4;
+  string status       = 5;  // "active", "proposed", "deprecated"
+  uint64 created_at   = 6;  // block height
+  uint64 updated_at   = 7;  // block height
+  uint64 claim_count  = 8;
+  uint64 fact_count   = 9;
+  string proposed_by  = 10; // bech32 address
+}
+
+// DomainProposal represents a proposal for adding or modifying domains.
+message DomainProposal {
+  string id              = 1;
+  Domain domain          = 2;
+  string proposer        = 3;  // bech32 address
+  string proposal_type   = 4;  // "add", "deprecate", "modify"
+  string stake           = 5;  // bigint as string (uzrn)
+  uint32 votes_for       = 6;
+  uint32 votes_against   = 7;
+  repeated string voters = 8;
+  string status          = 9;  // "active", "passed", "rejected", "expired"
+  uint64 created_at      = 10; // block height
+  uint64 expires_at      = 11; // block height
+}
+
+// LogicZoneProperties defines the properties of a Godelian logic zone.
+message LogicZoneProperties {
+  string zone              = 1;
+  bool   complete          = 2;
+  bool   decidable         = 3;
+  bool   goedel_applies    = 4;
+  uint64 max_confidence_bps = 5;
+  string description       = 6;
+}
+
+// CrossStratumLink represents a relationship between domains in different strata.
+message CrossStratumLink {
+  string source_domain = 1;
+  string target_domain = 2;
+  string link_type     = 3;  // "depends_on", "generalizes", "restricts"
+  uint64 discount      = 4;  // confidence discount for cross-stratum references (basis points)
+}

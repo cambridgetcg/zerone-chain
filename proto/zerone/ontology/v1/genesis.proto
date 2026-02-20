@@ -1,0 +1,25 @@
+syntax = "proto3";
+package zerone.ontology.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/ontology/types";
+
+import "zerone/ontology/v1/state.proto";
+
+// GenesisState defines the ontology module's genesis state.
+message GenesisState {
+  Params params                            = 1;
+  repeated StratumProperties strata        = 2;
+  repeated Domain domains                  = 3;
+  repeated DomainProposal proposals        = 4;
+  repeated CrossStratumLink cross_links    = 5;
+}
+
+// Params defines the ontology module parameters.
+message Params {
+  string min_proposal_stake      = 1;  // bigint as string (uzrn)
+  uint64 proposal_voting_period  = 2;  // blocks
+  uint32 min_endorsements        = 3;
+  uint64 cross_stratum_discount  = 4;  // basis points
+  uint32 max_domains_per_stratum = 5;
+  bool   allow_new_strata        = 6;
+}

@@ -1,0 +1,59 @@
+syntax = "proto3";
+package zerone.vesting_rewards.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/vesting_rewards/types";
+
+import "google/api/annotations.proto";
+import "zerone/vesting_rewards/v1/state.proto";
+import "zerone/vesting_rewards/v1/genesis.proto";
+
+service Query {
+  rpc VestingSchedule(QueryVestingScheduleRequest) returns (QueryVestingScheduleResponse) {
+    option (google.api.http).get = "/zerone/vesting_rewards/v1/schedule/{vesting_id}";
+  }
+  rpc VestingSchedulesByRecipient(QueryVestingSchedulesByRecipientRequest) returns (QueryVestingSchedulesByRecipientResponse) {
+    option (google.api.http).get = "/zerone/vesting_rewards/v1/schedules/recipient/{recipient}";
+  }
+  rpc ActiveVestingSchedules(QueryActiveVestingSchedulesRequest) returns (QueryActiveVestingSchedulesResponse) {
+    option (google.api.http).get = "/zerone/vesting_rewards/v1/schedules/active";
+  }
+  rpc BlockRewardDistribution(QueryBlockRewardDistributionRequest) returns (QueryBlockRewardDistributionResponse) {
+    option (google.api.http).get = "/zerone/vesting_rewards/v1/distribution/{block_height}";
+  }
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/vesting_rewards/v1/params";
+  }
+  rpc ResearchFundBalance(QueryResearchFundBalanceRequest) returns (QueryResearchFundBalanceResponse) {
+    option (google.api.http).get = "/zerone/vesting_rewards/v1/research_fund";
+  }
+  rpc FounderShareStatus(QueryFounderShareStatusRequest) returns (QueryFounderShareStatusResponse) {
+    option (google.api.http).get = "/zerone/vesting_rewards/v1/founder_share";
+  }
+}
+
+message QueryVestingScheduleRequest { string vesting_id = 1; }
+message QueryVestingScheduleResponse { VestingSchedule schedule = 1; }
+message QueryVestingSchedulesByRecipientRequest { string recipient = 1; }
+message QueryVestingSchedulesByRecipientResponse { repeated VestingSchedule schedules = 1; }
+message QueryActiveVestingSchedulesRequest { uint32 limit = 1; uint32 offset = 2; }
+message QueryActiveVestingSchedulesResponse { repeated VestingSchedule schedules = 1; uint32 total = 2; }
+message QueryBlockRewardDistributionRequest { uint64 block_height = 1; }
+message QueryBlockRewardDistributionResponse { BlockRewardDistribution distribution = 1; bool found = 2; }
+message QueryParamsRequest {}
+message QueryParamsResponse {
+  Params params = 1;
+  repeated CategoryConfig category_configs = 2;
+}
+message QueryResearchFundBalanceRequest {}
+message QueryResearchFundBalanceResponse {
+  string balance = 1;
+  string denom = 2;
+}
+message QueryFounderShareStatusRequest {}
+message QueryFounderShareStatusResponse {
+  bool active = 1;
+  uint64 founder_share_bps = 2;
+  string founder_address = 3;
+  uint64 governance_activation_height = 4;
+  uint64 current_height = 5;
+}

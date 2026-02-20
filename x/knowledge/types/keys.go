@@ -16,7 +16,7 @@ const (
 )
 
 // Store key prefixes — one byte per sub-namespace.
-// Ranges mirror legible_money for cross-stack golden-vector compatibility.
+// KV prefix ranges for knowledge module state.
 var (
 	// ─── Core state ──────────────────────────────────────────────────────────
 	FactKeyPrefix              = []byte{0x01} // factID → Fact

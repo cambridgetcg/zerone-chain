@@ -119,8 +119,10 @@ func (am AppModule) ExportGenesis(ctx sdk.Context, cdc codec.JSONCodec) json.Raw
 	return cdc.MustMarshalJSON(gs)
 }
 
-// BeginBlock is a no-op placeholder; block processing logic is added in R2-2.
-func (am AppModule) BeginBlock(_ context.Context) error { return nil }
+// BeginBlock advances verification round phases each block.
+func (am AppModule) BeginBlock(ctx context.Context) error {
+	return am.keeper.BeginBlocker(ctx)
+}
 
 // ConsensusVersion returns the module's consensus version.
 func (AppModule) ConsensusVersion() uint64 { return 1 }

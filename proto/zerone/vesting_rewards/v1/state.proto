@@ -1,0 +1,79 @@
+syntax = "proto3";
+package zerone.vesting_rewards.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/vesting_rewards/types";
+
+// VestingSchedule represents a truth-linked reward vesting record.
+message VestingSchedule {
+  string id                  = 1;  // unique vesting ID
+  string claim_id            = 2;  // the claim this reward is for
+  string fact_id             = 3;  // the fact (once claim is accepted)
+  string recipient           = 4;  // bech32 address of reward recipient
+  string total_amount        = 5;  // total reward amount in uzrn (bigint as string)
+  string released_amount     = 6;  // amount already released (bigint as string)
+  string claimable_amount    = 7;  // amount currently claimable (bigint as string)
+  string reserve_amount      = 8;  // permanent challenge reserve (bigint as string)
+  string category            = 9;  // epistemic category: "axiomatic", "formal_proof", "on_chain", etc.
+  string source              = 10; // reward origin: "block_production", "verification", "api_call", etc.
+  string status              = 11; // "vesting", "paused", "completed", "falsified", "abandoned"
+  uint64 accepted_at_block   = 12; // when claim was accepted
+  uint64 cliff_ends_at_block = 13; // when cliff period ends
+  uint64 last_claim_block    = 14; // last block rewards were claimed
+  uint64 total_paused_blocks = 15; // total blocks spent paused
+  uint64 paused_at_block     = 16; // block when paused (0 if not paused)
+  uint32 defense_count         = 17; // successful defenses (accelerates)
+  uint32 replication_count     = 18; // independent replications (accelerates)
+  uint64 created_at            = 19; // block height when created
+  uint64 updated_at            = 20; // block height when last updated
+  uint32 corroboration_count   = 21; // cross-domain corroborations (accelerates)
+  uint32 citation_count        = 22; // citations by other accepted facts (accelerates)
+}
+
+// CategoryConfig defines release curve parameters for a vesting category.
+message CategoryConfig {
+  string category         = 1; // epistemic category name
+  uint64 half_life_blocks = 2; // blocks until half of reward is released
+  uint64 cliff_blocks     = 3; // blocks before any release begins
+  uint64 max_release      = 4; // basis points (950000 = 95%, rest is permanent reserve)
+}
+
+// RewardRouting represents a routed reward with full revenue split applied.
+message RewardRouting {
+  string source            = 1; // reward source
+  string original_amount   = 2; // original reward amount (bigint as string)
+  string contributor_share = 3; // contributor's share (bigint as string)
+  string protocol_share    = 4; // protocol share (bigint as string)
+  string research_share    = 5; // research fund share (bigint as string)
+  string burn_amount       = 6; // burned amount (bigint as string)
+  string recipient         = 7; // bech32 recipient address
+  string fact_id           = 8; // related fact
+  uint64 block_number      = 9; // block height
+  string founder_share     = 10; // founder's operational share (bigint as string)
+  string citation_pool     = 11; // protocol sub-split: citations (bigint as string)
+  string verification_pool = 12; // protocol sub-split: verification (bigint as string)
+  string treasury_share    = 13; // protocol sub-split: treasury (bigint as string)
+}
+
+// BlockRewardDistribution records block reward distribution for a specific block.
+message BlockRewardDistribution {
+  uint64 block_height       = 1; // block number
+  string producer_reward    = 2; // reward to block producer (bigint as string)
+  string research_share     = 3; // research fund share (bigint as string)
+  string total_minted       = 4; // total new tokens (bigint as string)
+  uint32 validator_count    = 5; // active validators
+  string fund_balance_after = 6; // remaining fund balance (bigint as string)
+  string founder_share      = 7; // founder's operational share (bigint as string)
+  string burn_amount        = 8; // burned amount (bigint as string)
+  string protocol_share     = 9; // protocol share (bigint as string)
+}
+
+// ClawbackRecord records a reward clawback due to falsification.
+message ClawbackRecord {
+  string id                 = 1; // unique record ID
+  string vesting_id         = 2; // vesting schedule being clawed back
+  string released_clawback  = 3; // amount clawed from already-released (bigint as string)
+  string unvested_forfeited = 4; // unvested amount forfeited (bigint as string)
+  string reserve_forfeited  = 5; // reserve forfeited (bigint as string)
+  string challenger_reward  = 6; // amount given to challenger (bigint as string)
+  uint64 block_height       = 7; // when clawback occurred
+}

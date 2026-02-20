@@ -1,0 +1,79 @@
+syntax = "proto3";
+package zerone.ontology.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/ontology/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/ontology/v1/state.proto";
+import "zerone/ontology/v1/genesis.proto";
+
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  rpc ProposeDomain(MsgProposeDomain) returns (MsgProposeDomainResponse);
+  rpc VoteDomainProposal(MsgVoteDomainProposal) returns (MsgVoteDomainProposalResponse);
+  rpc UpdateDomain(MsgUpdateDomain) returns (MsgUpdateDomainResponse);
+  rpc RegisterLogicZone(MsgRegisterLogicZone) returns (MsgRegisterLogicZoneResponse);
+  rpc AcknowledgeIncompleteness(MsgAcknowledgeIncompleteness) returns (MsgAcknowledgeIncompletenessResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+message MsgProposeDomain {
+  option (cosmos.msg.v1.signer) = "proposer";
+  string proposer     = 1;
+  string name         = 2;
+  string display_name = 3;
+  string description  = 4;
+  uint32 stratum      = 5;
+  string stake        = 6; // bigint as string (uzrn)
+}
+
+message MsgProposeDomainResponse {
+  string proposal_id = 1;
+}
+
+message MsgVoteDomainProposal {
+  option (cosmos.msg.v1.signer) = "voter";
+  string voter       = 1;
+  string proposal_id = 2;
+  bool   approve     = 3;
+}
+
+message MsgVoteDomainProposalResponse {}
+
+message MsgUpdateDomain {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority    = 1;
+  string domain_name  = 2;
+  string display_name = 3;
+  string description  = 4;
+  string status       = 5;
+}
+
+message MsgUpdateDomainResponse {}
+
+message MsgRegisterLogicZone {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority                  = 1;
+  LogicZoneProperties zone_properties = 2;
+}
+
+message MsgRegisterLogicZoneResponse {}
+
+message MsgAcknowledgeIncompleteness {
+  option (cosmos.msg.v1.signer) = "submitter";
+  string submitter = 1;
+  string fact_id   = 2;
+  string zone      = 3;
+  string reason    = 4;
+}
+
+message MsgAcknowledgeIncompletenessResponse {}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params    = 2;
+}
+
+message MsgUpdateParamsResponse {}

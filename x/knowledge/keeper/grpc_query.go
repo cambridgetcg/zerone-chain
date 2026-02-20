@@ -2,7 +2,9 @@ package keeper
 
 import (
 	"context"
-	"fmt"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
@@ -17,54 +19,173 @@ func NewQueryServerImpl(keeper Keeper) types.QueryServer {
 	return &queryServer{keeper: keeper}
 }
 
-func queryNotImplemented(method string) error {
-	return fmt.Errorf("knowledge: query %s not implemented — see R2-2", method)
+func (q *queryServer) Params(ctx context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
+	params, err := q.keeper.GetParams(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &types.QueryParamsResponse{Params: params}, nil
 }
 
-func (q *queryServer) Params(_ context.Context, _ *types.QueryParamsRequest) (*types.QueryParamsResponse, error) {
-	return nil, queryNotImplemented("Params")
+func (q *queryServer) Fact(ctx context.Context, req *types.QueryFactRequest) (*types.QueryFactResponse, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact id is required")
+	}
+	fact, found := q.keeper.GetFact(ctx, req.Id)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.Id)
+	}
+	return &types.QueryFactResponse{Fact: fact}, nil
 }
 
-func (q *queryServer) Fact(_ context.Context, _ *types.QueryFactRequest) (*types.QueryFactResponse, error) {
-	return nil, queryNotImplemented("Fact")
+func (q *queryServer) Facts(ctx context.Context, req *types.QueryFactsRequest) (*types.QueryFactsResponse, error) {
+	var facts []*types.Fact
+
+	// If domain filter is specified, use the secondary index
+	if req.Domain != "" {
+		q.keeper.IterateFactsByDomain(ctx, req.Domain, func(factID string) bool {
+			fact, found := q.keeper.GetFact(ctx, factID)
+			if found {
+				if matchesFactFilters(fact, req.Status, req.Category) {
+					facts = append(facts, fact)
+				}
+			}
+			return false
+		})
+	} else {
+		q.keeper.IterateFacts(ctx, func(fact *types.Fact) bool {
+			if matchesFactFilters(fact, req.Status, req.Category) {
+				facts = append(facts, fact)
+			}
+			return false
+		})
+	}
+
+	return &types.QueryFactsResponse{Facts: facts}, nil
 }
 
-func (q *queryServer) Facts(_ context.Context, _ *types.QueryFactsRequest) (*types.QueryFactsResponse, error) {
-	return nil, queryNotImplemented("Facts")
+func (q *queryServer) FactsByDomain(ctx context.Context, req *types.QueryFactsByDomainRequest) (*types.QueryFactsByDomainResponse, error) {
+	if req.Domain == "" {
+		return nil, status.Error(codes.InvalidArgument, "domain is required")
+	}
+
+	var facts []*types.Fact
+	q.keeper.IterateFactsByDomain(ctx, req.Domain, func(factID string) bool {
+		fact, found := q.keeper.GetFact(ctx, factID)
+		if found {
+			facts = append(facts, fact)
+		}
+		return false
+	})
+
+	return &types.QueryFactsByDomainResponse{Facts: facts}, nil
 }
 
-func (q *queryServer) FactsByDomain(_ context.Context, _ *types.QueryFactsByDomainRequest) (*types.QueryFactsByDomainResponse, error) {
-	return nil, queryNotImplemented("FactsByDomain")
+func (q *queryServer) FactsBySubmitter(ctx context.Context, req *types.QueryFactsBySubmitterRequest) (*types.QueryFactsBySubmitterResponse, error) {
+	if req.Submitter == "" {
+		return nil, status.Error(codes.InvalidArgument, "submitter is required")
+	}
+
+	var facts []*types.Fact
+	q.keeper.IterateFactsBySubmitter(ctx, req.Submitter, func(factID string) bool {
+		fact, found := q.keeper.GetFact(ctx, factID)
+		if found {
+			facts = append(facts, fact)
+		}
+		return false
+	})
+
+	return &types.QueryFactsBySubmitterResponse{Facts: facts}, nil
 }
 
-func (q *queryServer) FactsBySubmitter(_ context.Context, _ *types.QueryFactsBySubmitterRequest) (*types.QueryFactsBySubmitterResponse, error) {
-	return nil, queryNotImplemented("FactsBySubmitter")
+func (q *queryServer) Claim(ctx context.Context, req *types.QueryClaimRequest) (*types.QueryClaimResponse, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "claim id is required")
+	}
+	claim, found := q.keeper.GetClaim(ctx, req.Id)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "claim %s not found", req.Id)
+	}
+	return &types.QueryClaimResponse{Claim: claim}, nil
 }
 
-func (q *queryServer) Claim(_ context.Context, _ *types.QueryClaimRequest) (*types.QueryClaimResponse, error) {
-	return nil, queryNotImplemented("Claim")
+func (q *queryServer) PendingClaims(ctx context.Context, _ *types.QueryPendingClaimsRequest) (*types.QueryPendingClaimsResponse, error) {
+	var claims []*types.Claim
+	q.keeper.IterateClaims(ctx, func(claim *types.Claim) bool {
+		if claim.Status == types.ClaimStatus_CLAIM_STATUS_PENDING {
+			claims = append(claims, claim)
+		}
+		return false
+	})
+	return &types.QueryPendingClaimsResponse{Claims: claims}, nil
 }
 
-func (q *queryServer) PendingClaims(_ context.Context, _ *types.QueryPendingClaimsRequest) (*types.QueryPendingClaimsResponse, error) {
-	return nil, queryNotImplemented("PendingClaims")
+func (q *queryServer) VerificationRound(ctx context.Context, req *types.QueryVerificationRoundRequest) (*types.QueryVerificationRoundResponse, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "round id is required")
+	}
+	round, found := q.keeper.GetVerificationRound(ctx, req.Id)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "verification round %s not found", req.Id)
+	}
+	return &types.QueryVerificationRoundResponse{Round: round}, nil
 }
 
-func (q *queryServer) VerificationRound(_ context.Context, _ *types.QueryVerificationRoundRequest) (*types.QueryVerificationRoundResponse, error) {
-	return nil, queryNotImplemented("VerificationRound")
+func (q *queryServer) Domain(ctx context.Context, req *types.QueryDomainRequest) (*types.QueryDomainResponse, error) {
+	if req.Name == "" {
+		return nil, status.Error(codes.InvalidArgument, "domain name is required")
+	}
+	domain, found := q.keeper.GetDomain(ctx, req.Name)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "domain %s not found", req.Name)
+	}
+	return &types.QueryDomainResponse{Domain: domain}, nil
 }
 
-func (q *queryServer) Domain(_ context.Context, _ *types.QueryDomainRequest) (*types.QueryDomainResponse, error) {
-	return nil, queryNotImplemented("Domain")
+func (q *queryServer) Domains(ctx context.Context, _ *types.QueryDomainsRequest) (*types.QueryDomainsResponse, error) {
+	var domains []*types.Domain
+	q.keeper.IterateDomains(ctx, func(domain *types.Domain) bool {
+		domains = append(domains, domain)
+		return false
+	})
+	return &types.QueryDomainsResponse{Domains: domains}, nil
 }
 
-func (q *queryServer) Domains(_ context.Context, _ *types.QueryDomainsRequest) (*types.QueryDomainsResponse, error) {
-	return nil, queryNotImplemented("Domains")
+func (q *queryServer) FactConfidence(ctx context.Context, req *types.QueryFactConfidenceRequest) (*types.QueryFactConfidenceResponse, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact id is required")
+	}
+	fact, found := q.keeper.GetFact(ctx, req.Id)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.Id)
+	}
+	return &types.QueryFactConfidenceResponse{Confidence: fact.Confidence}, nil
 }
 
-func (q *queryServer) FactConfidence(_ context.Context, _ *types.QueryFactConfidenceRequest) (*types.QueryFactConfidenceResponse, error) {
-	return nil, queryNotImplemented("FactConfidence")
+func (q *queryServer) FactCitationCount(ctx context.Context, req *types.QueryFactCitationCountRequest) (*types.QueryFactCitationCountResponse, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact id is required")
+	}
+	fact, found := q.keeper.GetFact(ctx, req.Id)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.Id)
+	}
+	return &types.QueryFactCitationCountResponse{
+		Count: fact.CitationCount + fact.IncomingCitationCount,
+	}, nil
 }
 
-func (q *queryServer) FactCitationCount(_ context.Context, _ *types.QueryFactCitationCountRequest) (*types.QueryFactCitationCountResponse, error) {
-	return nil, queryNotImplemented("FactCitationCount")
+// matchesFactFilters checks if a fact passes optional status and category filters.
+func matchesFactFilters(fact *types.Fact, statusFilter, categoryFilter string) bool {
+	if statusFilter != "" {
+		if fact.Status.String() != statusFilter {
+			return false
+		}
+	}
+	if categoryFilter != "" {
+		if fact.Category != categoryFilter {
+			return false
+		}
+	}
+	return true
 }
