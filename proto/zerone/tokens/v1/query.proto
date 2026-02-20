@@ -1,0 +1,183 @@
+syntax = "proto3";
+package zerone.tokens.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/tokens/types";
+
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "google/api/annotations.proto";
+import "zerone/tokens/v1/types.proto";
+import "zerone/tokens/v1/genesis.proto";
+
+// Query defines the gRPC query service for the tokens module.
+service Query {
+  // Params queries module parameters.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/params";
+  }
+
+  // TokenConfig queries a token definition by ID.
+  rpc TokenConfig(QueryTokenConfigRequest) returns (QueryTokenConfigResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/tokens/{token_id}";
+  }
+
+  // Tokens queries all token definitions with optional pagination.
+  rpc Tokens(QueryTokensRequest) returns (QueryTokensResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/tokens";
+  }
+
+  // TokenBySymbol queries a token definition by symbol.
+  rpc TokenBySymbol(QueryTokenBySymbolRequest) returns (QueryTokenBySymbolResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/tokens/symbol/{symbol}";
+  }
+
+  // Balance queries a specific account balance for a token.
+  rpc Balance(QueryBalanceRequest) returns (QueryBalanceResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/tokens/{token_id}/balance/{address}";
+  }
+
+  // TotalSupply queries the total supply breakdown for a token.
+  rpc TotalSupply(QueryTotalSupplyRequest) returns (QueryTotalSupplyResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/tokens/{token_id}/supply";
+  }
+
+  // Allowance queries a spender allowance.
+  rpc Allowance(QueryAllowanceRequest) returns (QueryAllowanceResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/tokens/{token_id}/allowance/{owner}/{spender}";
+  }
+
+  // DelegatedPower queries delegated voting power for a delegator or delegatee.
+  rpc DelegatedPower(QueryDelegatedPowerRequest) returns (QueryDelegatedPowerResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/tokens/{token_id}/delegation/{address}";
+  }
+
+  // WrappedToken queries a wrap record by token ID.
+  rpc WrappedToken(QueryWrappedTokenRequest) returns (QueryWrappedTokenResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/wrapped/{token_id}";
+  }
+
+  // WrappedTokens queries all wrap records.
+  rpc WrappedTokens(QueryWrappedTokensRequest) returns (QueryWrappedTokensResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/wrapped";
+  }
+
+  // EmissionPeriod queries an emission period by ID.
+  rpc EmissionPeriod(QueryEmissionPeriodRequest) returns (QueryEmissionPeriodResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/emissions/{emission_id}";
+  }
+
+  // EmissionPeriods queries all emission periods.
+  rpc EmissionPeriods(QueryEmissionPeriodsRequest) returns (QueryEmissionPeriodsResponse) {
+    option (google.api.http).get = "/zerone/tokens/v1/emissions";
+  }
+}
+
+// ─── Request / Response messages ─────────────────────────────────────────────
+
+message QueryParamsRequest {}
+
+message QueryParamsResponse {
+  Params params = 1;
+}
+
+message QueryTokenConfigRequest {
+  string token_id = 1;
+}
+
+message QueryTokenConfigResponse {
+  TokenDefinition token = 1;
+}
+
+message QueryTokensRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+message QueryTokensResponse {
+  repeated TokenDefinition tokens = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryTokenBySymbolRequest {
+  string symbol = 1;
+}
+
+message QueryTokenBySymbolResponse {
+  TokenDefinition token = 1;
+}
+
+message QueryBalanceRequest {
+  string token_id = 1;
+  string address  = 2;
+}
+
+message QueryBalanceResponse {
+  string balance = 1;
+}
+
+message QueryTotalSupplyRequest {
+  string token_id = 1;
+}
+
+message QueryTotalSupplyResponse {
+  string total_supply = 1;
+  string max_supply   = 2;
+  string minted       = 3;
+  string burned       = 4;
+}
+
+message QueryAllowanceRequest {
+  string token_id = 1;
+  string owner    = 2;
+  string spender  = 3;
+}
+
+message QueryAllowanceResponse {
+  string allowance = 1;
+}
+
+message QueryDelegatedPowerRequest {
+  string token_id = 1;
+  string address  = 2;
+}
+
+message QueryDelegatedPowerResponse {
+  string delegated_total    = 1; // total power this address has delegated away
+  string received_total     = 2; // total power this address has received
+  string undelegated_balance = 3; // balance - delegated_total
+}
+
+message QueryWrappedTokenRequest {
+  string token_id = 1;
+}
+
+message QueryWrappedTokenResponse {
+  string token_id      = 1;
+  string wrapped_denom = 2;
+  string total_wrapped = 3;
+}
+
+message QueryWrappedTokensRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+message QueryWrappedTokensResponse {
+  repeated QueryWrappedTokenResponse records = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryEmissionPeriodRequest {
+  string emission_id = 1;
+}
+
+message QueryEmissionPeriodResponse {
+  EmissionPeriod emission = 1;
+}
+
+message QueryEmissionPeriodsRequest {
+  bool active_only = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryEmissionPeriodsResponse {
+  repeated EmissionPeriod emissions = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}

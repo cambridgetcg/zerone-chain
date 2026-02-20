@@ -1,0 +1,16 @@
+syntax = "proto3";
+package zerone.tokens.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/tokens/types";
+
+// GenesisState defines the tokens module's genesis state.
+message GenesisState {
+  Params params = 1;
+}
+
+// Params holds the tokens module parameters.
+// All fields default to zero (module is a stub at genesis).
+message Params {
+  uint64 emission_epoch_blocks = 1; // blocks per emission epoch (0 = disabled)
+  string default_fee_bps       = 2; // default swap fee in BPS (unused, reserved)
+}

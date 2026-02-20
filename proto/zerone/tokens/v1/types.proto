@@ -1,0 +1,38 @@
+syntax = "proto3";
+package zerone.tokens.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/tokens/types";
+
+// TokenFeatures controls which operations are enabled for a token.
+message TokenFeatures {
+  bool mintable  = 1;
+  bool burnable  = 2;
+  bool pausable  = 3;
+  bool wrappable = 4;
+}
+
+// TokenDefinition is a ZRN-20 secondary token's on-chain configuration.
+message TokenDefinition {
+  string        id           = 1;
+  string        creator      = 2;   // address that created the token (= mint authority)
+  string        name         = 3;
+  string        symbol       = 4;   // 1-16 uppercase alphanumeric
+  uint32        decimals     = 5;
+  string        total_supply = 6;   // bigint as string
+  string        max_supply   = 7;   // "0" = unlimited
+  TokenFeatures features     = 8;
+  bool          paused       = 9;
+  uint64        created_at   = 10;  // block height
+}
+
+// EmissionPeriod defines a scheduled token emission (replaces LP pools).
+message EmissionPeriod {
+  string id               = 1;
+  uint64 start_block      = 2;
+  uint64 end_block        = 3;
+  string amount_per_block = 4;  // uzrn per block
+  string recipient        = 5;  // module account or address
+  bool   active           = 6;
+  string total_emitted    = 7;  // running total emitted
+  string creator          = 8;  // governance authority that created it
+}

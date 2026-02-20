@@ -1,0 +1,211 @@
+syntax = "proto3";
+package zerone.tokens.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/tokens/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/tokens/v1/genesis.proto";
+import "zerone/tokens/v1/types.proto";
+
+// Msg defines the ZRN-20 tokens module's transaction service.
+// 15 handlers: 8 core token ops, 2 delegation, 2 wrap, 2 emission, 1 governance.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // ─── Token lifecycle ─────────────────────────────────────────────────────
+  rpc CreateToken(MsgCreateToken) returns (MsgCreateTokenResponse);
+  rpc MintToken(MsgMintToken) returns (MsgMintTokenResponse);
+  rpc BurnToken(MsgBurnToken) returns (MsgBurnTokenResponse);
+  rpc TransferToken(MsgTransferToken) returns (MsgTransferTokenResponse);
+  rpc ApproveToken(MsgApproveToken) returns (MsgApproveTokenResponse);
+  rpc TransferFrom(MsgTransferFrom) returns (MsgTransferFromResponse);
+  rpc PauseToken(MsgPauseToken) returns (MsgPauseTokenResponse);
+  rpc UnpauseToken(MsgUnpauseToken) returns (MsgUnpauseTokenResponse);
+
+  // ─── Delegated voting power ──────────────────────────────────────────────
+  rpc DelegatePower(MsgDelegatePower) returns (MsgDelegatePowerResponse);
+  rpc UndelegatePower(MsgUndelegatePower) returns (MsgUndelegatePowerResponse);
+
+  // ─── Token wrapping (ZRN-20 ↔ IBC-compatible sdk.Coin) ──────────────────
+  rpc WrapToken(MsgWrapToken) returns (MsgWrapTokenResponse);
+  rpc UnwrapToken(MsgUnwrapToken) returns (MsgUnwrapTokenResponse);
+
+  // ─── Emission periods (governance-gated) ─────────────────────────────────
+  rpc CreateEmissionPeriod(MsgCreateEmissionPeriod) returns (MsgCreateEmissionPeriodResponse);
+  rpc CancelEmissionPeriod(MsgCancelEmissionPeriod) returns (MsgCancelEmissionPeriodResponse);
+
+  // ─── Governance ──────────────────────────────────────────────────────────
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+// ============================================================================
+// Token Lifecycle Messages
+// ============================================================================
+
+message MsgCreateToken {
+  option (cosmos.msg.v1.signer) = "creator";
+  string        creator        = 1;
+  string        name           = 2;
+  string        symbol         = 3;
+  uint32        decimals       = 4;
+  string        initial_supply = 5;
+  string        max_supply     = 6; // "0" = unlimited
+  TokenFeatures features       = 7;
+}
+
+message MsgCreateTokenResponse {
+  string token_id = 1;
+}
+
+message MsgMintToken {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string token_id  = 2;
+  string to        = 3;
+  string amount    = 4;
+}
+
+message MsgMintTokenResponse {}
+
+message MsgBurnToken {
+  option (cosmos.msg.v1.signer) = "burner";
+  string burner   = 1;
+  string token_id = 2;
+  string amount   = 3;
+}
+
+message MsgBurnTokenResponse {}
+
+message MsgTransferToken {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender   = 1;
+  string token_id = 2;
+  string to       = 3;
+  string amount   = 4;
+}
+
+message MsgTransferTokenResponse {}
+
+message MsgApproveToken {
+  option (cosmos.msg.v1.signer) = "owner";
+  string owner    = 1;
+  string token_id = 2;
+  string spender  = 3;
+  string amount   = 4;
+}
+
+message MsgApproveTokenResponse {}
+
+message MsgTransferFrom {
+  option (cosmos.msg.v1.signer) = "spender";
+  string spender  = 1;
+  string token_id = 2;
+  string from     = 3;
+  string to       = 4;
+  string amount   = 5;
+}
+
+message MsgTransferFromResponse {}
+
+message MsgPauseToken {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string token_id  = 2;
+}
+
+message MsgPauseTokenResponse {}
+
+message MsgUnpauseToken {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string token_id  = 2;
+}
+
+message MsgUnpauseTokenResponse {}
+
+// ============================================================================
+// Delegation Messages
+// ============================================================================
+
+message MsgDelegatePower {
+  option (cosmos.msg.v1.signer) = "delegator";
+  string delegator = 1;
+  string token_id  = 2;
+  string delegate  = 3;
+  string amount    = 4;
+}
+
+message MsgDelegatePowerResponse {}
+
+message MsgUndelegatePower {
+  option (cosmos.msg.v1.signer) = "delegator";
+  string delegator = 1;
+  string token_id  = 2;
+  string delegate  = 3;
+  string amount    = 4;
+}
+
+message MsgUndelegatePowerResponse {}
+
+// ============================================================================
+// Wrapping Messages (ZRN-20 ↔ IBC-compatible)
+// ============================================================================
+
+message MsgWrapToken {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender   = 1;
+  string token_id = 2;
+  string amount   = 3;
+}
+
+message MsgWrapTokenResponse {
+  string wrapped_denom = 1;
+}
+
+message MsgUnwrapToken {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender        = 1;
+  string wrapped_denom = 2;
+  string amount        = 3;
+}
+
+message MsgUnwrapTokenResponse {
+  string token_id = 1;
+}
+
+// ============================================================================
+// Emission Period Messages (governance-gated)
+// ============================================================================
+
+message MsgCreateEmissionPeriod {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority        = 1;
+  uint64 start_block      = 2;
+  uint64 end_block        = 3;
+  string amount_per_block = 4; // uzrn per block
+  string recipient        = 5; // module account or address
+}
+
+message MsgCreateEmissionPeriodResponse {
+  string emission_id = 1;
+}
+
+message MsgCancelEmissionPeriod {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority   = 1;
+  string emission_id = 2;
+}
+
+message MsgCancelEmissionPeriodResponse {}
+
+// ============================================================================
+// Governance Messages
+// ============================================================================
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params    = 2;
+}
+
+message MsgUpdateParamsResponse {}

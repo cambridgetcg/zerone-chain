@@ -118,6 +118,12 @@ import (
 	zeronestaking "github.com/zerone-chain/zerone/x/staking"
 	zeronestakingkeeper "github.com/zerone-chain/zerone/x/staking/keeper"
 	zeronestakingtypes "github.com/zerone-chain/zerone/x/staking/types"
+	zeronebilling "github.com/zerone-chain/zerone/x/billing"
+	zeronebillingkeeper "github.com/zerone-chain/zerone/x/billing/keeper"
+	zeronebillingtypes "github.com/zerone-chain/zerone/x/billing/types"
+	zeronetokens "github.com/zerone-chain/zerone/x/tokens"
+	zeronetokenskeeper "github.com/zerone-chain/zerone/x/tokens/keeper"
+	zeronetokenstypes "github.com/zerone-chain/zerone/x/tokens/types"
 	vestingrewards "github.com/zerone-chain/zerone/x/vesting_rewards"
 	vestingrewardskeeper "github.com/zerone-chain/zerone/x/vesting_rewards/keeper"
 	vestingrewardstypes "github.com/zerone-chain/zerone/x/vesting_rewards/types"
@@ -176,11 +182,13 @@ var (
 		vestingrewards.AppModuleBasic{},
 		zeroneontology.AppModuleBasic{},
 		zeroneknowledge.AppModuleBasic{},
+		zeronetokens.AppModuleBasic{},
+		zeronebilling.AppModuleBasic{},
 		// R2-2: x/knowledge wired
-		// R3-1: x/billing
+		// R3-1: x/billing — wired
 		// R3-2: x/liquiditypool
 		// R3-4: x/gov (zeronegov.AppModuleBasic{})
-		// R3-6: x/tokens
+		// R3-6: x/tokens — wired
 		// R4-1: x/home
 		// R4-2: x/partnerships
 		// R4-3: x/bvm
@@ -216,6 +224,9 @@ var (
 		vestingrewardstypes.ResearchFundModuleName: nil,                              // research_fund: receive-only
 		zeroneontologytypes.ModuleName:             nil,                              // ontology: receive proposal stake
 		zeroneknowledgetypes.ModuleName:            {authtypes.Burner},               // knowledge: burn slashed claim stakes
+		zeronetokenstypes.ModuleName:               {authtypes.Minter, authtypes.Burner}, // tokens: mint/burn for wrap/unwrap + emissions
+		zeronebillingtypes.ModuleName:              {authtypes.Burner},                   // billing: burn split
+		"treasury_protocol":                        nil,                                  // treasury_protocol: receive-only
 	}
 )
 
@@ -324,10 +335,11 @@ type ZeroneApp struct {
 	VestingRewardsKeeper    vestingrewardskeeper.Keeper
 	ZeroneOntologyKeeper    zeroneontologykeeper.Keeper
 	KnowledgeKeeper         zeroneknowledgekeeper.Keeper
-	// R3-1: BillingKeeper
+	TokensKeeper            zeronetokenskeeper.Keeper
+	BillingKeeper           zeronebillingkeeper.Keeper
 	// R3-2: LiquidityPoolKeeper
 	// ZeroneGovKeeper (custom)
-	// R3-6: TokensKeeper
+	// R3-6: x/tokens — wired
 	// R4-1: HomeKeeper
 	// R4-2: PartnershipsKeeper
 	// R4-3: BVMKeeper
@@ -417,6 +429,8 @@ func NewZeroneApp(
 		vestingrewardstypes.StoreKey,
 		zeroneontologytypes.StoreKey,
 		zeroneknowledgetypes.StoreKey,
+		zeronetokenstypes.StoreKey,
+		zeronebillingtypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -651,6 +665,24 @@ func NewZeroneApp(
 	app.KnowledgeKeeper.SetOntologyKeeper(&app.ZeroneOntologyKeeper)
 	app.KnowledgeKeeper.SetVestingRewardsKeeper(vestingrewardskeeper.NewVestingRewardsKeeperAdapter(app.VestingRewardsKeeper))
 
+	app.TokensKeeper = zeronetokenskeeper.NewKeeper(
+		appCodec,
+		sdkruntime.NewKVStoreService(keys[zeronetokenstypes.StoreKey]),
+		app.BankKeeper,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+	billingKnowledgeAdapter := zeroneknowledgekeeper.NewBillingKnowledgeAdapter(app.KnowledgeKeeper)
+	vestingRFDAdapter := vestingrewardskeeper.NewResearchFundDepositorAdapter(app.VestingRewardsKeeper)
+	app.BillingKeeper = zeronebillingkeeper.NewKeeper(
+		sdkruntime.NewKVStoreService(keys[zeronebillingtypes.StoreKey]),
+		appCodec,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		app.BankKeeper,
+		billingKnowledgeAdapter,
+		vestingRFDAdapter,
+	)
+
 	// ---- IBC Router ----
 	ibcRouter := ibcporttypes.NewRouter()
 	ibcRouter.AddRoute(ibctransfertypes.ModuleName, ibctransfer.NewIBCModule(app.TransferKeeper))
@@ -685,6 +717,8 @@ func NewZeroneApp(
 		vestingrewards.NewAppModule(appCodec, app.VestingRewardsKeeper),
 		zeroneontology.NewAppModule(appCodec, app.ZeroneOntologyKeeper),
 		zeroneknowledge.NewAppModule(appCodec, app.KnowledgeKeeper),
+		zeronetokens.NewAppModule(appCodec, app.TokensKeeper),
+		zeronebilling.NewAppModule(appCodec, app.BillingKeeper),
 	)
 
 	app.ModuleManager.SetOrderBeginBlockers(
@@ -710,6 +744,8 @@ func NewZeroneApp(
 		zeronestakingtypes.ModuleName,
 		zeroneontologytypes.ModuleName,
 		zeroneknowledgetypes.ModuleName, // LAST: depends on staking + ontology state
+		zeronetokenstypes.ModuleName,    // tokens: emission period processing
+		zeronebillingtypes.ModuleName,   // billing: no-op
 	)
 
 	app.ModuleManager.SetOrderEndBlockers(
@@ -734,6 +770,8 @@ func NewZeroneApp(
 		vestingrewardstypes.ModuleName,
 		zeroneontologytypes.ModuleName,  // EndBlocker: expire proposals
 		zeroneknowledgetypes.ModuleName, // EndBlocker: no-op for now
+		zeronetokenstypes.ModuleName,    // EndBlocker: no-op
+		zeronebillingtypes.ModuleName,   // EndBlocker: no-op
 	)
 
 	genesisOrder := []string{
@@ -759,6 +797,8 @@ func NewZeroneApp(
 		vestingrewardstypes.ModuleName,
 		zeroneontologytypes.ModuleName,  // Genesis: after bank (needs bank for stake escrow)
 		zeroneknowledgetypes.ModuleName, // Genesis: after ontology + staking (needs both)
+		zeronetokenstypes.ModuleName,    // Genesis: after bank (needs bank for wrap)
+		zeronebillingtypes.ModuleName,   // Genesis: after knowledge (depends on knowledge for fact queries)
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisOrder...)
