@@ -1,0 +1,88 @@
+syntax = "proto3";
+package zerone.knowledge.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/knowledge/types";
+
+import "zerone/knowledge/v1/types.proto";
+
+// Params are the governance parameters for the knowledge module.
+// All BPS values use a 1,000,000 scale (1,000,000 = 100%).
+message Params {
+  // ─── Core verification ───────────────────────────────────────────────────
+  uint64 min_verifiers            = 1;  // default: 3
+  uint64 max_verifiers            = 2;  // default: 22
+  uint64 commit_phase_blocks      = 3;  // default: 4
+  uint64 reveal_phase_blocks      = 4;  // default: 4
+  uint64 aggregation_phase_blocks = 5;  // default: 3
+  uint64 claim_cooldown_blocks    = 6;  // default: 50
+
+  // ─── Confidence scoring ──────────────────────────────────────────────────
+  uint64 initial_confidence               = 7;  // default: 500,000 (50%)
+  uint64 confidence_boost_per_verification = 8;  // default: 50,000  (5%)
+  uint64 confidence_threshold             = 9;  // default: 770,000 (77%) acceptance
+  uint64 quorum_threshold                 = 10; // default: 660,000 (66%)
+
+  // ─── Slashing — MUST be non-zero (B22-3 audit) ──────────────────────────
+  uint64 wrong_verification_slash_bps = 11; // default: 50,000  (5%)
+  uint64 missed_reveal_slash_bps      = 12; // default: 100,000 (10%)
+  uint64 equivocation_slash_bps       = 13; // default: 200,000 (20%)
+  uint64 invalid_claim_slash_bps      = 14; // default: 220,000 (22%)
+
+  // ─── Rewards ─────────────────────────────────────────────────────────────
+  string verification_reward           = 15; // default: "3000000" (3 ZRN in uzrn)
+  uint64 verification_reward_decay_bps = 16; // default: 999,000 (0.999× per epoch)
+
+  // ─── Claim validation ────────────────────────────────────────────────────
+  uint64 min_claim_text_length = 17; // default: 20
+  uint64 max_claim_text_length = 18; // default: 10,000
+  string min_claim_stake       = 19; // default: "1000000" (1 ZRN in uzrn)
+
+  // ─── Adversarial verification ────────────────────────────────────────────
+  bool   adversarial_verification_enabled = 20; // default: true
+  uint64 provisional_threshold            = 21; // default: 500,000 (50%)
+  uint64 reject_threshold                 = 22; // default: 300,000 (30%)
+  uint64 challenge_duration_blocks        = 23; // default: 34,272 (1 day)
+  string min_challenge_stake              = 24; // default: "11000000" (11 ZRN)
+  uint64 failed_challenge_slash_bps       = 25; // default: 220,000 (22%)
+  uint64 successful_challenge_reward_bps  = 26; // default: 300,000 (30%)
+  uint64 max_concurrent_challenges        = 27; // default: 3
+
+  // ─── Citation economics ──────────────────────────────────────────────────
+  uint64 citation_share_bps    = 28; // default: 150,000 (15%)
+  uint64 cross_domain_bonus_bps = 29; // default: 200,000 (20%)
+
+  // ─── Extended governance params ─────────────────────────────────────────
+  uint64 max_facts_per_domain        = 30; // default: 100,000
+  uint64 fact_expiry_blocks          = 31; // default: 0 (no expiry)
+  uint64 cross_stratum_discount_bps  = 32; // default: 0
+  uint64 novelty_bonus_bps           = 33; // default: 0
+  uint64 max_validators_per_round    = 34; // default: 22
+  uint64 max_citations_per_claim     = 35; // default: 50
+  uint64 citation_decay_per_level    = 36; // default: 500,000 (50% per ancestor level)
+  uint64 self_citation_discount_bps  = 37; // default: 500,000 (50%)
+  uint64 confidence_growth_epoch     = 38; // default: 1,111 blocks
+  uint64 confidence_growth_per_epoch_bps = 39; // default: 11,000 (1.1%)
+  uint64 max_survival_confidence     = 40; // default: 770,000 (77%)
+  uint64 survived_challenge_confidence_cap = 41; // default: 880,000 (88%)
+  uint64 max_apprentice_validators   = 42; // default: 111 (Sybil cap)
+
+  // ─── FARM anti-gaming params ─────────────────────────────────────────────
+  uint64 conformity_threshold_bps          = 43; // default: 950,000 (FARM-1)
+  uint64 calibration_trivial_threshold     = 44; // default: 950,000 (FARM-2)
+  uint64 misbehavior_rejection_threshold   = 45; // default: 300,000 (FARM-6)
+  uint64 min_domain_contributors_for_novelty = 46; // default: 3 (FARM-7)
+  uint64 min_participation_rate_bps        = 47; // default: 500,000 (FARM-8)
+  uint64 challenge_stake_ratio_min_bps     = 48; // default: 500,000 (FARM-9)
+
+  // ─── Research fund ───────────────────────────────────────────────────────
+  uint64 research_fund_share_bps = 49; // default: 130,000 (13%)
+}
+
+// GenesisState is the genesis state of the knowledge module.
+message GenesisState {
+  Params                    params        = 1;
+  repeated Fact             facts         = 2;
+  repeated Claim            pending_claims = 3;
+  repeated VerificationRound active_rounds = 4;
+  repeated Domain           domains       = 5;
+}

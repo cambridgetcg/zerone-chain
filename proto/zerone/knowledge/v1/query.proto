@@ -1,0 +1,178 @@
+syntax = "proto3";
+package zerone.knowledge.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/knowledge/types";
+
+import "cosmos/base/query/v1beta1/pagination.proto";
+import "google/api/annotations.proto";
+import "zerone/knowledge/v1/types.proto";
+import "zerone/knowledge/v1/genesis.proto";
+
+// Query defines the gRPC query service for the knowledge module.
+service Query {
+  // Params queries module parameters.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/params";
+  }
+
+  // Fact queries a single fact by ID.
+  rpc Fact(QueryFactRequest) returns (QueryFactResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts/{id}";
+  }
+
+  // Facts queries facts with optional domain, status, and category filters.
+  rpc Facts(QueryFactsRequest) returns (QueryFactsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts";
+  }
+
+  // FactsByDomain queries all facts in a domain.
+  rpc FactsByDomain(QueryFactsByDomainRequest) returns (QueryFactsByDomainResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts/domain/{domain}";
+  }
+
+  // FactsBySubmitter queries all facts submitted by an address.
+  rpc FactsBySubmitter(QueryFactsBySubmitterRequest) returns (QueryFactsBySubmitterResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts/submitter/{submitter}";
+  }
+
+  // Claim queries a single claim by ID.
+  rpc Claim(QueryClaimRequest) returns (QueryClaimResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/claims/{id}";
+  }
+
+  // PendingClaims queries all pending claims.
+  rpc PendingClaims(QueryPendingClaimsRequest) returns (QueryPendingClaimsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/claims/pending";
+  }
+
+  // VerificationRound queries a verification round by ID.
+  rpc VerificationRound(QueryVerificationRoundRequest) returns (QueryVerificationRoundResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/rounds/{id}";
+  }
+
+  // Domain queries a domain by name.
+  rpc Domain(QueryDomainRequest) returns (QueryDomainResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/domains/{name}";
+  }
+
+  // Domains queries all domains with optional pagination.
+  rpc Domains(QueryDomainsRequest) returns (QueryDomainsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/domains";
+  }
+
+  // FactConfidence queries the current confidence score of a fact.
+  rpc FactConfidence(QueryFactConfidenceRequest) returns (QueryFactConfidenceResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts/{id}/confidence";
+  }
+
+  // FactCitationCount queries the citation count of a fact.
+  rpc FactCitationCount(QueryFactCitationCountRequest) returns (QueryFactCitationCountResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts/{id}/citations";
+  }
+}
+
+// ─── Request / Response messages ─────────────────────────────────────────────
+
+message QueryParamsRequest {}
+
+message QueryParamsResponse {
+  Params params = 1;
+}
+
+message QueryFactRequest {
+  string id = 1;
+}
+
+message QueryFactResponse {
+  Fact fact = 1;
+}
+
+message QueryFactsRequest {
+  string   domain     = 1;
+  string   status     = 2;
+  string   category   = 3;
+  cosmos.base.query.v1beta1.PageRequest pagination = 4;
+}
+
+message QueryFactsResponse {
+  repeated Fact facts = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryFactsByDomainRequest {
+  string domain = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryFactsByDomainResponse {
+  repeated Fact facts = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryFactsBySubmitterRequest {
+  string submitter = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryFactsBySubmitterResponse {
+  repeated Fact facts = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryClaimRequest {
+  string id = 1;
+}
+
+message QueryClaimResponse {
+  Claim claim = 1;
+}
+
+message QueryPendingClaimsRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+message QueryPendingClaimsResponse {
+  repeated Claim claims = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryVerificationRoundRequest {
+  string id = 1;
+}
+
+message QueryVerificationRoundResponse {
+  VerificationRound round = 1;
+}
+
+message QueryDomainRequest {
+  string name = 1;
+}
+
+message QueryDomainResponse {
+  Domain domain = 1;
+}
+
+message QueryDomainsRequest {
+  cosmos.base.query.v1beta1.PageRequest pagination = 1;
+}
+
+message QueryDomainsResponse {
+  repeated Domain domains = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryFactConfidenceRequest {
+  string id = 1;
+}
+
+message QueryFactConfidenceResponse {
+  uint64 confidence = 1;
+}
+
+message QueryFactCitationCountRequest {
+  string id = 1;
+}
+
+message QueryFactCitationCountResponse {
+  uint64 count = 1;
+}

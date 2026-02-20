@@ -1,0 +1,194 @@
+syntax = "proto3";
+package zerone.knowledge.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/knowledge/types";
+
+// FactStatus represents the lifecycle state of a verified fact.
+enum FactStatus {
+  FACT_STATUS_UNSPECIFIED = 0;
+  FACT_STATUS_PENDING     = 1;
+  FACT_STATUS_PROVISIONAL = 2;
+  FACT_STATUS_VERIFIED    = 3;
+  FACT_STATUS_ACTIVE      = 4;
+  FACT_STATUS_CONTESTED   = 5;
+  FACT_STATUS_CHALLENGED  = 6;
+  FACT_STATUS_SUPERSEDED  = 7;
+  FACT_STATUS_EXPIRED     = 8;
+  FACT_STATUS_DISPROVEN   = 9;
+  FACT_STATUS_REVOKED     = 10;
+  FACT_STATUS_AT_RISK     = 11;
+  FACT_STATUS_PRUNED      = 12;
+}
+
+// ClaimStatus represents the lifecycle state of a submitted claim.
+enum ClaimStatus {
+  CLAIM_STATUS_UNSPECIFIED        = 0;
+  CLAIM_STATUS_PENDING            = 1;
+  CLAIM_STATUS_PENDING_EVALUATION = 2;
+  CLAIM_STATUS_EVALUATED          = 3;
+  CLAIM_STATUS_PROVISIONAL        = 4;
+  CLAIM_STATUS_IN_VERIFICATION    = 5;
+  CLAIM_STATUS_ACCEPTED           = 6;
+  CLAIM_STATUS_REJECTED           = 7;
+  CLAIM_STATUS_CHALLENGED         = 8;
+  CLAIM_STATUS_EXPIRED            = 9;
+  CLAIM_STATUS_INSUFFICIENT       = 10;
+  CLAIM_STATUS_CONTESTED          = 11;
+}
+
+// VerificationPhase tracks progress of a commit-reveal verification round.
+enum VerificationPhase {
+  VERIFICATION_PHASE_UNSPECIFIED  = 0;
+  VERIFICATION_PHASE_COMMIT       = 1;
+  VERIFICATION_PHASE_REVEAL       = 2;
+  VERIFICATION_PHASE_AGGREGATION  = 3;
+  VERIFICATION_PHASE_COMPLETE     = 4;
+  VERIFICATION_PHASE_EXPIRED      = 5;
+}
+
+// Verdict is the outcome of a completed verification round.
+enum Verdict {
+  VERDICT_UNSPECIFIED  = 0;
+  VERDICT_ACCEPT       = 1;
+  VERDICT_REJECT       = 2;
+  VERDICT_INCONCLUSIVE = 3;
+}
+
+// DomainStatus tracks whether an epistemic domain is active or proposed.
+enum DomainStatus {
+  DOMAIN_STATUS_UNSPECIFIED = 0;
+  DOMAIN_STATUS_ACTIVE      = 1;
+  DOMAIN_STATUS_DEPRECATED  = 2;
+  DOMAIN_STATUS_PROPOSED    = 3;
+}
+
+// Fact represents a piece of verified knowledge in the protocol.
+// Confidence is measured on a 0-1,000,000 BPS scale (1,000,000 = 100%).
+message Fact {
+  string id                    = 1;
+  string content               = 2;
+  string domain                = 3;
+  // Epistemic category: "axiomatic", "empirical", "derived", "contested",
+  // "analytic", "formal", "protocol", "computational", "predictive",
+  // "historical", "replicated", "social", "protocol_observation"
+  string category              = 4;
+  uint64 confidence            = 5;  // 0-1,000,000 BPS
+  string submitter             = 6;
+  uint64 submitted_at_block    = 7;
+  uint64 verified_at_block     = 8;
+  uint64 citation_count        = 9;
+  uint64 fundamentality        = 10; // 0-1,000,000 (how foundational this fact is)
+  repeated string references   = 11; // fact IDs this fact cites
+  FactStatus status            = 12;
+  string claim_id              = 13;
+  uint64 reverification_block  = 14;
+  uint64 last_verified_block   = 15;
+  uint64 challenge_window_end  = 16;
+  uint64 bridge_score          = 17; // 0-1,000,000 cross-domain bridge value
+  uint64 novelty_score         = 18; // 0-1,000,000
+  string patronage_amount      = 19; // coin amount as string (uzrn)
+  uint64 patronage_expiry_block = 20;
+  string stratum               = 21;
+  string maturity              = 22; // "emerging", "established", "canonical"
+  uint64 incoming_citation_count = 23;
+}
+
+// Claim is an unverified submission awaiting or undergoing verification.
+message Claim {
+  string id                    = 1;
+  string fact_content          = 2;
+  string domain                = 3;
+  string category              = 4;
+  string submitter             = 5;
+  uint64 submitted_at_block    = 6;
+  ClaimStatus status           = 7;
+  repeated string references   = 8;
+  string verification_round_id = 9;
+  string stake                 = 10; // coin amount as string (uzrn)
+  string partnership_id        = 11;
+  uint64 challenge_window_end  = 12;
+  string provisional_fact_id   = 13;
+  string content_hash          = 14; // SHA-256 of fact_content for duplicate detection
+}
+
+// VerificationRound tracks one commit-reveal verification cycle.
+message VerificationRound {
+  string id                       = 1;
+  string claim_id                 = 2;
+  uint64 started_at_block         = 3;
+  VerificationPhase phase         = 4;
+  repeated string selected_verifiers = 5;
+  repeated CommitEntry commits    = 6;
+  repeated RevealEntry reveals    = 7;
+  Verdict verdict                 = 8;
+  uint64 verdict_block            = 9;
+  uint64 commit_deadline          = 10;
+  uint64 reveal_deadline          = 11;
+  uint64 aggregation_deadline     = 12;
+}
+
+// CommitEntry records a validator's blinded commitment (SHA-256(vote || salt)).
+message CommitEntry {
+  string verifier          = 1;
+  bytes  commit_hash       = 2; // SHA-256(vote || salt)
+  uint64 committed_at_block = 3;
+}
+
+// RevealEntry records a validator's revealed vote and salt.
+message RevealEntry {
+  string verifier         = 1;
+  string vote             = 2; // "accept" or "reject"
+  bytes  salt             = 3;
+  uint64 revealed_at_block = 4;
+}
+
+// VRFProof captures a Verifiable Random Function output for validator selection.
+message VRFProof {
+  bytes  proof        = 1;
+  bytes  output       = 2;
+  string proposer     = 3;
+  uint64 block_height = 4;
+}
+
+// Domain is an epistemic knowledge domain (e.g., "mathematics", "physics").
+message Domain {
+  string name             = 1;
+  string description      = 2;
+  DomainStatus status     = 3;
+  uint64 created_at_block = 4;
+  uint64 fact_count       = 5;
+  string proposer         = 6;
+  repeated string endorsers = 7;
+  string stratum          = 8;
+}
+
+// ValidatorInfo caches a validator's tier and verification stats for round selection.
+message ValidatorInfo {
+  string address           = 1;
+  uint64 stake             = 2; // in uzrn
+  string tier              = 3; // "apprentice", "verified", "bonded", "guardian"
+  uint64 verification_count = 4;
+  uint64 accuracy_bps      = 5; // 0-1,000,000
+}
+
+// ProvisionalChallenge is an adversarial challenge against a provisional fact.
+message ProvisionalChallenge {
+  string id                  = 1;
+  string claim_id            = 2;
+  string fact_id             = 3;
+  string challenger          = 4;
+  string stake               = 5;
+  string reason              = 6;
+  repeated string evidence_ids = 7;
+  string counter_claim       = 8;
+  // "open", "resolved_upheld", "resolved_overturned", "expired", "inconclusive"
+  string status              = 9;
+  // "deterministic" or "arbiter"
+  string resolution_path     = 10;
+  string dispute_id          = 11;
+  uint64 created_at_height   = 12;
+  uint64 resolved_at_height  = 13;
+  // "upheld", "overturned", "weakened", "inconclusive", "undecidability"
+  string outcome             = 14;
+  uint32 attempt_number      = 15;
+}

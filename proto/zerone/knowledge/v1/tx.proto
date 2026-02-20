@@ -1,0 +1,298 @@
+syntax = "proto3";
+package zerone.knowledge.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/knowledge/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/knowledge/v1/genesis.proto";
+
+// Msg defines the knowledge module's transaction service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // ─── PoT lifecycle ───────────────────────────────────────────────────────
+
+  // SubmitClaim submits a new knowledge claim for verification.
+  rpc SubmitClaim(MsgSubmitClaim) returns (MsgSubmitClaimResponse);
+
+  // SubmitCommitment submits a blinded commitment during the commit phase.
+  rpc SubmitCommitment(MsgSubmitCommitment) returns (MsgSubmitCommitmentResponse);
+
+  // SubmitReveal reveals a validator's vote during the reveal phase.
+  rpc SubmitReveal(MsgSubmitReveal) returns (MsgSubmitRevealResponse);
+
+  // ChallengeFact challenges a verified fact and opens a new verification round.
+  rpc ChallengeFact(MsgChallengeFact) returns (MsgChallengeFactResponse);
+
+  // AddFact governance-creates a fact (authority-gated).
+  rpc AddFact(MsgAddFact) returns (MsgAddFactResponse);
+
+  // ─── Negative knowledge ──────────────────────────────────────────────────
+
+  // SubmitContradiction submits a counter-claim against an existing fact.
+  rpc SubmitContradiction(MsgSubmitContradiction) returns (MsgSubmitContradictionResponse);
+
+  // ─── Knowledge preservation ──────────────────────────────────────────────
+
+  // PatronizeFact funds a fact to prevent it from being pruned.
+  rpc PatronizeFact(MsgPatronizeFact) returns (MsgPatronizeFactResponse);
+
+  // ─── Domain management ───────────────────────────────────────────────────
+
+  // ProposeDomain proposes a new epistemic domain.
+  rpc ProposeDomain(MsgProposeDomain) returns (MsgProposeDomainResponse);
+
+  // EndorseDomainProposal endorses a pending domain proposal.
+  rpc EndorseDomainProposal(MsgEndorseDomainProposal) returns (MsgEndorseDomainProposalResponse);
+
+  // ChallengeDomainProposal challenges a pending domain proposal.
+  rpc ChallengeDomainProposal(MsgChallengeDomainProposal) returns (MsgChallengeDomainProposalResponse);
+
+  // RegisterStratum registers a new knowledge stratum (authority-gated).
+  rpc RegisterStratum(MsgRegisterStratum) returns (MsgRegisterStratumResponse);
+
+  // ─── Adversarial verification ────────────────────────────────────────────
+
+  // ChallengeProvisionalFact challenges a provisional fact before it becomes verified.
+  rpc ChallengeProvisionalFact(MsgChallengeProvisionalFact) returns (MsgChallengeProvisionalFactResponse);
+
+  // ─── Governance ──────────────────────────────────────────────────────────
+
+  // UpdateParams updates module parameters. Governance authority only.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+
+  // UpdateExtendedParams updates the JSON-encoded extended parameters.
+  rpc UpdateExtendedParams(MsgUpdateExtendedParams) returns (MsgUpdateExtendedParamsResponse);
+
+  // ─── Research fund governance ────────────────────────────────────────────
+
+  // ProposeResearchFund proposes a disbursement from the research fund.
+  rpc ProposeResearchFund(MsgProposeResearchFund) returns (MsgProposeResearchFundResponse);
+
+  // VoteResearchProposal votes on a research fund proposal.
+  rpc VoteResearchProposal(MsgVoteResearchProposal) returns (MsgVoteResearchProposalResponse);
+
+  // ExecuteResearchProposal executes an approved research fund proposal.
+  rpc ExecuteResearchProposal(MsgExecuteResearchProposal) returns (MsgExecuteResearchProposalResponse);
+}
+
+// ─── PoT lifecycle messages ───────────────────────────────────────────────────
+
+message MsgSubmitClaim {
+  option (cosmos.msg.v1.signer) = "submitter";
+
+  string          submitter     = 1;
+  string          fact_content  = 2;
+  string          domain        = 3;
+  string          category      = 4;
+  string          stake         = 5; // uzrn amount
+  repeated string references    = 6; // fact IDs cited
+  string          partnership_id = 7;
+}
+
+message MsgSubmitClaimResponse {
+  string claim_id = 1;
+}
+
+message MsgSubmitCommitment {
+  option (cosmos.msg.v1.signer) = "verifier";
+
+  string verifier  = 1;
+  string round_id  = 2;
+  bytes  commit_hash = 3; // SHA-256(vote || salt)
+}
+
+message MsgSubmitCommitmentResponse {}
+
+message MsgSubmitReveal {
+  option (cosmos.msg.v1.signer) = "verifier";
+
+  string verifier = 1;
+  string round_id = 2;
+  string vote     = 3; // "accept" or "reject"
+  bytes  salt     = 4;
+}
+
+message MsgSubmitRevealResponse {}
+
+message MsgChallengeFact {
+  option (cosmos.msg.v1.signer) = "challenger";
+
+  string          challenger   = 1;
+  string          fact_id      = 2;
+  string          stake        = 3; // uzrn amount
+  string          reason       = 4;
+  repeated string evidence_ids = 5;
+}
+
+message MsgChallengeFactResponse {
+  string round_id = 1;
+}
+
+message MsgAddFact {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string          authority  = 1;
+  string          content    = 2;
+  string          domain     = 3;
+  string          category   = 4;
+  repeated string references = 5;
+  uint64          confidence = 6; // initial confidence (0-1,000,000)
+}
+
+message MsgAddFactResponse {
+  string fact_id = 1;
+}
+
+// ─── Negative knowledge messages ─────────────────────────────────────────────
+
+message MsgSubmitContradiction {
+  option (cosmos.msg.v1.signer) = "submitter";
+
+  string          submitter    = 1;
+  string          fact_id      = 2; // fact being contradicted
+  string          counter_claim = 3;
+  string          stake        = 4; // uzrn amount
+  repeated string evidence_ids = 5;
+  string          reason       = 6;
+  string          domain       = 7;
+  string          category     = 8;
+}
+
+message MsgSubmitContradictionResponse {
+  string counter_fact_id = 1;
+}
+
+// ─── Knowledge preservation messages ─────────────────────────────────────────
+
+message MsgPatronizeFact {
+  option (cosmos.msg.v1.signer) = "patron";
+
+  string patron           = 1;
+  string fact_id          = 2;
+  string amount           = 3; // uzrn amount
+  uint64 duration_blocks  = 4;
+}
+
+message MsgPatronizeFactResponse {}
+
+// ─── Domain management messages ──────────────────────────────────────────────
+
+message MsgProposeDomain {
+  option (cosmos.msg.v1.signer) = "proposer";
+
+  string proposer     = 1;
+  string name         = 2;
+  string description  = 3;
+  string stratum      = 4;
+  string stake        = 5; // uzrn amount
+}
+
+message MsgProposeDomainResponse {
+  string proposal_id = 1;
+}
+
+message MsgEndorseDomainProposal {
+  option (cosmos.msg.v1.signer) = "endorser";
+
+  string endorser    = 1;
+  string proposal_id = 2;
+}
+
+message MsgEndorseDomainProposalResponse {}
+
+message MsgChallengeDomainProposal {
+  option (cosmos.msg.v1.signer) = "challenger";
+
+  string challenger  = 1;
+  string proposal_id = 2;
+  string reason      = 3;
+}
+
+message MsgChallengeDomainProposalResponse {}
+
+message MsgRegisterStratum {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string          authority          = 1;
+  string          name               = 2;
+  string          description        = 3;
+  uint64          confidence_ceiling = 4; // 0-1,000,000
+  repeated string parent_strata      = 5;
+}
+
+message MsgRegisterStratumResponse {}
+
+// ─── Adversarial verification messages ───────────────────────────────────────
+
+message MsgChallengeProvisionalFact {
+  option (cosmos.msg.v1.signer) = "challenger";
+
+  string          challenger   = 1;
+  string          claim_id     = 2;
+  string          fact_id      = 3;
+  string          stake        = 4; // uzrn amount
+  string          reason       = 5;
+  repeated string evidence_ids = 6;
+  string          counter_claim = 7;
+}
+
+message MsgChallengeProvisionalFactResponse {
+  string challenge_id = 1;
+}
+
+// ─── Governance messages ──────────────────────────────────────────────────────
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1;
+  Params params    = 2;
+}
+
+message MsgUpdateParamsResponse {}
+
+message MsgUpdateExtendedParams {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority  = 1;
+  string params_json = 2; // JSON-encoded ExtendedParams blob
+}
+
+message MsgUpdateExtendedParamsResponse {}
+
+// ─── Research fund governance messages ───────────────────────────────────────
+
+message MsgProposeResearchFund {
+  option (cosmos.msg.v1.signer) = "proposer";
+
+  string proposer               = 1;
+  string title                  = 2;
+  string description            = 3;
+  string amount                 = 4; // uzrn amount
+  string recipient              = 5;
+  uint64 voting_period_blocks   = 6;
+}
+
+message MsgProposeResearchFundResponse {
+  string proposal_id = 1;
+}
+
+message MsgVoteResearchProposal {
+  option (cosmos.msg.v1.signer) = "voter";
+
+  string voter       = 1;
+  string proposal_id = 2;
+  bool   vote        = 3; // true = yes, false = no
+}
+
+message MsgVoteResearchProposalResponse {}
+
+message MsgExecuteResearchProposal {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority   = 1;
+  string proposal_id = 2;
+}
+
+message MsgExecuteResearchProposalResponse {}
