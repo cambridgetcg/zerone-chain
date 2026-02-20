@@ -1,0 +1,27 @@
+package types
+
+import "cosmossdk.io/errors"
+
+var (
+	ErrValidatorNotFound        = errors.Register(ModuleName, 2, "validator not found")
+	ErrValidatorAlreadyExists   = errors.Register(ModuleName, 3, "validator already registered")
+	ErrDIDAlreadyRegistered     = errors.Register(ModuleName, 4, "DID already registered to another validator")
+	ErrInsufficientSelfDelegation = errors.Register(ModuleName, 5, "insufficient self-delegation")
+	ErrValidatorInactive        = errors.Register(ModuleName, 6, "validator is not active")
+	ErrDelegationNotFound       = errors.Register(ModuleName, 7, "delegation not found")
+	ErrInsufficientDelegation   = errors.Register(ModuleName, 8, "insufficient delegation amount")
+	ErrMaxValidatorsReached     = errors.Register(ModuleName, 9, "maximum block-producing validators reached")
+	ErrInvalidAmount            = errors.Register(ModuleName, 10, "invalid amount")
+	ErrUnauthorized             = errors.Register(ModuleName, 11, "unauthorized")
+	ErrInvalidParams            = errors.Register(ModuleName, 12, "invalid params")
+	ErrRedelegationCooldown     = errors.Register(ModuleName, 13, "redelegation cooldown active")
+	ErrSameValidator            = errors.Register(ModuleName, 14, "source and destination validator must differ")
+	ErrInvalidAddress           = errors.Register(ModuleName, 15, "invalid address")
+	ErrInvalidPubkey            = errors.Register(ModuleName, 16, "invalid consensus pubkey")
+	ErrInvalidDID               = errors.Register(ModuleName, 17, "invalid DID")
+	ErrInvalidCommission        = errors.Register(ModuleName, 18, "invalid commission (max 10,000 bps)")
+	ErrInvalidDescription       = errors.Register(ModuleName, 19, "invalid validator description")
+	ErrValidatorJailed          = errors.Register(ModuleName, 20, "validator is jailed")
+	ErrSlashRateLimited         = errors.Register(ModuleName, 21, "slash rate limited for this epoch")
+	ErrDisbursementQuorum       = errors.Register(ModuleName, 22, "invalid disbursement quorum bps")
+)

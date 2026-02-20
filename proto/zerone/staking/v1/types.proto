@@ -1,0 +1,78 @@
+syntax = "proto3";
+package zerone.staking.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/staking/types";
+
+// ValidatorTier enumerates the 4-tier graduated validator system.
+enum ValidatorTier {
+  VALIDATOR_TIER_UNSPECIFIED = 0;
+  VALIDATOR_TIER_APPRENTICE = 1;
+  VALIDATOR_TIER_VERIFIED   = 2;
+  VALIDATOR_TIER_SCHOLAR    = 3;
+  VALIDATOR_TIER_GUARDIAN   = 4;
+}
+
+// Validator represents a Zerone validator with tier and reputation.
+message Validator {
+  string        operator_address               = 1;
+  string        consensus_pubkey               = 2;
+  string        did                            = 3;
+  string        moniker                        = 4;
+  ValidatorTier tier                           = 5;
+  string        self_delegation                = 6;  // uzrn amount (string for big int)
+  string        delegated_stake                = 7;  // uzrn delegated by others
+  string        total_stake                    = 8;  // self_delegation + delegated_stake
+  uint64        reputation_score               = 9;  // 0–1,000,000 BPS
+  uint64        correct_verifications          = 10;
+  uint64        total_verifications            = 11;
+  uint64        contested_count                = 12; // must increment! (Guardian fix)
+  uint64        contested_verifications_correct = 13;
+  uint64        joined_at_block                = 14;
+  bool          is_active                      = 15;
+  bool          jailed                         = 16;
+  string        jail_reason                    = 17;
+  uint64        unjail_after_block             = 18;
+  uint64        slash_count                    = 19;
+  uint64        slashes_this_epoch             = 20;
+  uint64        last_slash_height              = 21;
+  string        website                        = 22;
+  string        details                        = 23;
+  uint64        commission_bps                 = 24; // up to 10,000 (100%)
+}
+
+// Delegation records a delegation from delegator to validator.
+message Delegation {
+  string delegator_address = 1;
+  string validator_address = 2;
+  string amount            = 3; // uzrn
+  uint64 created_at_block  = 4;
+}
+
+// UnbondingEntry records a pending unbonding.
+message UnbondingEntry {
+  string id                  = 1;
+  string delegator_address   = 2;
+  string validator_address   = 3;
+  string amount              = 4; // uzrn
+  uint64 created_at_height   = 5;
+  uint64 completes_at_height = 6;
+  string status              = 7; // "pending" or "completed"
+}
+
+// TierConfig defines requirements and rewards for each validator tier.
+message TierConfig {
+  ValidatorTier tier                             = 1;
+  string        name                             = 2;  // "Apprentice", "Verified", "Scholar", "Guardian"
+  string        min_stake                        = 3;  // uzrn (MUST be enforced — audit fix)
+  uint64        min_reputation                   = 4;  // BPS
+  uint64        min_verifications                = 5;
+  uint64        min_accuracy                     = 6;  // BPS (1,000,000 = 100%)
+  int64         max_slash_count                  = 7;  // -1 = unlimited
+  repeated string allowed_categories             = 8;
+  uint64        reward_multiplier_bps            = 9;  // 1,000 = 1.0x
+  uint64        selection_weight_bps             = 10; // VRF selection weight
+  uint64        slash_window_epochs              = 11;
+  uint64        min_contested_verifications      = 12;
+  uint64        contested_verification_multiplier = 13;
+  uint64        slash_multiplier_bps             = 14; // 1,000 = 1.0x
+}

@@ -1,0 +1,98 @@
+syntax = "proto3";
+package zerone.staking.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/staking/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/staking/v1/types.proto";
+import "zerone/staking/v1/genesis.proto";
+
+// Msg defines the staking module Msg service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  rpc RegisterValidator(MsgRegisterValidator) returns (MsgRegisterValidatorResponse);
+  rpc Delegate(MsgDelegate)                   returns (MsgDelegateResponse);
+  rpc Undelegate(MsgUndelegate)               returns (MsgUndelegateResponse);
+  rpc Redelegate(MsgRedelegate)               returns (MsgRedelegateResponse);
+  rpc UpdateValidatorStake(MsgUpdateValidatorStake) returns (MsgUpdateValidatorStakeResponse);
+  rpc UpdateParams(MsgUpdateParams)           returns (MsgUpdateParamsResponse);
+}
+
+// MsgRegisterValidator registers a new validator.
+message MsgRegisterValidator {
+  option (cosmos.msg.v1.signer) = "operator";
+
+  string operator         = 1;
+  string consensus_pubkey = 2;
+  string did              = 3;
+  string moniker          = 4;
+  string self_delegation  = 5; // uzrn
+  uint64 commission_bps   = 6;
+  string website          = 7;
+  string details          = 8;
+}
+
+message MsgRegisterValidatorResponse {
+  uint32 initial_tier = 1;
+}
+
+// MsgDelegate delegates tokens to a validator.
+message MsgDelegate {
+  option (cosmos.msg.v1.signer) = "delegator";
+
+  string delegator = 1;
+  string validator = 2;
+  string amount    = 3; // uzrn
+}
+
+message MsgDelegateResponse {
+  string new_delegation = 1; // total delegation after operation
+}
+
+// MsgUndelegate initiates unbonding from a validator.
+message MsgUndelegate {
+  option (cosmos.msg.v1.signer) = "delegator";
+
+  string delegator = 1;
+  string validator = 2;
+  string amount    = 3; // uzrn
+}
+
+message MsgUndelegateResponse {
+  string unbonding_id         = 1;
+  uint64 completes_at_height  = 2;
+}
+
+// MsgRedelegate moves delegation between validators.
+message MsgRedelegate {
+  option (cosmos.msg.v1.signer) = "delegator";
+
+  string delegator     = 1;
+  string src_validator = 2;
+  string dst_validator = 3;
+  string amount        = 4; // uzrn
+}
+
+message MsgRedelegateResponse {}
+
+// MsgUpdateValidatorStake increases or decreases self-delegation.
+message MsgUpdateValidatorStake {
+  option (cosmos.msg.v1.signer) = "operator";
+
+  string operator = 1;
+  string amount   = 2; // uzrn
+  bool   increase = 3;
+}
+
+message MsgUpdateValidatorStakeResponse {}
+
+// MsgUpdateParams updates module parameters (governance-gated).
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1;
+  Params params    = 2;
+}
+
+message MsgUpdateParamsResponse {}

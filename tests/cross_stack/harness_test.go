@@ -1,0 +1,289 @@
+package cross_stack_test
+
+import (
+	"encoding/json"
+	"testing"
+
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/stretchr/testify/require"
+
+	sdkmath "cosmossdk.io/math"
+	"cosmossdk.io/log"
+
+	abci "github.com/cometbft/cometbft/abci/types"
+	cmted25519 "github.com/cometbft/cometbft/crypto/ed25519"
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	cmttypes "github.com/cometbft/cometbft/types"
+
+	"github.com/cosmos/cosmos-sdk/baseapp"
+	cryptocodec "github.com/cosmos/cosmos-sdk/crypto/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	simtestutil "github.com/cosmos/cosmos-sdk/testutil/sims"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authkeeper "github.com/cosmos/cosmos-sdk/x/auth/keeper"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
+	bankkeeper "github.com/cosmos/cosmos-sdk/x/bank/keeper"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	sdkstakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	zeroneapp "github.com/zerone-chain/zerone/app"
+	zeroneauthkeeper "github.com/zerone-chain/zerone/x/auth/keeper"
+	zeroneauthtypes "github.com/zerone-chain/zerone/x/auth/types"
+	zeronestakingkeeper "github.com/zerone-chain/zerone/x/staking/keeper"
+)
+
+const testChainID = "zerone-test-1"
+
+// Note: bech32 prefix is set and sealed by the app package init().
+
+// TestHarness provides a full app context for cross-module integration tests.
+// All keepers are real (not mocked) and share state through the same app instance.
+type TestHarness struct {
+	T   *testing.T
+	App *zeroneapp.ZeroneApp
+	Ctx sdk.Context
+
+	// Zerone custom module keepers
+	AuthKeeper    zeroneauthkeeper.Keeper
+	StakingKeeper zeronestakingkeeper.Keeper
+
+	// Standard Cosmos SDK keepers
+	BankKeeper    bankkeeper.Keeper
+	AccountKeeper authkeeper.AccountKeeper
+
+	currentHeight int64
+}
+
+// genesisStateWithValSet injects a CometBFT validator into the default genesis
+// so that InitChain succeeds (Cosmos SDK requires at least one bonded validator).
+func genesisStateWithValSet(
+	t *testing.T,
+	app *zeroneapp.ZeroneApp,
+	genState zeroneapp.GenesisState,
+) zeroneapp.GenesisState {
+	t.Helper()
+
+	privVal := cmted25519.GenPrivKey()
+	pubKey := privVal.PubKey()
+	validator := cmttypes.NewValidator(pubKey, 1)
+	valSet := cmttypes.NewValidatorSet([]*cmttypes.Validator{validator})
+
+	// Create genesis account for the validator.
+	senderPrivKey := cmted25519.GenPrivKey()
+	acc := authtypes.NewBaseAccount(senderPrivKey.PubKey().Address().Bytes(), nil, 0, 0)
+	balance := banktypes.Balance{
+		Address: acc.GetAddress().String(),
+		Coins:   sdk.NewCoins(sdk.NewCoin(sdk.DefaultBondDenom, sdkmath.NewInt(100_000_000_000))),
+	}
+
+	var err error
+	genState, err = genesisStateWithValSetHelper(
+		app, genState, valSet, []authtypes.GenesisAccount{acc}, balance,
+	)
+	require.NoError(t, err)
+	return genState
+}
+
+// genesisStateWithValSetHelper patches the genesis state to include
+// the given validator set, accounts, and balances.
+func genesisStateWithValSetHelper(
+	app *zeroneapp.ZeroneApp,
+	genesisState map[string]json.RawMessage,
+	valSet *cmttypes.ValidatorSet,
+	genAccs []authtypes.GenesisAccount,
+	balances ...banktypes.Balance,
+) (map[string]json.RawMessage, error) {
+	codec := app.AppCodec()
+
+	// set genesis accounts
+	authGenesis := authtypes.NewGenesisState(authtypes.DefaultParams(), genAccs)
+	genesisState[authtypes.ModuleName] = codec.MustMarshalJSON(authGenesis)
+
+	validators := make([]sdkstakingtypes.Validator, 0, len(valSet.Validators))
+	delegations := make([]sdkstakingtypes.Delegation, 0, len(valSet.Validators))
+
+	bondAmt := sdk.DefaultPowerReduction
+
+	for _, val := range valSet.Validators {
+		pk, err := cryptocodec.FromCmtPubKeyInterface(val.PubKey)
+		if err != nil {
+			return nil, err
+		}
+		pkAny, err := codectypes.NewAnyWithValue(pk)
+		if err != nil {
+			return nil, err
+		}
+		validator := sdkstakingtypes.Validator{
+			OperatorAddress:   sdk.ValAddress(val.Address).String(),
+			ConsensusPubkey:   pkAny,
+			Jailed:            false,
+			Status:            sdkstakingtypes.Bonded,
+			Tokens:            bondAmt,
+			DelegatorShares:   sdkmath.LegacyOneDec(),
+			Description:       sdkstakingtypes.Description{},
+			UnbondingHeight:   0,
+			Commission:        sdkstakingtypes.NewCommission(sdkmath.LegacyZeroDec(), sdkmath.LegacyZeroDec(), sdkmath.LegacyZeroDec()),
+			MinSelfDelegation: sdkmath.ZeroInt(),
+		}
+		validators = append(validators, validator)
+		delegations = append(delegations, sdkstakingtypes.NewDelegation(
+			genAccs[0].GetAddress().String(),
+			sdk.ValAddress(val.Address).String(),
+			sdkmath.LegacyOneDec(),
+		))
+	}
+
+	// set validators and delegations in the SDK staking genesis
+	stakingGenesis := sdkstakingtypes.NewGenesisState(sdkstakingtypes.DefaultParams(), validators, delegations)
+	genesisState[sdkstakingtypes.ModuleName] = codec.MustMarshalJSON(stakingGenesis)
+
+	totalSupply := sdk.NewCoins()
+	for _, b := range balances {
+		totalSupply = totalSupply.Add(b.Coins...)
+	}
+	for range delegations {
+		totalSupply = totalSupply.Add(sdk.NewCoin(sdk.DefaultBondDenom, bondAmt))
+	}
+
+	// add bonded amount to bonded pool module account
+	balances = append(balances, banktypes.Balance{
+		Address: authtypes.NewModuleAddress(sdkstakingtypes.BondedPoolName).String(),
+		Coins:   sdk.Coins{sdk.NewCoin(sdk.DefaultBondDenom, bondAmt)},
+	})
+
+	bankGenesis := banktypes.NewGenesisState(
+		banktypes.DefaultGenesisState().Params,
+		balances,
+		totalSupply,
+		[]banktypes.Metadata{},
+		[]banktypes.SendEnabled{},
+	)
+	genesisState[banktypes.ModuleName] = codec.MustMarshalJSON(bankGenesis)
+
+	return genesisState, nil
+}
+
+// NewTestHarness creates a fully initialized Zerone app with default genesis
+// and a single bonded validator. Uses an in-memory database so each test gets
+// a clean, isolated state.
+func NewTestHarness(t *testing.T) *TestHarness {
+	t.Helper()
+
+	db := dbm.NewMemDB()
+	app := zeroneapp.NewZeroneApp(
+		log.NewNopLogger(),
+		db,
+		nil,  // traceStore
+		true, // loadLatest
+		simtestutil.NewAppOptionsWithFlagHome(t.TempDir()),
+		baseapp.SetChainID(testChainID),
+	)
+
+	genState := app.DefaultGenesis()
+	genState = genesisStateWithValSet(t, app, genState)
+	stateBytes, err := json.Marshal(genState)
+	require.NoError(t, err)
+
+	_, err = app.InitChain(&abci.RequestInitChain{
+		ChainId:         testChainID,
+		AppStateBytes:   stateBytes,
+		ConsensusParams: simtestutil.DefaultConsensusParams,
+	})
+	require.NoError(t, err)
+
+	_, err = app.Commit()
+	require.NoError(t, err)
+
+	h := &TestHarness{
+		T:             t,
+		App:           app,
+		AuthKeeper:    app.ZeroneAuthKeeper,
+		StakingKeeper: app.ZeroneStakingKeeper,
+		BankKeeper:    app.BankKeeper,
+		AccountKeeper: app.AccountKeeper,
+		currentHeight: 1,
+	}
+
+	h.Ctx = app.NewContext(true).
+		WithBlockHeight(h.currentHeight).
+		WithChainID(testChainID).
+		WithBlockHeader(cmtproto.Header{
+			Height:  h.currentHeight,
+			ChainID: testChainID,
+		})
+
+	return h
+}
+
+// newTestApp creates a ZeroneApp with SetChainID but does NOT call InitChain.
+// Used by genesis tests that need to control InitChain themselves.
+func newTestApp(t *testing.T, chainID string) *zeroneapp.ZeroneApp {
+	t.Helper()
+	db := dbm.NewMemDB()
+	return zeroneapp.NewZeroneApp(
+		log.NewNopLogger(),
+		db,
+		nil,
+		true,
+		simtestutil.NewAppOptionsWithFlagHome(t.TempDir()),
+		baseapp.SetChainID(chainID),
+	)
+}
+
+// initChainWithValSet is a convenience for genesis tests: patches the genesis
+// state with a validator set and calls InitChain + Commit.
+func initChainWithValSet(t *testing.T, app *zeroneapp.ZeroneApp, chainID string) {
+	t.Helper()
+	genState := app.DefaultGenesis()
+	genState = genesisStateWithValSet(t, app, genState)
+	stateBytes, err := json.Marshal(genState)
+	require.NoError(t, err)
+
+	_, err = app.InitChain(&abci.RequestInitChain{
+		ChainId:         chainID,
+		AppStateBytes:   stateBytes,
+		ConsensusParams: simtestutil.DefaultConsensusParams,
+	})
+	require.NoError(t, err)
+	_, err = app.Commit()
+	require.NoError(t, err)
+}
+
+// FundAccount mints coins and sends them to the given address.
+// Uses the zerone_auth module account which has Minter permission.
+func (h *TestHarness) FundAccount(addr sdk.AccAddress, amount sdk.Coins) error {
+	moduleName := zeroneauthtypes.ModuleName // has Minter permission
+	if err := h.App.BankKeeper.MintCoins(h.Ctx, moduleName, amount); err != nil {
+		return err
+	}
+	return h.App.BankKeeper.SendCoinsFromModuleToAccount(h.Ctx, moduleName, addr, amount)
+}
+
+// AdvanceBlocks simulates advancing the chain by n blocks.
+// Runs module-level BeginBlocker and EndBlocker at each block height.
+func (h *TestHarness) AdvanceBlocks(n int) {
+	for i := 0; i < n; i++ {
+		h.currentHeight++
+		h.Ctx = h.App.NewContext(true).
+			WithBlockHeight(h.currentHeight).
+			WithChainID(testChainID).
+			WithBlockHeader(cmtproto.Header{
+				Height:  h.currentHeight,
+				ChainID: testChainID,
+			})
+
+		h.App.BeginBlocker(h.Ctx)
+		h.App.EndBlocker(h.Ctx)
+	}
+}
+
+// GetBalance returns the balance of a specific denom for an address.
+func (h *TestHarness) GetBalance(addr sdk.AccAddress, denom string) sdk.Coin {
+	return h.App.BankKeeper.GetBalance(h.Ctx, addr, denom)
+}
+
+// Height returns the current block height.
+func (h *TestHarness) Height() int64 {
+	return h.currentHeight
+}
+

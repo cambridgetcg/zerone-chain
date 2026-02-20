@@ -1,0 +1,27 @@
+syntax = "proto3";
+package zerone.common.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/common/types";
+
+// BasisPoints represents a value on a 1,000,000 scale (100% = 1,000,000).
+// ALL Zerone modules use this scale. No exceptions.
+message BasisPoints {
+  uint64 value = 1;
+}
+
+// RevenueSplit defines how protocol revenue is allocated — governance-adjustable.
+message RevenueSplit {
+  uint64 contributor_bps = 1; // default 550,000 (55%)
+  uint64 protocol_bps    = 2; // default 220,000 (22%)
+  uint64 research_bps    = 3; // default 130,000 (13%)
+  uint64 burn_bps        = 4; // default 100,000 (10%)
+  // Must sum to 1,000,000
+}
+
+// ProtocolSubSplit defines how the protocol share is divided.
+message ProtocolSubSplit {
+  uint64 citation_bps     = 1; // default 500,000 (50% of protocol)
+  uint64 verification_bps = 2; // default 300,000 (30% of protocol)
+  uint64 treasury_bps     = 3; // default 200,000 (20% of protocol)
+  // Must sum to 1,000,000
+}

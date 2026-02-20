@@ -1,0 +1,37 @@
+syntax = "proto3";
+package zerone.auth.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/auth/types";
+
+import "zerone/auth/v1/types.proto";
+
+// GenesisState defines the auth module's genesis state.
+message GenesisState {
+  Params params = 1;
+  repeated Account accounts = 2;
+  repeated DIDMapping did_mappings = 3;
+  repeated SessionKey session_keys = 4;
+  repeated RecoveryConfig recovery_configs = 5;
+}
+
+// Params defines the auth module parameters.
+message Params {
+  uint32 max_session_keys = 1;
+  uint64 max_session_duration = 2;
+  uint64 key_rotation_cooldown = 3;
+  uint64 recovery_delay_blocks = 4;
+  uint64 challenge_period_blocks = 5;
+  // Bootstrap fund settings for new account registration
+  bool bootstrap_enabled = 6;
+  string bootstrap_amount = 7; // uzrn amount as string (bigint)
+  // Max metadata length in bytes (default 1024)
+  uint32 max_metadata_length = 8;
+  // Whether DID is required for registration
+  bool require_did = 9;
+  // Max recovery shards per account
+  uint32 max_recovery_shards = 10;
+  // Recovery challenge period in blocks
+  uint64 recovery_challenge_period_blocks = 11;
+  // Recovery execution delay in blocks
+  uint64 recovery_execution_delay_blocks = 12;
+}

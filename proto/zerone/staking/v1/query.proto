@@ -1,0 +1,86 @@
+syntax = "proto3";
+package zerone.staking.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/staking/types";
+
+import "google/api/annotations.proto";
+import "zerone/staking/v1/types.proto";
+import "zerone/staking/v1/genesis.proto";
+
+// Query defines the staking module Query service.
+service Query {
+  rpc Validator(QueryValidatorRequest) returns (QueryValidatorResponse) {
+    option (google.api.http).get = "/zerone/staking/v1/validator/{address}";
+  }
+  rpc Validators(QueryValidatorsRequest) returns (QueryValidatorsResponse) {
+    option (google.api.http).get = "/zerone/staking/v1/validators";
+  }
+  rpc Delegation(QueryDelegationRequest) returns (QueryDelegationResponse) {
+    option (google.api.http).get = "/zerone/staking/v1/delegation/{delegator}/{validator}";
+  }
+  rpc DelegatorDelegations(QueryDelegatorDelegationsRequest) returns (QueryDelegatorDelegationsResponse) {
+    option (google.api.http).get = "/zerone/staking/v1/delegator/{delegator}/delegations";
+  }
+  rpc ValidatorDelegations(QueryValidatorDelegationsRequest) returns (QueryValidatorDelegationsResponse) {
+    option (google.api.http).get = "/zerone/staking/v1/validator/{validator}/delegations";
+  }
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/staking/v1/params";
+  }
+  rpc TierConfig(QueryTierConfigRequest) returns (QueryTierConfigResponse) {
+    option (google.api.http).get = "/zerone/staking/v1/tier/{tier}";
+  }
+}
+
+message QueryValidatorRequest {
+  string address = 1;
+}
+message QueryValidatorResponse {
+  Validator validator = 1;
+}
+
+message QueryValidatorsRequest {
+  bool   active_only = 1;
+  int32  tier        = 2; // -1 = all tiers
+  uint64 limit       = 3;
+  uint64 offset      = 4;
+}
+message QueryValidatorsResponse {
+  repeated Validator validators = 1;
+  uint64             total      = 2;
+}
+
+message QueryDelegationRequest {
+  string delegator = 1;
+  string validator = 2;
+}
+message QueryDelegationResponse {
+  Delegation delegation = 1;
+}
+
+message QueryDelegatorDelegationsRequest {
+  string delegator = 1;
+}
+message QueryDelegatorDelegationsResponse {
+  repeated Delegation delegations = 1;
+}
+
+message QueryValidatorDelegationsRequest {
+  string validator = 1;
+}
+message QueryValidatorDelegationsResponse {
+  repeated Delegation delegations = 1;
+}
+
+message QueryParamsRequest {}
+message QueryParamsResponse {
+  Params              params       = 1;
+  repeated TierConfig tier_configs = 2;
+}
+
+message QueryTierConfigRequest {
+  uint32 tier = 1;
+}
+message QueryTierConfigResponse {
+  TierConfig tier_config = 1;
+}

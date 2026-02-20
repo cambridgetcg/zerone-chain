@@ -1,0 +1,72 @@
+syntax = "proto3";
+package zerone.auth.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/auth/types";
+
+import "google/api/annotations.proto";
+import "zerone/auth/v1/types.proto";
+import "zerone/auth/v1/genesis.proto";
+
+// Query defines the gRPC query service for the auth module.
+service Query {
+  // Account returns a Zerone account by bech32 address.
+  rpc Account(QueryAccountRequest) returns (QueryAccountResponse) {
+    option (google.api.http).get = "/zerone/auth/v1/account/{address}";
+  }
+
+  // AccountByDID returns a Zerone account by DID.
+  rpc AccountByDID(QueryAccountByDIDRequest) returns (QueryAccountByDIDResponse) {
+    option (google.api.http).get = "/zerone/auth/v1/account_by_did/{did}";
+  }
+
+  // SessionKeys returns all session keys for an owner.
+  rpc SessionKeys(QuerySessionKeysRequest) returns (QuerySessionKeysResponse) {
+    option (google.api.http).get = "/zerone/auth/v1/session_keys/{owner}";
+  }
+
+  // Params returns the module parameters.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/auth/v1/params";
+  }
+
+  // FrozenAccounts returns all frozen accounts.
+  rpc FrozenAccounts(QueryFrozenAccountsRequest) returns (QueryFrozenAccountsResponse) {
+    option (google.api.http).get = "/zerone/auth/v1/frozen_accounts";
+  }
+}
+
+message QueryAccountRequest {
+  string address = 1;
+}
+
+message QueryAccountResponse {
+  Account account = 1;
+}
+
+message QueryAccountByDIDRequest {
+  string did = 1;
+}
+
+message QueryAccountByDIDResponse {
+  Account account = 1;
+}
+
+message QuerySessionKeysRequest {
+  string owner = 1;
+}
+
+message QuerySessionKeysResponse {
+  repeated SessionKey session_keys = 1;
+}
+
+message QueryParamsRequest {}
+
+message QueryParamsResponse {
+  Params params = 1;
+}
+
+message QueryFrozenAccountsRequest {}
+
+message QueryFrozenAccountsResponse {
+  repeated Account accounts = 1;
+}

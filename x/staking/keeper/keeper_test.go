@@ -1,0 +1,1896 @@
+package keeper_test
+
+import (
+	"context"
+	"fmt"
+	"math/big"
+	"testing"
+
+	"cosmossdk.io/log"
+	"cosmossdk.io/store"
+	storemetrics "cosmossdk.io/store/metrics"
+	storetypes "cosmossdk.io/store/types"
+
+	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	dbm "github.com/cosmos/cosmos-db"
+	"github.com/cosmos/cosmos-sdk/codec"
+	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/zerone-chain/zerone/x/staking/keeper"
+	"github.com/zerone-chain/zerone/x/staking/types"
+)
+
+// ============================================================
+// Test infrastructure
+// ============================================================
+
+func init() {
+	cfg := sdk.GetConfig()
+	cfg.SetBech32PrefixForAccount("zrn", "zrnpub")
+	cfg.SetBech32PrefixForValidator("zrnvaloper", "zrnvaloperpub")
+	cfg.SetBech32PrefixForConsensusNode("zrnvalcons", "zrnvalconspub")
+}
+
+// ---------- Mock BankKeeper ----------
+
+type mockBankKeeper struct {
+	balances map[string]sdk.Coins
+	burned   sdk.Coins
+}
+
+func newMockBankKeeper() *mockBankKeeper {
+	return &mockBankKeeper{
+		balances: make(map[string]sdk.Coins),
+	}
+}
+
+func (m *mockBankKeeper) SendCoins(_ context.Context, _, _ sdk.AccAddress, _ sdk.Coins) error {
+	return nil
+}
+
+func (m *mockBankKeeper) SendCoinsFromAccountToModule(_ context.Context, _ sdk.AccAddress, _ string, _ sdk.Coins) error {
+	return nil
+}
+
+func (m *mockBankKeeper) SendCoinsFromModuleToAccount(_ context.Context, _ string, _ sdk.AccAddress, _ sdk.Coins) error {
+	return nil
+}
+
+func (m *mockBankKeeper) GetBalance(_ context.Context, _ sdk.AccAddress, _ string) sdk.Coin {
+	return sdk.NewInt64Coin("uzrn", 0)
+}
+
+func (m *mockBankKeeper) GetAllBalances(_ context.Context, _ sdk.AccAddress) sdk.Coins {
+	return nil
+}
+
+func (m *mockBankKeeper) SpendableCoins(_ context.Context, _ sdk.AccAddress) sdk.Coins {
+	return nil
+}
+
+func (m *mockBankKeeper) MintCoins(_ context.Context, _ string, _ sdk.Coins) error {
+	return nil
+}
+
+func (m *mockBankKeeper) BurnCoins(_ context.Context, _ string, amt sdk.Coins) error {
+	m.burned = m.burned.Add(amt...)
+	return nil
+}
+
+// ---------- Mock AccountKeeper ----------
+
+type mockAccountKeeper struct{}
+
+func (m *mockAccountKeeper) GetAccount(_ context.Context, _ sdk.AccAddress) sdk.AccountI { return nil }
+func (m *mockAccountKeeper) SetAccount(_ context.Context, _ sdk.AccountI)               {}
+func (m *mockAccountKeeper) NewAccountWithAddress(_ context.Context, _ sdk.AccAddress) sdk.AccountI {
+	return nil
+}
+
+// ---------- Mock AutopoiesisKeeper ----------
+
+type mockAutopoiesisKeeper struct {
+	multipliers map[string]uint64
+}
+
+func newMockAutopoiesisKeeper() *mockAutopoiesisKeeper {
+	return &mockAutopoiesisKeeper{multipliers: make(map[string]uint64)}
+}
+
+func (m *mockAutopoiesisKeeper) GetMultiplier(_ context.Context, path string) uint64 {
+	if v, ok := m.multipliers[path]; ok {
+		return v
+	}
+	return 1_000_000 // default 1.0x
+}
+
+// ---------- Setup ----------
+
+func setupKeeper(t *testing.T) (keeper.Keeper, sdk.Context) {
+	t.Helper()
+
+	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
+	db := dbm.NewMemDB()
+	stateStore := store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
+	stateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, db)
+	if err := stateStore.LoadLatestVersion(); err != nil {
+		t.Fatalf("failed to load latest version: %v", err)
+	}
+
+	registry := codectypes.NewInterfaceRegistry()
+	cdc := codec.NewProtoCodec(registry)
+	bk := newMockBankKeeper()
+	ak := &mockAccountKeeper{}
+
+	k := keeper.NewKeeper(cdc, storeKey, ak, bk, "authority")
+	ctx := sdk.NewContext(stateStore, cmtproto.Header{Height: 100}, false, log.NewNopLogger())
+
+	// Initialize default genesis.
+	k.InitGenesis(ctx, types.DefaultGenesisState())
+
+	return k, ctx
+}
+
+func setupBareKeeper(t *testing.T) (keeper.Keeper, sdk.Context) {
+	t.Helper()
+
+	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
+	db := dbm.NewMemDB()
+	stateStore := store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
+	stateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, db)
+	if err := stateStore.LoadLatestVersion(); err != nil {
+		t.Fatalf("failed to load latest version: %v", err)
+	}
+
+	registry := codectypes.NewInterfaceRegistry()
+	cdc := codec.NewProtoCodec(registry)
+	bk := newMockBankKeeper()
+	ak := &mockAccountKeeper{}
+
+	k := keeper.NewKeeper(cdc, storeKey, ak, bk, "authority")
+	ctx := sdk.NewContext(stateStore, cmtproto.Header{Height: 100}, false, log.NewNopLogger())
+
+	return k, ctx
+}
+
+// testAddr creates a deterministic bech32 address from a seed.
+func testAddr(seed string) string {
+	padded := make([]byte, 20)
+	copy(padded, []byte(seed))
+	return sdk.AccAddress(padded).String()
+}
+
+// registerTestValidator registers a validator via SetValidator directly.
+func registerTestValidator(t *testing.T, k keeper.Keeper, ctx sdk.Context, addr, did, selfDel string) {
+	t.Helper()
+	val := &types.Validator{
+		OperatorAddress: addr,
+		ConsensusPubkey: fmt.Sprintf("pk_%s", addr[:8]),
+		Did:             did,
+		Moniker:         fmt.Sprintf("val_%s", addr[:8]),
+		Tier:            types.TierApprentice,
+		SelfDelegation:  selfDel,
+		DelegatedStake:  "0",
+		TotalStake:      selfDel,
+		ReputationScore: 500_000,
+		IsActive:        true,
+	}
+	k.SetValidator(ctx, val)
+}
+
+// promoteToScholar sets a validator to Scholar tier with sufficient stats.
+func promoteToScholar(t *testing.T, k keeper.Keeper, ctx sdk.Context, addr string) {
+	t.Helper()
+	val, found := k.GetValidator(ctx, addr)
+	if !found {
+		t.Fatalf("validator %s not found for promotion", addr)
+	}
+	val.SelfDelegation = "1111000000"
+	val.TotalStake = "1111000000"
+	val.TotalVerifications = 22
+	val.CorrectVerifications = 18
+	val.ReputationScore = 600_000
+	val.Tier = types.TierScholar
+	k.SetValidator(ctx, val)
+}
+
+// promoteToGuardian sets a validator to Guardian tier with sufficient stats.
+func promoteToGuardian(t *testing.T, k keeper.Keeper, ctx sdk.Context, addr string) {
+	t.Helper()
+	val, found := k.GetValidator(ctx, addr)
+	if !found {
+		t.Fatalf("validator %s not found for promotion", addr)
+	}
+	val.SelfDelegation = "11111000000"
+	val.TotalStake = "11111000000"
+	val.TotalVerifications = 500
+	val.CorrectVerifications = 450
+	val.ContestedVerificationsCorrect = 50
+	val.ContestedCount = 50
+	val.ReputationScore = 800_000
+	val.SlashCount = 0
+	val.Tier = types.TierGuardian
+	k.SetValidator(ctx, val)
+}
+
+// ============================================================
+// 1. Core CRUD Tests
+// ============================================================
+
+func TestValidatorCRUD(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("val_crud")
+
+	// Create
+	val := &types.Validator{
+		OperatorAddress: addr,
+		ConsensusPubkey: "pk_crud",
+		Did:             "did:zrn:crud",
+		Moniker:         "TestVal",
+		Tier:            types.TierApprentice,
+		SelfDelegation:  "111000",
+		DelegatedStake:  "0",
+		TotalStake:      "111000",
+		ReputationScore: 500_000,
+		IsActive:        true,
+	}
+	k.SetValidator(ctx, val)
+
+	// Read
+	got, found := k.GetValidator(ctx, addr)
+	if !found {
+		t.Fatal("validator not found after SetValidator")
+	}
+	if got.OperatorAddress != addr {
+		t.Errorf("expected address %s, got %s", addr, got.OperatorAddress)
+	}
+	if got.Did != "did:zrn:crud" {
+		t.Errorf("expected DID did:zrn:crud, got %s", got.Did)
+	}
+
+	// Read by DID
+	gotByDID, found := k.GetValidatorByDID(ctx, "did:zrn:crud")
+	if !found {
+		t.Fatal("validator not found by DID")
+	}
+	if gotByDID.OperatorAddress != addr {
+		t.Errorf("DID lookup returned wrong address: %s", gotByDID.OperatorAddress)
+	}
+
+	// Delete
+	k.DeleteValidator(ctx, addr)
+	_, found = k.GetValidator(ctx, addr)
+	if found {
+		t.Error("validator should not exist after delete")
+	}
+}
+
+func TestDelegationCRUD(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	delAddr := testAddr("delegator")
+	valAddr := testAddr("validator")
+
+	del := &types.Delegation{
+		DelegatorAddress: delAddr,
+		ValidatorAddress: valAddr,
+		Amount:           "500000",
+		CreatedAtBlock:   100,
+	}
+	k.SetDelegation(ctx, del)
+
+	got, found := k.GetDelegation(ctx, delAddr, valAddr)
+	if !found {
+		t.Fatal("delegation not found")
+	}
+	if got.Amount != "500000" {
+		t.Errorf("expected amount 500000, got %s", got.Amount)
+	}
+
+	// Reverse index
+	dels := k.GetDelegationsForValidator(ctx, valAddr)
+	if len(dels) != 1 {
+		t.Fatalf("expected 1 delegation via reverse index, got %d", len(dels))
+	}
+	if dels[0].DelegatorAddress != delAddr {
+		t.Errorf("reverse index returned wrong delegator")
+	}
+
+	k.DeleteDelegation(ctx, delAddr, valAddr)
+	_, found = k.GetDelegation(ctx, delAddr, valAddr)
+	if found {
+		t.Error("delegation should not exist after delete")
+	}
+}
+
+func TestUnbondingCRUD(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	entry := &types.UnbondingEntry{
+		Id:                "unbond_1",
+		DelegatorAddress:  testAddr("delegator"),
+		ValidatorAddress:  testAddr("validator"),
+		Amount:            "100000",
+		CreatedAtHeight:   100,
+		CompletesAtHeight: 100 + 268_560,
+		Status:            "pending",
+	}
+	k.SetUnbonding(ctx, entry)
+
+	got, found := k.GetUnbonding(ctx, "unbond_1")
+	if !found {
+		t.Fatal("unbonding not found")
+	}
+	if got.Amount != "100000" {
+		t.Errorf("expected amount 100000, got %s", got.Amount)
+	}
+
+	k.DeleteUnbonding(ctx, "unbond_1")
+	_, found = k.GetUnbonding(ctx, "unbond_1")
+	if found {
+		t.Error("unbonding should not exist after delete")
+	}
+}
+
+func TestUnbondingSequence(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	seq1 := k.NextUnbondingSeq(ctx)
+	seq2 := k.NextUnbondingSeq(ctx)
+	seq3 := k.NextUnbondingSeq(ctx)
+
+	if seq1 != 1 || seq2 != 2 || seq3 != 3 {
+		t.Errorf("expected sequential IDs 1,2,3 — got %d,%d,%d", seq1, seq2, seq3)
+	}
+}
+
+// ============================================================
+// 2. MsgServer Tests
+// ============================================================
+
+func TestMsgServer_RegisterValidator(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	addr := testAddr("register_val")
+
+	resp, err := ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+		Operator:        addr,
+		ConsensusPubkey: "pk_register",
+		SelfDelegation:  "111000",
+		CommissionBps:   1000,
+		Did:             "did:zrn:register",
+		Moniker:         "TestReg",
+	})
+	if err != nil {
+		t.Fatalf("RegisterValidator failed: %v", err)
+	}
+	if resp.InitialTier != uint32(types.TierApprentice) {
+		t.Errorf("expected initial tier apprentice, got %d", resp.InitialTier)
+	}
+
+	val, found := k.GetValidator(ctx, addr)
+	if !found {
+		t.Fatal("validator not found after registration")
+	}
+	if val.SelfDelegation != "111000" {
+		t.Errorf("expected self delegation 111000, got %s", val.SelfDelegation)
+	}
+	if val.IsActive != true {
+		t.Error("validator should be active")
+	}
+}
+
+func TestMsgServer_RegisterValidator_DuplicateAddr(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	addr := testAddr("dup_addr")
+
+	_, err := ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+		Operator:        addr,
+		ConsensusPubkey: "pk_dup1",
+		SelfDelegation:  "111000",
+	})
+	if err != nil {
+		t.Fatalf("first registration failed: %v", err)
+	}
+
+	_, err = ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+		Operator:        addr,
+		ConsensusPubkey: "pk_dup2",
+		SelfDelegation:  "111000",
+	})
+	if err == nil {
+		t.Error("expected error for duplicate address")
+	}
+}
+
+func TestMsgServer_RegisterValidator_DuplicateDID(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	_, err := ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+		Operator:        testAddr("did_val1"),
+		ConsensusPubkey: "pk_did1",
+		SelfDelegation:  "111000",
+		Did:             "did:zrn:shared",
+	})
+	if err != nil {
+		t.Fatalf("first registration failed: %v", err)
+	}
+
+	_, err = ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+		Operator:        testAddr("did_val2"),
+		ConsensusPubkey: "pk_did2",
+		SelfDelegation:  "111000",
+		Did:             "did:zrn:shared",
+	})
+	if err == nil {
+		t.Error("expected error for duplicate DID")
+	}
+}
+
+func TestMsgServer_RegisterValidator_InsufficientSelfDel(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	_, err := ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+		Operator:        testAddr("low_stake"),
+		ConsensusPubkey: "pk_low",
+		SelfDelegation:  "100", // below min 111000
+	})
+	if err == nil {
+		t.Error("expected error for insufficient self-delegation")
+	}
+}
+
+func TestMsgServer_Delegate(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	valAddr := testAddr("del_val")
+	delAddr := testAddr("delegator1")
+
+	registerTestValidator(t, k, ctx, valAddr, "did:zrn:delval", "111000")
+
+	resp, err := ms.Delegate(ctx, &types.MsgDelegate{
+		Delegator: delAddr,
+		Validator: valAddr,
+		Amount:    "500000",
+	})
+	if err != nil {
+		t.Fatalf("Delegate failed: %v", err)
+	}
+	if resp.NewDelegation != "500000" {
+		t.Errorf("expected new delegation 500000, got %s", resp.NewDelegation)
+	}
+
+	val, _ := k.GetValidator(ctx, valAddr)
+	if val.DelegatedStake != "500000" {
+		t.Errorf("expected delegated stake 500000, got %s", val.DelegatedStake)
+	}
+}
+
+func TestMsgServer_Delegate_InactiveValidator(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	valAddr := testAddr("inactive_val")
+
+	val := &types.Validator{
+		OperatorAddress: valAddr,
+		ConsensusPubkey: "pk_inactive",
+		Tier:            types.TierApprentice,
+		SelfDelegation:  "111000",
+		DelegatedStake:  "0",
+		TotalStake:      "111000",
+		IsActive:        false,
+	}
+	k.SetValidator(ctx, val)
+
+	_, err := ms.Delegate(ctx, &types.MsgDelegate{
+		Delegator: testAddr("del_inactive"),
+		Validator: valAddr,
+		Amount:    "500000",
+	})
+	if err == nil {
+		t.Error("expected error delegating to inactive validator")
+	}
+}
+
+func TestMsgServer_Undelegate(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	valAddr := testAddr("undel_val")
+	delAddr := testAddr("undel_del")
+
+	registerTestValidator(t, k, ctx, valAddr, "did:zrn:undelval", "111000")
+
+	// Create delegation.
+	k.SetDelegation(ctx, &types.Delegation{
+		DelegatorAddress: delAddr,
+		ValidatorAddress: valAddr,
+		Amount:           "1000000",
+		CreatedAtBlock:   100,
+	})
+	val, _ := k.GetValidator(ctx, valAddr)
+	val.DelegatedStake = "1000000"
+	val.TotalStake = "1111000"
+	k.SetValidator(ctx, val)
+
+	resp, err := ms.Undelegate(ctx, &types.MsgUndelegate{
+		Delegator: delAddr,
+		Validator: valAddr,
+		Amount:    "500000",
+	})
+	if err != nil {
+		t.Fatalf("Undelegate failed: %v", err)
+	}
+	if resp.UnbondingId == "" {
+		t.Error("expected non-empty unbonding ID")
+	}
+
+	// Check delegation reduced.
+	del, found := k.GetDelegation(ctx, delAddr, valAddr)
+	if !found {
+		t.Fatal("delegation should still exist with remaining amount")
+	}
+	if del.Amount != "500000" {
+		t.Errorf("expected remaining delegation 500000, got %s", del.Amount)
+	}
+
+	// Check unbonding entry created.
+	entry, found := k.GetUnbonding(ctx, resp.UnbondingId)
+	if !found {
+		t.Fatal("unbonding entry not found")
+	}
+	if entry.Amount != "500000" {
+		t.Errorf("expected unbonding amount 500000, got %s", entry.Amount)
+	}
+	if entry.Status != "pending" {
+		t.Errorf("expected pending status, got %s", entry.Status)
+	}
+}
+
+func TestMsgServer_Undelegate_Full(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	valAddr := testAddr("undfull_val")
+	delAddr := testAddr("undfull_del")
+
+	registerTestValidator(t, k, ctx, valAddr, "", "111000")
+	k.SetDelegation(ctx, &types.Delegation{
+		DelegatorAddress: delAddr,
+		ValidatorAddress: valAddr,
+		Amount:           "500000",
+		CreatedAtBlock:   100,
+	})
+	val, _ := k.GetValidator(ctx, valAddr)
+	val.DelegatedStake = "500000"
+	val.TotalStake = "611000"
+	k.SetValidator(ctx, val)
+
+	_, err := ms.Undelegate(ctx, &types.MsgUndelegate{
+		Delegator: delAddr,
+		Validator: valAddr,
+		Amount:    "500000",
+	})
+	if err != nil {
+		t.Fatalf("Undelegate full failed: %v", err)
+	}
+
+	_, found := k.GetDelegation(ctx, delAddr, valAddr)
+	if found {
+		t.Error("delegation should be fully removed after full undelegation")
+	}
+}
+
+func TestMsgServer_Redelegate(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	val1 := testAddr("redel_src")
+	val2 := testAddr("redel_dst")
+	delAddr := testAddr("redel_del")
+
+	registerTestValidator(t, k, ctx, val1, "", "1111000000")
+	registerTestValidator(t, k, ctx, val2, "", "1111000000")
+
+	k.SetDelegation(ctx, &types.Delegation{
+		DelegatorAddress: delAddr,
+		ValidatorAddress: val1,
+		Amount:           "500000",
+		CreatedAtBlock:   100,
+	})
+	v1, _ := k.GetValidator(ctx, val1)
+	v1.DelegatedStake = "500000"
+	v1.TotalStake = "1111500000"
+	k.SetValidator(ctx, v1)
+
+	_, err := ms.Redelegate(ctx, &types.MsgRedelegate{
+		Delegator:    delAddr,
+		SrcValidator: val1,
+		DstValidator: val2,
+		Amount:       "300000",
+	})
+	if err != nil {
+		t.Fatalf("Redelegate failed: %v", err)
+	}
+
+	// Check source delegation reduced.
+	srcDel, found := k.GetDelegation(ctx, delAddr, val1)
+	if !found {
+		t.Fatal("source delegation should still exist")
+	}
+	if srcDel.Amount != "200000" {
+		t.Errorf("expected remaining source 200000, got %s", srcDel.Amount)
+	}
+
+	// Check destination delegation created.
+	dstDel, found := k.GetDelegation(ctx, delAddr, val2)
+	if !found {
+		t.Fatal("destination delegation should exist")
+	}
+	if dstDel.Amount != "300000" {
+		t.Errorf("expected destination 300000, got %s", dstDel.Amount)
+	}
+}
+
+func TestMsgServer_Redelegate_Cooldown(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	val1 := testAddr("cd_src")
+	val2 := testAddr("cd_dst")
+	val3 := testAddr("cd_dst2")
+	delAddr := testAddr("cd_del")
+
+	registerTestValidator(t, k, ctx, val1, "", "1111000000")
+	registerTestValidator(t, k, ctx, val2, "", "1111000000")
+	registerTestValidator(t, k, ctx, val3, "", "1111000000")
+
+	k.SetDelegation(ctx, &types.Delegation{
+		DelegatorAddress: delAddr,
+		ValidatorAddress: val1,
+		Amount:           "1000000",
+		CreatedAtBlock:   100,
+	})
+	v1, _ := k.GetValidator(ctx, val1)
+	v1.DelegatedStake = "1000000"
+	v1.TotalStake = "1112000000"
+	k.SetValidator(ctx, v1)
+
+	// First redelegate should succeed.
+	_, err := ms.Redelegate(ctx, &types.MsgRedelegate{
+		Delegator:    delAddr,
+		SrcValidator: val1,
+		DstValidator: val2,
+		Amount:       "300000",
+	})
+	if err != nil {
+		t.Fatalf("first redelegate failed: %v", err)
+	}
+
+	// Second redelegate during cooldown should fail.
+	_, err = ms.Redelegate(ctx, &types.MsgRedelegate{
+		Delegator:    delAddr,
+		SrcValidator: val1,
+		DstValidator: val3,
+		Amount:       "100000",
+	})
+	if err == nil {
+		t.Error("expected cooldown error for rapid redelegate")
+	}
+
+	// After cooldown, should succeed.
+	params := k.GetParams(ctx)
+	ctx = ctx.WithBlockHeight(100 + int64(params.RedelegationCooldownBlocks))
+	_, err = ms.Redelegate(ctx, &types.MsgRedelegate{
+		Delegator:    delAddr,
+		SrcValidator: val1,
+		DstValidator: val3,
+		Amount:       "100000",
+	})
+	if err != nil {
+		t.Errorf("redelegate after cooldown should succeed: %v", err)
+	}
+}
+
+func TestMsgServer_UpdateValidatorStake_Increase(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	addr := testAddr("upstake_val")
+
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	_, err := ms.UpdateValidatorStake(ctx, &types.MsgUpdateValidatorStake{
+		Operator: addr,
+		Amount:   "500000",
+		Increase: true,
+	})
+	if err != nil {
+		t.Fatalf("UpdateValidatorStake increase failed: %v", err)
+	}
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.SelfDelegation != "611000" {
+		t.Errorf("expected self delegation 611000, got %s", val.SelfDelegation)
+	}
+}
+
+func TestMsgServer_UpdateValidatorStake_Decrease(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	addr := testAddr("downstake")
+
+	registerTestValidator(t, k, ctx, addr, "", "1000000")
+
+	_, err := ms.UpdateValidatorStake(ctx, &types.MsgUpdateValidatorStake{
+		Operator: addr,
+		Amount:   "500000",
+		Increase: false,
+	})
+	if err != nil {
+		t.Fatalf("UpdateValidatorStake decrease failed: %v", err)
+	}
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.SelfDelegation != "500000" {
+		t.Errorf("expected self delegation 500000, got %s", val.SelfDelegation)
+	}
+}
+
+func TestMsgServer_UpdateParams(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	newParams := types.DefaultParams()
+	newParams.MaxValidators = 50
+
+	_, err := ms.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: "authority",
+		Params:    newParams,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParams failed: %v", err)
+	}
+
+	params := k.GetParams(ctx)
+	if params.MaxValidators != 50 {
+		t.Errorf("expected MaxValidators=50, got %d", params.MaxValidators)
+	}
+}
+
+func TestMsgServer_UpdateParams_Unauthorized(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	_, err := ms.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: testAddr("not_authority"),
+		Params:    types.DefaultParams(),
+	})
+	if err == nil {
+		t.Error("expected unauthorized error")
+	}
+}
+
+// ============================================================
+// 3. Slash Tests
+// ============================================================
+
+func TestSlashValidator_Basic(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_basic")
+	registerTestValidator(t, k, ctx, addr, "", "1000000")
+	promoteToScholar(t, k, ctx, addr)
+
+	k.SlashValidator(ctx, addr, big.NewInt(100000), "test_slash")
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.SlashCount != 1 {
+		t.Errorf("expected SlashCount=1, got %d", val.SlashCount)
+	}
+	if val.SlashesThisEpoch != 1 {
+		t.Errorf("expected SlashesThisEpoch=1, got %d", val.SlashesThisEpoch)
+	}
+}
+
+func TestSlashValidator_ZeroAmount(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_zero")
+	registerTestValidator(t, k, ctx, addr, "", "1000000")
+
+	k.SlashValidator(ctx, addr, big.NewInt(0), "zero_slash")
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.SlashCount != 0 {
+		t.Errorf("zero-amount slash should not increment SlashCount, got %d", val.SlashCount)
+	}
+}
+
+func TestSlashValidator_PerEpochCap(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_cap")
+	registerTestValidator(t, k, ctx, addr, "", "10000000000")
+	promoteToScholar(t, k, ctx, addr)
+
+	// Default MaxSlashesPerEpoch = 2
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "cap_1")
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "cap_2")
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.SlashesThisEpoch != 2 {
+		t.Fatalf("expected 2 slashes this epoch, got %d", val.SlashesThisEpoch)
+	}
+
+	// Third slash should be silently capped.
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "cap_3")
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SlashesThisEpoch != 2 {
+		t.Errorf("expected capped at 2, got %d", val.SlashesThisEpoch)
+	}
+}
+
+func TestSlashValidator_Escalation(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_esc")
+	registerTestValidator(t, k, ctx, addr, "", "1111000000")
+	promoteToScholar(t, k, ctx, addr)
+
+	params := k.GetParams(ctx)
+	params.MaxSlashesPerEpoch = 10
+	params.MaxSlashCountDeactivate = 10
+	k.SetParams(ctx, params)
+
+	// First slash: no escalation (count=0)
+	val, _ := k.GetValidator(ctx, addr)
+	stakeBefore, _ := new(big.Int).SetString(val.SelfDelegation, 10)
+
+	k.SlashValidator(ctx, addr, big.NewInt(1_000_000), "esc_0")
+	val, _ = k.GetValidator(ctx, addr)
+	stakeAfter, _ := new(big.Int).SetString(val.SelfDelegation, 10)
+
+	slashed := new(big.Int).Sub(stakeBefore, stakeAfter)
+	if slashed.Int64() != 1_000_000 {
+		t.Errorf("first slash: expected 1000000, got %s", slashed.String())
+	}
+
+	// Second slash: escalation factor = (1M + 1*100000) / 1M = 1.1x
+	stakeBefore2, _ := new(big.Int).SetString(val.SelfDelegation, 10)
+	k.SlashValidator(ctx, addr, big.NewInt(1_000_000), "esc_1")
+	val, _ = k.GetValidator(ctx, addr)
+	stakeAfter2, _ := new(big.Int).SetString(val.SelfDelegation, 10)
+	slashed2 := new(big.Int).Sub(stakeBefore2, stakeAfter2)
+
+	if slashed2.Int64() != 1_100_000 {
+		t.Errorf("second slash: expected 1100000 (1.1x), got %s", slashed2.String())
+	}
+}
+
+func TestSlashValidator_SSIMultiplier(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_ssi")
+	registerTestValidator(t, k, ctx, addr, "", "1111000000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.SelfDelegation = "10000"
+	val.DelegatedStake = "0"
+	val.TotalStake = "10000"
+	val.Tier = types.TierScholar
+	k.SetValidator(ctx, val)
+
+	mockAuto := newMockAutopoiesisKeeper()
+	mockAuto.multipliers["ssi"] = 800_000 // 0.8x
+	k.SetAutopoiesisKeeper(mockAuto)
+
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "ssi_test")
+
+	val, found := k.GetValidator(ctx, addr)
+	if !found {
+		t.Fatal("validator not found after slash")
+	}
+	if val.SelfDelegation != "9200" {
+		t.Errorf("expected self_del=9200 (base 1000 x 0.8 SSI = 800), got %s", val.SelfDelegation)
+	}
+}
+
+func TestSlashValidator_SSIMultiplierHigh(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_ssi_hi")
+	registerTestValidator(t, k, ctx, addr, "", "1111000000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.SelfDelegation = "10000"
+	val.DelegatedStake = "0"
+	val.TotalStake = "10000"
+	val.Tier = types.TierScholar
+	k.SetValidator(ctx, val)
+
+	mockAuto := newMockAutopoiesisKeeper()
+	mockAuto.multipliers["ssi"] = 2_000_000 // 2.0x
+	k.SetAutopoiesisKeeper(mockAuto)
+
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "ssi_high_test")
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SelfDelegation != "8000" {
+		t.Errorf("expected self_del=8000 (base 1000 x 2.0 SSI = 2000), got %s", val.SelfDelegation)
+	}
+}
+
+func TestSlashValidator_NilAutopoiesisKeeper(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_nilauto")
+	registerTestValidator(t, k, ctx, addr, "", "1111000000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.SelfDelegation = "10000"
+	val.DelegatedStake = "0"
+	val.TotalStake = "10000"
+	val.Tier = types.TierScholar
+	k.SetValidator(ctx, val)
+
+	// No autopoiesis keeper set = default 1.0x
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "nil_auto")
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SelfDelegation != "9000" {
+		t.Errorf("expected self_del=9000, got %s", val.SelfDelegation)
+	}
+}
+
+func TestSlashValidator_OwnBeforeDelegated(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_own")
+	registerTestValidator(t, k, ctx, addr, "", "1111000000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.SelfDelegation = "1000"
+	val.DelegatedStake = "500"
+	val.TotalStake = "1500"
+	val.Tier = types.TierScholar
+	k.SetValidator(ctx, val)
+
+	// Slash exact own stake.
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "exact_own")
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SelfDelegation != "0" {
+		t.Errorf("own stake should be 0, got %s", val.SelfDelegation)
+	}
+	if val.DelegatedStake != "500" {
+		t.Errorf("delegated should be untouched (500), got %s", val.DelegatedStake)
+	}
+}
+
+func TestSlashValidator_OverflowToDelegated(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_over")
+	registerTestValidator(t, k, ctx, addr, "", "1111000000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.SelfDelegation = "1000"
+	val.DelegatedStake = "500"
+	val.TotalStake = "1500"
+	val.Tier = types.TierScholar
+	k.SetValidator(ctx, val)
+
+	k.SlashValidator(ctx, addr, big.NewInt(1200), "overflow")
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SelfDelegation != "0" {
+		t.Errorf("own stake should be 0 after overflow, got %s", val.SelfDelegation)
+	}
+	if val.DelegatedStake != "300" {
+		t.Errorf("delegated should be 300 after overflow, got %s", val.DelegatedStake)
+	}
+	if val.TotalStake != "300" {
+		t.Errorf("total should be 300, got %s", val.TotalStake)
+	}
+}
+
+func TestSlashValidator_Deactivation(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_deact")
+	registerTestValidator(t, k, ctx, addr, "", "1000000000")
+
+	params := k.GetParams(ctx)
+	params.MaxSlashCountDeactivate = 3
+	params.MaxSlashesPerEpoch = 10
+	k.SetParams(ctx, params)
+
+	for i := 0; i < 3; i++ {
+		k.SlashValidator(ctx, addr, big.NewInt(1000), fmt.Sprintf("deact_%d", i))
+	}
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.IsActive {
+		t.Error("validator should be deactivated after 3 slashes (MaxSlashCountDeactivate=3)")
+	}
+}
+
+func TestSlashValidator_ReputationDecrease(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("slash_rep")
+	registerTestValidator(t, k, ctx, addr, "", "1000000000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	repBefore := val.ReputationScore
+
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "rep_slash")
+
+	val, _ = k.GetValidator(ctx, addr)
+	params := k.GetParams(ctx)
+	expected := repBefore - params.ReputationSlashDelta
+	if val.ReputationScore != expected {
+		t.Errorf("expected reputation %d (was %d, slash delta %d), got %d",
+			expected, repBefore, params.ReputationSlashDelta, val.ReputationScore)
+	}
+}
+
+// ============================================================
+// 4. RecordVerification Tests
+// ============================================================
+
+func TestRecordVerification_Correct(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("rv_correct")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	repBefore := val.ReputationScore
+
+	k.RecordVerification(ctx, addr, true, false)
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.TotalVerifications != 1 {
+		t.Errorf("expected TotalVerifications=1, got %d", val.TotalVerifications)
+	}
+	if val.CorrectVerifications != 1 {
+		t.Errorf("expected CorrectVerifications=1, got %d", val.CorrectVerifications)
+	}
+
+	params := k.GetParams(ctx)
+	expected := repBefore + params.ReputationCorrectDelta
+	if val.ReputationScore != expected {
+		t.Errorf("expected reputation %d, got %d", expected, val.ReputationScore)
+	}
+}
+
+func TestRecordVerification_Incorrect(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("rv_wrong")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	repBefore := val.ReputationScore
+
+	k.RecordVerification(ctx, addr, false, false)
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.TotalVerifications != 1 {
+		t.Errorf("expected TotalVerifications=1, got %d", val.TotalVerifications)
+	}
+	if val.CorrectVerifications != 0 {
+		t.Errorf("expected CorrectVerifications=0, got %d", val.CorrectVerifications)
+	}
+
+	params := k.GetParams(ctx)
+	expected := repBefore - params.ReputationIncorrectDelta
+	if val.ReputationScore != expected {
+		t.Errorf("expected reputation %d, got %d", expected, val.ReputationScore)
+	}
+}
+
+func TestRecordVerification_Contested(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("rv_contest")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	k.RecordVerification(ctx, addr, true, true)
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.ContestedVerificationsCorrect != 1 {
+		t.Errorf("expected ContestedVerificationsCorrect=1, got %d", val.ContestedVerificationsCorrect)
+	}
+	if val.ContestedCount != 1 {
+		t.Errorf("expected ContestedCount=1, got %d", val.ContestedCount)
+	}
+}
+
+func TestRecordVerification_ReputationUnderflowGuard(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("rv_underflow")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	// Set reputation very low.
+	val, _ := k.GetValidator(ctx, addr)
+	val.ReputationScore = 50
+	k.SetValidator(ctx, val)
+
+	k.RecordVerification(ctx, addr, false, false)
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.ReputationScore != 0 {
+		t.Errorf("reputation should floor at 0, got %d", val.ReputationScore)
+	}
+}
+
+func TestRecordVerification_ReputationCap(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("rv_cap")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.ReputationScore = types.BPSScale - 10
+	k.SetValidator(ctx, val)
+
+	k.RecordVerification(ctx, addr, true, false)
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.ReputationScore > types.BPSScale {
+		t.Errorf("reputation should cap at BPSScale, got %d", val.ReputationScore)
+	}
+}
+
+func TestRecordVerification_ParameterizedReputation(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("rv_param")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	params := k.GetParams(ctx)
+	params.ReputationCorrectDelta = 500
+	params.ReputationIncorrectDelta = 1000
+	k.SetParams(ctx, params)
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.ReputationScore = 500_000
+	k.SetValidator(ctx, val)
+
+	k.RecordVerification(ctx, addr, true, false)
+	val, _ = k.GetValidator(ctx, addr)
+	if val.ReputationScore != 500_500 {
+		t.Errorf("expected 500500 after correct (+500), got %d", val.ReputationScore)
+	}
+
+	k.RecordVerification(ctx, addr, false, false)
+	val, _ = k.GetValidator(ctx, addr)
+	if val.ReputationScore != 499_500 {
+		t.Errorf("expected 499500 after incorrect (-1000), got %d", val.ReputationScore)
+	}
+}
+
+// ============================================================
+// 5. Tier Tests
+// ============================================================
+
+func TestComputeValidatorTier_Apprentice(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	tier := keeper.ComputeValidatorTier(ctx, k, big.NewInt(111000), 0, 0, 0, 0, 0)
+	if tier != types.TierApprentice {
+		t.Errorf("expected Apprentice, got %s", types.ValidatorTierString(tier))
+	}
+}
+
+func TestComputeValidatorTier_Verified(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	tier := keeper.ComputeValidatorTier(ctx, k, big.NewInt(1_110_000), 22, 18, 0, 0, 0)
+	if tier != types.TierVerified {
+		t.Errorf("expected Verified, got %s", types.ValidatorTierString(tier))
+	}
+}
+
+func TestComputeValidatorTier_Scholar(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	tier := keeper.ComputeValidatorTier(ctx, k, big.NewInt(1_111_000_000), 22, 12, 0, 0, 0)
+	if tier != types.TierScholar {
+		t.Errorf("expected Scholar, got %s", types.ValidatorTierString(tier))
+	}
+}
+
+func TestComputeValidatorTier_Guardian(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	tier := keeper.ComputeValidatorTier(ctx, k, big.NewInt(11_111_000_000), 500, 450, 0, 50, 0)
+	if tier != types.TierGuardian {
+		t.Errorf("expected Guardian, got %s", types.ValidatorTierString(tier))
+	}
+}
+
+func TestComputeValidatorTier_GuardianRequiresContestedCount(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	// All Guardian criteria met EXCEPT contested verifications (0 instead of 33).
+	tier := keeper.ComputeValidatorTier(ctx, k, big.NewInt(11_111_000_000), 500, 450, 0, 0, 0)
+	if tier == types.TierGuardian {
+		t.Error("Guardian should NOT be granted without contested verifications (P0-2 fix)")
+	}
+}
+
+func TestComputeValidatorTier_GuardianSlashBlocksDemotion(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	// Guardian criteria met but has 1 slash (MaxSlashCount=0 for Guardian).
+	tier := keeper.ComputeValidatorTier(ctx, k, big.NewInt(11_111_000_000), 500, 450, 1, 50, 50)
+	if tier == types.TierGuardian {
+		t.Error("Guardian should NOT be granted with any slashes (MaxSlashCount=0)")
+	}
+}
+
+func TestIsTierEligibleForCategory(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	// Apprentice: protocol, computational, formal only.
+	if !k.IsTierEligibleForCategory(ctx, types.TierApprentice, "protocol") {
+		t.Error("apprentice should be eligible for protocol")
+	}
+	if k.IsTierEligibleForCategory(ctx, types.TierApprentice, "empirical") {
+		t.Error("apprentice should NOT be eligible for empirical")
+	}
+	if k.IsTierEligibleForCategory(ctx, types.TierApprentice, "contested") {
+		t.Error("apprentice should NOT be eligible for contested")
+	}
+
+	// Guardian: all categories.
+	if !k.IsTierEligibleForCategory(ctx, types.TierGuardian, "contested") {
+		t.Error("guardian should be eligible for contested")
+	}
+}
+
+func TestGetEffectiveSelectionStake_TierZero(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("ess_tier0")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	effective := k.GetEffectiveSelectionStake(ctx, val)
+
+	params := k.GetParams(ctx)
+	vs, _ := new(big.Int).SetString(params.VirtualStake, 10)
+	if effective.Cmp(vs) != 0 {
+		t.Errorf("tier 0 should use virtual stake %s, got %s", vs, effective)
+	}
+}
+
+func TestGetEffectiveSelectionStake_ScholarUsesRealStake(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("ess_scholar")
+	registerTestValidator(t, k, ctx, addr, "", "1111000000")
+	promoteToScholar(t, k, ctx, addr)
+
+	val, _ := k.GetValidator(ctx, addr)
+	effective := k.GetEffectiveSelectionStake(ctx, val)
+
+	totalStake, _ := new(big.Int).SetString(val.TotalStake, 10)
+	if effective.Cmp(totalStake) != 0 {
+		t.Errorf("scholar should use real stake %s, got %s", totalStake, effective)
+	}
+}
+
+func TestCalculateTierReward(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	base := big.NewInt(1000)
+
+	// Apprentice: 100 BPS = 0.1x → 1000 * 100 / 1000 = 100
+	reward := k.CalculateTierReward(ctx, types.TierApprentice, base)
+	if reward.Int64() != 100 {
+		t.Errorf("apprentice reward: expected 100, got %d", reward.Int64())
+	}
+
+	// Scholar: 1000 BPS = 1.0x → 1000 * 1000 / 1000 = 1000
+	reward = k.CalculateTierReward(ctx, types.TierScholar, base)
+	if reward.Int64() != 1000 {
+		t.Errorf("scholar reward: expected 1000, got %d", reward.Int64())
+	}
+
+	// Guardian: 2000 BPS = 2.0x → 1000 * 2000 / 1000 = 2000
+	reward = k.CalculateTierReward(ctx, types.TierGuardian, base)
+	if reward.Int64() != 2000 {
+		t.Errorf("guardian reward: expected 2000, got %d", reward.Int64())
+	}
+}
+
+func TestCalculateTierSlash(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	base := big.NewInt(1000)
+
+	// Apprentice: 1500 BPS → 1000 * 1500 / 1000 = 1500
+	slash := k.CalculateTierSlash(ctx, types.TierApprentice, base)
+	if slash.Int64() != 1500 {
+		t.Errorf("apprentice slash: expected 1500, got %d", slash.Int64())
+	}
+
+	// Scholar: 1000 BPS → 1000 * 1000 / 1000 = 1000
+	slash = k.CalculateTierSlash(ctx, types.TierScholar, base)
+	if slash.Int64() != 1000 {
+		t.Errorf("scholar slash: expected 1000, got %d", slash.Int64())
+	}
+}
+
+func TestAccuracyRate(t *testing.T) {
+	tests := []struct {
+		name      string
+		total     uint64
+		correct   uint64
+		wantBps   uint64
+		meetsMin  bool // meets 77% Guardian threshold
+	}{
+		{"exactly 77%", 1_000_000, 770_000, 770_000, true},
+		{"above 77%", 1_000_000, 770_001, 770_001, true},
+		{"below 77%", 1_000_000, 769_999, 769_999, false},
+		{"zero completions", 0, 0, 0, false},
+		{"100%", 1000, 1000, 1_000_000, true},
+		{"1 of 3 (33.3%)", 3, 1, 333_333, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &types.Validator{
+				TotalVerifications:   tt.total,
+				CorrectVerifications: tt.correct,
+			}
+			got := v.GetAccuracyRate()
+			if got != tt.wantBps {
+				t.Errorf("GetAccuracyRate(%d/%d) = %d, want %d", tt.correct, tt.total, got, tt.wantBps)
+			}
+			meetsThreshold := got >= 770_000
+			if meetsThreshold != tt.meetsMin {
+				t.Errorf("meets guardian threshold = %v, want %v", meetsThreshold, tt.meetsMin)
+			}
+		})
+	}
+}
+
+// ============================================================
+// 6. BeginBlocker / EndBlocker Tests
+// ============================================================
+
+func TestBeginBlocker_SlashDecay(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("bb_decay")
+	registerTestValidator(t, k, ctx, addr, "", "1000000000")
+
+	params := k.GetParams(ctx)
+	params.MaxSlashesPerEpoch = 5
+	k.SetParams(ctx, params)
+
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "decay_1")
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "decay_2")
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.SlashCount != 2 {
+		t.Fatalf("expected SlashCount=2, got %d", val.SlashCount)
+	}
+
+	// First epoch: slashes happened, so no decay (SlashesThisEpoch > 0).
+	epochBlocks := int64(params.SlashDecayPeriodBlocks)
+	ctx = ctx.WithBlockHeight(epochBlocks)
+	k.BeginBlocker(ctx)
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SlashesThisEpoch != 0 {
+		t.Errorf("expected SlashesThisEpoch reset to 0, got %d", val.SlashesThisEpoch)
+	}
+	if val.SlashCount != 2 {
+		t.Errorf("expected SlashCount=2 (had slashes this epoch), got %d", val.SlashCount)
+	}
+
+	// Second epoch: clean epoch, decay by 1.
+	ctx = ctx.WithBlockHeight(epochBlocks * 2)
+	k.BeginBlocker(ctx)
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SlashCount != 1 {
+		t.Errorf("expected SlashCount=1 after clean epoch, got %d", val.SlashCount)
+	}
+
+	// Third epoch: another clean epoch.
+	ctx = ctx.WithBlockHeight(epochBlocks * 3)
+	k.BeginBlocker(ctx)
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SlashCount != 0 {
+		t.Errorf("expected SlashCount=0 after 2 clean epochs, got %d", val.SlashCount)
+	}
+}
+
+func TestBeginBlocker_UnbondingMaturation(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	entry := &types.UnbondingEntry{
+		Id:                "mature_1",
+		DelegatorAddress:  testAddr("mature_del"),
+		ValidatorAddress:  testAddr("mature_val"),
+		Amount:            "100000",
+		CreatedAtHeight:   50,
+		CompletesAtHeight: 200,
+		Status:            "pending",
+	}
+	k.SetUnbonding(ctx, entry)
+
+	// Before maturation.
+	ctx = ctx.WithBlockHeight(199)
+	k.BeginBlocker(ctx)
+	e, _ := k.GetUnbonding(ctx, "mature_1")
+	if e.Status != "pending" {
+		t.Errorf("expected pending before maturation, got %s", e.Status)
+	}
+
+	// At maturation.
+	ctx = ctx.WithBlockHeight(200)
+	k.BeginBlocker(ctx)
+	e, _ = k.GetUnbonding(ctx, "mature_1")
+	if e.Status != "completed" {
+		t.Errorf("expected completed at maturation, got %s", e.Status)
+	}
+}
+
+func TestEndBlocker_TierAdvancement(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("eb_advance")
+	registerTestValidator(t, k, ctx, addr, "", "1110000")
+
+	// Meet Verified criteria.
+	val, _ := k.GetValidator(ctx, addr)
+	val.TotalVerifications = 22
+	val.CorrectVerifications = 18
+	val.ReputationScore = 800_000
+	k.SetValidator(ctx, val)
+
+	k.EndBlocker(ctx)
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.Tier != types.TierVerified {
+		t.Errorf("expected tier Verified after EndBlocker, got %s", types.ValidatorTierString(val.Tier))
+	}
+}
+
+// ============================================================
+// 7. Genesis Tests
+// ============================================================
+
+func TestGenesis_RoundTrip(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("genesis_val")
+	registerTestValidator(t, k, ctx, addr, "did:zrn:genesis", "1111000000")
+
+	params := k.GetParams(ctx)
+	params.TierConfigs[0].MinStake = "333000"
+	params.ReputationCorrectDelta = 150
+	params.RedelegationCooldownBlocks = 2222
+	k.SetParams(ctx, params)
+
+	gs1 := k.ExportGenesis(ctx)
+	if len(gs1.Params.TierConfigs) != 4 {
+		t.Fatalf("exported genesis should have 4 TierConfigs, got %d", len(gs1.Params.TierConfigs))
+	}
+	if gs1.Params.TierConfigs[0].MinStake != "333000" {
+		t.Errorf("exported apprentice MinStake: expected 333000, got %s", gs1.Params.TierConfigs[0].MinStake)
+	}
+
+	// Re-import.
+	k2, ctx2 := setupBareKeeper(t)
+	k2.InitGenesis(ctx2, gs1)
+
+	gs2 := k2.ExportGenesis(ctx2)
+	if gs2.Params.TierConfigs[0].MinStake != gs1.Params.TierConfigs[0].MinStake {
+		t.Errorf("round-trip MinStake mismatch: %s vs %s",
+			gs1.Params.TierConfigs[0].MinStake, gs2.Params.TierConfigs[0].MinStake)
+	}
+	if gs2.Params.RedelegationCooldownBlocks != 2222 {
+		t.Errorf("round-trip RedelegationCooldownBlocks: expected 2222, got %d",
+			gs2.Params.RedelegationCooldownBlocks)
+	}
+	if len(gs2.Validators) != len(gs1.Validators) {
+		t.Errorf("validator count mismatch: %d vs %d", len(gs1.Validators), len(gs2.Validators))
+	}
+}
+
+func TestGenesis_DefaultParams(t *testing.T) {
+	k, ctx := setupBareKeeper(t)
+	params := k.GetParams(ctx)
+	if len(params.TierConfigs) != 4 {
+		t.Fatalf("expected DefaultParams TierConfigs length=4, got %d", len(params.TierConfigs))
+	}
+	if params.UnbondingPeriod != 268_560 {
+		t.Errorf("expected default UnbondingPeriod=268560, got %d", params.UnbondingPeriod)
+	}
+}
+
+func TestGenesis_SetParamsSyncsKVStore(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := k.GetParams(ctx)
+	params.TierConfigs[0].MinStake = "222000"
+	params.TierConfigs[2].SlashMultiplierBps = 2000
+	k.SetParams(ctx, params)
+
+	readParams := k.GetParams(ctx)
+	if readParams.TierConfigs[0].MinStake != "222000" {
+		t.Errorf("expected apprentice MinStake=222000, got %s", readParams.TierConfigs[0].MinStake)
+	}
+
+	apprenticeConfig, found := k.GetTierConfig(ctx, types.TierApprentice)
+	if !found {
+		t.Fatal("apprentice tier config not found in KVStore")
+	}
+	if apprenticeConfig.MinStake != "222000" {
+		t.Errorf("KVStore apprentice MinStake: expected 222000, got %s", apprenticeConfig.MinStake)
+	}
+}
+
+// ============================================================
+// 8. Params Validation Tests
+// ============================================================
+
+func TestParams_Validate_Valid(t *testing.T) {
+	p := types.DefaultParams()
+	if err := p.Validate(); err != nil {
+		t.Errorf("valid params should pass: %v", err)
+	}
+}
+
+func TestParams_Validate_TierConfigs3_Fails(t *testing.T) {
+	p := types.DefaultParams()
+	p.TierConfigs = p.TierConfigs[:3]
+	if err := p.Validate(); err == nil {
+		t.Error("expected error for 3 tier configs")
+	}
+}
+
+func TestParams_Validate_SlashMultiplierBpsOver10000_Fails(t *testing.T) {
+	p := types.DefaultParams()
+	p.TierConfigs[0].SlashMultiplierBps = 10001
+	if err := p.Validate(); err == nil {
+		t.Error("expected error for slash_multiplier_bps=10001")
+	}
+}
+
+func TestParams_Validate_MinAccuracyOver1M_Fails(t *testing.T) {
+	p := types.DefaultParams()
+	p.TierConfigs[1].MinAccuracy = 1_000_001
+	if err := p.Validate(); err == nil {
+		t.Error("expected error for min_accuracy > 1000000")
+	}
+}
+
+func TestParams_Validate_RewardMultiplierZero_Fails(t *testing.T) {
+	p := types.DefaultParams()
+	p.TierConfigs[0].RewardMultiplierBps = 0
+	if err := p.Validate(); err == nil {
+		t.Error("expected error for reward_multiplier_bps=0")
+	}
+}
+
+func TestParams_Validate_SelectionWeightZero_Fails(t *testing.T) {
+	p := types.DefaultParams()
+	p.TierConfigs[0].SelectionWeightBps = 0
+	if err := p.Validate(); err == nil {
+		t.Error("expected error for selection_weight_bps=0")
+	}
+}
+
+func TestParams_Validate_SlashEscalationBpsOverLimit(t *testing.T) {
+	p := types.DefaultParams()
+	p.SlashEscalationBps = 1_000_001
+	if err := p.Validate(); err == nil {
+		t.Error("expected error for SlashEscalationBps > 1000000")
+	}
+}
+
+func TestParams_Validate_EmptyTierConfigsAllowed(t *testing.T) {
+	p := types.DefaultParams()
+	p.TierConfigs = nil
+	if err := p.Validate(); err != nil {
+		t.Errorf("empty TierConfigs should be allowed (backward compat): %v", err)
+	}
+}
+
+// ============================================================
+// 9. Adversarial Tests (ported from OpenClaw)
+// ============================================================
+
+func TestOC_WhaleStakeConcentration(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	whaleAddr := testAddr("whale_val")
+	smallAddr := testAddr("small_val")
+
+	registerTestValidator(t, k, ctx, whaleAddr, "did:zrn:whale", "999999999999999")
+	registerTestValidator(t, k, ctx, smallAddr, "did:zrn:small", "111000")
+
+	params := k.GetParams(ctx)
+	whaleVal, _ := k.GetValidator(ctx, whaleAddr)
+	smallVal, _ := k.GetValidator(ctx, smallAddr)
+
+	whaleEffective := k.GetEffectiveSelectionStake(ctx, whaleVal)
+	smallEffective := k.GetEffectiveSelectionStake(ctx, smallVal)
+
+	// Both at tier 0, both get virtual stake.
+	if whaleEffective.Cmp(smallEffective) != 0 {
+		t.Errorf("whale effective (%s) != small effective (%s) at tier 0", whaleEffective, smallEffective)
+	}
+
+	vs, _ := new(big.Int).SetString(params.VirtualStake, 10)
+	if whaleEffective.Cmp(vs) != 0 {
+		t.Errorf("tier-0 effective should be virtual stake (%s), got %s", params.VirtualStake, whaleEffective)
+	}
+
+	// Promote whale to Scholar — now uses real stake.
+	promoteToScholar(t, k, ctx, whaleAddr)
+	whaleVal, _ = k.GetValidator(ctx, whaleAddr)
+	whaleEffective = k.GetEffectiveSelectionStake(ctx, whaleVal)
+	if whaleEffective.Cmp(vs) == 0 {
+		t.Error("scholar whale should use real stake, not virtual")
+	}
+}
+
+func TestOC_SybilRegistrationSpam(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	for i := 0; i < 50; i++ {
+		addr := testAddr(fmt.Sprintf("syb%04d", i))
+		_, err := ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+			Operator:        addr,
+			ConsensusPubkey: fmt.Sprintf("pk_syb_%04d", i),
+			SelfDelegation:  "111000",
+			Did:             fmt.Sprintf("did:zrn:syb%04d", i),
+		})
+		if err != nil {
+			t.Fatalf("sybil registration #%d failed: %v", i, err)
+		}
+	}
+
+	// All at tier 0 = 0 block producers.
+	count := k.CountBlockProducers(ctx)
+	if count != 0 {
+		t.Errorf("expected 0 block producers from 50 min-stake sybils, got %d", count)
+	}
+}
+
+func TestOC_UnbondingIdCollision(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	valAddr := testAddr("oc_unbond")
+	delAddr := testAddr("oc_unbdel")
+
+	registerTestValidator(t, k, ctx, valAddr, "", "1111000000")
+
+	k.SetDelegation(ctx, &types.Delegation{
+		DelegatorAddress: delAddr,
+		ValidatorAddress: valAddr,
+		Amount:           "10000000",
+		CreatedAtBlock:   100,
+	})
+	val, _ := k.GetValidator(ctx, valAddr)
+	val.DelegatedStake = "10000000"
+	val.TotalStake = "1121000000"
+	k.SetValidator(ctx, val)
+
+	ids := make(map[string]bool)
+	for i := 0; i < 5; i++ {
+		resp, err := ms.Undelegate(ctx, &types.MsgUndelegate{
+			Delegator: delAddr,
+			Validator: valAddr,
+			Amount:    "100000",
+		})
+		if err != nil {
+			t.Fatalf("undelegate #%d failed: %v", i+1, err)
+		}
+		if ids[resp.UnbondingId] {
+			t.Errorf("unbonding ID collision: %s returned twice", resp.UnbondingId)
+		}
+		ids[resp.UnbondingId] = true
+	}
+	if len(ids) != 5 {
+		t.Errorf("expected 5 unique IDs, got %d", len(ids))
+	}
+}
+
+func TestOC_TierDemotionOnSlash(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("oc_demote")
+	registerTestValidator(t, k, ctx, addr, "did:zrn:gdmote", "11111000000")
+	promoteToGuardian(t, k, ctx, addr)
+
+	val, _ := k.GetValidator(ctx, addr)
+	if val.Tier != types.TierGuardian {
+		t.Fatalf("expected Guardian tier, got %s", types.ValidatorTierString(val.Tier))
+	}
+
+	params := k.GetParams(ctx)
+	params.MaxSlashesPerEpoch = 5
+	k.SetParams(ctx, params)
+
+	k.SlashValidator(ctx, addr, big.NewInt(100000), "guardian_slash")
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.SlashCount != 1 {
+		t.Errorf("expected SlashCount=1 after slash, got %d", val.SlashCount)
+	}
+	// Guardian MaxSlashCount=0, so any slash should prevent Guardian status.
+	if val.Tier == types.TierGuardian {
+		t.Error("Guardian should lose tier after any slash (MaxSlashCount=0)")
+	}
+}
+
+func TestOC_BlockProducerCapEnforcement(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+	params := k.GetParams(ctx)
+	params.MaxValidators = 2
+	k.SetParams(ctx, params)
+
+	// Register 4 validators at Scholar tier.
+	addrs := make([]string, 4)
+	for i := 0; i < 4; i++ {
+		addrs[i] = testAddr(fmt.Sprintf("bpcap%d", i))
+		_, err := ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+			Operator:        addrs[i],
+			ConsensusPubkey: fmt.Sprintf("pk_bpcap_%d", i),
+			SelfDelegation:  "1111000000", // Scholar-level stake
+			Did:             fmt.Sprintf("did:zrn:bpcap%d", i),
+		})
+		if err != nil {
+			t.Fatalf("registration #%d failed: %v", i, err)
+		}
+	}
+
+	// All start at Apprentice (no verifications), so 0 block producers.
+	if count := k.CountBlockProducers(ctx); count != 0 {
+		t.Fatalf("expected 0 block producers initially, got %d", count)
+	}
+
+	// Promote 2 to Scholar.
+	promoteToScholar(t, k, ctx, addrs[0])
+	promoteToScholar(t, k, ctx, addrs[1])
+	if count := k.CountBlockProducers(ctx); count != 2 {
+		t.Fatalf("expected 2 block producers, got %d", count)
+	}
+
+	// Verifier-only registrations should always succeed (tier 0).
+	for i := 0; i < 5; i++ {
+		vAddr := testAddr(fmt.Sprintf("verifier%d", i))
+		_, err := ms.RegisterValidator(ctx, &types.MsgRegisterValidator{
+			Operator:        vAddr,
+			ConsensusPubkey: fmt.Sprintf("pk_ver_%d", i),
+			SelfDelegation:  "111000",
+		})
+		if err != nil {
+			t.Errorf("verifier registration #%d should succeed: %v", i, err)
+		}
+	}
+}
+
+// ============================================================
+// 10. AUDIT TESTS — 5 new tests per the security audit
+// ============================================================
+
+// AUDIT-1: Guardian tier MUST require ContestedCount >= MinContestedVerifications.
+func TestAudit_GuardianTier_RequiresContestedCount(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	// Validator meets ALL Guardian criteria EXCEPT contested count.
+	addr := testAddr("audit_gc")
+	registerTestValidator(t, k, ctx, addr, "did:zrn:audit_gc", "11111000000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.SelfDelegation = "11111000000"
+	val.TotalStake = "11111000000"
+	val.TotalVerifications = 500
+	val.CorrectVerifications = 450
+	val.ContestedVerificationsCorrect = 32 // 1 short of 33
+	val.ContestedCount = 32
+	val.ReputationScore = 800_000
+	val.SlashCount = 0
+	k.SetValidator(ctx, val)
+
+	newTier, changed := k.CheckTierTransition(ctx, val)
+	if newTier == types.TierGuardian {
+		t.Error("AUDIT-1: Guardian MUST NOT be granted with ContestedCount=32 (requires 33)")
+	}
+
+	// Now set to 33 — should qualify.
+	val.ContestedVerificationsCorrect = 33
+	val.ContestedCount = 33
+	k.SetValidator(ctx, val)
+
+	newTier, changed = k.CheckTierTransition(ctx, val)
+	if !changed || newTier != types.TierGuardian {
+		t.Error("AUDIT-1: Guardian should be granted with ContestedCount=33")
+	}
+}
+
+// AUDIT-2: Scholar tier MUST enforce MinStake of 1,111 ZRN (1111000000 uzrn).
+func TestAudit_ScholarTier_EnforcesMinStake(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	scholarCfg, found := k.GetTierConfig(ctx, types.TierScholar)
+	if !found {
+		t.Fatal("Scholar tier config not found")
+	}
+	if scholarCfg.MinStake != "1111000000" {
+		t.Errorf("AUDIT-2: Scholar MinStake should be '1111000000', got '%s'", scholarCfg.MinStake)
+	}
+
+	// Validator with 1110999999 (1 uzrn below) should NOT qualify.
+	tier := keeper.ComputeValidatorTier(ctx, k, big.NewInt(1_110_999_999), 22, 18, 0, 0, 0)
+	if tier >= types.TierScholar {
+		t.Error("AUDIT-2: validator with 1110999999 uzrn should NOT reach Scholar")
+	}
+
+	// Exact threshold should qualify.
+	tier = keeper.ComputeValidatorTier(ctx, k, big.NewInt(1_111_000_000), 22, 18, 0, 0, 0)
+	if tier < types.TierScholar {
+		t.Error("AUDIT-2: validator with 1111000000 uzrn should reach Scholar")
+	}
+}
+
+// AUDIT-3: Reputation MUST NOT underflow (go below 0).
+func TestAudit_Reputation_NoUnderflow(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("audit_rep")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	// Set reputation to just above the incorrect delta.
+	params := k.GetParams(ctx)
+	val, _ := k.GetValidator(ctx, addr)
+	val.ReputationScore = params.ReputationIncorrectDelta - 1
+	k.SetValidator(ctx, val)
+
+	k.RecordVerification(ctx, addr, false, false)
+
+	val, _ = k.GetValidator(ctx, addr)
+	if val.ReputationScore != 0 {
+		t.Errorf("AUDIT-3: reputation should floor at 0, got %d", val.ReputationScore)
+	}
+
+	// Slash underflow guard.
+	val.ReputationScore = params.ReputationSlashDelta - 1
+	k.SetValidator(ctx, val)
+
+	k.SlashValidator(ctx, addr, big.NewInt(1000), "underflow_slash")
+	val, _ = k.GetValidator(ctx, addr)
+	if val.ReputationScore != 0 {
+		t.Errorf("AUDIT-3: reputation should floor at 0 after slash, got %d", val.ReputationScore)
+	}
+}
+
+// AUDIT-4: DisbursementQuorumBps validation (params boundary).
+func TestAudit_Params_DisbursementQuorumValidation(t *testing.T) {
+	p := types.DefaultParams()
+	// SlashEscalationBps at exactly BPSScale should pass.
+	p.SlashEscalationBps = types.BPSScale
+	if err := p.Validate(); err != nil {
+		t.Errorf("AUDIT-4: SlashEscalationBps at max should pass: %v", err)
+	}
+
+	// Above BPSScale should fail.
+	p.SlashEscalationBps = types.BPSScale + 1
+	if err := p.Validate(); err == nil {
+		t.Error("AUDIT-4: SlashEscalationBps above max should fail")
+	}
+
+	// Reputation deltas at boundary.
+	p = types.DefaultParams()
+	p.ReputationCorrectDelta = types.BPSScale
+	if err := p.Validate(); err != nil {
+		t.Errorf("AUDIT-4: ReputationCorrectDelta at max should pass: %v", err)
+	}
+	p.ReputationCorrectDelta = types.BPSScale + 1
+	if err := p.Validate(); err == nil {
+		t.Error("AUDIT-4: ReputationCorrectDelta above max should fail")
+	}
+}
+
+// AUDIT-5: All BPS values use 1,000,000 scale (NOT 10,000).
+func TestAudit_Params_AllBPSScale(t *testing.T) {
+	if types.BPSScale != 1_000_000 {
+		t.Fatalf("AUDIT-5: BPSScale must be 1,000,000, got %d", types.BPSScale)
+	}
+
+	configs := types.DefaultTierConfigs()
+	for _, tc := range configs {
+		if tc.MinAccuracy > types.BPSScale {
+			t.Errorf("AUDIT-5: tier %s MinAccuracy %d exceeds BPSScale", tc.Name, tc.MinAccuracy)
+		}
+	}
+
+	// Guardian requires 77% accuracy = 770,000 BPS.
+	guardianCfg := configs[3]
+	if guardianCfg.MinAccuracy != 770_000 {
+		t.Errorf("AUDIT-5: Guardian MinAccuracy should be 770000 (77%% at 1M scale), got %d", guardianCfg.MinAccuracy)
+	}
+
+	// Verified requires 77% accuracy.
+	verifiedCfg := configs[1]
+	if verifiedCfg.MinAccuracy != 770_000 {
+		t.Errorf("AUDIT-5: Verified MinAccuracy should be 770000, got %d", verifiedCfg.MinAccuracy)
+	}
+}

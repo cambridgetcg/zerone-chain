@@ -1,0 +1,34 @@
+syntax = "proto3";
+package zerone.staking.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/staking/types";
+
+import "zerone/staking/v1/types.proto";
+
+// Params defines the staking module parameters.
+// All BPS fields use 1,000,000 scale (100% = 1,000,000).
+message Params {
+  uint64              unbonding_period            = 1;  // blocks (~7 days = 268,560)
+  string              virtual_stake               = 2;  // uzrn for tier 0/1 VRF selection
+  uint64              max_validators              = 3;  // block-producing validator cap
+  string              min_self_delegation          = 4;  // uzrn minimum to register
+  uint64              max_slashes_per_epoch        = 5;
+  uint64              slash_decay_period_blocks    = 6;  // epoch length in blocks
+  uint64              max_slash_count_deactivate   = 7;
+  string              min_stake_for_verification   = 8;  // uzrn
+  uint64              slash_escalation_bps         = 9;  // progressive escalation per slash
+  uint64              reputation_correct_delta     = 10; // BPS added on correct verification
+  uint64              reputation_incorrect_delta   = 11; // BPS subtracted on incorrect
+  uint64              reputation_slash_delta       = 12; // BPS subtracted on slash
+  uint64              redelegation_cooldown_blocks = 13;
+  repeated TierConfig tier_configs                 = 14;
+}
+
+// GenesisState defines the staking module genesis state.
+message GenesisState {
+  Params                params           = 1;
+  repeated Validator    validators       = 2;
+  repeated Delegation   delegations      = 3;
+  repeated UnbondingEntry unbonding_entries = 4;
+  uint64                unbonding_seq    = 5;
+}

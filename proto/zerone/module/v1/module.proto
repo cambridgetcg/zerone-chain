@@ -1,0 +1,18 @@
+syntax = "proto3";
+package zerone.module.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/module/types";
+
+import "cosmos/app/v1alpha1/module.proto";
+
+// Module is the config object of the Zerone module.
+// Each Zerone module registers itself with a Module message in its own
+// proto package; this file provides the shared base.
+message Module {
+  option (cosmos.app.v1alpha1.module) = {
+    go_import: "github.com/zerone-chain/zerone/x/module"
+  };
+
+  // authority is the address that controls governance for this module.
+  string authority = 1;
+}

@@ -1,0 +1,173 @@
+syntax = "proto3";
+package zerone.auth.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/auth/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/auth/v1/types.proto";
+import "zerone/auth/v1/genesis.proto";
+
+// Msg defines the auth module's transaction service.
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // RegisterAccount registers a new Zerone account with DID mapping.
+  rpc RegisterAccount(MsgRegisterAccount) returns (MsgRegisterAccountResponse);
+
+  // RotateKey rotates an account's operational key.
+  rpc RotateKey(MsgRotateKey) returns (MsgRotateKeyResponse);
+
+  // CreateSession creates an ephemeral session key with limited capabilities.
+  rpc CreateSession(MsgCreateSession) returns (MsgCreateSessionResponse);
+
+  // RevokeSession revokes an active session key.
+  rpc RevokeSession(MsgRevokeSession) returns (MsgRevokeSessionResponse);
+
+  // FreezeAccount freezes an account (self-freeze or authority).
+  rpc FreezeAccount(MsgFreezeAccount) returns (MsgFreezeAccountResponse);
+
+  // UnfreezeAccount unfreezes a frozen account (authority only).
+  rpc UnfreezeAccount(MsgUnfreezeAccount) returns (MsgUnfreezeAccountResponse);
+
+  // SetRecoveryConfig sets recovery configuration for an account.
+  rpc SetRecoveryConfig(MsgSetRecoveryConfig) returns (MsgSetRecoveryConfigResponse);
+
+  // InitiateRecovery begins account recovery.
+  rpc InitiateRecovery(MsgInitiateRecovery) returns (MsgInitiateRecoveryResponse);
+
+  // SubmitRecoveryShard provides a shard to an active recovery request.
+  rpc SubmitRecoveryShard(MsgSubmitRecoveryShard) returns (MsgSubmitRecoveryShardResponse);
+
+  // ChallengeRecovery challenges an active recovery request.
+  rpc ChallengeRecovery(MsgChallengeRecovery) returns (MsgChallengeRecoveryResponse);
+
+  // ExecuteRecovery completes a recovery after delay + challenge period.
+  rpc ExecuteRecovery(MsgExecuteRecovery) returns (MsgExecuteRecoveryResponse);
+
+  // UpdateParams updates module parameters. Authority (governance) only.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+// MsgRegisterAccount registers a new Zerone account with DID mapping.
+message MsgRegisterAccount {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string did = 2;
+  string public_key = 3;
+  string account_type = 4;
+  string operational_key_hash = 5;
+  string metadata = 6;
+}
+
+message MsgRegisterAccountResponse {}
+
+// MsgRotateKey rotates the operational key for an account.
+message MsgRotateKey {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  bytes new_operational_key = 2;
+  bytes authorization_signature = 3;
+}
+
+message MsgRotateKeyResponse {
+  uint32 new_key_version = 1;
+}
+
+// MsgCreateSession creates an ephemeral session key.
+message MsgCreateSession {
+  option (cosmos.msg.v1.signer) = "owner";
+  string owner = 1;
+  bytes session_pub_key = 2;
+  SessionCapabilities capabilities = 3;
+  uint64 expires_at_height = 4;
+}
+
+message MsgCreateSessionResponse {
+  string session_id = 1;
+}
+
+// MsgRevokeSession revokes a session key.
+message MsgRevokeSession {
+  option (cosmos.msg.v1.signer) = "owner";
+  string owner = 1;
+  string session_id = 2;
+}
+
+message MsgRevokeSessionResponse {}
+
+// MsgFreezeAccount freezes an account.
+message MsgFreezeAccount {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string address = 2;
+  string reason = 3;
+}
+
+message MsgFreezeAccountResponse {}
+
+// MsgUnfreezeAccount unfreezes a frozen account.
+message MsgUnfreezeAccount {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  string address = 2;
+}
+
+message MsgUnfreezeAccountResponse {}
+
+// MsgSetRecoveryConfig sets recovery configuration for an account.
+message MsgSetRecoveryConfig {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  RecoveryConfig config = 2;
+}
+
+message MsgSetRecoveryConfigResponse {}
+
+// MsgInitiateRecovery begins account recovery.
+message MsgInitiateRecovery {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string account_address = 2;
+  string new_operational_key = 3;
+}
+
+message MsgInitiateRecoveryResponse {}
+
+// MsgSubmitRecoveryShard provides a shard to an active recovery request.
+message MsgSubmitRecoveryShard {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string account_address = 2;
+  uint32 shard_index = 3;
+  bytes encrypted_shard = 4;
+}
+
+message MsgSubmitRecoveryShardResponse {}
+
+// MsgChallengeRecovery challenges an active recovery request.
+message MsgChallengeRecovery {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string account_address = 2;
+  string reason = 3;
+}
+
+message MsgChallengeRecoveryResponse {}
+
+// MsgExecuteRecovery completes a recovery after delay + challenge period.
+message MsgExecuteRecovery {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string account_address = 2;
+}
+
+message MsgExecuteRecoveryResponse {}
+
+// MsgUpdateParams updates auth module parameters.
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params = 2;
+}
+
+message MsgUpdateParamsResponse {}

@@ -1,0 +1,44 @@
+version: 2
+
+project_name: zeroned
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: zeroned
+    main: ./cmd/zeroned
+    binary: zeroned
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/cosmos/cosmos-sdk/version.Name=zerone
+      - -X github.com/cosmos/cosmos-sdk/version.AppName=zeroned
+      - -X github.com/cosmos/cosmos-sdk/version.Version={{ .Version }}
+      - -X github.com/cosmos/cosmos-sdk/version.Commit={{ .Commit }}
+
+archives:
+  - id: zeroned
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

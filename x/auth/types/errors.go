@@ -1,0 +1,36 @@
+package types
+
+import (
+	"cosmossdk.io/errors"
+)
+
+var (
+	ErrAccountNotFound            = errors.Register(ModuleName, 2, "account not found")
+	ErrDIDNotFound                = errors.Register(ModuleName, 3, "DID not found")
+	ErrSessionExpired             = errors.Register(ModuleName, 4, "session key expired")
+	ErrMaxSessionKeys             = errors.Register(ModuleName, 5, "max session keys reached")
+	ErrUnauthorizedKey            = errors.Register(ModuleName, 6, "unauthorized key operation")
+	ErrKeyRotationCooldown        = errors.Register(ModuleName, 7, "key rotation cooldown active")
+	ErrAccountFrozen              = errors.Register(ModuleName, 8, "account is frozen")
+	ErrInvalidDID                 = errors.Register(ModuleName, 9, "invalid DID format")
+	ErrDuplicateDID               = errors.Register(ModuleName, 10, "DID already registered")
+	ErrSessionNotFound            = errors.Register(ModuleName, 11, "session key not found")
+	ErrInvalidKeyType             = errors.Register(ModuleName, 12, "invalid key type")
+	ErrSessionDurationExceeded    = errors.Register(ModuleName, 13, "session duration exceeds maximum")
+	ErrAccountAlreadyExists       = errors.Register(ModuleName, 14, "account already exists")
+	ErrInvalidPublicKey           = errors.Register(ModuleName, 15, "invalid public key")
+	ErrSessionCapabilityDenied    = errors.Register(ModuleName, 16, "session key capability denied")
+	ErrDIDResolutionFailed        = errors.Register(ModuleName, 17, "DID resolution failed")
+	ErrUnauthorized               = errors.Register(ModuleName, 18, "unauthorized")
+	ErrRecoveryNotFound           = errors.Register(ModuleName, 19, "recovery request not found")
+	ErrRecoveryAlreadyActive      = errors.Register(ModuleName, 20, "recovery already active")
+	ErrRecoveryNotExecutable      = errors.Register(ModuleName, 21, "recovery not executable")
+	ErrRecoveryConfigNotFound     = errors.Register(ModuleName, 22, "recovery config not found")
+	ErrInvalidShard               = errors.Register(ModuleName, 23, "invalid recovery shard")
+	ErrRecoveryChallenged         = errors.Register(ModuleName, 24, "recovery has been challenged")
+	ErrAccountNotFrozen           = errors.Register(ModuleName, 25, "account is not frozen")
+	ErrBootstrapAlreadyClaimed    = errors.Register(ModuleName, 26, "bootstrap fund already claimed")
+	ErrBootstrapDisabled          = errors.Register(ModuleName, 27, "bootstrap fund is disabled")
+	ErrBootstrapInsufficientFunds = errors.Register(ModuleName, 28, "bootstrap fund has insufficient balance")
+	ErrDIDDerivationMismatch      = errors.Register(ModuleName, 29, "DID does not derive from public key")
+)

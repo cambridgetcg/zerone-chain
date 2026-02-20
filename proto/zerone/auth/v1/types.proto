@@ -1,0 +1,125 @@
+syntax = "proto3";
+package zerone.auth.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/auth/types";
+
+// Account is a Zerone account with DID and 4-layer key architecture.
+message Account {
+  // Bech32 address (store key for account lookups)
+  string address = 1;
+  // DID derived from identity key: did:zrn:{32-hex}
+  string did = 2;
+  // Hex-encoded Ed25519 identity public key (immutable)
+  string public_key = 3;
+  // Account type: agent, human, contract, system
+  string account_type = 4;
+  // Hash of current operational key
+  string operational_key_hash = 5;
+  // Hex-encoded Ed25519 operational public key (synced to Cosmos BaseAccount)
+  string operational_public_key = 6;
+  uint32 operational_key_version = 7;
+  uint32 session_key_count = 8;
+  // Cached reputation score (0-1000000)
+  uint32 reputation_score = 9;
+  uint64 created_at_block = 10;
+  uint64 last_active_block = 11;
+  AccountFlags flags = 12;
+  // Optional metadata (JSON string, max length governed by params)
+  string metadata = 13;
+}
+
+// AccountFlags packed flags for account capabilities.
+message AccountFlags {
+  bool is_validator = 1;
+  bool can_submit_claims = 2;
+  bool can_challenge = 3;
+  bool in_recovery = 4;
+  bool frozen = 5;
+  string freeze_reason = 6;
+}
+
+// DIDMapping stores the bidirectional DID <-> bech32 mapping.
+message DIDMapping {
+  string did = 1;
+  string bech32 = 2;
+  string pub_key = 3;
+}
+
+// SessionKey represents an ephemeral key with limited capabilities.
+message SessionKey {
+  string key_hash = 1;
+  string public_key = 2;
+  string owner = 3;
+  SessionCapabilities capabilities = 4;
+  uint64 expires_at_block = 5;
+  uint64 created_at_block = 6;
+  repeated CapabilityGrant capability_grants = 7;
+}
+
+// SessionCapabilities defines what a session key can do.
+message SessionCapabilities {
+  bool can_transfer = 1;
+  bool can_stake = 2;
+  bool can_submit_claims = 3;
+  bool can_vote = 4;
+  string max_transfer_amount = 5;
+  repeated string allowed_recipients = 6;
+  // ICA capabilities
+  bool can_ica = 7;
+  repeated string allowed_ica_connections = 8;
+  repeated string allowed_ica_msg_types = 9;
+  // Agent autonomy capabilities
+  bool can_partnership = 10;
+  bool can_research = 11;
+  bool can_dispute = 12;
+}
+
+// CapabilityGrant provides fine-grained control over individual capabilities.
+message CapabilityGrant {
+  string capability = 1;
+  uint64 expires_at_block = 2;
+  int64  max_uses_remaining = 3;
+}
+
+// RecoveryConfig defines the recovery configuration for an account.
+message RecoveryConfig {
+  string account_address = 1;
+  string recovery_key_hash = 2;
+  uint32 threshold = 3;
+  uint32 total_shards = 4;
+  repeated ShardHolder shard_holders = 5;
+  uint64 recovery_delay_blocks = 6;
+  uint64 challenge_period_blocks = 7;
+}
+
+// ShardHolder identifies who holds a recovery shard.
+message ShardHolder {
+  string type = 1;
+  string identifier = 2;
+  uint32 shard_index = 3;
+  bool can_initiate_recovery = 4;
+}
+
+// RecoveryRequest represents an in-progress recovery.
+message RecoveryRequest {
+  string account_address = 1;
+  string initiated_by = 2;
+  string new_operational_key = 3;
+  repeated uint32 shards_provided = 4;
+  uint32 shards_required = 5;
+  uint64 initiated_at_block = 6;
+  uint64 delay_expires_at = 7;
+  uint64 challenge_expires_at = 8;
+  string status = 9;
+  string challenger_address = 10;
+  string challenge_reason = 11;
+}
+
+// RecoveryShard stores an encrypted Shamir shard on-chain during recovery.
+message RecoveryShard {
+  string owner_address = 1;
+  uint32 shard_index = 2;
+  string submitter_address = 3;
+  bytes  encrypted_data = 4;
+  uint64 submitted_block = 5;
+}

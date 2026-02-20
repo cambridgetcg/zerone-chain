@@ -14,15 +14,12 @@
 
 ## Naming
 
-| Old (Draft) | New (Zerone) |
-|-------------|-------------|
-| legible_money | zerone |
-| legible-devnet-1 | zerone-testnet-1 |
-| legbled | zeroned |
-| ulgm | uzrn |
-| LGM | ZRN |
-| github.com/legible-money/legible | github.com/zerone-chain/zerone |
-| Legible Money | Zerone |
+- **Chain:** Zerone
+- **Binary:** zeroned
+- **Token:** ZRN / uzrn (6 decimals)
+- **Chain ID:** zerone-testnet-1
+- **Module path:** github.com/zerone-chain/zerone
+- **Proto packages:** zerone.<module>.v1
 
 ## Module Dependency DAG
 
@@ -226,29 +223,14 @@ LAYER 4 — app wiring
 | R10 | 6 | 4 parallel | 1-2 days |
 | **Total** | **56** | | **10-12 days** |
 
-## Key Differences from Draft
+## Design Standards
 
-| Aspect | Draft | Zerone |
-|--------|-------|--------|
-| Types | ~50% hand-written JSON, ~50% proto | 100% proto-generated |
-| BPS scale | Mixed 10k/1M | 1,000,000 everywhere |
-| Revenue splits | Constants | Governance-adjustable params |
-| Slash params | Zeroed defaults | Non-zero from genesis |
-| Commits | auto-sync | Conventional commits |
-| CI | Added in B21-6 | From commit 1 |
-| Upgrades | None | x/upgrade + cosmovisor from day 1 |
-| Token | LGM/ulgm | ZRN/uzrn |
-| Binary | legbled | zeroned |
-| State encoding | JSON marshal (some non-deterministic) | Proto marshal (deterministic) |
-| API | Partial gRPC, some hand-wired | Full gRPC + REST gateway + Swagger |
-
-## What Transfers Directly
-
-- All 113 proto files (with consistency pass)
-- All test logic (rewritten against proto types but same assertions)
-- All parameter defaults (from B21-2 audit document)
-- All security fixes (baked into the port, not applied after)
-- All audit reports (as reference)
-- Genesis axioms (777 axioms + agent_purpose facts)
-- Vault integration (unchanged — it's external infrastructure)
-- DevNet smoke test (adapted for new binary name)
+- 100% proto-generated types (no hand-written JSON structs)
+- 1,000,000 BPS scale everywhere (no exceptions)
+- Governance-adjustable revenue splits (sum validated to 1M)
+- Non-zero slash param defaults from genesis
+- Conventional commits from day 1
+- CI on every push from commit 1
+- x/upgrade + cosmovisor from day 1
+- Proto marshal for all state (deterministic)
+- Full gRPC + REST gateway + Swagger auto-generated
