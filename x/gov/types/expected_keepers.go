@@ -25,6 +25,13 @@ type VestingRewardsKeeper interface {
 	DisburseFromResearchFund(ctx sdk.Context, recipient sdk.AccAddress, amount sdk.Coins) error
 }
 
+// UpgradeKeeper defines the upgrade module interface for scheduling software upgrades.
+// When an upgrade-category LIP passes with an attached plan, ScheduleUpgrade halts
+// the chain at the specified height so validators can swap binaries.
+type UpgradeKeeper interface {
+	ScheduleUpgrade(ctx context.Context, plan UpgradePlan) error
+}
+
 // FundingRecorder is the interface used by the SybilFundingDecorator to record
 // sender->recipient funding relationships for sybil vote-weight decay.
 type FundingRecorder interface {

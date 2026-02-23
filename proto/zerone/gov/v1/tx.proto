@@ -18,6 +18,7 @@ service Msg {
   rpc SubmitResearchSpend(MsgSubmitResearchSpend) returns (MsgSubmitResearchSpendResponse);
   rpc VoteResearchSpend(MsgVoteResearchSpend) returns (MsgVoteResearchSpendResponse);
   rpc SetResearchVoters(MsgSetResearchVoters) returns (MsgSetResearchVotersResponse);
+  rpc AttachUpgradePlan(MsgAttachUpgradePlan) returns (MsgAttachUpgradePlanResponse);
 }
 
 // MsgSubmitLIP creates a new LIP proposal.
@@ -120,3 +121,16 @@ message MsgSetResearchVoters {
 }
 
 message MsgSetResearchVotersResponse {}
+
+// MsgAttachUpgradePlan attaches a software upgrade plan to an upgrade-category LIP.
+message MsgAttachUpgradePlan {
+  option (cosmos.msg.v1.signer) = "proposer";
+
+  string proposer     = 1; // must be the LIP proposer
+  string lip_id       = 2; // target LIP (must be upgrade category, non-terminal)
+  string upgrade_name = 3; // must match a registered upgrade handler name
+  int64  height       = 4; // block height to halt at
+  string info         = 5; // upgrade info (release notes URL, binary hash, etc.)
+}
+
+message MsgAttachUpgradePlanResponse {}

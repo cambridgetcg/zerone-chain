@@ -369,6 +369,67 @@ func (x *ResearchFundVoters) GetVoter2() string {
 	return ""
 }
 
+// UpgradePlan describes a planned software upgrade attached to an upgrade-category LIP.
+type UpgradePlan struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`      // upgrade handler name
+	Height        int64                  `protobuf:"varint,2,opt,name=height,proto3" json:"height,omitempty"` // block height to halt at
+	Info          string                 `protobuf:"bytes,3,opt,name=info,proto3" json:"info,omitempty"`      // release notes URL, binary hash, etc.
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpgradePlan) Reset() {
+	*x = UpgradePlan{}
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpgradePlan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpgradePlan) ProtoMessage() {}
+
+func (x *UpgradePlan) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpgradePlan.ProtoReflect.Descriptor instead.
+func (*UpgradePlan) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *UpgradePlan) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UpgradePlan) GetHeight() int64 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *UpgradePlan) GetInfo() string {
+	if x != nil {
+		return x.Info
+	}
+	return ""
+}
+
 // ResearchSpendProposal represents a 2-of-2 research fund spending proposal.
 type ResearchSpendProposal struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -397,7 +458,7 @@ type ResearchSpendProposal struct {
 
 func (x *ResearchSpendProposal) Reset() {
 	*x = ResearchSpendProposal{}
-	mi := &file_zerone_gov_v1_types_proto_msgTypes[4]
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -409,7 +470,7 @@ func (x *ResearchSpendProposal) String() string {
 func (*ResearchSpendProposal) ProtoMessage() {}
 
 func (x *ResearchSpendProposal) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_gov_v1_types_proto_msgTypes[4]
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -422,7 +483,7 @@ func (x *ResearchSpendProposal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResearchSpendProposal.ProtoReflect.Descriptor instead.
 func (*ResearchSpendProposal) Descriptor() ([]byte, []int) {
-	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{4}
+	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ResearchSpendProposal) GetProposalId() uint64 {
@@ -592,7 +653,11 @@ const file_zerone_gov_v1_types_proto_rawDesc = "" +
 	"\x06weight\x18\x04 \x01(\tR\x06weight\"D\n" +
 	"\x12ResearchFundVoters\x12\x16\n" +
 	"\x06voter1\x18\x01 \x01(\tR\x06voter1\x12\x16\n" +
-	"\x06voter2\x18\x02 \x01(\tR\x06voter2\"\x8f\x05\n" +
+	"\x06voter2\x18\x02 \x01(\tR\x06voter2\"M\n" +
+	"\vUpgradePlan\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06height\x18\x02 \x01(\x03R\x06height\x12\x12\n" +
+	"\x04info\x18\x03 \x01(\tR\x04info\"\x8f\x05\n" +
 	"\x15ResearchSpendProposal\x12\x1f\n" +
 	"\vproposal_id\x18\x01 \x01(\x04R\n" +
 	"proposalId\x12\x1a\n" +
@@ -632,13 +697,14 @@ func file_zerone_gov_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_gov_v1_types_proto_rawDescData
 }
 
-var file_zerone_gov_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_zerone_gov_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_zerone_gov_v1_types_proto_goTypes = []any{
 	(*LIP)(nil),                   // 0: zerone.gov.v1.LIP
 	(*ParamChange)(nil),           // 1: zerone.gov.v1.ParamChange
 	(*Vote)(nil),                  // 2: zerone.gov.v1.Vote
 	(*ResearchFundVoters)(nil),    // 3: zerone.gov.v1.ResearchFundVoters
-	(*ResearchSpendProposal)(nil), // 4: zerone.gov.v1.ResearchSpendProposal
+	(*UpgradePlan)(nil),           // 4: zerone.gov.v1.UpgradePlan
+	(*ResearchSpendProposal)(nil), // 5: zerone.gov.v1.ResearchSpendProposal
 }
 var file_zerone_gov_v1_types_proto_depIdxs = []int32{
 	1, // 0: zerone.gov.v1.LIP.param_changes:type_name -> zerone.gov.v1.ParamChange
@@ -660,7 +726,7 @@ func file_zerone_gov_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_gov_v1_types_proto_rawDesc), len(file_zerone_gov_v1_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

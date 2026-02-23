@@ -28,6 +28,7 @@ const (
 	Msg_SubmitResearchSpend_FullMethodName = "/zerone.gov.v1.Msg/SubmitResearchSpend"
 	Msg_VoteResearchSpend_FullMethodName   = "/zerone.gov.v1.Msg/VoteResearchSpend"
 	Msg_SetResearchVoters_FullMethodName   = "/zerone.gov.v1.Msg/SetResearchVoters"
+	Msg_AttachUpgradePlan_FullMethodName   = "/zerone.gov.v1.Msg/AttachUpgradePlan"
 )
 
 // MsgClient is the client API for Msg service.
@@ -45,6 +46,7 @@ type MsgClient interface {
 	SubmitResearchSpend(ctx context.Context, in *MsgSubmitResearchSpend, opts ...grpc.CallOption) (*MsgSubmitResearchSpendResponse, error)
 	VoteResearchSpend(ctx context.Context, in *MsgVoteResearchSpend, opts ...grpc.CallOption) (*MsgVoteResearchSpendResponse, error)
 	SetResearchVoters(ctx context.Context, in *MsgSetResearchVoters, opts ...grpc.CallOption) (*MsgSetResearchVotersResponse, error)
+	AttachUpgradePlan(ctx context.Context, in *MsgAttachUpgradePlan, opts ...grpc.CallOption) (*MsgAttachUpgradePlanResponse, error)
 }
 
 type msgClient struct {
@@ -145,6 +147,16 @@ func (c *msgClient) SetResearchVoters(ctx context.Context, in *MsgSetResearchVot
 	return out, nil
 }
 
+func (c *msgClient) AttachUpgradePlan(ctx context.Context, in *MsgAttachUpgradePlan, opts ...grpc.CallOption) (*MsgAttachUpgradePlanResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAttachUpgradePlanResponse)
+	err := c.cc.Invoke(ctx, Msg_AttachUpgradePlan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -160,6 +172,7 @@ type MsgServer interface {
 	SubmitResearchSpend(context.Context, *MsgSubmitResearchSpend) (*MsgSubmitResearchSpendResponse, error)
 	VoteResearchSpend(context.Context, *MsgVoteResearchSpend) (*MsgVoteResearchSpendResponse, error)
 	SetResearchVoters(context.Context, *MsgSetResearchVoters) (*MsgSetResearchVotersResponse, error)
+	AttachUpgradePlan(context.Context, *MsgAttachUpgradePlan) (*MsgAttachUpgradePlanResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -196,6 +209,9 @@ func (UnimplementedMsgServer) VoteResearchSpend(context.Context, *MsgVoteResearc
 }
 func (UnimplementedMsgServer) SetResearchVoters(context.Context, *MsgSetResearchVoters) (*MsgSetResearchVotersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SetResearchVoters not implemented")
+}
+func (UnimplementedMsgServer) AttachUpgradePlan(context.Context, *MsgAttachUpgradePlan) (*MsgAttachUpgradePlanResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AttachUpgradePlan not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -380,6 +396,24 @@ func _Msg_SetResearchVoters_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_AttachUpgradePlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAttachUpgradePlan)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AttachUpgradePlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AttachUpgradePlan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AttachUpgradePlan(ctx, req.(*MsgAttachUpgradePlan))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -422,6 +456,10 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetResearchVoters",
 			Handler:    _Msg_SetResearchVoters_Handler,
+		},
+		{
+			MethodName: "AttachUpgradePlan",
+			Handler:    _Msg_AttachUpgradePlan_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

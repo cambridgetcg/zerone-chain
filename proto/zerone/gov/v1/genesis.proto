@@ -26,10 +26,17 @@ message CategoryConfig {
   uint64 review_blocks     = 3; // blocks required in review stage before last_call
 }
 
+// GenesisUpgradePlan pairs a LIP ID with its attached upgrade plan for genesis export/import.
+message GenesisUpgradePlan {
+  string      lip_id = 1;
+  UpgradePlan plan   = 2;
+}
+
 // GenesisState defines the governance module's genesis state.
 message GenesisState {
   Params          params          = 1;
   repeated LIP    lips            = 2;
   repeated Vote   votes           = 3;
   uint64          next_lip_number = 4;
+  repeated GenesisUpgradePlan upgrade_plans = 5;
 }

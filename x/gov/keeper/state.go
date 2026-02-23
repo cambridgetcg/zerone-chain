@@ -194,6 +194,56 @@ func (k Keeper) SetNextLIPNumber(ctx sdk.Context, n uint64) {
 	store.Set(types.LIPCounterKey, bz)
 }
 
+// ---------- Upgrade Plan CRUD ----------
+
+// SetUpgradePlan stores an upgrade plan associated with a LIP.
+func (k Keeper) SetUpgradePlan(ctx sdk.Context, lipID string, plan *types.UpgradePlan) {
+	store := ctx.KVStore(k.storeKey)
+	bz, err := json.Marshal(plan)
+	if err != nil {
+		panic("failed to marshal upgrade plan: " + err.Error())
+	}
+	store.Set(types.UpgradePlanKey(lipID), bz)
+}
+
+// GetUpgradePlan retrieves the upgrade plan for a LIP.
+func (k Keeper) GetUpgradePlan(ctx sdk.Context, lipID string) (*types.UpgradePlan, bool) {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.UpgradePlanKey(lipID))
+	if bz == nil {
+		return nil, false
+	}
+	var plan types.UpgradePlan
+	if err := json.Unmarshal(bz, &plan); err != nil {
+		return nil, false
+	}
+	return &plan, true
+}
+
+// DeleteUpgradePlan removes the upgrade plan for a LIP.
+func (k Keeper) DeleteUpgradePlan(ctx sdk.Context, lipID string) {
+	store := ctx.KVStore(k.storeKey)
+	store.Delete(types.UpgradePlanKey(lipID))
+}
+
+// IterateUpgradePlans iterates over all stored upgrade plans. Return true from cb to stop.
+func (k Keeper) IterateUpgradePlans(ctx sdk.Context, cb func(lipID string, plan *types.UpgradePlan) bool) {
+	store := ctx.KVStore(k.storeKey)
+	iter := storetypes.KVStorePrefixIterator(store, types.UpgradePlanKeyPrefix)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		lipID := string(iter.Key()[len(types.UpgradePlanKeyPrefix):])
+		var plan types.UpgradePlan
+		if err := json.Unmarshal(iter.Value(), &plan); err != nil {
+			panic("failed to unmarshal upgrade plan: " + err.Error())
+		}
+		if cb(lipID, &plan) {
+			break
+		}
+	}
+}
+
 // ---------- Genesis ----------
 
 // InitGenesis initializes the module's state from a genesis state.
@@ -206,6 +256,10 @@ func (k Keeper) InitGenesis(ctx sdk.Context, gs *types.GenesisState) {
 	}
 	for _, vote := range gs.Votes {
 		k.SetVote(ctx, vote)
+	}
+
+	for _, gup := range gs.UpgradePlans {
+		k.SetUpgradePlan(ctx, gup.LipId, gup.Plan)
 	}
 
 	// Restore research fund voters from params if set.
@@ -233,10 +287,20 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) *types.GenesisState {
 		params.ResearchFundVoters = voters
 	}
 
+	var upgradePlans []*types.GenesisUpgradePlan
+	k.IterateUpgradePlans(ctx, func(lipID string, plan *types.UpgradePlan) bool {
+		upgradePlans = append(upgradePlans, &types.GenesisUpgradePlan{
+			LipId: lipID,
+			Plan:  plan,
+		})
+		return false
+	})
+
 	return &types.GenesisState{
 		Params:        params,
 		Lips:          allLIPs,
 		Votes:         k.GetAllVotes(ctx),
 		NextLipNumber: k.GetNextLIPNumber(ctx),
+		UpgradePlans:  upgradePlans,
 	}
 }

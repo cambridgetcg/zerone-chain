@@ -199,6 +199,59 @@ func (x *CategoryConfig) GetReviewBlocks() uint64 {
 	return 0
 }
 
+// GenesisUpgradePlan pairs a LIP ID with its attached upgrade plan for genesis export/import.
+type GenesisUpgradePlan struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LipId         string                 `protobuf:"bytes,1,opt,name=lip_id,json=lipId,proto3" json:"lip_id,omitempty"`
+	Plan          *UpgradePlan           `protobuf:"bytes,2,opt,name=plan,proto3" json:"plan,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GenesisUpgradePlan) Reset() {
+	*x = GenesisUpgradePlan{}
+	mi := &file_zerone_gov_v1_genesis_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GenesisUpgradePlan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GenesisUpgradePlan) ProtoMessage() {}
+
+func (x *GenesisUpgradePlan) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_genesis_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GenesisUpgradePlan.ProtoReflect.Descriptor instead.
+func (*GenesisUpgradePlan) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_genesis_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GenesisUpgradePlan) GetLipId() string {
+	if x != nil {
+		return x.LipId
+	}
+	return ""
+}
+
+func (x *GenesisUpgradePlan) GetPlan() *UpgradePlan {
+	if x != nil {
+		return x.Plan
+	}
+	return nil
+}
+
 // GenesisState defines the governance module's genesis state.
 type GenesisState struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -206,13 +259,14 @@ type GenesisState struct {
 	Lips          []*LIP                 `protobuf:"bytes,2,rep,name=lips,proto3" json:"lips,omitempty"`
 	Votes         []*Vote                `protobuf:"bytes,3,rep,name=votes,proto3" json:"votes,omitempty"`
 	NextLipNumber uint64                 `protobuf:"varint,4,opt,name=next_lip_number,json=nextLipNumber,proto3" json:"next_lip_number,omitempty"`
+	UpgradePlans  []*GenesisUpgradePlan  `protobuf:"bytes,5,rep,name=upgrade_plans,json=upgradePlans,proto3" json:"upgrade_plans,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GenesisState) Reset() {
 	*x = GenesisState{}
-	mi := &file_zerone_gov_v1_genesis_proto_msgTypes[2]
+	mi := &file_zerone_gov_v1_genesis_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -224,7 +278,7 @@ func (x *GenesisState) String() string {
 func (*GenesisState) ProtoMessage() {}
 
 func (x *GenesisState) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_gov_v1_genesis_proto_msgTypes[2]
+	mi := &file_zerone_gov_v1_genesis_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -237,7 +291,7 @@ func (x *GenesisState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenesisState.ProtoReflect.Descriptor instead.
 func (*GenesisState) Descriptor() ([]byte, []int) {
-	return file_zerone_gov_v1_genesis_proto_rawDescGZIP(), []int{2}
+	return file_zerone_gov_v1_genesis_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *GenesisState) GetParams() *Params {
@@ -268,6 +322,13 @@ func (x *GenesisState) GetNextLipNumber() uint64 {
 	return 0
 }
 
+func (x *GenesisState) GetUpgradePlans() []*GenesisUpgradePlan {
+	if x != nil {
+		return x.UpgradePlans
+	}
+	return nil
+}
+
 var File_zerone_gov_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_gov_v1_genesis_proto_rawDesc = "" +
@@ -288,12 +349,16 @@ const file_zerone_gov_v1_genesis_proto_rawDesc = "" +
 	"\x0eCategoryConfig\x12\x1a\n" +
 	"\bcategory\x18\x01 \x01(\tR\bcategory\x12,\n" +
 	"\x12required_stake_bps\x18\x02 \x01(\tR\x10requiredStakeBps\x12#\n" +
-	"\rreview_blocks\x18\x03 \x01(\x04R\freviewBlocks\"\xb8\x01\n" +
+	"\rreview_blocks\x18\x03 \x01(\x04R\freviewBlocks\"[\n" +
+	"\x12GenesisUpgradePlan\x12\x15\n" +
+	"\x06lip_id\x18\x01 \x01(\tR\x05lipId\x12.\n" +
+	"\x04plan\x18\x02 \x01(\v2\x1a.zerone.gov.v1.UpgradePlanR\x04plan\"\x80\x02\n" +
 	"\fGenesisState\x12-\n" +
 	"\x06params\x18\x01 \x01(\v2\x15.zerone.gov.v1.ParamsR\x06params\x12&\n" +
 	"\x04lips\x18\x02 \x03(\v2\x12.zerone.gov.v1.LIPR\x04lips\x12)\n" +
 	"\x05votes\x18\x03 \x03(\v2\x13.zerone.gov.v1.VoteR\x05votes\x12&\n" +
-	"\x0fnext_lip_number\x18\x04 \x01(\x04R\rnextLipNumberB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
+	"\x0fnext_lip_number\x18\x04 \x01(\x04R\rnextLipNumber\x12F\n" +
+	"\rupgrade_plans\x18\x05 \x03(\v2!.zerone.gov.v1.GenesisUpgradePlanR\fupgradePlansB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
 
 var (
 	file_zerone_gov_v1_genesis_proto_rawDescOnce sync.Once
@@ -307,26 +372,30 @@ func file_zerone_gov_v1_genesis_proto_rawDescGZIP() []byte {
 	return file_zerone_gov_v1_genesis_proto_rawDescData
 }
 
-var file_zerone_gov_v1_genesis_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_zerone_gov_v1_genesis_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_zerone_gov_v1_genesis_proto_goTypes = []any{
 	(*Params)(nil),             // 0: zerone.gov.v1.Params
 	(*CategoryConfig)(nil),     // 1: zerone.gov.v1.CategoryConfig
-	(*GenesisState)(nil),       // 2: zerone.gov.v1.GenesisState
-	(*ResearchFundVoters)(nil), // 3: zerone.gov.v1.ResearchFundVoters
-	(*LIP)(nil),                // 4: zerone.gov.v1.LIP
-	(*Vote)(nil),               // 5: zerone.gov.v1.Vote
+	(*GenesisUpgradePlan)(nil), // 2: zerone.gov.v1.GenesisUpgradePlan
+	(*GenesisState)(nil),       // 3: zerone.gov.v1.GenesisState
+	(*ResearchFundVoters)(nil), // 4: zerone.gov.v1.ResearchFundVoters
+	(*UpgradePlan)(nil),        // 5: zerone.gov.v1.UpgradePlan
+	(*LIP)(nil),                // 6: zerone.gov.v1.LIP
+	(*Vote)(nil),               // 7: zerone.gov.v1.Vote
 }
 var file_zerone_gov_v1_genesis_proto_depIdxs = []int32{
 	1, // 0: zerone.gov.v1.Params.category_configs:type_name -> zerone.gov.v1.CategoryConfig
-	3, // 1: zerone.gov.v1.Params.research_fund_voters:type_name -> zerone.gov.v1.ResearchFundVoters
-	0, // 2: zerone.gov.v1.GenesisState.params:type_name -> zerone.gov.v1.Params
-	4, // 3: zerone.gov.v1.GenesisState.lips:type_name -> zerone.gov.v1.LIP
-	5, // 4: zerone.gov.v1.GenesisState.votes:type_name -> zerone.gov.v1.Vote
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	4, // 1: zerone.gov.v1.Params.research_fund_voters:type_name -> zerone.gov.v1.ResearchFundVoters
+	5, // 2: zerone.gov.v1.GenesisUpgradePlan.plan:type_name -> zerone.gov.v1.UpgradePlan
+	0, // 3: zerone.gov.v1.GenesisState.params:type_name -> zerone.gov.v1.Params
+	6, // 4: zerone.gov.v1.GenesisState.lips:type_name -> zerone.gov.v1.LIP
+	7, // 5: zerone.gov.v1.GenesisState.votes:type_name -> zerone.gov.v1.Vote
+	2, // 6: zerone.gov.v1.GenesisState.upgrade_plans:type_name -> zerone.gov.v1.GenesisUpgradePlan
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_zerone_gov_v1_genesis_proto_init() }
@@ -341,7 +410,7 @@ func file_zerone_gov_v1_genesis_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_gov_v1_genesis_proto_rawDesc), len(file_zerone_gov_v1_genesis_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -19,11 +19,22 @@ type Keeper struct {
 	bankKeeper    types.BankKeeper
 	stakingKeeper types.StakingKeeper
 	vestingKeeper types.VestingRewardsKeeper // set post-init to break circular deps
+	upgradeKeeper types.UpgradeKeeper       // set post-init to break circular deps
 }
 
 // SetVestingKeeper sets the vesting rewards keeper (post-init to break circular deps).
 func (k *Keeper) SetVestingKeeper(vk types.VestingRewardsKeeper) {
 	k.vestingKeeper = vk
+}
+
+// SetUpgradeKeeper sets the upgrade keeper (post-init to break circular deps).
+func (k *Keeper) SetUpgradeKeeper(uk types.UpgradeKeeper) {
+	k.upgradeKeeper = uk
+}
+
+// GetUpgradeKeeper returns the upgrade keeper.
+func (k Keeper) GetUpgradeKeeper() types.UpgradeKeeper {
+	return k.upgradeKeeper
 }
 
 // NewKeeper creates a new governance keeper.
