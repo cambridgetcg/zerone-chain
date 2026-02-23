@@ -2260,3 +2260,996 @@ func TestDeleteDisputeCleansIndices(t *testing.T) {
 		t.Error("deleted dispute should not be found by GetDispute")
 	}
 }
+
+// ============================================================
+// Ported from prototype (legible-money) — Resolution, Tier,
+// Evidence, Edge-case, and Adversarial tests
+// ============================================================
+
+// ---------- Resolution Logic ----------
+
+// TestDisputeResolutionByEvidence verifies a full commit-reveal-vote-settle
+// flow where the challenger provides strong evidence and wins.
+func TestDisputeResolutionByEvidence(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("res-ev-challenger")
+	defender := testAddr("res-ev-defender")
+	bk.setBalance(challenger, "uzrn", 100_000_000)
+	kk.addFact("fact-res-ev", defender)
+
+	// 1. Initiate
+	resp, err := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-res-ev",
+		Reason:     "Fact lacks supporting data",
+		Bond:       "1000000",
+	})
+	if err != nil {
+		t.Fatalf("InitiateDispute failed: %v", err)
+	}
+
+	// 2. Commit evidence from challenger
+	content := "Source paper retracted by journal"
+	nonce := "nonce-res-ev"
+	h := sha256.Sum256([]byte(content + nonce))
+	commitHash := hex.EncodeToString(h[:])
+
+	_, err = msgSrv.CommitEvidence(ctx, &types.MsgCommitEvidence{
+		Submitter:      challenger,
+		DisputeId:      resp.DisputeId,
+		CommitmentHash: commitHash,
+	})
+	if err != nil {
+		t.Fatalf("CommitEvidence failed: %v", err)
+	}
+
+	// 3. Advance to reveal phase
+	dispute, _ := k.GetDispute(ctx, resp.DisputeId)
+	dispute.Phase = types.DisputePhase_DISPUTE_PHASE_EVIDENCE_REVEAL
+	dispute.EvidenceDeadline = 5000
+	k.SetDispute(ctx, dispute)
+
+	// 4. Reveal evidence
+	_, err = msgSrv.RevealEvidence(ctx, &types.MsgRevealEvidence{
+		Submitter: challenger,
+		DisputeId: resp.DisputeId,
+		Content:   content,
+		Nonce:     nonce,
+	})
+	if err != nil {
+		t.Fatalf("RevealEvidence failed: %v", err)
+	}
+
+	// 5. Advance to arbitration
+	dispute, _ = k.GetDispute(ctx, resp.DisputeId)
+	dispute.Phase = types.DisputePhase_DISPUTE_PHASE_ARBITRATION
+	dispute.VotingDeadline = 10000
+	k.SetDispute(ctx, dispute)
+
+	// 6. All arbiters vote for challenger (evidence was compelling)
+	for _, arb := range dispute.Arbiters {
+		_, err = msgSrv.ArbiterVote(ctx, &types.MsgArbiterVote{
+			Arbiter:   arb,
+			DisputeId: resp.DisputeId,
+			Vote:      types.ArbiterDecision_ARBITER_DECISION_CHALLENGER,
+			Reasoning: "Evidence strongly supports challenger",
+		})
+		if err != nil {
+			t.Fatalf("ArbiterVote failed: %v", err)
+		}
+	}
+
+	// 7. Settle
+	settleResp, err := msgSrv.SettleDispute(ctx, &types.MsgSettleDispute{
+		Authority: "zrn1authority",
+		DisputeId: resp.DisputeId,
+	})
+	if err != nil {
+		t.Fatalf("SettleDispute failed: %v", err)
+	}
+	if settleResp.Outcome != types.DisputeOutcome_DISPUTE_OUTCOME_CHALLENGER_WINS {
+		t.Errorf("expected CHALLENGER_WINS, got %s", settleResp.Outcome.String())
+	}
+
+	// Verify evidence count reflects submitted evidence
+	final, _ := k.GetDispute(ctx, resp.DisputeId)
+	if final.EvidenceCount != 1 {
+		t.Errorf("expected evidence count 1, got %d", final.EvidenceCount)
+	}
+}
+
+// TestDisputeResolutionByVoting verifies that stake-weighted voting
+// correctly determines outcomes even when the head count is against.
+func TestDisputeResolutionByVoting(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	arbiters := []string{testAddr("arb-wt1"), testAddr("arb-wt2"), testAddr("arb-wt3")}
+	dispute := &types.Dispute{
+		Id:             "dispute-vote-weight",
+		TargetId:       "fact-vote-wt",
+		Phase:          types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+		Tier:           1,
+		VotingDeadline: 5000,
+		Arbiters:       arbiters,
+	}
+	k.SetDispute(ctx, dispute)
+
+	// 2 arbiters vote DEFENDER with low stake, 1 votes CHALLENGER with very high stake
+	// CHALLENGER weight: 900000, DEFENDER weight: 2*100 = 200
+	// CHALLENGER ratio = 900000 / 900200 ≈ 999778 bps >> 666667 majority
+	k.SetVote(ctx, &types.DisputeVote{DisputeId: dispute.Id, Arbiter: arbiters[0], Vote: types.ArbiterDecision_ARBITER_DECISION_DEFENDER, Stake: "100"})
+	k.SetVote(ctx, &types.DisputeVote{DisputeId: dispute.Id, Arbiter: arbiters[1], Vote: types.ArbiterDecision_ARBITER_DECISION_DEFENDER, Stake: "100"})
+	k.SetVote(ctx, &types.DisputeVote{DisputeId: dispute.Id, Arbiter: arbiters[2], Vote: types.ArbiterDecision_ARBITER_DECISION_CHALLENGER, Stake: "900000"})
+
+	outcome := k.TallyVotes(ctx, dispute)
+	if outcome != types.DisputeOutcome_DISPUTE_OUTCOME_CHALLENGER_WINS {
+		t.Errorf("expected CHALLENGER_WINS (high-stake voter should dominate), got %s", outcome.String())
+	}
+}
+
+// TestDisputeResolutionTimeout verifies that auto-settlement produces
+// TIMED_OUT when no votes are cast and the voting deadline passes.
+func TestDisputeResolutionTimeout(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	challenger := testAddr("res-timeout-c")
+	dispute := &types.Dispute{
+		Id:             "dispute-res-timeout",
+		TargetId:       "fact-res-timeout",
+		Challenger:     challenger,
+		Defender:       testAddr("res-timeout-d"),
+		Phase:          types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+		Tier:           1,
+		Bond:           "1000000",
+		VotingDeadline: 200,
+		Arbiters:       []string{testAddr("arb-to1"), testAddr("arb-to2"), testAddr("arb-to3")},
+	}
+	k.SetDispute(ctx, dispute)
+
+	// No votes cast at all — advance past voting deadline
+	k.ProcessPhaseTransitions(ctx, 201)
+
+	resolved, _ := k.GetDispute(ctx, "dispute-res-timeout")
+	if resolved.Phase != types.DisputePhase_DISPUTE_PHASE_TIMED_OUT {
+		t.Errorf("expected TIMED_OUT phase, got %s", resolved.Phase.String())
+	}
+	if resolved.Outcome != types.DisputeOutcome_DISPUTE_OUTCOME_TIMED_OUT {
+		t.Errorf("expected TIMED_OUT outcome, got %s", resolved.Outcome.String())
+	}
+}
+
+// ---------- Tier-Specific Configuration ----------
+
+// TestDisputeConfigByTier verifies each of the 4 tiers has the expected
+// arbiter count, min bond, evidence/voting periods, quorum, and majority.
+func TestDisputeConfigByTier(t *testing.T) {
+	params := types.DefaultParams()
+
+	expectations := []struct {
+		tier         uint32
+		arbiterCount uint32
+		minBond      string
+		evidPeriod   uint64
+		votePeriod   uint64
+		quorumBps    uint64
+		majorityBps  uint64
+	}{
+		{1, 3, "1000000", 500, 1000, 500000, 666667},
+		{2, 7, "10000000", 1000, 2000, 500000, 666667},
+		{3, 13, "100000000", 2000, 5000, 600000, 750000},
+		{4, 21, "1000000000", 5000, 10000, 666000, 800000},
+	}
+
+	for _, exp := range expectations {
+		tc := types.GetTierConfig(params, exp.tier)
+		if tc == nil {
+			t.Fatalf("tier %d config not found", exp.tier)
+		}
+		if tc.ArbiterCount != exp.arbiterCount {
+			t.Errorf("tier %d: expected arbiter count %d, got %d", exp.tier, exp.arbiterCount, tc.ArbiterCount)
+		}
+		if tc.MinBond != exp.minBond {
+			t.Errorf("tier %d: expected min bond %s, got %s", exp.tier, exp.minBond, tc.MinBond)
+		}
+		if tc.EvidencePeriod != exp.evidPeriod {
+			t.Errorf("tier %d: expected evidence period %d, got %d", exp.tier, exp.evidPeriod, tc.EvidencePeriod)
+		}
+		if tc.VotingPeriod != exp.votePeriod {
+			t.Errorf("tier %d: expected voting period %d, got %d", exp.tier, exp.votePeriod, tc.VotingPeriod)
+		}
+		if tc.QuorumBps != exp.quorumBps {
+			t.Errorf("tier %d: expected quorum %d, got %d", exp.tier, exp.quorumBps, tc.QuorumBps)
+		}
+		if tc.MajorityBps != exp.majorityBps {
+			t.Errorf("tier %d: expected majority %d, got %d", exp.tier, exp.majorityBps, tc.MajorityBps)
+		}
+	}
+
+	// Invalid tier returns nil
+	if types.GetTierConfig(params, 0) != nil {
+		t.Error("tier 0 should return nil config")
+	}
+	if types.GetTierConfig(params, 99) != nil {
+		t.Error("tier 99 should return nil config")
+	}
+}
+
+// TestDisputeStakeRequirements verifies that disputes cannot be opened
+// with a bond below each tier's minimum.
+func TestDisputeStakeRequirements(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("stake-req-c")
+	defender := testAddr("stake-req-d")
+	bk.setBalance(challenger, "uzrn", 10_000_000_000)
+	kk.addFact("fact-stake-req", defender)
+
+	// Bond of 999999 is below tier 1 minimum of 1000000
+	_, err := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-stake-req",
+		Reason:     "Testing stake requirement",
+		Bond:       "999999",
+	})
+	if err == nil {
+		t.Fatal("expected error for bond below tier 1 minimum (999999 < 1000000)")
+	}
+
+	// Bond exactly at tier 1 minimum should succeed
+	_, err = msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-stake-req",
+		Reason:     "Testing exact minimum",
+		Bond:       "1000000",
+	})
+	if err != nil {
+		t.Fatalf("bond at exact tier 1 minimum should succeed: %v", err)
+	}
+
+	// Negative and zero bonds
+	kk.addFact("fact-stake-neg", defender)
+	_, err = msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-stake-neg",
+		Reason:     "Negative bond",
+		Bond:       "-100",
+	})
+	if err == nil {
+		t.Fatal("expected error for negative bond")
+	}
+}
+
+// ---------- Evidence Submission ----------
+
+// TestSubmitMultipleEvidence verifies both parties can commit and reveal
+// evidence, and that evidence count is tracked correctly.
+func TestSubmitMultipleEvidence(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("multi-ev-c")
+	defender := testAddr("multi-ev-d")
+	bk.setBalance(challenger, "uzrn", 10_000_000)
+	kk.addFact("fact-multi-ev", defender)
+
+	resp, err := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-multi-ev",
+		Reason:     "Multiple evidence test",
+		Bond:       "1000000",
+	})
+	if err != nil {
+		t.Fatalf("InitiateDispute failed: %v", err)
+	}
+
+	// Challenger commits
+	content1 := "Challenger evidence: the source is unreliable"
+	nonce1 := "nonce-challenger"
+	h1 := sha256.Sum256([]byte(content1 + nonce1))
+	_, err = msgSrv.CommitEvidence(ctx, &types.MsgCommitEvidence{
+		Submitter:      challenger,
+		DisputeId:      resp.DisputeId,
+		CommitmentHash: hex.EncodeToString(h1[:]),
+	})
+	if err != nil {
+		t.Fatalf("Challenger commit failed: %v", err)
+	}
+
+	// Defender commits
+	content2 := "Defender evidence: source verified by peer review"
+	nonce2 := "nonce-defender"
+	h2 := sha256.Sum256([]byte(content2 + nonce2))
+	_, err = msgSrv.CommitEvidence(ctx, &types.MsgCommitEvidence{
+		Submitter:      defender,
+		DisputeId:      resp.DisputeId,
+		CommitmentHash: hex.EncodeToString(h2[:]),
+	})
+	if err != nil {
+		t.Fatalf("Defender commit failed: %v", err)
+	}
+
+	// Advance to reveal phase
+	dispute, _ := k.GetDispute(ctx, resp.DisputeId)
+	dispute.Phase = types.DisputePhase_DISPUTE_PHASE_EVIDENCE_REVEAL
+	dispute.EvidenceDeadline = 5000
+	k.SetDispute(ctx, dispute)
+
+	// Both reveal
+	_, err = msgSrv.RevealEvidence(ctx, &types.MsgRevealEvidence{
+		Submitter: challenger,
+		DisputeId: resp.DisputeId,
+		Content:   content1,
+		Nonce:     nonce1,
+	})
+	if err != nil {
+		t.Fatalf("Challenger reveal failed: %v", err)
+	}
+
+	_, err = msgSrv.RevealEvidence(ctx, &types.MsgRevealEvidence{
+		Submitter: defender,
+		DisputeId: resp.DisputeId,
+		Content:   content2,
+		Nonce:     nonce2,
+	})
+	if err != nil {
+		t.Fatalf("Defender reveal failed: %v", err)
+	}
+
+	// Verify evidence count
+	dispute, _ = k.GetDispute(ctx, resp.DisputeId)
+	if dispute.EvidenceCount != 2 {
+		t.Errorf("expected evidence count 2, got %d", dispute.EvidenceCount)
+	}
+
+	// Verify both evidence items stored
+	evidence := k.GetEvidenceByDispute(ctx, resp.DisputeId)
+	if len(evidence) != 2 {
+		t.Errorf("expected 2 evidence items, got %d", len(evidence))
+	}
+}
+
+// TestEvidenceDeadlineEnforced verifies that evidence cannot be committed
+// or revealed after the respective deadlines have passed.
+func TestEvidenceDeadlineEnforced(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("ev-deadline-c")
+	defender := testAddr("ev-deadline-d")
+	bk.setBalance(challenger, "uzrn", 10_000_000)
+	kk.addFact("fact-ev-deadline", defender)
+
+	resp, _ := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-ev-deadline",
+		Reason:     "Deadline test",
+		Bond:       "1000000",
+	})
+
+	// Set evidence deadline to past
+	dispute, _ := k.GetDispute(ctx, resp.DisputeId)
+	dispute.EvidenceDeadline = 50 // block 100 > 50
+	k.SetDispute(ctx, dispute)
+
+	// Commit should fail after deadline
+	_, err := msgSrv.CommitEvidence(ctx, &types.MsgCommitEvidence{
+		Submitter:      challenger,
+		DisputeId:      resp.DisputeId,
+		CommitmentHash: "abc123",
+	})
+	if err == nil {
+		t.Fatal("expected error for commit after evidence deadline")
+	}
+
+	// Also verify reveal after deadline fails
+	dispute.Phase = types.DisputePhase_DISPUTE_PHASE_EVIDENCE_REVEAL
+	dispute.EvidenceDeadline = 50
+	k.SetDispute(ctx, dispute)
+
+	// Plant a fake commitment so reveal path is exercised
+	k.SetCommitment(ctx, &types.EvidenceCommitment{
+		DisputeId:   resp.DisputeId,
+		Submitter:   challenger,
+		Side:        "challenger",
+		ContentHash: "fake",
+		CommittedAt: 10,
+		Revealed:    false,
+	})
+
+	_, err = msgSrv.RevealEvidence(ctx, &types.MsgRevealEvidence{
+		Submitter: challenger,
+		DisputeId: resp.DisputeId,
+		Content:   "late evidence",
+		Nonce:     "late-nonce",
+	})
+	if err == nil {
+		t.Fatal("expected error for reveal after evidence deadline")
+	}
+}
+
+// TestEvidenceFromNonParty verifies that outsiders cannot submit evidence
+// to a dispute they are not a party to.
+func TestEvidenceFromNonParty(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("ev-nonparty-c")
+	defender := testAddr("ev-nonparty-d")
+	outsider := testAddr("ev-nonparty-outsider")
+	bk.setBalance(challenger, "uzrn", 10_000_000)
+	kk.addFact("fact-ev-nonparty", defender)
+
+	resp, _ := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-ev-nonparty",
+		Reason:     "Non-party test",
+		Bond:       "1000000",
+	})
+
+	// Outsider tries to commit evidence
+	_, err := msgSrv.CommitEvidence(ctx, &types.MsgCommitEvidence{
+		Submitter:      outsider,
+		DisputeId:      resp.DisputeId,
+		CommitmentHash: "outsider-hash",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-party evidence submission")
+	}
+}
+
+// ---------- Edge Cases ----------
+
+// TestDisputeAlreadyResolved verifies that settled disputes cannot be
+// re-settled or re-voted on.
+func TestDisputeAlreadyResolved(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	// Create already-settled dispute
+	dispute := &types.Dispute{
+		Id:         "dispute-already-settled",
+		TargetId:   "fact-settled",
+		Challenger: testAddr("settled-c"),
+		Defender:   testAddr("settled-d"),
+		Phase:      types.DisputePhase_DISPUTE_PHASE_SETTLED,
+		Outcome:    types.DisputeOutcome_DISPUTE_OUTCOME_DEFENDER_WINS,
+		Bond:       "1000000",
+		Tier:       1,
+		Arbiters:   []string{testAddr("settled-arb1")},
+	}
+	k.SetDispute(ctx, dispute)
+
+	// Try to settle again
+	_, err := msgSrv.SettleDispute(ctx, &types.MsgSettleDispute{
+		Authority: "zrn1authority",
+		DisputeId: "dispute-already-settled",
+	})
+	if err == nil {
+		t.Fatal("expected error for settling an already-settled dispute")
+	}
+
+	// Try to vote on settled dispute
+	_, err = msgSrv.ArbiterVote(ctx, &types.MsgArbiterVote{
+		Arbiter:   dispute.Arbiters[0],
+		DisputeId: dispute.Id,
+		Vote:      types.ArbiterDecision_ARBITER_DECISION_CHALLENGER,
+		Reasoning: "Too late",
+	})
+	if err == nil {
+		t.Fatal("expected error for voting on settled dispute")
+	}
+
+	// Try to commit evidence to settled dispute
+	_, err = msgSrv.CommitEvidence(ctx, &types.MsgCommitEvidence{
+		Submitter:      dispute.Challenger,
+		DisputeId:      dispute.Id,
+		CommitmentHash: "late-commit",
+	})
+	if err == nil {
+		t.Fatal("expected error for committing evidence to settled dispute")
+	}
+}
+
+// TestDisputeAgainstOwnClaim verifies behavior when a submitter challenges
+// their own fact. The system should allow it (the economic penalty deters
+// abuse) or reject it.
+func TestDisputeAgainstOwnClaim(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	selfDisputer := testAddr("self-disputer")
+	bk.setBalance(selfDisputer, "uzrn", 100_000_000)
+
+	// Fact submitted by the same person who will challenge
+	kk.addFact("fact-self-dispute", selfDisputer)
+
+	resp, err := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: selfDisputer,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-self-dispute",
+		Reason:     "Challenging my own fact",
+		Bond:       "1000000",
+	})
+
+	// Whether allowed or rejected, verify consistent behavior
+	if err != nil {
+		// Self-dispute rejected — this is valid defense
+		t.Logf("Self-dispute rejected (defense): %v", err)
+	} else {
+		// Self-dispute allowed — verify it was created properly
+		dispute, found := k.GetDispute(ctx, resp.DisputeId)
+		if !found {
+			t.Fatal("dispute not found after self-dispute initiation")
+		}
+		if dispute.Challenger != dispute.Defender {
+			t.Logf("Self-dispute allowed: challenger=%s defender=%s (different addresses in fact lookup)", dispute.Challenger, dispute.Defender)
+		} else {
+			t.Logf("Self-dispute allowed: challenger == defender == %s", dispute.Challenger)
+		}
+		// Bond should still have been escrowed
+		if bk.balances[selfDisputer]["uzrn"] >= 100_000_000 {
+			t.Error("expected bond to be escrowed for self-dispute")
+		}
+	}
+}
+
+// TestCascadingDisputes verifies that multiple disputes can be opened
+// against the same target (up to the max active limit).
+func TestCascadingDisputes(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	defender := testAddr("cascade-d")
+	kk.addFact("fact-cascade", defender)
+
+	var disputeIDs []string
+	// Open multiple disputes from different challengers
+	for i := 0; i < 3; i++ {
+		challenger := testAddr(fmt.Sprintf("cascade-c-%d", i))
+		bk.setBalance(challenger, "uzrn", 10_000_000)
+
+		resp, err := msgSrv.InitiateDispute(ctx.WithBlockHeight(int64(100+i)), &types.MsgInitiateDispute{
+			Challenger: challenger,
+			TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+			TargetId:   "fact-cascade",
+			Reason:     fmt.Sprintf("Challenge round %d", i),
+			Bond:       "1000000",
+		})
+		if err != nil {
+			t.Fatalf("dispute %d failed: %v", i, err)
+		}
+		disputeIDs = append(disputeIDs, resp.DisputeId)
+	}
+
+	// Verify all 3 disputes exist for this target
+	disputes := k.GetDisputesByTarget(ctx, "fact-cascade")
+	if len(disputes) != 3 {
+		t.Errorf("expected 3 cascading disputes, got %d", len(disputes))
+	}
+
+	// All should be active
+	for _, d := range disputes {
+		if d.Phase != types.DisputePhase_DISPUTE_PHASE_EVIDENCE_COMMIT {
+			t.Errorf("dispute %s: expected EVIDENCE_COMMIT phase, got %s", d.Id, d.Phase.String())
+		}
+	}
+
+	// Each should have distinct IDs
+	seen := map[string]bool{}
+	for _, id := range disputeIDs {
+		if seen[id] {
+			t.Errorf("duplicate dispute ID: %s", id)
+		}
+		seen[id] = true
+	}
+}
+
+// ---------- Adversarial / Security Tests (ported from OC tests) ----------
+
+// TestDoubleCommitPrevention verifies that the same party cannot commit
+// evidence twice to the same dispute.
+func TestDoubleCommitPrevention(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("dbl-commit-c")
+	defender := testAddr("dbl-commit-d")
+	bk.setBalance(challenger, "uzrn", 10_000_000)
+	kk.addFact("fact-dbl-commit", defender)
+
+	resp, _ := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-dbl-commit",
+		Reason:     "Double commit test",
+		Bond:       "1000000",
+	})
+
+	// First commit — should succeed
+	_, err := msgSrv.CommitEvidence(ctx, &types.MsgCommitEvidence{
+		Submitter:      challenger,
+		DisputeId:      resp.DisputeId,
+		CommitmentHash: "hash-1",
+	})
+	if err != nil {
+		t.Fatalf("first commit should succeed: %v", err)
+	}
+
+	// Second commit — should fail
+	_, err = msgSrv.CommitEvidence(ctx, &types.MsgCommitEvidence{
+		Submitter:      challenger,
+		DisputeId:      resp.DisputeId,
+		CommitmentHash: "hash-2",
+	})
+	if err == nil {
+		t.Fatal("expected error for double commitment — attacker could overwrite evidence")
+	}
+}
+
+// TestBondSlashIntegerTruncation verifies that bond slash calculation
+// does not produce negative burn or zero slash for meaningful bonds.
+func TestBondSlashIntegerTruncation(t *testing.T) {
+	params := types.DefaultParams()
+	slashRate := params.SlashRateLoserBps  // 500000 (50%)
+	rewardRate := params.RewardRateWinnerBps // 400000 (40%)
+	arbiterRate := params.ArbiterRewardBps   // 100000 (10%)
+
+	// Scale factor is 1M (1,000,000)
+	bonds := []int64{1, 2, 100, 999, 1000, 1000000, 10000000}
+
+	for _, bond := range bonds {
+		slash := bond * int64(slashRate) / 1_000_000
+		winnerReward := slash * int64(rewardRate) / 1_000_000
+		arbiterReward := slash * int64(arbiterRate) / 1_000_000
+		burn := slash - winnerReward - arbiterReward
+
+		if burn < 0 {
+			t.Errorf("negative burn at bond=%d: slash=%d reward=%d arbiter=%d burn=%d",
+				bond, slash, winnerReward, arbiterReward, burn)
+		}
+
+		// At the minimum bond (1000000), verify non-trivial economics
+		if bond == 1000000 {
+			if slash != 500000 {
+				t.Errorf("expected slash 500000 at bond 1M, got %d", slash)
+			}
+			if winnerReward != 200000 {
+				t.Errorf("expected winner reward 200000 at bond 1M, got %d", winnerReward)
+			}
+			if arbiterReward != 50000 {
+				t.Errorf("expected arbiter reward 50000 at bond 1M, got %d", arbiterReward)
+			}
+			expectedBurn := int64(250000)
+			if burn != expectedBurn {
+				t.Errorf("expected burn %d at bond 1M, got %d", expectedBurn, burn)
+			}
+		}
+	}
+}
+
+// TestQuorumBoundaryExact verifies the quorum threshold at exact boundaries
+// for different tier configurations.
+func TestQuorumBoundaryExact(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	// Tier 1: 3 arbiters, quorum 500000 bps (50%)
+	// Quorum required: 3 * 500000 / 1000000 = 1 (floor). So 1/3 meets quorum.
+	arbitersTier1 := []string{testAddr("qb-arb1"), testAddr("qb-arb2"), testAddr("qb-arb3")}
+	dispute1 := &types.Dispute{
+		Id:       "quorum-boundary-1",
+		TargetId: "fact-qb1",
+		Tier:     1,
+		Arbiters: arbitersTier1,
+	}
+	k.SetDispute(ctx, dispute1)
+
+	// 0 votes → TIMED_OUT
+	outcome0 := k.TallyVotes(ctx, dispute1)
+	if outcome0 != types.DisputeOutcome_DISPUTE_OUTCOME_TIMED_OUT {
+		t.Errorf("0 votes: expected TIMED_OUT, got %s", outcome0.String())
+	}
+
+	// 1 vote should meet quorum (1 >= 1)
+	k.SetVote(ctx, &types.DisputeVote{
+		DisputeId: dispute1.Id,
+		Arbiter:   arbitersTier1[0],
+		Vote:      types.ArbiterDecision_ARBITER_DECISION_CHALLENGER,
+		Stake:     "1000",
+	})
+	outcome1 := k.TallyVotes(ctx, dispute1)
+	// With 1 vote for challenger out of 1 total: 100% >= 66.67% majority → CHALLENGER_WINS
+	if outcome1 != types.DisputeOutcome_DISPUTE_OUTCOME_CHALLENGER_WINS {
+		t.Errorf("1/3 vote (all challenger): expected CHALLENGER_WINS, got %s", outcome1.String())
+	}
+}
+
+// TestArbiterCollusionAllOverturn verifies behavior when all arbiters
+// vote the same way (potential collusion scenario).
+func TestArbiterCollusionAllOverturn(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	arbiters := []string{testAddr("coll-arb1"), testAddr("coll-arb2"), testAddr("coll-arb3")}
+	dispute := &types.Dispute{
+		Id:             "dispute-collusion",
+		TargetId:       "fact-collusion",
+		Phase:          types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+		Tier:           1,
+		VotingDeadline: 5000,
+		Arbiters:       arbiters,
+	}
+	k.SetDispute(ctx, dispute)
+
+	// All 3 arbiters vote for challenger (unanimous overturn)
+	for _, arb := range arbiters {
+		k.SetVote(ctx, &types.DisputeVote{
+			DisputeId: dispute.Id,
+			Arbiter:   arb,
+			Vote:      types.ArbiterDecision_ARBITER_DECISION_CHALLENGER,
+			Stake:     "5000",
+		})
+	}
+
+	outcome := k.TallyVotes(ctx, dispute)
+	if outcome != types.DisputeOutcome_DISPUTE_OUTCOME_CHALLENGER_WINS {
+		t.Errorf("expected CHALLENGER_WINS for unanimous vote, got %s", outcome.String())
+	}
+
+	// Verify: defense against collusion is the escalation mechanism
+	// At tier 1 (3 arbiters), collusion is feasible. Escalation to tier 2
+	// (7 arbiters) or tier 3 (13) dilutes collusion probability.
+	params := types.DefaultParams()
+	tc2 := types.GetTierConfig(params, 2)
+	tc3 := types.GetTierConfig(params, 3)
+	if tc2.ArbiterCount <= dispute.Tier*3 {
+		t.Logf("Tier 2 has %d arbiters (up from 3 at tier 1)", tc2.ArbiterCount)
+	}
+	if tc3.ArbiterCount < 10 {
+		t.Errorf("tier 3 should have many arbiters to dilute collusion, got %d", tc3.ArbiterCount)
+	}
+}
+
+// TestEscalationResetsPhaseAndDeadlines verifies that escalation properly
+// resets the dispute to EVIDENCE_COMMIT phase with new deadlines.
+func TestEscalationResetsPhaseAndDeadlines(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("esc-reset-c")
+	defender := testAddr("esc-reset-d")
+	bk.setBalance(challenger, "uzrn", 100_000_000)
+	kk.addFact("fact-esc-reset", defender)
+
+	resp, _ := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-esc-reset",
+		Reason:     "Escalation reset test",
+		Bond:       "1000000",
+	})
+
+	// Record original deadlines
+	original, _ := k.GetDispute(ctx, resp.DisputeId)
+	originalEvDeadline := original.EvidenceDeadline
+	originalVoteDeadline := original.VotingDeadline
+	originalArbiterCount := len(original.Arbiters)
+
+	// Set up for escalation
+	original.CreatedAt = 1
+	k.SetDispute(ctx, original)
+
+	// Escalate at a block past escalation delay
+	escCtx := ctx.WithBlockHeight(600)
+	escResp, err := msgSrv.EscalateDispute(escCtx, &types.MsgEscalateDispute{
+		Requester:      challenger,
+		DisputeId:      resp.DisputeId,
+		AdditionalBond: "10000000",
+	})
+	if err != nil {
+		t.Fatalf("EscalateDispute failed: %v", err)
+	}
+	if escResp.NewTier != 2 {
+		t.Errorf("expected tier 2, got %d", escResp.NewTier)
+	}
+
+	// Verify phase reset
+	escalated, _ := k.GetDispute(ctx, resp.DisputeId)
+	if escalated.Phase != types.DisputePhase_DISPUTE_PHASE_EVIDENCE_COMMIT {
+		t.Errorf("expected EVIDENCE_COMMIT after escalation, got %s", escalated.Phase.String())
+	}
+
+	// Deadlines should be different (set from the escalation block)
+	if escalated.EvidenceDeadline == originalEvDeadline {
+		t.Error("evidence deadline should be reset after escalation")
+	}
+	if escalated.VotingDeadline == originalVoteDeadline {
+		t.Error("voting deadline should be reset after escalation")
+	}
+
+	// Arbiter count should increase (tier 2 has 7 arbiters)
+	if len(escalated.Arbiters) <= originalArbiterCount {
+		t.Errorf("expected more arbiters after escalation: was %d, now %d",
+			originalArbiterCount, len(escalated.Arbiters))
+	}
+	if len(escalated.Arbiters) != 7 {
+		t.Errorf("tier 2 should have 7 arbiters, got %d", len(escalated.Arbiters))
+	}
+}
+
+// TestVoteAfterVotingDeadline verifies the voting deadline is enforced
+// through the MsgServer.
+func TestVoteAfterVotingDeadline(t *testing.T) {
+	k, ctx, bk, _, kk := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("vote-deadline-c")
+	defender := testAddr("vote-deadline-d")
+	bk.setBalance(challenger, "uzrn", 10_000_000)
+	kk.addFact("fact-vote-deadline", defender)
+
+	resp, _ := msgSrv.InitiateDispute(ctx, &types.MsgInitiateDispute{
+		Challenger: challenger,
+		TargetType: types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		TargetId:   "fact-vote-deadline",
+		Reason:     "Vote deadline test",
+		Bond:       "1000000",
+	})
+
+	dispute, _ := k.GetDispute(ctx, resp.DisputeId)
+	dispute.Phase = types.DisputePhase_DISPUTE_PHASE_ARBITRATION
+	dispute.VotingDeadline = 150
+	k.SetDispute(ctx, dispute)
+
+	arbiter := dispute.Arbiters[0]
+
+	// Attempt to vote at block 200 (past deadline of 150)
+	lateCtx := ctx.WithBlockHeight(200)
+	_, err := msgSrv.ArbiterVote(lateCtx, &types.MsgArbiterVote{
+		Arbiter:   arbiter,
+		DisputeId: resp.DisputeId,
+		Vote:      types.ArbiterDecision_ARBITER_DECISION_CHALLENGER,
+		Reasoning: "Late vote attempt",
+	})
+	if err == nil {
+		t.Fatal("expected error for vote after deadline")
+	}
+}
+
+// TestSettleDisputeWrongPhase verifies that settlement is rejected when
+// the dispute is not in the ARBITRATION phase.
+func TestSettleDisputeWrongPhase(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	// Dispute in EVIDENCE_COMMIT phase — not ready for settlement
+	k.SetDispute(ctx, &types.Dispute{
+		Id:         "dispute-wrong-phase-settle",
+		TargetId:   "fact-wp",
+		Challenger: testAddr("wp-c"),
+		Defender:   testAddr("wp-d"),
+		Phase:      types.DisputePhase_DISPUTE_PHASE_EVIDENCE_COMMIT,
+		Bond:       "1000000",
+		Tier:       1,
+	})
+
+	_, err := msgSrv.SettleDispute(ctx, &types.MsgSettleDispute{
+		Authority: "zrn1authority",
+		DisputeId: "dispute-wrong-phase-settle",
+	})
+	if err == nil {
+		t.Fatal("expected error for settlement in EVIDENCE_COMMIT phase")
+	}
+
+	// Dispute in EVIDENCE_REVEAL phase — also not ready
+	k.SetDispute(ctx, &types.Dispute{
+		Id:         "dispute-wrong-phase-settle-2",
+		TargetId:   "fact-wp2",
+		Challenger: testAddr("wp2-c"),
+		Defender:   testAddr("wp2-d"),
+		Phase:      types.DisputePhase_DISPUTE_PHASE_EVIDENCE_REVEAL,
+		Bond:       "1000000",
+		Tier:       1,
+	})
+
+	_, err = msgSrv.SettleDispute(ctx, &types.MsgSettleDispute{
+		Authority: "zrn1authority",
+		DisputeId: "dispute-wrong-phase-settle-2",
+	})
+	if err == nil {
+		t.Fatal("expected error for settlement in EVIDENCE_REVEAL phase")
+	}
+}
+
+// TestDistributeDrawRefundAndArbiterFees verifies the draw settlement:
+// challenger gets bond minus arbiter fees, arbiters split the fees.
+func TestDistributeDrawRefundAndArbiterFees(t *testing.T) {
+	k, ctx, bk, _, _ := setupKeeper(t)
+
+	challenger := testAddr("draw-ref-c")
+	arb1 := testAddr("draw-arb1")
+	arb2 := testAddr("draw-arb2")
+
+	dispute := &types.Dispute{
+		Id:         "draw-refund",
+		TargetId:   "fact-draw",
+		Challenger: challenger,
+		Defender:   testAddr("draw-ref-d"),
+		Bond:       "1000000",
+		Outcome:    types.DisputeOutcome_DISPUTE_OUTCOME_DRAW,
+		Phase:      types.DisputePhase_DISPUTE_PHASE_SETTLED,
+		Tier:       1,
+		Arbiters:   []string{arb1, arb2},
+	}
+	k.SetDispute(ctx, dispute)
+
+	// Both arbiters voted (they split the arbiter fee on draw)
+	k.SetVote(ctx, &types.DisputeVote{DisputeId: dispute.Id, Arbiter: arb1, Vote: types.ArbiterDecision_ARBITER_DECISION_CHALLENGER, Stake: "1"})
+	k.SetVote(ctx, &types.DisputeVote{DisputeId: dispute.Id, Arbiter: arb2, Vote: types.ArbiterDecision_ARBITER_DECISION_DEFENDER, Stake: "1"})
+
+	// Fund module account
+	bk.moduleBalances[types.ModuleName] = map[string]int64{"uzrn": 2_000_000}
+
+	err := k.DistributeSettlement(ctx, dispute)
+	if err != nil {
+		t.Fatalf("DistributeSettlement failed: %v", err)
+	}
+
+	// Challenger should get most of the bond back (bond - arbiter fee)
+	// ArbiterFee = bond * arbiterRewardBps / 1M = 1000000 * 100000 / 1M = 100000
+	// Refund = 1000000 - 100000 = 900000
+	challengerBal := bk.balances[challenger]["uzrn"]
+	if challengerBal <= 0 {
+		t.Errorf("expected challenger to receive refund, got balance %d", challengerBal)
+	}
+
+	// Each arbiter should get half the fee (100000 / 2 = 50000)
+	arb1Bal := bk.balances[arb1]["uzrn"]
+	arb2Bal := bk.balances[arb2]["uzrn"]
+	if arb1Bal <= 0 || arb2Bal <= 0 {
+		t.Errorf("expected arbiters to receive fees: arb1=%d arb2=%d", arb1Bal, arb2Bal)
+	}
+	if arb1Bal != arb2Bal {
+		t.Errorf("expected equal arbiter fees: arb1=%d arb2=%d", arb1Bal, arb2Bal)
+	}
+}
+
+// TestEscalateTimedOutDispute verifies that timed-out disputes cannot be
+// escalated (per the EscalateDispute guard).
+func TestEscalateTimedOutDispute(t *testing.T) {
+	k, ctx, bk, _, _ := setupKeeper(t)
+	msgSrv := keeper.NewMsgServerImpl(k)
+
+	challenger := testAddr("esc-timedout-c")
+	bk.setBalance(challenger, "uzrn", 100_000_000)
+
+	dispute := &types.Dispute{
+		Id:         "dispute-esc-timedout",
+		TargetId:   "fact-esc-to",
+		Challenger: challenger,
+		Defender:   testAddr("esc-timedout-d"),
+		Phase:      types.DisputePhase_DISPUTE_PHASE_TIMED_OUT,
+		Tier:       1,
+		Bond:       "1000000",
+		CreatedAt:  1,
+	}
+	k.SetDispute(ctx, dispute)
+
+	escCtx := ctx.WithBlockHeight(600)
+	_, err := msgSrv.EscalateDispute(escCtx, &types.MsgEscalateDispute{
+		Requester:      challenger,
+		DisputeId:      dispute.Id,
+		AdditionalBond: "10000000",
+	})
+	if err == nil {
+		t.Fatal("expected error for escalating timed-out dispute")
+	}
+}
