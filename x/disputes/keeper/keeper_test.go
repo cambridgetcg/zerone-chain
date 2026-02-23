@@ -1694,3 +1694,73 @@ func TestArbiterSelectionExcludesParties(t *testing.T) {
 		}
 	}
 }
+
+// ---------- Tests: UpdateParams ----------
+
+func TestUpdateParams(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	authority := k.GetAuthority()
+
+	srv := keeper.NewMsgServerImpl(k)
+	newParams := types.DefaultParams()
+	newParams.MaxActiveDisputes = 200
+	newParams.EscalationDelay = 1000
+
+	_, err := srv.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: authority,
+		Params:    newParams,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParams failed: %v", err)
+	}
+
+	got := k.GetParams(ctx)
+	if got.MaxActiveDisputes != 200 {
+		t.Errorf("expected MaxActiveDisputes 200, got %d", got.MaxActiveDisputes)
+	}
+	if got.EscalationDelay != 1000 {
+		t.Errorf("expected EscalationDelay 1000, got %d", got.EscalationDelay)
+	}
+}
+
+func TestUpdateParamsUnauthorized(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+	_, err := srv.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: testAddr("wrongauthority"),
+		Params:    types.DefaultParams(),
+	})
+	if err == nil {
+		t.Fatal("expected unauthorized error")
+	}
+}
+
+func TestUpdateParamsNilParams(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	authority := k.GetAuthority()
+	srv := keeper.NewMsgServerImpl(k)
+	_, err := srv.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: authority,
+		Params:    nil,
+	})
+	if err == nil {
+		t.Fatal("expected nil params error")
+	}
+}
+
+func TestUpdateParamsInvalid(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	authority := k.GetAuthority()
+	srv := keeper.NewMsgServerImpl(k)
+
+	badParams := types.DefaultParams()
+	badParams.TierConfigs = nil // invalid: at least one tier required
+
+	_, err := srv.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: authority,
+		Params:    badParams,
+	})
+	if err == nil {
+		t.Fatal("expected validation error for invalid params")
+	}
+}
