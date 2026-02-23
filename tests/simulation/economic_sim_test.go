@@ -191,7 +191,7 @@ func TestEconomicSimulation(t *testing.T) {
 		}
 
 		burnedBig := new(big.Int)
-		burnedBig.SetString(dist.BurnAmount, 10)
+		burnedBig.SetString(dist.DevelopmentAmount, 10)
 		if burnedBig.Sign() > 0 {
 			state.totalBurned = state.totalBurned.Add(sdkmath.NewIntFromBigInt(burnedBig))
 		}

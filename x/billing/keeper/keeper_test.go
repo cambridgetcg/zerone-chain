@@ -534,7 +534,7 @@ func TestRevenueSplit_FromParams(t *testing.T) {
 	params.RevenueSplit.ContributorBps = 600000
 	params.RevenueSplit.ProtocolBps = 200000
 	params.RevenueSplit.ResearchBps = 100000
-	params.RevenueSplit.BurnBps = 100000
+	params.RevenueSplit.DevelopmentBps = 100000
 	k.SetParams(ctx, params)
 
 	distribution := k.CalculateDistribution(ctx, big.NewInt(10000000), []string{"fact-1"})

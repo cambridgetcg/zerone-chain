@@ -257,7 +257,8 @@
       "_note": "Block rewards with evidence-category vesting schedules and revenue splits",
       "params": {
         "block_reward": "10000000",
-        "reward_decay_bps": 850000,
+        "reward_decay_bps": 994478,
+        "reward_decay_bps_note": "1-year half-life: rewards halve annually (prod=994478)",
         "blocks_per_reward_epoch": 50000,
         "blocks_per_reward_epoch_[TESTNET]": "prod=100000, halved for faster epoch cycling",
         "founder_share_bps": 70000,

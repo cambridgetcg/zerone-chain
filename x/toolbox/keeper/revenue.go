@@ -29,7 +29,7 @@ func uzrnCoin(amount uint64) sdk.Coin {
 // DistributeRevenue splits collected fees according to governance params.
 // Split: ToolRevenueBps → contributors, ProtocolBps → protocol sub-split,
 //
-//	ResearchBps → research fund, BurnBps → burn.
+//	ResearchBps → research fund, DevelopmentBps → development fund.
 func (k Keeper) DistributeRevenue(ctx context.Context, tool *types.Tool, totalAmount sdk.Coin) error {
 	if totalAmount.IsZero() {
 		return nil
@@ -79,11 +79,12 @@ func (k Keeper) DistributeRevenue(ctx context.Context, tool *types.Tool, totalAm
 		}
 	}
 
-	// 4. Burn.
-	burnAmount := safeMulDiv(total, params.BurnBps, types.BpsDenominator)
-	if burnAmount > 0 {
-		if err := k.bankKeeper.BurnCoins(ctx, ToolboxModuleName, sdk.NewCoins(uzrnCoin(burnAmount))); err != nil {
-			return fmt.Errorf("burn: %w", err)
+	// 4. Development fund.
+	devAmount := safeMulDiv(total, params.DevelopmentBps, types.BpsDenominator)
+	if devAmount > 0 {
+		// TODO(R16): route to development fund instead of burning
+		if err := k.bankKeeper.BurnCoins(ctx, ToolboxModuleName, sdk.NewCoins(uzrnCoin(devAmount))); err != nil {
+			return fmt.Errorf("development fund: %w", err)
 		}
 	}
 

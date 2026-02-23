@@ -281,7 +281,7 @@ cmd_init() {
   # Group 8: Vesting rewards [TESTNET: shorter epochs, lower validator threshold]
   patch '
     .app_state.vesting_rewards.params.block_reward = "10000000" |
-    .app_state.vesting_rewards.params.reward_decay_bps = 850000 |
+    .app_state.vesting_rewards.params.reward_decay_bps = 994478 |
     .app_state.vesting_rewards.params.blocks_per_reward_epoch = 50000 |
     .app_state.vesting_rewards.params.founder_share_bps = 70000 |
     .app_state.vesting_rewards.params.founder_address = "" |

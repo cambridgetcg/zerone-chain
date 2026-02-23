@@ -9,13 +9,13 @@ import (
 )
 
 // DefaultRevenueSplit returns the default 4-way revenue split.
-// contributor 55%, protocol 22%, research 13%, burn 10%.
+// contributor 55%, protocol 22%, research 3.33%, development 19.67%.
 func DefaultRevenueSplit() *commontypes.RevenueSplit {
 	return &commontypes.RevenueSplit{
-		ContributorBps: 550000,
-		ProtocolBps:    220000,
-		ResearchBps:    130000,
-		BurnBps:        100000,
+		ContributorBps: 550000,  // 55%
+		ProtocolBps:    220000,  // 22%
+		ResearchBps:    33300,   // 3.33%
+		DevelopmentBps: 196700,  // 19.67%
 	}
 }
 
@@ -33,7 +33,7 @@ func DefaultProtocolSubSplit() *commontypes.ProtocolSubSplit {
 func DefaultParams() *Params {
 	return &Params{
 		BlockReward:                "10000000",             // 10 ZRN base
-		RewardDecayBps:             850000,                 // 0.85x per epoch
+		RewardDecayBps:             994478,                 // ~1-year half-life (0.994478x per 100K-block epoch)
 		BlocksPerRewardEpoch:       100000,                 // ~2.9 days at 2521ms
 		RevenueSplit:               DefaultRevenueSplit(),
 		ProtocolSubSplit:           DefaultProtocolSubSplit(),
@@ -170,7 +170,7 @@ func validateRevenueSplit(split *commontypes.RevenueSplit) error {
 	if split == nil {
 		return nil // defaults used
 	}
-	total := split.ContributorBps + split.ProtocolBps + split.ResearchBps + split.BurnBps
+	total := split.ContributorBps + split.ProtocolBps + split.ResearchBps + split.DevelopmentBps
 	if total != 1000000 {
 		return fmt.Errorf("revenue split must sum to 1000000, got %d", total)
 	}

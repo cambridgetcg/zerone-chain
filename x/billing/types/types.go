@@ -9,13 +9,13 @@ import (
 	commontypes "github.com/zerone-chain/zerone/x/common/types"
 )
 
-// DefaultRevenueSplit returns the default 55/22/13/10 revenue split.
+// DefaultRevenueSplit returns the default 55/22/3.33/19.67 revenue split.
 func DefaultRevenueSplit() *commontypes.RevenueSplit {
 	return &commontypes.RevenueSplit{
-		ContributorBps: 550000,
-		ProtocolBps:    220000,
-		ResearchBps:    130000,
-		BurnBps:        100000,
+		ContributorBps: 550000,  // 55%
+		ProtocolBps:    220000,  // 22%
+		ResearchBps:    33300,   // 3.33%
+		DevelopmentBps: 196700,  // 19.67%
 	}
 }
 
@@ -74,7 +74,7 @@ func (p *Params) Validate() error {
 		return fmt.Errorf("invalid min_provider_stake: %s", p.MinProviderStake)
 	}
 	if p.RevenueSplit != nil {
-		sum := p.RevenueSplit.ContributorBps + p.RevenueSplit.ProtocolBps + p.RevenueSplit.ResearchBps + p.RevenueSplit.BurnBps
+		sum := p.RevenueSplit.ContributorBps + p.RevenueSplit.ProtocolBps + p.RevenueSplit.ResearchBps + p.RevenueSplit.DevelopmentBps
 		if sum != 1000000 {
 			return fmt.Errorf("revenue_split bps must sum to 1000000, got %d", sum)
 		}

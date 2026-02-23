@@ -185,7 +185,7 @@ cmd_init() {
   # Vesting rewards — production block rewards and decay
   patch '
     .app_state.vesting_rewards.params.block_reward = "10000000" |
-    .app_state.vesting_rewards.params.reward_decay_bps = 850000 |
+    .app_state.vesting_rewards.params.reward_decay_bps = 994478 |
     .app_state.vesting_rewards.params.blocks_per_reward_epoch = 100000 |
     .app_state.vesting_rewards.params.min_validators_for_full_reward = 22 |
     .app_state.vesting_rewards.params.floor_reward = "100000"

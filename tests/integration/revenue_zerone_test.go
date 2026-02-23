@@ -83,7 +83,7 @@ func TestToolboxRevenueCascade(t *testing.T) {
 		t.Fatalf("toolbox DistributeRevenue failed: %v", err)
 	}
 
-	// Default toolbox params: ToolRevenueBps=550000, ProtocolBps=220000, ResearchBps=130000, BurnBps=100000
+	// Default toolbox params: ToolRevenueBps=550000, ProtocolBps=220000, ResearchBps=130000, DevelopmentBps=100000
 	totalAmt := uint64(1000000)
 
 	// Contributor share: 55% of 1M = 550,000

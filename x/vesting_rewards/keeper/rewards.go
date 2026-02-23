@@ -19,7 +19,7 @@ import (
 //   - ContributorBps: goes to the reward recipient (e.g. block producer)
 //   - ProtocolBps:    split further via ProtocolSubSplit (citation/verification/treasury)
 //   - ResearchBps:    deposited into the research fund (with founder auto-split)
-//   - BurnBps:        burned permanently (supply deflation)
+//   - DevelopmentBps:    development fund (bug bounties, truth discovery, protocol development)
 //
 // All block-level rewards flow through this router for consistent revenue routing.
 func (k Keeper) DistributeRevenue(
@@ -54,13 +54,13 @@ func (k Keeper) DistributeRevenue(
 	researchAmount := new(big.Int).Mul(amountBig, big.NewInt(int64(split.ResearchBps)))
 	researchAmount.Div(researchAmount, bps)
 
-	// Burn = remainder to avoid rounding leaks
-	burnAmount := new(big.Int).Set(amountBig)
-	burnAmount.Sub(burnAmount, contributorAmount)
-	burnAmount.Sub(burnAmount, protocolAmount)
-	burnAmount.Sub(burnAmount, researchAmount)
-	if burnAmount.Sign() < 0 {
-		burnAmount.SetInt64(0)
+	// Development = remainder to avoid rounding leaks
+	devAmount := new(big.Int).Set(amountBig)
+	devAmount.Sub(devAmount, contributorAmount)
+	devAmount.Sub(devAmount, protocolAmount)
+	devAmount.Sub(devAmount, researchAmount)
+	if devAmount.Sign() < 0 {
+		devAmount.SetInt64(0)
 	}
 
 	// Protocol sub-split
@@ -92,7 +92,7 @@ func (k Keeper) DistributeRevenue(
 		ContributorShare: contributorAmount.String(),
 		ProtocolShare:    protocolAmount.String(),
 		ResearchShare:    researchAmount.String(),
-		BurnAmount:       burnAmount.String(),
+		DevelopmentAmount: devAmount.String(),
 		Recipient:        recipient,
 		FactId:           factId,
 		BlockNumber:      uint64(ctx.BlockHeight()),
@@ -115,7 +115,7 @@ func (k Keeper) RouteFees(ctx sdk.Context) error {
 
 	split := k.GetRevenueSplit(ctx)
 	// If all non-contributor shares are zero, nothing to route
-	if split.ProtocolBps == 0 && split.ResearchBps == 0 && split.BurnBps == 0 {
+	if split.ProtocolBps == 0 && split.ResearchBps == 0 && split.DevelopmentBps == 0 {
 		return nil
 	}
 
@@ -148,17 +148,17 @@ func (k Keeper) RouteFees(ctx sdk.Context) error {
 			}
 		}
 
-		// Burn share
-		burnTotal := totalAmount.MulRaw(int64(split.BurnBps)).QuoRaw(bps)
-		if burnTotal.IsPositive() {
-			burnCoins := sdk.NewCoins(sdk.NewCoin(coin.Denom, burnTotal))
-			// Move to vesting_rewards module for burning
-			if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, authtypes.FeeCollectorName, types.ModuleName, burnCoins); err != nil {
-				k.Logger(ctx).Warn("failed to escrow fee burn share", "err", err)
+		// Development fund share
+		devTotal := totalAmount.MulRaw(int64(split.DevelopmentBps)).QuoRaw(bps)
+		if devTotal.IsPositive() {
+			devCoins := sdk.NewCoins(sdk.NewCoin(coin.Denom, devTotal))
+			// TODO(R16): route to development fund instead of burning
+			if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, authtypes.FeeCollectorName, types.ModuleName, devCoins); err != nil {
+				k.Logger(ctx).Warn("failed to escrow fee development share", "err", err)
 				continue
 			}
-			if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, burnCoins); err != nil {
-				k.Logger(ctx).Warn("failed to burn fee share", "err", err)
+			if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, devCoins); err != nil {
+				k.Logger(ctx).Warn("failed to route development fund share", "err", err)
 			}
 		}
 
@@ -361,7 +361,7 @@ func (k Keeper) DistributeBlockReward(
 			ResearchShare:  "0",
 			TotalMinted:    "0",
 			ValidatorCount: activeValidatorCount,
-			BurnAmount:     "0",
+			DevelopmentAmount:     "0",
 			ProtocolShare:  "0",
 		}
 	}
@@ -427,7 +427,7 @@ func (k Keeper) DistributeBlockReward(
 		TotalMinted:    routing.OriginalAmount,
 		ValidatorCount: activeValidatorCount,
 		FounderShare:   routing.FounderShare,
-		BurnAmount:     routing.BurnAmount,
+		DevelopmentAmount:     routing.DevelopmentAmount,
 		ProtocolShare:  routing.ProtocolShare,
 	}
 
@@ -459,13 +459,14 @@ func (k Keeper) DistributeBlockReward(
 			}
 		}
 
-		// Burn the burn share
-		burnBig := new(big.Int)
-		burnBig.SetString(routing.BurnAmount, 10)
-		if burnBig.Sign() > 0 {
-			burnCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(burnBig)))
-			if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, burnCoins); err != nil {
-				k.Logger(ctx).Error("failed to burn block reward share", "error", err)
+		// Development fund share
+		devBig := new(big.Int)
+		devBig.SetString(routing.DevelopmentAmount, 10)
+		if devBig.Sign() > 0 {
+			devCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(devBig)))
+			// TODO(R16): route to development fund instead of burning
+			if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, devCoins); err != nil {
+				k.Logger(ctx).Error("failed to route development fund share", "error", err)
 			}
 		}
 
@@ -512,7 +513,7 @@ func (k Keeper) DistributeBlockReward(
 		"contributor", routing.ContributorShare,
 		"protocol", routing.ProtocolShare,
 		"research", routing.ResearchShare,
-		"burn", routing.BurnAmount,
+		"development", routing.DevelopmentAmount,
 		"total_minted", dist.FundBalanceAfter,
 	)
 

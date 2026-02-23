@@ -335,7 +335,7 @@ func checkResearchFundNonNegative(s *SimState) error {
 
 func checkRevenueSplitIntegrity(s *SimState) error {
 	split := s.vestingKeeper.GetRevenueSplit(s.ctx)
-	total := split.ContributorBps + split.ProtocolBps + split.ResearchBps + split.BurnBps
+	total := split.ContributorBps + split.ProtocolBps + split.ResearchBps + split.DevelopmentBps
 	if total != 1_000_000 {
 		return fmt.Errorf("revenue split does not sum to 1M BPS: got %d", total)
 	}

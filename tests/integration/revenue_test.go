@@ -270,7 +270,7 @@ func TestNoDoubleTaxation(t *testing.T) {
 	producerReward := new(big.Int)
 	producerReward.SetString(dist.ProducerReward, 10)
 	burnAmt := new(big.Int)
-	burnAmt.SetString(dist.BurnAmount, 10)
+	burnAmt.SetString(dist.DevelopmentAmount, 10)
 	protocolShare := new(big.Int)
 	protocolShare.SetString(dist.ProtocolShare, 10)
 

@@ -808,8 +808,8 @@ func TestDistributeRevenue_4WaySplit(t *testing.T) {
 		t.Errorf("expected research share 1300, got %s", routing.ResearchShare)
 	}
 	// burn = 10000 - 5500 - 2200 - 1300 = 1000
-	if routing.BurnAmount != "1000" {
-		t.Errorf("expected burn amount 1000, got %s", routing.BurnAmount)
+	if routing.DevelopmentAmount != "1000" {
+		t.Errorf("expected burn amount 1000, got %s", routing.DevelopmentAmount)
 	}
 }
 
@@ -870,7 +870,7 @@ func TestDistributeRevenue_SplitSumsToTotal(t *testing.T) {
 	research := new(big.Int)
 	research.SetString(routing.ResearchShare, 10)
 	burn := new(big.Int)
-	burn.SetString(routing.BurnAmount, 10)
+	burn.SetString(routing.DevelopmentAmount, 10)
 
 	total := new(big.Int).Add(contributor, protocol)
 	total.Add(total, research)
@@ -896,7 +896,7 @@ func TestDistributeBlockReward_BurnsTokens(t *testing.T) {
 	}
 
 	// 10% burn: 10000000 * 100000 / 1000000 = 1000000
-	if dist.BurnAmount == "0" {
+	if dist.DevelopmentAmount == "0" {
 		t.Fatal("expected non-zero burn amount")
 	}
 
@@ -1096,9 +1096,9 @@ func TestBlockReward_Epoch1(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	// At epoch 1: 10000000 * 0.85 = 8500000
-	if dist.TotalMinted != "8500000" {
-		t.Errorf("expected decayed reward 8500000 at epoch 1, got %s", dist.TotalMinted)
+	// At epoch 1: 10000000 * 0.994478 = 9944780
+	if dist.TotalMinted != "9944780" {
+		t.Errorf("expected decayed reward 9944780 at epoch 1, got %s", dist.TotalMinted)
 	}
 }
 
@@ -1117,17 +1117,18 @@ func TestBlockReward_Epoch10(t *testing.T) {
 	if totalMinted == "0" || totalMinted == "10000000" {
 		t.Errorf("expected decayed reward at epoch 10, got %s", totalMinted)
 	}
-	// 10000000 * 0.85^10 ≈ 1968744
+	// 10000000 * 0.994478^10 ≈ 9461280
 	minted := new(big.Int)
 	minted.SetString(totalMinted, 10)
-	if minted.Cmp(big.NewInt(1800000)) < 0 || minted.Cmp(big.NewInt(2100000)) > 0 {
-		t.Errorf("epoch 10 reward %s outside expected range [1800000, 2100000]", totalMinted)
+	if minted.Cmp(big.NewInt(9400000)) < 0 || minted.Cmp(big.NewInt(9500000)) > 0 {
+		t.Errorf("epoch 10 reward %s outside expected range [9400000, 9500000]", totalMinted)
 	}
 }
 
 func TestBlockReward_FloorReward(t *testing.T) {
 	bk := newMockBankKeeper()
-	k, ctx := setupMintKeeper(t, bk, "0", 200*100000)
+	// With 1-year half-life (decay_bps=994478), floor reached at ~epoch 832 (~year 6.6)
+	k, ctx := setupMintKeeper(t, bk, "0", 1000*100000)
 
 	producer := sdk.AccAddress("producer____________").String()
 	dist, err := k.DistributeBlockReward(ctx, producer, 22, true)
@@ -1237,10 +1238,10 @@ func TestApplyDecay(t *testing.T) {
 		maxReward int64
 	}{
 		{"epoch 0", 0, 10000000, 10000000},
-		{"epoch 1", 100000, 8500000, 8500000},
-		{"epoch 2", 200000, 7225000, 7225000},
-		{"epoch 5", 500000, 4000000, 4500000},
-		{"epoch 10", 1000000, 1800000, 2100000},
+		{"epoch 1", 100000, 9944780, 9944780},
+		{"epoch 2", 200000, 9889000, 9890000},
+		{"epoch 5", 500000, 9720000, 9750000},
+		{"epoch 10", 1000000, 9440000, 9480000},
 	}
 
 	for _, tt := range tests {
@@ -1324,8 +1325,8 @@ func TestDistributeBlockReward_4WayAccounting(t *testing.T) {
 	}
 
 	// Burn (10%): 1000000
-	if dist.BurnAmount != "1000000" {
-		t.Errorf("expected burn amount 1000000, got %s", dist.BurnAmount)
+	if dist.DevelopmentAmount != "1000000" {
+		t.Errorf("expected burn amount 1000000, got %s", dist.DevelopmentAmount)
 	}
 
 	// Protocol (22%): 2200000
@@ -1733,7 +1734,7 @@ func TestDistributeRevenue_CustomSplit(t *testing.T) {
 		ContributorBps: 400000,
 		ProtocolBps:    300000,
 		ResearchBps:    200000,
-		BurnBps:        100000,
+		DevelopmentBps:        100000,
 	}
 	gs.Params.ProtocolSubSplit = &commontypes.ProtocolSubSplit{
 		CitationBps:     600000,
@@ -1759,8 +1760,8 @@ func TestDistributeRevenue_CustomSplit(t *testing.T) {
 	if routing.ResearchShare != "200000" {
 		t.Errorf("expected research 200000, got %s", routing.ResearchShare)
 	}
-	if routing.BurnAmount != "100000" {
-		t.Errorf("expected burn 100000, got %s", routing.BurnAmount)
+	if routing.DevelopmentAmount != "100000" {
+		t.Errorf("expected burn 100000, got %s", routing.DevelopmentAmount)
 	}
 	if routing.CitationPool != "180000" {
 		t.Errorf("expected citation pool 180000, got %s", routing.CitationPool)

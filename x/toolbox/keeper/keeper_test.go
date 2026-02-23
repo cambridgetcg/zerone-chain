@@ -1090,7 +1090,7 @@ func TestDistributeRevenue_GovernanceChangedSplits(t *testing.T) {
 	params.ToolRevenueBps = 600_000
 	params.ProtocolBps = 200_000
 	params.ResearchBps = 150_000
-	params.BurnBps = 50_000
+	params.DevelopmentBps = 50_000
 	k.SetParams(ctx, params)
 
 	tool := &types.Tool{

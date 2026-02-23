@@ -18,6 +18,7 @@ Zerone is a **Proof-of-Truth** (PoT) blockchain where all tokens are minted thro
 | [STAKING.md](STAKING.md) | Tiered validator system, staking economics, slashing |
 | [GENESIS.md](GENESIS.md) | Genesis distribution, bootstrap accounts, and ceremony |
 | [SINKS-AND-FLOWS.md](SINKS-AND-FLOWS.md) | Complete map of where ZRN is created, destroyed, and moves |
+| [GOVERNANCE-MIGRATION.md](GOVERNANCE-MIGRATION.md) | 4-phase research fund governance: from founder pair to full community |
 | [REVIEW.md](REVIEW.md) | Honest assessment: strengths, risks, open questions |
 
 ## Quick Numbers
