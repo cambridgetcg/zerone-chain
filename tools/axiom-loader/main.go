@@ -248,4 +248,52 @@ func computeDepthMap(axioms []*ktypes.GenesisAxiom) map[string]int {
 
 	return depth
 }
-func runEdges(args []string) error    { return fmt.Errorf("not implemented") }
+func runEdges(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("usage: axiom-loader edges <axioms.json> [-o output.csv]")
+	}
+
+	axiomPath := args[0]
+	outputPath := ""
+	for i := 1; i < len(args); i++ {
+		if args[i] == "-o" && i+1 < len(args) {
+			outputPath = args[i+1]
+			i++
+		}
+	}
+
+	axioms, err := ktypes.LoadAxiomsFromFile(axiomPath)
+	if err != nil {
+		return err
+	}
+
+	idToDomain := make(map[string]string, len(axioms))
+	for _, a := range axioms {
+		idToDomain[a.AxiomID] = a.Domain
+	}
+
+	out := os.Stdout
+	if outputPath != "" {
+		f, err := os.Create(outputPath)
+		if err != nil {
+			return fmt.Errorf("failed to create output file: %w", err)
+		}
+		defer f.Close()
+		out = f
+	}
+
+	fmt.Fprintln(out, "source,target,source_domain,target_domain")
+	edgeCount := 0
+	for _, a := range axioms {
+		for _, dep := range a.Dependencies {
+			fmt.Fprintf(out, "%s,%s,%s,%s\n", a.AxiomID, dep, a.Domain, idToDomain[dep])
+			edgeCount++
+		}
+	}
+
+	if outputPath != "" {
+		fmt.Printf("✓ Exported %d edges to %s\n", edgeCount, outputPath)
+	}
+
+	return nil
+}
