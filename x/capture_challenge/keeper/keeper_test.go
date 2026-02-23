@@ -947,6 +947,78 @@ func TestResolveChallengeUnauthorized(t *testing.T) {
 }
 
 // -----------------------------------------------------------------------
+// Tests: UpdateParams
+// -----------------------------------------------------------------------
+
+func TestUpdateParams(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	authority := k.GetAuthority()
+
+	srv := keeper.NewMsgServerImpl(k)
+	newParams := types.DefaultParams()
+	newParams.MinChallengeStake = "50000000"
+	newParams.EvidencePeriodBlocks = 10000
+
+	_, err := srv.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: authority,
+		Params:    newParams,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParams failed: %v", err)
+	}
+
+	got := k.GetParams(ctx)
+	if got.MinChallengeStake != "50000000" {
+		t.Errorf("expected MinChallengeStake 50000000, got %s", got.MinChallengeStake)
+	}
+	if got.EvidencePeriodBlocks != 10000 {
+		t.Errorf("expected EvidencePeriodBlocks 10000, got %d", got.EvidencePeriodBlocks)
+	}
+}
+
+func TestUpdateParamsUnauthorized(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+	_, err := srv.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: testAddr(99),
+		Params:    types.DefaultParams(),
+	})
+	if err == nil {
+		t.Fatal("expected unauthorized error")
+	}
+}
+
+func TestUpdateParamsNilParams(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	authority := k.GetAuthority()
+	srv := keeper.NewMsgServerImpl(k)
+	_, err := srv.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: authority,
+		Params:    nil,
+	})
+	if err == nil {
+		t.Fatal("expected nil params error")
+	}
+}
+
+func TestUpdateParamsInvalid(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	authority := k.GetAuthority()
+	srv := keeper.NewMsgServerImpl(k)
+
+	badParams := types.DefaultParams()
+	badParams.MinChallengeStake = "0" // invalid: must be > 0
+
+	_, err := srv.UpdateParams(ctx, &types.MsgUpdateParams{
+		Authority: authority,
+		Params:    badParams,
+	})
+	if err == nil {
+		t.Fatal("expected validation error for invalid params")
+	}
+}
+
+// -----------------------------------------------------------------------
 // Unused import guard
 // -----------------------------------------------------------------------
 
