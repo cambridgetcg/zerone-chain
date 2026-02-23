@@ -1894,3 +1894,545 @@ func TestAudit_Params_AllBPSScale(t *testing.T) {
 		t.Errorf("AUDIT-5: Verified MinAccuracy should be 770000, got %d", verifiedCfg.MinAccuracy)
 	}
 }
+
+// ============================================================
+// 11. Query Server Tests
+// ============================================================
+
+func TestQueryValidator(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+	addr := testAddr("qval")
+	registerTestValidator(t, k, ctx, addr, "did:zrn:qval", "111000")
+
+	resp, err := qs.Validator(ctx, &types.QueryValidatorRequest{Address: addr})
+	if err != nil {
+		t.Fatalf("Validator query failed: %v", err)
+	}
+	if resp.Validator.OperatorAddress != addr {
+		t.Errorf("expected address %s, got %s", addr, resp.Validator.OperatorAddress)
+	}
+	if resp.Validator.Did != "did:zrn:qval" {
+		t.Errorf("expected DID did:zrn:qval, got %s", resp.Validator.Did)
+	}
+}
+
+func TestQueryValidatorNotFound(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Validator(ctx, &types.QueryValidatorRequest{Address: testAddr("nonexist")})
+	if err == nil {
+		t.Error("expected error for nonexistent validator")
+	}
+}
+
+func TestQueryValidatorsAll(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	for i := 0; i < 3; i++ {
+		addr := testAddr(fmt.Sprintf("qvall%d", i))
+		registerTestValidator(t, k, ctx, addr, fmt.Sprintf("did:zrn:qvall%d", i), "111000")
+	}
+
+	resp, err := qs.Validators(ctx, &types.QueryValidatorsRequest{Tier: -1})
+	if err != nil {
+		t.Fatalf("Validators query failed: %v", err)
+	}
+	if resp.Total != 3 {
+		t.Errorf("expected 3 validators, got %d", resp.Total)
+	}
+	if len(resp.Validators) != 3 {
+		t.Errorf("expected 3 validators in page, got %d", len(resp.Validators))
+	}
+}
+
+func TestQueryValidatorsActiveOnly(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	activeAddr := testAddr("qvactive")
+	registerTestValidator(t, k, ctx, activeAddr, "did:zrn:qvactive", "111000")
+
+	inactiveAddr := testAddr("qvinactive")
+	registerTestValidator(t, k, ctx, inactiveAddr, "did:zrn:qvinactive", "111000")
+	val, _ := k.GetValidator(ctx, inactiveAddr)
+	val.IsActive = false
+	k.SetValidator(ctx, val)
+
+	resp, err := qs.Validators(ctx, &types.QueryValidatorsRequest{ActiveOnly: true, Tier: -1})
+	if err != nil {
+		t.Fatalf("Validators query failed: %v", err)
+	}
+	if resp.Total != 1 {
+		t.Errorf("expected 1 active validator, got %d", resp.Total)
+	}
+	if resp.Validators[0].OperatorAddress != activeAddr {
+		t.Errorf("expected active validator %s, got %s", activeAddr, resp.Validators[0].OperatorAddress)
+	}
+}
+
+func TestQueryValidatorsPagination(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	for i := 0; i < 5; i++ {
+		addr := testAddr(fmt.Sprintf("qvpag%d", i))
+		registerTestValidator(t, k, ctx, addr, fmt.Sprintf("did:zrn:qvpag%d", i), "111000")
+	}
+
+	// First page: offset=0, limit=2
+	resp1, err := qs.Validators(ctx, &types.QueryValidatorsRequest{Tier: -1, Limit: 2, Offset: 0})
+	if err != nil {
+		t.Fatalf("page 1 query failed: %v", err)
+	}
+	if resp1.Total != 5 {
+		t.Errorf("expected total 5, got %d", resp1.Total)
+	}
+	if len(resp1.Validators) != 2 {
+		t.Errorf("expected 2 validators in page 1, got %d", len(resp1.Validators))
+	}
+
+	// Second page: offset=2, limit=2
+	resp2, err := qs.Validators(ctx, &types.QueryValidatorsRequest{Tier: -1, Limit: 2, Offset: 2})
+	if err != nil {
+		t.Fatalf("page 2 query failed: %v", err)
+	}
+	if len(resp2.Validators) != 2 {
+		t.Errorf("expected 2 validators in page 2, got %d", len(resp2.Validators))
+	}
+
+	// Ensure pages don't overlap.
+	if resp1.Validators[0].OperatorAddress == resp2.Validators[0].OperatorAddress {
+		t.Error("page 1 and page 2 should not overlap")
+	}
+}
+
+func TestQueryDelegation(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+	delAddr := testAddr("qdel")
+	valAddr := testAddr("qdelval")
+
+	k.SetDelegation(ctx, &types.Delegation{
+		DelegatorAddress: delAddr,
+		ValidatorAddress: valAddr,
+		Amount:           "500000",
+		CreatedAtBlock:   100,
+	})
+
+	resp, err := qs.Delegation(ctx, &types.QueryDelegationRequest{Delegator: delAddr, Validator: valAddr})
+	if err != nil {
+		t.Fatalf("Delegation query failed: %v", err)
+	}
+	if resp.Delegation.Amount != "500000" {
+		t.Errorf("expected amount 500000, got %s", resp.Delegation.Amount)
+	}
+}
+
+func TestQueryDelegationNotFound(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Delegation(ctx, &types.QueryDelegationRequest{
+		Delegator: testAddr("noexist_del"),
+		Validator: testAddr("noexist_val"),
+	})
+	if err == nil {
+		t.Error("expected error for nonexistent delegation")
+	}
+}
+
+func TestQueryDelegatorDelegations(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+	delAddr := testAddr("qddel")
+
+	for i := 0; i < 3; i++ {
+		valAddr := testAddr(fmt.Sprintf("qddval%d", i))
+		k.SetDelegation(ctx, &types.Delegation{
+			DelegatorAddress: delAddr,
+			ValidatorAddress: valAddr,
+			Amount:           fmt.Sprintf("%d00000", i+1),
+			CreatedAtBlock:   100,
+		})
+	}
+
+	resp, err := qs.DelegatorDelegations(ctx, &types.QueryDelegatorDelegationsRequest{Delegator: delAddr})
+	if err != nil {
+		t.Fatalf("DelegatorDelegations query failed: %v", err)
+	}
+	if len(resp.Delegations) != 3 {
+		t.Errorf("expected 3 delegations, got %d", len(resp.Delegations))
+	}
+}
+
+// ============================================================
+// 12. Additional Query Tests
+// ============================================================
+
+func TestQueryValidatorDelegations(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+	valAddr := testAddr("qvdval")
+
+	for i := 0; i < 3; i++ {
+		delAddr := testAddr(fmt.Sprintf("qvddel%d", i))
+		k.SetDelegation(ctx, &types.Delegation{
+			DelegatorAddress: delAddr,
+			ValidatorAddress: valAddr,
+			Amount:           "100000",
+			CreatedAtBlock:   100,
+		})
+	}
+
+	resp, err := qs.ValidatorDelegations(ctx, &types.QueryValidatorDelegationsRequest{Validator: valAddr})
+	if err != nil {
+		t.Fatalf("ValidatorDelegations query failed: %v", err)
+	}
+	if len(resp.Delegations) != 3 {
+		t.Errorf("expected 3 delegations to validator, got %d", len(resp.Delegations))
+	}
+}
+
+func TestQueryParams(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	resp, err := qs.Params(ctx, &types.QueryParamsRequest{})
+	if err != nil {
+		t.Fatalf("Params query failed: %v", err)
+	}
+	if resp.Params == nil {
+		t.Fatal("expected non-nil params")
+	}
+	if resp.Params.UnbondingPeriod != 268_560 {
+		t.Errorf("expected default UnbondingPeriod=268560, got %d", resp.Params.UnbondingPeriod)
+	}
+	if len(resp.TierConfigs) != 4 {
+		t.Errorf("expected 4 tier configs, got %d", len(resp.TierConfigs))
+	}
+}
+
+func TestQueryTierConfig(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	resp, err := qs.TierConfig(ctx, &types.QueryTierConfigRequest{Tier: uint32(types.TierScholar)})
+	if err != nil {
+		t.Fatalf("TierConfig query failed: %v", err)
+	}
+	if resp.TierConfig == nil {
+		t.Fatal("expected non-nil tier config")
+	}
+	if resp.TierConfig.Name != "Scholar" {
+		t.Errorf("expected tier name 'Scholar', got '%s'", resp.TierConfig.Name)
+	}
+	if resp.TierConfig.MinStake != "1111000000" {
+		t.Errorf("expected Scholar MinStake '1111000000', got '%s'", resp.TierConfig.MinStake)
+	}
+}
+
+// ============================================================
+// 13. Tier Transition Tests
+// ============================================================
+
+func TestCheckTierTransition_ApprenticeToVerified(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("tt_a2v")
+	registerTestValidator(t, k, ctx, addr, "", "1110000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	val.TotalVerifications = 22
+	val.CorrectVerifications = 18
+	val.ReputationScore = 800_000
+	k.SetValidator(ctx, val)
+
+	newTier, changed := k.CheckTierTransition(ctx, val)
+	if !changed {
+		t.Error("expected tier change from Apprentice to Verified")
+	}
+	if newTier != types.TierVerified {
+		t.Errorf("expected Verified, got %s", types.ValidatorTierString(newTier))
+	}
+}
+
+func TestCheckTierTransition_NoChange(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("tt_nochg")
+	registerTestValidator(t, k, ctx, addr, "", "111000")
+
+	val, _ := k.GetValidator(ctx, addr)
+	// Apprentice with insufficient stats for Verified.
+	val.TotalVerifications = 5
+	val.CorrectVerifications = 3
+	k.SetValidator(ctx, val)
+
+	_, changed := k.CheckTierTransition(ctx, val)
+	if changed {
+		t.Error("expected no tier change for under-qualified validator")
+	}
+}
+
+func TestCheckTierTransition_ScholarDownToVerified(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	addr := testAddr("tt_s2v")
+	registerTestValidator(t, k, ctx, addr, "", "1111000000")
+	promoteToScholar(t, k, ctx, addr)
+
+	val, _ := k.GetValidator(ctx, addr)
+	// Reduce stake below Scholar minimum.
+	val.SelfDelegation = "500000"
+	val.TotalStake = "500000"
+	k.SetValidator(ctx, val)
+
+	newTier, changed := k.CheckTierTransition(ctx, val)
+	if !changed {
+		t.Error("expected tier demotion from Scholar")
+	}
+	if newTier >= types.TierScholar {
+		t.Errorf("expected demotion below Scholar, got %s", types.ValidatorTierString(newTier))
+	}
+}
+
+// ============================================================
+// 14. Staking Edge Cases
+// ============================================================
+
+func TestGetTotalBondedStake(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	registerTestValidator(t, k, ctx, testAddr("tbs_v1"), "", "1000000")
+	registerTestValidator(t, k, ctx, testAddr("tbs_v2"), "", "2000000")
+	registerTestValidator(t, k, ctx, testAddr("tbs_v3"), "", "3000000")
+
+	total := k.GetTotalBondedStake(ctx)
+	expected := big.NewInt(6000000)
+	if total.Cmp(expected) != 0 {
+		t.Errorf("expected total bonded stake %s, got %s", expected, total)
+	}
+}
+
+func TestCountBlockProducers(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	// Register 4 validators: 2 at Apprentice, 1 Scholar, 1 Guardian.
+	apprentice1 := testAddr("cbp_a1")
+	apprentice2 := testAddr("cbp_a2")
+	scholar := testAddr("cbp_sch")
+	guardian := testAddr("cbp_grd")
+
+	registerTestValidator(t, k, ctx, apprentice1, "", "111000")
+	registerTestValidator(t, k, ctx, apprentice2, "", "111000")
+	registerTestValidator(t, k, ctx, scholar, "", "1111000000")
+	registerTestValidator(t, k, ctx, guardian, "", "11111000000")
+
+	promoteToScholar(t, k, ctx, scholar)
+	promoteToGuardian(t, k, ctx, guardian)
+
+	count := k.CountBlockProducers(ctx)
+	if count != 2 {
+		t.Errorf("expected 2 block producers (Scholar + Guardian), got %d", count)
+	}
+}
+
+func TestIterateValidatorsEarlyStop(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	for i := 0; i < 5; i++ {
+		addr := testAddr(fmt.Sprintf("ives%d", i))
+		registerTestValidator(t, k, ctx, addr, fmt.Sprintf("did:zrn:ives%d", i), "111000")
+	}
+
+	var visited int
+	k.IterateValidators(ctx, func(val *types.Validator) bool {
+		visited++
+		return visited >= 2 // stop after 2
+	})
+
+	if visited != 2 {
+		t.Errorf("expected iteration to stop after 2, visited %d", visited)
+	}
+}
+
+func TestDelegationReverseIndex(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	valAddr := testAddr("dri_val")
+
+	for i := 0; i < 3; i++ {
+		delAddr := testAddr(fmt.Sprintf("dri_del%d", i))
+		k.SetDelegation(ctx, &types.Delegation{
+			DelegatorAddress: delAddr,
+			ValidatorAddress: valAddr,
+			Amount:           fmt.Sprintf("%d00000", i+1),
+			CreatedAtBlock:   100,
+		})
+	}
+
+	dels := k.GetDelegationsForValidator(ctx, valAddr)
+	if len(dels) != 3 {
+		t.Errorf("expected 3 delegations via reverse index, got %d", len(dels))
+	}
+}
+
+// ============================================================
+// 15. Unbonding Edge Cases
+// ============================================================
+
+func TestGetMatureUnbondings(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	// Create 3 unbondings with different completion heights.
+	entries := []struct {
+		id         string
+		completes  uint64
+	}{
+		{"mat_1", 50},
+		{"mat_2", 100},
+		{"mat_3", 200},
+	}
+	for _, e := range entries {
+		k.SetUnbonding(ctx, &types.UnbondingEntry{
+			Id:                e.id,
+			DelegatorAddress:  testAddr("mat_del"),
+			ValidatorAddress:  testAddr("mat_val"),
+			Amount:            "100000",
+			CreatedAtHeight:   10,
+			CompletesAtHeight: e.completes,
+			Status:            "pending",
+		})
+	}
+
+	// At height 100, entries mat_1 and mat_2 should be mature.
+	mature := k.GetMatureUnbondings(ctx, 100)
+	if len(mature) != 2 {
+		t.Errorf("expected 2 mature unbondings at height 100, got %d", len(mature))
+	}
+
+	// At height 200, all 3 should be mature.
+	mature = k.GetMatureUnbondings(ctx, 200)
+	if len(mature) != 3 {
+		t.Errorf("expected 3 mature unbondings at height 200, got %d", len(mature))
+	}
+}
+
+func TestGetUnbondingsForDelegator(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	del1 := testAddr("ubd_del1")
+	del2 := testAddr("ubd_del2")
+
+	k.SetUnbonding(ctx, &types.UnbondingEntry{
+		Id: "ubd_1", DelegatorAddress: del1, ValidatorAddress: testAddr("ubd_val"),
+		Amount: "100000", CreatedAtHeight: 100, CompletesAtHeight: 200, Status: "pending",
+	})
+	k.SetUnbonding(ctx, &types.UnbondingEntry{
+		Id: "ubd_2", DelegatorAddress: del1, ValidatorAddress: testAddr("ubd_val"),
+		Amount: "200000", CreatedAtHeight: 100, CompletesAtHeight: 300, Status: "pending",
+	})
+	k.SetUnbonding(ctx, &types.UnbondingEntry{
+		Id: "ubd_3", DelegatorAddress: del2, ValidatorAddress: testAddr("ubd_val"),
+		Amount: "300000", CreatedAtHeight: 100, CompletesAtHeight: 400, Status: "pending",
+	})
+
+	entries := k.GetUnbondingsForDelegator(ctx, del1)
+	if len(entries) != 2 {
+		t.Errorf("expected 2 unbondings for del1, got %d", len(entries))
+	}
+
+	entries2 := k.GetUnbondingsForDelegator(ctx, del2)
+	if len(entries2) != 1 {
+		t.Errorf("expected 1 unbonding for del2, got %d", len(entries2))
+	}
+}
+
+func TestIterateUnbondings(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	for i := 0; i < 4; i++ {
+		k.SetUnbonding(ctx, &types.UnbondingEntry{
+			Id:                fmt.Sprintf("iter_u_%d", i),
+			DelegatorAddress:  testAddr("iter_del"),
+			ValidatorAddress:  testAddr("iter_val"),
+			Amount:            "100000",
+			CreatedAtHeight:   100,
+			CompletesAtHeight: 200,
+			Status:            "pending",
+		})
+	}
+
+	var count int
+	k.IterateUnbondings(ctx, func(entry *types.UnbondingEntry) bool {
+		count++
+		return false
+	})
+	if count != 4 {
+		t.Errorf("expected 4 unbondings via iteration, got %d", count)
+	}
+}
+
+// ============================================================
+// 16. Misc Tests
+// ============================================================
+
+func TestGetValidatorByDIDNotFound(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_, found := k.GetValidatorByDID(ctx, "did:zrn:nonexistent")
+	if found {
+		t.Error("expected validator not found for nonexistent DID")
+	}
+}
+
+func TestGetActiveValidatorSet(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	active1 := testAddr("avs_a1")
+	active2 := testAddr("avs_a2")
+	inactive := testAddr("avs_in")
+
+	registerTestValidator(t, k, ctx, active1, "did:zrn:avs_a1", "111000")
+	registerTestValidator(t, k, ctx, active2, "did:zrn:avs_a2", "111000")
+	registerTestValidator(t, k, ctx, inactive, "did:zrn:avs_in", "111000")
+
+	// Deactivate one.
+	val, _ := k.GetValidator(ctx, inactive)
+	val.IsActive = false
+	k.SetValidator(ctx, val)
+
+	activeSet := k.GetActiveValidatorSet(ctx)
+	if len(activeSet) != 2 {
+		t.Errorf("expected 2 active validators, got %d", len(activeSet))
+	}
+	for _, v := range activeSet {
+		if !v.IsActive {
+			t.Errorf("inactive validator %s found in active set", v.OperatorAddress)
+		}
+	}
+}
+
+func TestLastRedelegationHeight(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	delAddr := testAddr("lrh_del")
+
+	// Default should be 0.
+	h := k.GetLastRedelegationHeight(ctx, delAddr)
+	if h != 0 {
+		t.Errorf("expected default redelegation height 0, got %d", h)
+	}
+
+	// Set and retrieve.
+	k.SetLastRedelegationHeight(ctx, delAddr, 500)
+	h = k.GetLastRedelegationHeight(ctx, delAddr)
+	if h != 500 {
+		t.Errorf("expected redelegation height 500, got %d", h)
+	}
+
+	// Overwrite.
+	k.SetLastRedelegationHeight(ctx, delAddr, 750)
+	h = k.GetLastRedelegationHeight(ctx, delAddr)
+	if h != 750 {
+		t.Errorf("expected redelegation height 750, got %d", h)
+	}
+}

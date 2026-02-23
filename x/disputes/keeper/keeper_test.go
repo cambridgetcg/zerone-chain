@@ -1764,3 +1764,499 @@ func TestUpdateParamsInvalid(t *testing.T) {
 		t.Fatal("expected validation error for invalid params")
 	}
 }
+
+// ---------- Tally/Settlement Edge Cases ----------
+
+func TestTallyVotesNoVotes(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	dispute := &types.Dispute{
+		Id:       "tally-no-votes",
+		TargetId: "fact-1",
+		Tier:     1,
+		Phase:    types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+		Arbiters: []string{testAddr("arb1"), testAddr("arb2"), testAddr("arb3")},
+	}
+	k.SetDispute(ctx, dispute)
+
+	// No votes cast at all
+	outcome := k.TallyVotes(ctx, dispute)
+	if outcome != types.DisputeOutcome_DISPUTE_OUTCOME_TIMED_OUT {
+		t.Errorf("expected TIMED_OUT with no votes, got %s", outcome.String())
+	}
+}
+
+func TestTallyVotesAllAbstain(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	dispute := &types.Dispute{
+		Id:       "tally-all-abstain",
+		TargetId: "fact-1",
+		Tier:     1,
+		Phase:    types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+		Arbiters: []string{testAddr("arb1"), testAddr("arb2"), testAddr("arb3")},
+	}
+	k.SetDispute(ctx, dispute)
+
+	// All 3 arbiters abstain
+	for i, arb := range dispute.Arbiters {
+		k.SetVote(ctx, &types.DisputeVote{
+			DisputeId: dispute.Id,
+			Arbiter:   arb,
+			Vote:      types.ArbiterDecision_ARBITER_DECISION_ABSTAIN,
+			Stake:     "1",
+			Rationale: fmt.Sprintf("abstain-%d", i),
+		})
+	}
+
+	outcome := k.TallyVotes(ctx, dispute)
+	if outcome != types.DisputeOutcome_DISPUTE_OUTCOME_DRAW {
+		t.Errorf("expected DRAW when all abstain (totalVotingWeight=0), got %s", outcome.String())
+	}
+}
+
+func TestTallyVotesTiedVotes(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	dispute := &types.Dispute{
+		Id:       "tally-tied",
+		TargetId: "fact-1",
+		Tier:     1,
+		Phase:    types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+		Arbiters: []string{testAddr("arb1"), testAddr("arb2")},
+	}
+	k.SetDispute(ctx, dispute)
+
+	// 1 vote challenger, 1 vote defender with equal stake
+	k.SetVote(ctx, &types.DisputeVote{
+		DisputeId: dispute.Id,
+		Arbiter:   dispute.Arbiters[0],
+		Vote:      types.ArbiterDecision_ARBITER_DECISION_CHALLENGER,
+		Stake:     "1000",
+	})
+	k.SetVote(ctx, &types.DisputeVote{
+		DisputeId: dispute.Id,
+		Arbiter:   dispute.Arbiters[1],
+		Vote:      types.ArbiterDecision_ARBITER_DECISION_DEFENDER,
+		Stake:     "1000",
+	})
+
+	// 50/50 split: neither reaches 66.67% majority → DRAW
+	outcome := k.TallyVotes(ctx, dispute)
+	if outcome != types.DisputeOutcome_DISPUTE_OUTCOME_DRAW {
+		t.Errorf("expected DRAW for tied votes, got %s", outcome.String())
+	}
+}
+
+func TestDistributeSettlementZeroBond(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	dispute := &types.Dispute{
+		Id:         "zero-bond",
+		TargetId:   "fact-1",
+		Challenger: testAddr("challenger"),
+		Defender:   testAddr("defender"),
+		Bond:       "0",
+		Outcome:    types.DisputeOutcome_DISPUTE_OUTCOME_CHALLENGER_WINS,
+		Phase:      types.DisputePhase_DISPUTE_PHASE_SETTLED,
+	}
+	k.SetDispute(ctx, dispute)
+
+	err := k.DistributeSettlement(ctx, dispute)
+	if err != nil {
+		t.Fatalf("expected nil error for zero bond, got %v", err)
+	}
+}
+
+func TestDistributeSettlementDefenderWins(t *testing.T) {
+	k, ctx, bk, _, _ := setupKeeper(t)
+
+	defender := testAddr("defender")
+	challenger := testAddr("challenger")
+
+	dispute := &types.Dispute{
+		Id:         "def-wins",
+		TargetId:   "fact-1",
+		Challenger: challenger,
+		Defender:   defender,
+		Bond:       "1000000",
+		Outcome:    types.DisputeOutcome_DISPUTE_OUTCOME_DEFENDER_WINS,
+		Phase:      types.DisputePhase_DISPUTE_PHASE_SETTLED,
+		Tier:       1,
+		Arbiters:   []string{testAddr("arb1"), testAddr("arb2"), testAddr("arb3")},
+	}
+	k.SetDispute(ctx, dispute)
+
+	// Set up votes for the arbiters (defender wins)
+	for _, arb := range dispute.Arbiters {
+		k.SetVote(ctx, &types.DisputeVote{
+			DisputeId: dispute.Id,
+			Arbiter:   arb,
+			Vote:      types.ArbiterDecision_ARBITER_DECISION_DEFENDER,
+			Stake:     "1",
+		})
+	}
+
+	// Fund the module so distribution can happen
+	bk.moduleBalances[types.ModuleName] = map[string]int64{"uzrn": 2_000_000}
+
+	defenderBefore := bk.balances[defender]["uzrn"]
+	err := k.DistributeSettlement(ctx, dispute)
+	if err != nil {
+		t.Fatalf("DistributeSettlement failed: %v", err)
+	}
+
+	defenderAfter := bk.balances[defender]["uzrn"]
+	if defenderAfter <= defenderBefore {
+		t.Errorf("expected defender balance to increase: before=%d, after=%d", defenderBefore, defenderAfter)
+	}
+}
+
+// ---------- Phase Transition Tests (Extended) ----------
+
+func TestProcessPhaseTransitions_CommitToReveal(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	k.SetDispute(ctx, &types.Dispute{
+		Id:               "pt-commit-reveal",
+		TargetId:         "fact-1",
+		Phase:            types.DisputePhase_DISPUTE_PHASE_EVIDENCE_COMMIT,
+		Tier:             1,
+		EvidenceDeadline: 150,
+		VotingDeadline:   2000,
+	})
+
+	// Block 150: should NOT transition (not past deadline)
+	k.ProcessPhaseTransitions(ctx, 150)
+	d, _ := k.GetDispute(ctx, "pt-commit-reveal")
+	if d.Phase != types.DisputePhase_DISPUTE_PHASE_EVIDENCE_COMMIT {
+		t.Errorf("should still be EVIDENCE_COMMIT at deadline block, got %s", d.Phase.String())
+	}
+
+	// Block 151: should transition to EVIDENCE_REVEAL
+	k.ProcessPhaseTransitions(ctx, 151)
+	d, _ = k.GetDispute(ctx, "pt-commit-reveal")
+	if d.Phase != types.DisputePhase_DISPUTE_PHASE_EVIDENCE_REVEAL {
+		t.Errorf("expected EVIDENCE_REVEAL after deadline, got %s", d.Phase.String())
+	}
+}
+
+func TestProcessPhaseTransitions_RevealToArbitration(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	k.SetDispute(ctx, &types.Dispute{
+		Id:               "pt-reveal-arb",
+		TargetId:         "fact-1",
+		Phase:            types.DisputePhase_DISPUTE_PHASE_EVIDENCE_REVEAL,
+		Tier:             1,
+		EvidenceDeadline: 400,
+		VotingDeadline:   2000,
+	})
+
+	// Block 400: should NOT transition
+	k.ProcessPhaseTransitions(ctx, 400)
+	d, _ := k.GetDispute(ctx, "pt-reveal-arb")
+	if d.Phase != types.DisputePhase_DISPUTE_PHASE_EVIDENCE_REVEAL {
+		t.Errorf("should still be EVIDENCE_REVEAL at deadline block, got %s", d.Phase.String())
+	}
+
+	// Block 401: should transition to ARBITRATION
+	k.ProcessPhaseTransitions(ctx, 401)
+	d, _ = k.GetDispute(ctx, "pt-reveal-arb")
+	if d.Phase != types.DisputePhase_DISPUTE_PHASE_ARBITRATION {
+		t.Errorf("expected ARBITRATION after reveal deadline, got %s", d.Phase.String())
+	}
+}
+
+func TestProcessPhaseTransitions_ArbitrationAutoSettle(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	arbiters := []string{testAddr("arb1"), testAddr("arb2"), testAddr("arb3")}
+	challenger := testAddr("challenger")
+
+	k.SetDispute(ctx, &types.Dispute{
+		Id:             "pt-arb-settle",
+		TargetId:       "fact-1",
+		Phase:          types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+		Tier:           1,
+		Challenger:     challenger,
+		Defender:       testAddr("defender"),
+		Bond:           "1000000",
+		VotingDeadline: 600,
+		Arbiters:       arbiters,
+	})
+
+	// All arbiters vote for challenger
+	for _, arb := range arbiters {
+		k.SetVote(ctx, &types.DisputeVote{
+			DisputeId: "pt-arb-settle",
+			Arbiter:   arb,
+			Vote:      types.ArbiterDecision_ARBITER_DECISION_CHALLENGER,
+			Stake:     "1",
+		})
+	}
+
+	// Fund the module account for settlement distribution
+	k.ProcessPhaseTransitions(ctx, 601)
+
+	d, _ := k.GetDispute(ctx, "pt-arb-settle")
+	if d.Phase != types.DisputePhase_DISPUTE_PHASE_SETTLED {
+		t.Errorf("expected SETTLED after auto-settle, got %s", d.Phase.String())
+	}
+	if d.Outcome != types.DisputeOutcome_DISPUTE_OUTCOME_CHALLENGER_WINS {
+		t.Errorf("expected CHALLENGER_WINS outcome, got %s", d.Outcome.String())
+	}
+}
+
+// ---------- Evidence/Vote CRUD Tests ----------
+
+func TestSetGetMultipleEvidence(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	for i := 0; i < 3; i++ {
+		k.SetEvidence(ctx, &types.DisputeEvidence{
+			Id:          fmt.Sprintf("ev-%d", i),
+			DisputeId:   "dispute-multi-ev",
+			Submitter:   testAddr(fmt.Sprintf("submitter-%d", i)),
+			Side:        "challenger",
+			Content:     fmt.Sprintf("evidence content %d", i),
+			SubmittedAt: uint64(100 + i),
+		})
+	}
+
+	evidence := k.GetEvidenceByDispute(ctx, "dispute-multi-ev")
+	if len(evidence) != 3 {
+		t.Fatalf("expected 3 evidence items, got %d", len(evidence))
+	}
+
+	// Verify each evidence is present
+	ids := map[string]bool{}
+	for _, ev := range evidence {
+		ids[ev.Id] = true
+	}
+	for i := 0; i < 3; i++ {
+		id := fmt.Sprintf("ev-%d", i)
+		if !ids[id] {
+			t.Errorf("evidence %s not found in results", id)
+		}
+	}
+}
+
+func TestGetCommitmentNotFound(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	_, found := k.GetCommitment(ctx, "nonexistent-dispute", "nonexistent-submitter")
+	if found {
+		t.Fatal("expected commitment not found for nonexistent dispute+submitter")
+	}
+}
+
+func TestGetVotesByDisputeEmpty(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	votes := k.GetVotesByDispute(ctx, "no-votes-dispute")
+	if len(votes) != 0 {
+		t.Errorf("expected 0 votes for nonexistent dispute, got %d", len(votes))
+	}
+}
+
+// ---------- Query Server Tests (Extended) ----------
+
+func TestQueryDisputesByTarget(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	// Create 2 disputes for the same target
+	k.SetDispute(ctx, &types.Dispute{
+		Id:       "target-q-1",
+		TargetId: "shared-fact",
+		Phase:    types.DisputePhase_DISPUTE_PHASE_EVIDENCE_COMMIT,
+	})
+	k.SetDispute(ctx, &types.Dispute{
+		Id:       "target-q-2",
+		TargetId: "shared-fact",
+		Phase:    types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+	})
+
+	resp, err := qs.DisputesByTarget(ctx, &types.QueryByTargetRequest{TargetId: "shared-fact"})
+	if err != nil {
+		t.Fatalf("DisputesByTarget failed: %v", err)
+	}
+	if len(resp.Disputes) != 2 {
+		t.Errorf("expected 2 disputes for target, got %d", len(resp.Disputes))
+	}
+}
+
+func TestQueryActiveDisputes(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	// 2 active disputes
+	k.SetDispute(ctx, &types.Dispute{
+		Id:       "qa-active-1",
+		TargetId: "fact-a",
+		Phase:    types.DisputePhase_DISPUTE_PHASE_EVIDENCE_COMMIT,
+	})
+	k.SetDispute(ctx, &types.Dispute{
+		Id:       "qa-active-2",
+		TargetId: "fact-b",
+		Phase:    types.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+	})
+	// 1 settled dispute (not active)
+	k.SetDispute(ctx, &types.Dispute{
+		Id:       "qa-settled-1",
+		TargetId: "fact-c",
+		Phase:    types.DisputePhase_DISPUTE_PHASE_SETTLED,
+	})
+
+	resp, err := qs.ActiveDisputes(ctx, &types.QueryActiveRequest{})
+	if err != nil {
+		t.Fatalf("ActiveDisputes query failed: %v", err)
+	}
+	if len(resp.Disputes) != 2 {
+		t.Errorf("expected 2 active disputes, got %d", len(resp.Disputes))
+	}
+
+	// Verify none of them are the settled one
+	for _, d := range resp.Disputes {
+		if d.Id == "qa-settled-1" {
+			t.Error("settled dispute should not appear in active query results")
+		}
+	}
+}
+
+func TestQueryParamsNilRequest(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Params(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil Params request")
+	}
+}
+
+// ---------- Arbiter Selection Tests (Extended) ----------
+
+func TestSelectArbitersDeterministic(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	challenger := testAddr("challenger")
+	defender := testAddr("defender")
+
+	arbiters1, err := k.SelectArbiters(ctx, 3, challenger, defender, 100)
+	if err != nil {
+		t.Fatalf("first SelectArbiters failed: %v", err)
+	}
+
+	arbiters2, err := k.SelectArbiters(ctx, 3, challenger, defender, 100)
+	if err != nil {
+		t.Fatalf("second SelectArbiters failed: %v", err)
+	}
+
+	if len(arbiters1) != len(arbiters2) {
+		t.Fatalf("deterministic selection returned different lengths: %d vs %d", len(arbiters1), len(arbiters2))
+	}
+	for i := range arbiters1 {
+		if arbiters1[i] != arbiters2[i] {
+			t.Errorf("arbiter[%d] differs: %s vs %s", i, arbiters1[i], arbiters2[i])
+		}
+	}
+}
+
+func TestSelectArbitersInsufficientValidators(t *testing.T) {
+	k, ctx, _, sk, _ := setupKeeper(t)
+
+	// Override validators to only have 2 (plus challenger and defender makes it even worse)
+	sk.validators = []string{testAddr("val1"), testAddr("val2")}
+
+	challenger := testAddr("challenger")
+	defender := testAddr("defender")
+
+	// Request 3 arbiters but only 2 validators available (neither is challenger/defender)
+	_, err := k.SelectArbiters(ctx, 3, challenger, defender, 100)
+	if err == nil {
+		t.Fatal("expected error for insufficient validators")
+	}
+}
+
+// ---------- Counter and ID Tests ----------
+
+func TestGetNextDisputeIDSequential(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	for expected := uint64(1); expected <= 5; expected++ {
+		got := k.GetNextDisputeID(ctx)
+		if got != expected {
+			t.Errorf("expected dispute ID %d, got %d", expected, got)
+		}
+	}
+}
+
+func TestGenerateDisputeIDDeterministic(t *testing.T) {
+	// Same inputs produce the same ID
+	id1 := keeper.GenerateDisputeID("fact-1", "challenger-addr", 100)
+	id2 := keeper.GenerateDisputeID("fact-1", "challenger-addr", 100)
+	if id1 != id2 {
+		t.Errorf("expected same IDs for same inputs, got %s and %s", id1, id2)
+	}
+
+	// Different inputs produce different IDs
+	id3 := keeper.GenerateDisputeID("fact-2", "challenger-addr", 100)
+	if id1 == id3 {
+		t.Errorf("expected different IDs for different inputs, got same: %s", id1)
+	}
+
+	id4 := keeper.GenerateDisputeID("fact-1", "challenger-addr", 200)
+	if id1 == id4 {
+		t.Errorf("expected different IDs for different block heights, got same: %s", id1)
+	}
+}
+
+// ---------- Delete and Iteration Tests ----------
+
+func TestDeleteDisputeCleansIndices(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	dispute := &types.Dispute{
+		Id:       "del-idx-1",
+		TargetId: "fact-del",
+		Phase:    types.DisputePhase_DISPUTE_PHASE_EVIDENCE_COMMIT, // active
+	}
+	k.SetDispute(ctx, dispute)
+
+	// Verify it appears in both indices before deletion
+	byTarget := k.GetDisputesByTarget(ctx, "fact-del")
+	if len(byTarget) != 1 {
+		t.Fatalf("expected 1 dispute by target before delete, got %d", len(byTarget))
+	}
+	active := k.GetActiveDisputes(ctx)
+	foundActive := false
+	for _, a := range active {
+		if a.Id == "del-idx-1" {
+			foundActive = true
+		}
+	}
+	if !foundActive {
+		t.Fatal("expected dispute in active index before delete")
+	}
+
+	// Delete and verify indices are cleaned
+	k.DeleteDispute(ctx, dispute)
+
+	byTarget = k.GetDisputesByTarget(ctx, "fact-del")
+	if len(byTarget) != 0 {
+		t.Errorf("expected 0 disputes by target after delete, got %d", len(byTarget))
+	}
+
+	active = k.GetActiveDisputes(ctx)
+	for _, a := range active {
+		if a.Id == "del-idx-1" {
+			t.Error("deleted dispute should not appear in active index")
+		}
+	}
+
+	_, found := k.GetDispute(ctx, "del-idx-1")
+	if found {
+		t.Error("deleted dispute should not be found by GetDispute")
+	}
+}
