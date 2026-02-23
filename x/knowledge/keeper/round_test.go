@@ -742,3 +742,311 @@ func TestVerdict_AllValues(t *testing.T) {
 		require.Equal(t, v, got.Verdict)
 	}
 }
+
+// ─── Extended Lifecycle ──────────────────────────────────────────────────────
+
+func TestRound_CommitRevealFullLifecycle(t *testing.T) {
+	// Full 3-validator commit→reveal→aggregate→complete path.
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+
+	for i := 0; i < 3; i++ {
+		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
+	}
+
+	claim := &types.Claim{
+		Id:          "claim-lifecycle",
+		FactContent: "Full lifecycle claim for three validator test",
+		Domain:      "mathematics",
+		Category:    "formal",
+		Submitter:   "zrn1sub",
+		Stake:       "1000000",
+		Status:      types.ClaimStatus_CLAIM_STATUS_PENDING,
+	}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round, err := k.CreateVerificationRound(ctx, claim)
+	require.NoError(t, err)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_COMMIT, round.Phase)
+
+	// --- Commit phase: 3 validators commit ---
+	salts := make([][]byte, 3)
+	for i := 0; i < 3; i++ {
+		salts[i], _ = hex.DecodeString(fmt.Sprintf("aabbccdd1122334400000000000000%02x", i))
+		commitHash := types.ComputeCommitmentHash(round.Id, "accept", 800_000, salts[i])
+		commit := &types.CommitEntry{
+			Verifier:         makeValidatorAddr(i),
+			CommitHash:       commitHash,
+			CommittedAtBlock: uint64(ctx.BlockHeight()),
+		}
+		require.NoError(t, k.StoreCommitmentInRound(ctx, round.Id, commit))
+	}
+
+	// --- Advance to reveal phase ---
+	ctx = ctx.WithBlockHeight(int64(round.CommitDeadline))
+	require.NoError(t, k.AdvanceRoundPhases(ctx))
+
+	updated, _ := k.GetVerificationRound(ctx, round.Id)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_REVEAL, updated.Phase)
+
+	// --- Reveal phase: 3 validators reveal ---
+	for i := 0; i < 3; i++ {
+		reveal := &types.RevealEntry{
+			Verifier:        makeValidatorAddr(i),
+			Vote:            "accept",
+			Salt:            salts[i],
+			RevealedAtBlock: uint64(ctx.BlockHeight()),
+		}
+		require.NoError(t, k.StoreRevealInRound(ctx, round.Id, reveal, 800_000))
+	}
+
+	// --- Advance to aggregation (triggers auto-aggregate + complete) ---
+	ctx = ctx.WithBlockHeight(int64(round.RevealDeadline))
+	require.NoError(t, k.AdvanceRoundPhases(ctx))
+
+	final, found := k.GetVerificationRound(ctx, round.Id)
+	require.True(t, found)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_COMPLETE, final.Phase)
+	require.Equal(t, types.Verdict_VERDICT_ACCEPT, final.Verdict)
+
+	// Claim should be accepted
+	updatedClaim, _ := k.GetClaim(ctx, "claim-lifecycle")
+	require.Equal(t, types.ClaimStatus_CLAIM_STATUS_ACCEPTED, updatedClaim.Status)
+}
+
+func TestRound_PhaseTransition_CommitInclusive(t *testing.T) {
+	// At CommitDeadline height, expected phase should be REVEAL (>= boundary).
+	// But at CommitDeadline-1, it should still be COMMIT.
+	params := types.DefaultParams()
+	round := makeRoundInPhase("r-commit-inc", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 100)
+
+	// At CommitDeadline-1 (103): still commit
+	phase := keeper.GetExpectedPhase(round, round.CommitDeadline-1, &params)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_COMMIT, phase,
+		"one block before CommitDeadline should still be commit")
+
+	// At CommitDeadline (104): transitions to reveal
+	phase = keeper.GetExpectedPhase(round, round.CommitDeadline, &params)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_REVEAL, phase,
+		"at CommitDeadline the phase transitions to reveal (>= boundary)")
+}
+
+func TestRound_PhaseTransition_RevealInclusive(t *testing.T) {
+	// At RevealDeadline height, expected phase should be AGGREGATION (>= boundary).
+	// But at RevealDeadline-1, it should still be REVEAL.
+	params := types.DefaultParams()
+	round := makeRoundInPhase("r-reveal-inc", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 100)
+
+	// At RevealDeadline-1 (107): still reveal
+	phase := keeper.GetExpectedPhase(round, round.RevealDeadline-1, &params)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_REVEAL, phase,
+		"one block before RevealDeadline should still be reveal")
+
+	// At RevealDeadline (108): transitions to aggregation
+	phase = keeper.GetExpectedPhase(round, round.RevealDeadline, &params)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, phase,
+		"at RevealDeadline the phase transitions to aggregation (>= boundary)")
+}
+
+func TestRound_CleanupExpiredRounds(t *testing.T) {
+	// Expired rounds should be removed from the active index.
+	k, ctx := setupKnowledgeTest(t)
+
+	claim := &types.Claim{
+		Id:          "claim-cleanup",
+		FactContent: "Claim for expired round cleanup test",
+		Domain:      "general",
+		Submitter:   "zrn1sub",
+		Stake:       "1000000",
+		Status:      types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
+	}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-cleanup", "claim-cleanup", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 80)
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	// Verify it's in the active index
+	active := k.GetActiveRounds(ctx)
+	require.Len(t, active, 1)
+
+	// Jump well past aggregation deadline (80+11=91), triggers expiration
+	ctx = ctx.WithBlockHeight(95)
+	require.NoError(t, k.AdvanceRoundPhases(ctx))
+
+	// Should no longer appear in active rounds
+	active = k.GetActiveRounds(ctx)
+	require.Empty(t, active, "expired round should be removed from active index")
+
+	// But the round should still exist in storage with EXPIRED phase
+	got, found := k.GetVerificationRound(ctx, "r-cleanup")
+	require.True(t, found)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_EXPIRED, got.Phase)
+}
+
+func TestRound_InsufficientParticipation(t *testing.T) {
+	// Below quorum (MinVerifiers=3, only 2 reveals) → inconclusive verdict.
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+
+	for i := 0; i < 3; i++ {
+		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
+	}
+
+	claim := &types.Claim{
+		Id:          "claim-quorum",
+		FactContent: "Claim for insufficient participation quorum test",
+		Domain:      "physics",
+		Submitter:   "zrn1sub",
+		Stake:       "1000000",
+		Status:      types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
+	}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-quorum", "claim-quorum", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 80)
+	// 3 commits, but only 2 reveals
+	round.Commits = []*types.CommitEntry{
+		{Verifier: makeValidatorAddr(0), CommitHash: []byte("h0"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(1), CommitHash: []byte("h1"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(2), CommitHash: []byte("h2"), CommittedAtBlock: 85},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: makeValidatorAddr(0), Vote: "accept", Salt: []byte("s0"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(1), Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 90},
+		// makeValidatorAddr(2) did NOT reveal
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	// Default MinVerifiers is 3, only 2 reveals → insufficient
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_INCONCLUSIVE, result.Verdict,
+		"2 reveals with MinVerifiers=3 must produce INCONCLUSIVE")
+	require.Equal(t, uint64(0), result.Confidence)
+}
+
+func TestRound_ContestedOutcome(t *testing.T) {
+	// Split verdicts (50/50) → inconclusive because neither side meets 77% threshold.
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+
+	for i := 0; i < 4; i++ {
+		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
+	}
+
+	// Lower MinVerifiers to 4 so all 4 reveals count
+	params, _ := k.GetParams(ctx)
+	params.MinVerifiers = 4
+	require.NoError(t, k.SetParams(ctx, params))
+
+	claim := &types.Claim{
+		Id:          "claim-contested",
+		FactContent: "Claim for contested split outcome test case",
+		Domain:      "physics",
+		Submitter:   "zrn1sub",
+		Stake:       "1000000",
+		Status:      types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
+	}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-contested", "claim-contested", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 80)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: makeValidatorAddr(0), CommitHash: []byte("h0"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(1), CommitHash: []byte("h1"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(2), CommitHash: []byte("h2"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(3), CommitHash: []byte("h3"), CommittedAtBlock: 85},
+	}
+	// 2 accept, 2 reject — 50/50 split
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: makeValidatorAddr(0), Vote: "accept", Salt: []byte("s0"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(1), Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(2), Vote: "reject", Salt: []byte("s2"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(3), Vote: "reject", Salt: []byte("s3"), RevealedAtBlock: 90},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_INCONCLUSIVE, result.Verdict,
+		"50/50 split must be INCONCLUSIVE (neither side meets 77% threshold)")
+}
+
+func TestRound_RejectedOutcome(t *testing.T) {
+	// All validators reject → rejected verdict.
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+
+	for i := 0; i < 3; i++ {
+		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
+	}
+
+	claim := &types.Claim{
+		Id:          "claim-all-reject",
+		FactContent: "Claim that all validators reject unanimously",
+		Domain:      "physics",
+		Submitter:   "zrn1sub",
+		Stake:       "1000000",
+		Status:      types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
+	}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-all-reject", "claim-all-reject", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 80)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: makeValidatorAddr(0), CommitHash: []byte("h0"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(1), CommitHash: []byte("h1"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(2), CommitHash: []byte("h2"), CommittedAtBlock: 85},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: makeValidatorAddr(0), Vote: "reject", Salt: []byte("s0"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(1), Vote: "reject", Salt: []byte("s1"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(2), Vote: "reject", Salt: []byte("s2"), RevealedAtBlock: 90},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_REJECT, result.Verdict,
+		"all 3 reject (100%) must exceed 77% threshold → REJECT")
+	require.Equal(t, uint64(1_000_000), result.Confidence,
+		"unanimous reject gives 100% confidence (1,000,000)")
+
+	// Complete and verify claim status
+	require.NoError(t, k.CompleteRound(ctx, round, result))
+	updatedClaim, _ := k.GetClaim(ctx, "claim-all-reject")
+	require.Equal(t, types.ClaimStatus_CLAIM_STATUS_REJECTED, updatedClaim.Status)
+}
+
+func TestRound_ConfidenceAggregation(t *testing.T) {
+	// 3 of 3 accept (all with equal stake) → confidence 1,000,000 ≥ 770,000 threshold.
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+
+	for i := 0; i < 3; i++ {
+		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
+	}
+
+	claim := &types.Claim{
+		Id:          "claim-confidence",
+		FactContent: "Claim for confidence aggregation threshold test",
+		Domain:      "mathematics",
+		Submitter:   "zrn1sub",
+		Stake:       "1000000",
+		Status:      types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
+	}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-confidence", "claim-confidence", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 80)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: makeValidatorAddr(0), CommitHash: []byte("h0"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(1), CommitHash: []byte("h1"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(2), CommitHash: []byte("h2"), CommittedAtBlock: 85},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: makeValidatorAddr(0), Vote: "accept", Salt: []byte("s0"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(1), Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(2), Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 90},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
+	require.GreaterOrEqual(t, result.Confidence, uint64(770_000),
+		"acceptance confidence must meet or exceed the 770,000 threshold")
+	require.Equal(t, uint64(1_000_000), result.Confidence,
+		"unanimous accept gives 100% confidence")
+}
