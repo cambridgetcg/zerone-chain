@@ -75,22 +75,23 @@ The verification pool itself is split between two modules:
 | Knowledge | 700,000 | ~4.6% | `x/knowledge` — verification rewards |
 | Compute | 300,000 | ~2.0% | `x/compute_pool` — compute credits |
 
-## Founder Share
+## Founder Share (Governance-Immune)
 
-A temporary 7% deduction from the research fund portion:
+A permanent 7% deduction from the research fund portion. **This share is hardened against governance modification** — once the founder address is set, neither the share percentage nor the address can be changed via parameter governance. Only a code-level upgrade could alter it.
 
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| `founder_share_bps` | 70,000 | 7% of the research fund share |
-| `founder_address` | "" (disabled at genesis) | Bech32 address |
-| `governance_activation_height` | 0 | Block height when share sunsets |
+| Parameter | Value | Governance-Adjustable? |
+|-----------|-------|----------------------|
+| `founder_share_bps` | 70,000 (7% of research) | **No** — immutable once set |
+| `founder_address` | "" (set at launch) | **No** — immutable once set |
 
 **Effective founder income:**
 - 7% of 3.33% = **0.23% of total revenue**
 - This goes directly to the founder's address (not locked/vested)
-- If founder address is empty or invalid, 100% goes to research fund
+- If founder address is empty (pre-launch), 100% goes to research fund
 
-**Sunset mechanism:** When `governance_activation_height` is reached (set by governance vote), the founder share drops to zero and the full 3.33% research share flows to the research fund.
+**Why governance-immune?** The founder share is a permanent protocol commitment, not a temporary bootstrap mechanism. It ensures the protocol's creator has perpetual alignment with the network's success. Governance can change almost everything else — but not this. It would take a code upgrade (which governance *can* propose via an upgrade-category LIP) to modify the founder share, requiring far higher coordination than a simple parameter change.
+
+**Enforcement:** `ValidateFounderShareImmutability()` in `MsgUpdateParams` rejects any governance proposal that attempts to modify `founder_share_bps` or `founder_address` once set.
 
 ## Revenue Sources
 

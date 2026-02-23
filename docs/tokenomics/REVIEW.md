@@ -36,13 +36,13 @@ The SSI-based adaptive parameters are genuinely innovative — the chain adjusti
 
 **New concern: Bootstrap friction.** With 0 ZRN at genesis, validators rely on virtual stake and earn from block 1. The research fund starts empty and fills organically from 13% revenue share. This is philosophically clean but means early-stage funding for ecosystem development depends entirely on block reward accumulation speed.
 
-### 2. The Founder Share Is Uncomfortably Manual
+### 2. ~~The Founder Share Is Uncomfortably Manual~~ → RESOLVED (by design)
 
-The 7% founder share of research fund (0.91% of total revenue) goes directly to an address — no vesting, no lock, no on-chain accountability. The governance sunset is good in theory but relies on governance actually voting to activate it.
+The 7% founder share of research fund (0.23% of total revenue) is now **governance-immune by design**. `ValidateFounderShareImmutability()` in `MsgUpdateParams` rejects any governance proposal that modifies `founder_share_bps` or `founder_address` once set.
 
-**Risk:** If the founder never sets `governance_activation_height`, the share runs indefinitely.
+**This is intentional, not an oversight.** The founder share is a permanent protocol commitment — perpetual alignment between creator and network. Only a code upgrade (upgrade-category LIP) could alter it.
 
-**Recommendation:** Set a hard-coded sunset block in the code (e.g., 2 years), with governance able to extend if desired but unable to be ignored.
+**Remaining concern:** The share goes directly to an address with no vesting or lock. At 0.23% of total revenue it's modest, but it's still unencumbered capital.
 
 ### 3. Empty Block Reward = 0 May Cause Issues
 
