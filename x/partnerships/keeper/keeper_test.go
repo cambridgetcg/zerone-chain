@@ -1981,3 +1981,1081 @@ func TestDefaultGenesis_Validation(t *testing.T) {
 		t.Errorf("default genesis should be valid: %v", err)
 	}
 }
+
+// ==================== QUERY SERVER TESTS ====================
+
+func TestQueryServer_Params(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	resp, err := qs.Params(ctx, &types.QueryParamsRequest{})
+	if err != nil {
+		t.Fatalf("Params query failed: %v", err)
+	}
+	if resp.Params == nil {
+		t.Fatal("expected non-nil params")
+	}
+	if resp.Params.FormationWindowBlocks != 1000 {
+		t.Errorf("expected FormationWindowBlocks 1000, got %d", resp.Params.FormationWindowBlocks)
+	}
+	if resp.Params.CoolingPeriodBlocks != 5000 {
+		t.Errorf("expected CoolingPeriodBlocks 5000, got %d", resp.Params.CoolingPeriodBlocks)
+	}
+}
+
+func TestQueryServer_Partnership(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-q1",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusActive,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "5000000",
+		TotalEarned:      "10000000",
+		CooperationScore: 500000,
+	}
+	k.SetPartnership(ctx, p)
+
+	qs := keeper.NewQueryServerImpl(k)
+	resp, err := qs.Partnership(ctx, &types.QueryPartnershipRequest{Id: "p-q1"})
+	if err != nil {
+		t.Fatalf("Partnership query failed: %v", err)
+	}
+	if resp.Partnership.Id != "p-q1" {
+		t.Errorf("expected id p-q1, got %s", resp.Partnership.Id)
+	}
+	if resp.Partnership.CommonPotBalance != "5000000" {
+		t.Errorf("expected pot 5000000, got %s", resp.Partnership.CommonPotBalance)
+	}
+	if resp.Partnership.Status != types.StatusActive {
+		t.Errorf("expected active, got %s", resp.Partnership.Status)
+	}
+}
+
+func TestQueryServer_PartnershipNotFound(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Partnership(ctx, &types.QueryPartnershipRequest{Id: "nonexistent"})
+	if err == nil {
+		t.Fatal("expected error for nonexistent partnership")
+	}
+}
+
+func TestQueryServer_PartnershipsByAddress(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p1 := &types.Partnership{
+		Id:               "p-addr1",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusActive,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "0",
+	}
+	k.SetPartnership(ctx, p1)
+
+	p2 := &types.Partnership{
+		Id:               "p-addr2",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agent2Addr,
+		Status:           types.StatusDissolved,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "0",
+	}
+	k.SetPartnership(ctx, p2)
+
+	qs := keeper.NewQueryServerImpl(k)
+	resp, err := qs.PartnershipsByAddress(ctx, &types.QueryByAddressRequest{Address: humanAddr})
+	if err != nil {
+		t.Fatalf("PartnershipsByAddress query failed: %v", err)
+	}
+	if len(resp.Partnerships) != 2 {
+		t.Errorf("expected 2 partnerships, got %d", len(resp.Partnerships))
+	}
+}
+
+func TestQueryServer_PartnershipsByAddressEmpty(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	resp, err := qs.PartnershipsByAddress(ctx, &types.QueryByAddressRequest{Address: outsiderAddr})
+	if err != nil {
+		t.Fatalf("PartnershipsByAddress query failed: %v", err)
+	}
+	if len(resp.Partnerships) != 0 {
+		t.Errorf("expected 0 partnerships, got %d", len(resp.Partnerships))
+	}
+}
+
+func TestQueryServer_PendingOps(t *testing.T) {
+	ms, k, ctx, bk := setupMsgServer(t)
+	bk.setBalance(humanAddr, "uzrn", 10000000)
+	bk.setBalance(agentAddr, "uzrn", 10000000)
+
+	pid, _ := proposeAndAccept(t, ms, ctx, humanAddr, agentAddr)
+
+	// Create a pending operation
+	_, err := ms.ProposeConsensusOp(ctx, &types.MsgProposeConsensusOp{
+		Proposer:      humanAddr,
+		PartnershipId: pid,
+		OpType:        "withdraw",
+		Amount:        "1000",
+		Rationale:     "test",
+	})
+	if err != nil {
+		t.Fatalf("ProposeConsensusOp failed: %v", err)
+	}
+
+	qs := keeper.NewQueryServerImpl(k)
+	resp, err := qs.PendingOps(ctx, &types.QueryPendingOpsRequest{PartnershipId: pid})
+	if err != nil {
+		t.Fatalf("PendingOps query failed: %v", err)
+	}
+	if len(resp.Operations) != 1 {
+		t.Errorf("expected 1 pending op, got %d", len(resp.Operations))
+	}
+	if resp.Operations[0].Status != types.OpStatusPending {
+		t.Errorf("expected pending status, got %s", resp.Operations[0].Status)
+	}
+}
+
+func TestQueryServer_PendingOpsEmpty(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	resp, err := qs.PendingOps(ctx, &types.QueryPendingOpsRequest{PartnershipId: "p-nonexistent"})
+	if err != nil {
+		t.Fatalf("PendingOps query failed: %v", err)
+	}
+	if len(resp.Operations) != 0 {
+		t.Errorf("expected 0 ops, got %d", len(resp.Operations))
+	}
+}
+
+func TestQueryServer_FormationPool(t *testing.T) {
+	ms, k, ctx, bk := setupMsgServer(t)
+	bk.setBalance(humanAddr, "uzrn", 10000000)
+	bk.setBalance(agentAddr, "uzrn", 10000000)
+
+	_, err := ms.JoinFormationPool(ctx, &types.MsgJoinFormationPool{
+		Joiner:        humanAddr,
+		Domains:       []string{"math"},
+		PreferredRole: "human",
+	})
+	if err != nil {
+		t.Fatalf("JoinFormationPool failed: %v", err)
+	}
+
+	_, err = ms.JoinFormationPool(ctx, &types.MsgJoinFormationPool{
+		Joiner:        agentAddr,
+		Domains:       []string{"physics"},
+		PreferredRole: "agent",
+	})
+	if err != nil {
+		t.Fatalf("JoinFormationPool failed: %v", err)
+	}
+
+	qs := keeper.NewQueryServerImpl(k)
+	resp, err := qs.FormationPool(ctx, &types.QueryFormationPoolRequest{})
+	if err != nil {
+		t.Fatalf("FormationPool query failed: %v", err)
+	}
+	if len(resp.Entries) != 2 {
+		t.Errorf("expected 2 entries, got %d", len(resp.Entries))
+	}
+}
+
+func TestQueryServer_NilRequestParams(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Params(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil params request")
+	}
+}
+
+func TestQueryServer_NilRequestPartnership(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Partnership(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil partnership request")
+	}
+}
+
+func TestQueryServer_NilRequestPartnershipsByAddress(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.PartnershipsByAddress(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil by-address request")
+	}
+}
+
+func TestQueryServer_NilRequestPendingOps(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.PendingOps(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil pending ops request")
+	}
+}
+
+func TestQueryServer_NilRequestFormationPool(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.FormationPool(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil formation pool request")
+	}
+}
+
+func TestQueryServer_PartnershipEmptyId(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Partnership(ctx, &types.QueryPartnershipRequest{Id: ""})
+	if err == nil {
+		t.Fatal("expected error for empty partnership id")
+	}
+}
+
+func TestQueryServer_PartnershipsByAddressEmptyAddr(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.PartnershipsByAddress(ctx, &types.QueryByAddressRequest{Address: ""})
+	if err == nil {
+		t.Fatal("expected error for empty address")
+	}
+}
+
+func TestQueryServer_PendingOpsEmptyPartnershipId(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.PendingOps(ctx, &types.QueryPendingOpsRequest{PartnershipId: ""})
+	if err == nil {
+		t.Fatal("expected error for empty partnership id")
+	}
+}
+
+// ==================== CRUD DIRECT TESTS ====================
+
+func TestPartnershipCRUD_Direct(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Not found initially
+	_, found := k.GetPartnership(ctx, "p-crud-1")
+	if found {
+		t.Fatal("expected partnership not found")
+	}
+
+	// Set
+	p := &types.Partnership{
+		Id:               "p-crud-1",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusActive,
+		SplitHumanBps:    600000,
+		SplitAgentBps:    400000,
+		CommonPotBalance: "5000",
+		TotalEarned:      "10000",
+		CooperationScore: 700000,
+	}
+	k.SetPartnership(ctx, p)
+
+	// Get
+	got, found := k.GetPartnership(ctx, "p-crud-1")
+	if !found {
+		t.Fatal("expected partnership found")
+	}
+	if got.HumanAddr != humanAddr {
+		t.Errorf("expected human %s, got %s", humanAddr, got.HumanAddr)
+	}
+	if got.SplitHumanBps != 600000 {
+		t.Errorf("expected split 600000, got %d", got.SplitHumanBps)
+	}
+
+	// GetAll
+	all := k.GetAllPartnerships(ctx)
+	if len(all) != 1 {
+		t.Errorf("expected 1 partnership, got %d", len(all))
+	}
+
+	// By Human index
+	ids := k.GetPartnershipsByHuman(ctx, humanAddr)
+	if len(ids) != 1 || ids[0] != "p-crud-1" {
+		t.Errorf("expected by human: [p-crud-1], got %v", ids)
+	}
+
+	// By Agent index
+	ids = k.GetPartnershipsByAgent(ctx, agentAddr)
+	if len(ids) != 1 || ids[0] != "p-crud-1" {
+		t.Errorf("expected by agent: [p-crud-1], got %v", ids)
+	}
+
+	// Delete
+	k.DeletePartnership(ctx, p)
+	_, found = k.GetPartnership(ctx, "p-crud-1")
+	if found {
+		t.Fatal("expected partnership deleted")
+	}
+}
+
+func TestConsensusOperationCRUD_Direct(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Not found initially
+	_, found := k.GetConsensusOperation(ctx, "op-crud-1")
+	if found {
+		t.Fatal("expected operation not found")
+	}
+
+	// Set
+	op := &types.ConsensusOperation{
+		Id:            "op-crud-1",
+		PartnershipId: "p-1",
+		OpType:        "withdraw",
+		ProposedBy:    humanAddr,
+		Amount:        "5000",
+		Status:        types.OpStatusPending,
+		Deliberation: &types.DeliberationState{
+			AmountTier:   types.AmountTierSmall,
+			WindowEndsAt: 200,
+			FloorEndsAt:  150,
+		},
+		CreatedAt: 100,
+	}
+	k.SetConsensusOperation(ctx, op)
+
+	// Get
+	got, found := k.GetConsensusOperation(ctx, "op-crud-1")
+	if !found {
+		t.Fatal("expected operation found")
+	}
+	if got.Amount != "5000" {
+		t.Errorf("expected amount 5000, got %s", got.Amount)
+	}
+	if got.Status != types.OpStatusPending {
+		t.Errorf("expected pending, got %s", got.Status)
+	}
+
+	// GetAll
+	all := k.GetAllConsensusOperations(ctx)
+	if len(all) != 1 {
+		t.Errorf("expected 1 operation, got %d", len(all))
+	}
+
+	// Delete
+	k.DeleteConsensusOperation(ctx, "op-crud-1")
+	_, found = k.GetConsensusOperation(ctx, "op-crud-1")
+	if found {
+		t.Fatal("expected operation deleted")
+	}
+}
+
+func TestPartnershipsByParticipant_Direct(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-part-1",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusActive,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "0",
+	}
+	k.SetPartnership(ctx, p)
+
+	// Human finds it
+	result := k.GetPartnershipsByParticipant(ctx, humanAddr)
+	if len(result) != 1 {
+		t.Errorf("expected 1 for human, got %d", len(result))
+	}
+
+	// Agent finds it
+	result = k.GetPartnershipsByParticipant(ctx, agentAddr)
+	if len(result) != 1 {
+		t.Errorf("expected 1 for agent, got %d", len(result))
+	}
+
+	// Non-participant finds nothing
+	result = k.GetPartnershipsByParticipant(ctx, outsiderAddr)
+	if len(result) != 0 {
+		t.Errorf("expected 0 for outsider, got %d", len(result))
+	}
+}
+
+// ==================== ADDITIONAL EDGE CASES ====================
+
+func TestRewardDistribution_Accumulates(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	partnership := &types.Partnership{
+		Id:               "p-accum",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusActive,
+		LockTier:         0,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "1000",
+		TotalEarned:      "5000",
+	}
+	k.SetPartnership(ctx, partnership)
+
+	// First distribution
+	_, _, potAdd1, err := k.DistributeReward(ctx, partnership, "1000000")
+	if err != nil {
+		t.Fatalf("first DistributeReward failed: %v", err)
+	}
+
+	// Refresh partnership from store after first distribution
+	partnership, _ = k.GetPartnership(ctx, "p-accum")
+
+	// Second distribution
+	_, _, potAdd2, err := k.DistributeReward(ctx, partnership, "500000")
+	if err != nil {
+		t.Fatalf("second DistributeReward failed: %v", err)
+	}
+
+	// Verify accumulation
+	partnership, _ = k.GetPartnership(ctx, "p-accum")
+
+	// Initial pot: 1000
+	// First pot add: 1000000 * 100000 / 1000000 = 100000 → pot = 101000
+	// Second pot add: 500000 * 100000 / 1000000 = 50000 → pot = 151000
+	potAddBig1 := new(big.Int)
+	potAddBig1.SetString(potAdd1, 10)
+	potAddBig2 := new(big.Int)
+	potAddBig2.SetString(potAdd2, 10)
+	expectedPot := new(big.Int).SetInt64(1000)
+	expectedPot.Add(expectedPot, potAddBig1)
+	expectedPot.Add(expectedPot, potAddBig2)
+
+	if partnership.CommonPotBalance != expectedPot.String() {
+		t.Errorf("expected pot %s, got %s", expectedPot.String(), partnership.CommonPotBalance)
+	}
+
+	// Total earned = 5000 + 1000000 + 500000 = 1505000
+	if partnership.TotalEarned != "1505000" {
+		t.Errorf("expected total earned 1505000, got %s", partnership.TotalEarned)
+	}
+}
+
+func TestHandleExit_AlreadyDissolved(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-dissolved",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusDissolved,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "0",
+	}
+	k.SetPartnership(ctx, p)
+
+	_, err := k.HandleExit(ctx, "p-dissolved", humanAddr)
+	if err == nil {
+		t.Fatal("expected error for already dissolved partnership")
+	}
+}
+
+func TestSafetyFreeze_AlreadyActive(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-freeze-active",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusActive,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "0",
+		CooperationScore: 500000,
+	}
+	k.SetPartnership(ctx, p)
+
+	// Set an already-active freeze (expires in the future)
+	sf := &types.SafetyFreeze{
+		PartnershipId:        "p-freeze-active",
+		FreezeCountThisEpoch: 1,
+		ExpiresAt:            200, // current block is 100, so still active
+	}
+	k.SetSafetyFreeze(ctx, sf)
+
+	_, err := k.HandleSafetyFreeze(ctx, "p-freeze-active", humanAddr)
+	if err == nil {
+		t.Fatal("expected error when freeze already active")
+	}
+}
+
+func TestCoercionSignal_AlreadyActive(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-coerce-dup",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusActive,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "0",
+	}
+	k.SetPartnership(ctx, p)
+
+	// First signal succeeds
+	_, err := k.HandleCoercionSignal(ctx, "p-coerce-dup", humanAddr)
+	if err != nil {
+		t.Fatalf("first coercion signal failed: %v", err)
+	}
+
+	// Second signal should fail (already active)
+	_, err = k.HandleCoercionSignal(ctx, "p-coerce-dup", agentAddr)
+	if err == nil {
+		t.Fatal("expected error for duplicate coercion signal")
+	}
+}
+
+// ==================== SETTLEMENT EDGE CASES ====================
+
+func TestSettleCooling_NotYetExpired(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-cool-notyet",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusCooling,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "10000",
+		ExitState: &types.ExitState{
+			InitiatedBy: humanAddr,
+			InitiatedAt: 50,
+			CooldownEnd: 200, // after current block (100)
+		},
+	}
+	k.SetPartnership(ctx, p)
+
+	k.SettleCoolingPartnerships(ctx)
+
+	updated, _ := k.GetPartnership(ctx, "p-cool-notyet")
+	if updated.Status != types.StatusCooling {
+		t.Errorf("expected still cooling, got %s", updated.Status)
+	}
+}
+
+func TestSettleCooling_Expired(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-cool-expired",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusCooling,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "10000",
+		ExitState: &types.ExitState{
+			InitiatedBy: humanAddr,
+			InitiatedAt: 50,
+			CooldownEnd: 90, // before current block (100)
+		},
+	}
+	k.SetPartnership(ctx, p)
+
+	k.SettleCoolingPartnerships(ctx)
+
+	updated, _ := k.GetPartnership(ctx, "p-cool-expired")
+	if updated.Status != types.StatusDissolved {
+		t.Errorf("expected dissolved, got %s", updated.Status)
+	}
+}
+
+func TestWithdrawalExecution_ViaApproval(t *testing.T) {
+	ms, k, ctx, bk := setupMsgServer(t)
+	bk.setBalance(humanAddr, "uzrn", 10000000)
+	bk.setBalance(agentAddr, "uzrn", 10000000)
+	bk.setModuleBalance(types.ModuleName, "uzrn", 10000000)
+
+	pid, _ := proposeAndAccept(t, ms, ctx, humanAddr, agentAddr)
+
+	// Propose withdraw of 100000
+	opResp, err := ms.ProposeConsensusOp(ctx, &types.MsgProposeConsensusOp{
+		Proposer:      humanAddr,
+		PartnershipId: pid,
+		OpType:        "withdraw",
+		Amount:        "100000",
+		Rationale:     "operational expenses",
+	})
+	if err != nil {
+		t.Fatalf("ProposeConsensusOp failed: %v", err)
+	}
+
+	// Check tier: 100000 / 2000000 = 5% = medium tier (window=222, floor=111)
+	op, _ := k.GetConsensusOperation(ctx, opResp.OperationId)
+	if op.Deliberation.AmountTier != types.AmountTierMedium {
+		t.Errorf("expected medium tier, got %s", op.Deliberation.AmountTier)
+	}
+
+	// Approve after floor period
+	voteCtx := ctxAtHeight(ctx, 100+112)
+	_, err = ms.VoteConsensusOp(voteCtx, &types.MsgVoteConsensusOp{
+		OperationId: opResp.OperationId,
+		Voter:       agentAddr,
+		Approve:     true,
+	})
+	if err != nil {
+		t.Fatalf("VoteConsensusOp failed: %v", err)
+	}
+
+	// Verify pot balance decreased
+	p, _ := k.GetPartnership(voteCtx, pid)
+	potBal := new(big.Int)
+	potBal.SetString(p.CommonPotBalance, 10)
+	expected := new(big.Int)
+	expected.SetString("1900000", 10) // 2000000 - 100000
+	if potBal.Cmp(expected) != 0 {
+		t.Errorf("expected pot 1900000, got %s", p.CommonPotBalance)
+	}
+}
+
+// ==================== ADDITIONAL VALIDATE BASIC TESTS ====================
+
+func TestValidateBasic_AcceptPartnership(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgAcceptPartnership
+		wantErr bool
+	}{
+		{"valid", &types.MsgAcceptPartnership{Accepter: agentAddr, PartnershipId: "p-1"}, false},
+		{"empty accepter", &types.MsgAcceptPartnership{Accepter: "", PartnershipId: "p-1"}, true},
+		{"empty partnership id", &types.MsgAcceptPartnership{Accepter: agentAddr, PartnershipId: ""}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBasic_SafetyFreeze(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgSafetyFreeze
+		wantErr bool
+	}{
+		{"valid", &types.MsgSafetyFreeze{Freezer: humanAddr, PartnershipId: "p-1"}, false},
+		{"empty freezer", &types.MsgSafetyFreeze{Freezer: "", PartnershipId: "p-1"}, true},
+		{"empty partnership id", &types.MsgSafetyFreeze{Freezer: humanAddr, PartnershipId: ""}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBasic_RaiseCoercionSignal(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgRaiseCoercionSignal
+		wantErr bool
+	}{
+		{"valid", &types.MsgRaiseCoercionSignal{Raiser: humanAddr, PartnershipId: "p-1"}, false},
+		{"empty raiser", &types.MsgRaiseCoercionSignal{Raiser: "", PartnershipId: "p-1"}, true},
+		{"empty partnership id", &types.MsgRaiseCoercionSignal{Raiser: humanAddr, PartnershipId: ""}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBasic_InitiateDissolution(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgInitiateDissolution
+		wantErr bool
+	}{
+		{"valid", &types.MsgInitiateDissolution{Initiator: humanAddr, PartnershipId: "p-1"}, false},
+		{"empty initiator", &types.MsgInitiateDissolution{Initiator: "", PartnershipId: "p-1"}, true},
+		{"empty partnership id", &types.MsgInitiateDissolution{Initiator: humanAddr, PartnershipId: ""}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBasic_CreateSeedPartnership(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgCreateSeedPartnership
+		wantErr bool
+	}{
+		{"valid", &types.MsgCreateSeedPartnership{Human: humanAddr, Agent: agentAddr}, false},
+		{"empty human", &types.MsgCreateSeedPartnership{Human: "", Agent: agentAddr}, true},
+		{"empty agent", &types.MsgCreateSeedPartnership{Human: humanAddr, Agent: ""}, true},
+		{"self partnership", &types.MsgCreateSeedPartnership{Human: humanAddr, Agent: humanAddr}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBasic_JoinFormationPool(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgJoinFormationPool
+		wantErr bool
+	}{
+		{"valid", &types.MsgJoinFormationPool{Joiner: humanAddr, Domains: []string{"math"}, PreferredRole: "human"}, false},
+		{"empty joiner", &types.MsgJoinFormationPool{Joiner: "", Domains: []string{"math"}, PreferredRole: "human"}, true},
+		{"no domains", &types.MsgJoinFormationPool{Joiner: humanAddr, Domains: []string{}, PreferredRole: "human"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBasic_LeaveFormationPool(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgLeaveFormationPool
+		wantErr bool
+	}{
+		{"valid", &types.MsgLeaveFormationPool{Leaver: humanAddr}, false},
+		{"empty leaver", &types.MsgLeaveFormationPool{Leaver: ""}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBasic_UpdateParams(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgUpdateParams
+		wantErr bool
+	}{
+		{"valid", &types.MsgUpdateParams{Authority: authority, Params: types.DefaultParams()}, false},
+		{"empty authority", &types.MsgUpdateParams{Authority: "", Params: types.DefaultParams()}, true},
+		{"nil params", &types.MsgUpdateParams{Authority: authority, Params: nil}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateBasic_VoteConsensusOp(t *testing.T) {
+	tests := []struct {
+		name    string
+		msg     *types.MsgVoteConsensusOp
+		wantErr bool
+	}{
+		{"valid approve", &types.MsgVoteConsensusOp{Voter: humanAddr, OperationId: "op-1", Approve: true}, false},
+		{"valid reject", &types.MsgVoteConsensusOp{Voter: humanAddr, OperationId: "op-1", Approve: false}, false},
+		{"empty voter", &types.MsgVoteConsensusOp{Voter: "", OperationId: "op-1", Approve: true}, true},
+		{"empty operation id", &types.MsgVoteConsensusOp{Voter: humanAddr, OperationId: "", Approve: true}, true},
+		{"invalid counter amount", &types.MsgVoteConsensusOp{Voter: humanAddr, OperationId: "op-1", Approve: false, CounterAmount: "abc"}, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.msg.ValidateBasic()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// ==================== SEQUENCE AUTO-INCREMENT ====================
+
+func TestSequence_AutoIncrement(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	seq1 := k.NextSequence(ctx)
+	seq2 := k.NextSequence(ctx)
+	seq3 := k.NextSequence(ctx)
+
+	if seq1 != 1 {
+		t.Errorf("expected seq1=1, got %d", seq1)
+	}
+	if seq2 != 2 {
+		t.Errorf("expected seq2=2, got %d", seq2)
+	}
+	if seq3 != 3 {
+		t.Errorf("expected seq3=3, got %d", seq3)
+	}
+
+	// Verify monotonic increment
+	if seq2 != seq1+1 || seq3 != seq2+1 {
+		t.Error("sequence is not monotonically incrementing")
+	}
+}
+
+// ==================== HANDLE EXIT EDGE CASES ====================
+
+func TestHandleExit_CoolingStatusBlocked(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-cooling",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusCooling,
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "0",
+		TotalEarned:      "0",
+		ExitState: &types.ExitState{
+			InitiatedBy: humanAddr,
+			InitiatedAt: 50,
+			CooldownEnd: 200,
+		},
+	}
+	k.SetPartnership(ctx, p)
+
+	_, err := k.HandleExit(ctx, "p-cooling", agentAddr)
+	if err == nil {
+		t.Fatal("expected error for exit on already-cooling partnership")
+	}
+}
+
+func TestHandleExit_SuspendedBypassesLock(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	p := &types.Partnership{
+		Id:               "p-suspended-exit",
+		HumanAddr:        humanAddr,
+		AgentAddr:        agentAddr,
+		Status:           types.StatusSuspended,
+		LockTier:         3,
+		LockExpiresAt:    999999, // lock not expired
+		SplitHumanBps:    500000,
+		SplitAgentBps:    500000,
+		CommonPotBalance: "10000",
+		TotalEarned:      "20000",
+	}
+	k.SetPartnership(ctx, p)
+
+	_, err := k.HandleExit(ctx, "p-suspended-exit", humanAddr)
+	if err != nil {
+		t.Fatalf("expected exit during suspension to succeed, got: %v", err)
+	}
+
+	updated, _ := k.GetPartnership(ctx, "p-suspended-exit")
+	if updated.Status != types.StatusCooling {
+		t.Errorf("expected cooling, got %s", updated.Status)
+	}
+}
+
+// ==================== PARAMS VALIDATION ====================
+
+func TestParamsValidation(t *testing.T) {
+	tests := []struct {
+		name    string
+		params  types.Params
+		wantErr bool
+	}{
+		{"valid default", *types.DefaultParams(), false},
+		{"zero formation window", types.Params{
+			FormationWindowBlocks: 0, CoolingPeriodBlocks: 5000, CommonPotShareBps: 100000,
+			SafetyFreezeDurationBlocks: 500, MaxFreezesPerEpoch: 3, CoercionReviewBlocks: 2000,
+			BaseCooldownBlocks: 100, MaxCounterProposalDepth: 3,
+			DefaultHumanSplitBps: 500000, DefaultAgentSplitBps: 500000,
+		}, true},
+		{"splits dont sum to 1000000", types.Params{
+			FormationWindowBlocks: 1000, CoolingPeriodBlocks: 5000, CommonPotShareBps: 100000,
+			SafetyFreezeDurationBlocks: 500, MaxFreezesPerEpoch: 3, CoercionReviewBlocks: 2000,
+			BaseCooldownBlocks: 100, MaxCounterProposalDepth: 3,
+			DefaultHumanSplitBps: 600000, DefaultAgentSplitBps: 500000,
+		}, true},
+	}
+
+	for i := range tests {
+		tt := &tests[i]
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.params.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// ==================== GENESIS VALIDATION EDGE CASES ====================
+
+func TestGenesisValidation_DuplicatePartnershipIds(t *testing.T) {
+	gs := types.DefaultGenesis()
+	gs.Partnerships = []*types.Partnership{
+		{Id: "p-1", HumanAddr: humanAddr, AgentAddr: agentAddr, SplitHumanBps: 500000, SplitAgentBps: 500000},
+		{Id: "p-1", HumanAddr: humanAddr, AgentAddr: agent2Addr, SplitHumanBps: 500000, SplitAgentBps: 500000},
+	}
+	if err := gs.Validate(); err == nil {
+		t.Fatal("expected error for duplicate partnership IDs in genesis")
+	}
+}
+
+func TestGenesisValidation_InvalidSplits(t *testing.T) {
+	gs := types.DefaultGenesis()
+	gs.Partnerships = []*types.Partnership{
+		{Id: "p-bad", HumanAddr: humanAddr, AgentAddr: agentAddr, SplitHumanBps: 600000, SplitAgentBps: 500000},
+	}
+	if err := gs.Validate(); err == nil {
+		t.Fatal("expected error for invalid splits in genesis")
+	}
+}
+
+// ==================== COUNTER-PROPOSAL VALIDATION ====================
+
+func TestValidateCounterProposal_DepthCheck(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// MaxCounterProposalDepth = 3 by default
+	// Depth 2: should be OK (can create depth 3)
+	op := &types.ConsensusOperation{
+		Deliberation: &types.DeliberationState{ChainDepth: 2},
+	}
+	if err := k.ValidateCounterProposal(ctx, op); err != nil {
+		t.Errorf("expected no error at depth 2, got: %v", err)
+	}
+
+	// Depth 3: should fail (at max)
+	op.Deliberation.ChainDepth = 3
+	if err := k.ValidateCounterProposal(ctx, op); err == nil {
+		t.Error("expected error at depth 3 (max)")
+	}
+}
+
+// ==================== CONSENSUS OP PENDING FILTERING ====================
+
+func TestGetPendingOpsForPartnership_FiltersNonPending(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Create two ops for same partnership: one pending, one approved
+	op1 := &types.ConsensusOperation{
+		Id:            "op-pend-1",
+		PartnershipId: "p-1",
+		OpType:        "withdraw",
+		ProposedBy:    humanAddr,
+		Amount:        "1000",
+		Status:        types.OpStatusPending,
+		Deliberation: &types.DeliberationState{
+			AmountTier:   types.AmountTierMicro,
+			WindowEndsAt: 200,
+			FloorEndsAt:  150,
+		},
+		CreatedAt: 100,
+	}
+	k.SetConsensusOperation(ctx, op1)
+
+	op2 := &types.ConsensusOperation{
+		Id:            "op-pend-2",
+		PartnershipId: "p-1",
+		OpType:        "withdraw",
+		ProposedBy:    humanAddr,
+		Amount:        "2000",
+		Status:        types.OpStatusApproved,
+		Deliberation: &types.DeliberationState{
+			AmountTier:   types.AmountTierSmall,
+			WindowEndsAt: 300,
+			FloorEndsAt:  250,
+		},
+		CreatedAt: 100,
+	}
+	k.SetConsensusOperation(ctx, op2)
+
+	// A third op for a different partnership
+	op3 := &types.ConsensusOperation{
+		Id:            "op-pend-3",
+		PartnershipId: "p-other",
+		OpType:        "withdraw",
+		ProposedBy:    humanAddr,
+		Amount:        "3000",
+		Status:        types.OpStatusPending,
+		Deliberation: &types.DeliberationState{
+			AmountTier:   types.AmountTierMedium,
+			WindowEndsAt: 400,
+			FloorEndsAt:  350,
+		},
+		CreatedAt: 100,
+	}
+	k.SetConsensusOperation(ctx, op3)
+
+	pending := k.GetPendingOpsForPartnership(ctx, "p-1")
+	if len(pending) != 1 {
+		t.Errorf("expected 1 pending op for p-1, got %d", len(pending))
+	}
+	if len(pending) > 0 && pending[0].Id != "op-pend-1" {
+		t.Errorf("expected op-pend-1, got %s", pending[0].Id)
+	}
+}

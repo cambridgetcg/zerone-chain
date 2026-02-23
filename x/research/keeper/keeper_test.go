@@ -686,3 +686,1077 @@ func TestGenesisImportExport(t *testing.T) {
 		t.Errorf("expected imported treasury 5000000, got %s", treasury)
 	}
 }
+
+// -----------------------------------------------------------------------
+// Ported Tests: Submission Edge Cases
+// -----------------------------------------------------------------------
+
+func TestSubmitResearchSequentialIds(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	msg := &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	}
+
+	resp1, err := msgServer.SubmitResearch(ctx, msg)
+	if err != nil {
+		t.Fatalf("submit 1 error: %v", err)
+	}
+	resp2, err := msgServer.SubmitResearch(ctx, msg)
+	if err != nil {
+		t.Fatalf("submit 2 error: %v", err)
+	}
+	resp3, err := msgServer.SubmitResearch(ctx, msg)
+	if err != nil {
+		t.Fatalf("submit 3 error: %v", err)
+	}
+
+	if resp1.ResearchId != "RES-1" || resp2.ResearchId != "RES-2" || resp3.ResearchId != "RES-3" {
+		t.Errorf("expected sequential IDs RES-1,RES-2,RES-3, got %s,%s,%s",
+			resp1.ResearchId, resp2.ResearchId, resp3.ResearchId)
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Review Edge Cases
+// -----------------------------------------------------------------------
+
+func TestReviewResearchMultipleReviewers(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	// Three distinct reviewers
+	msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+		Reviewer:     testAddrStr(10),
+		ResearchId:   resp.ResearchId,
+		Verdict:      types.ReviewVerdict_REVIEW_VERDICT_APPROVE,
+		Reasoning:    "Good",
+		QualityScore: 80,
+	})
+	msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+		Reviewer:     testAddrStr(11),
+		ResearchId:   resp.ResearchId,
+		Verdict:      types.ReviewVerdict_REVIEW_VERDICT_APPROVE,
+		Reasoning:    "OK",
+		QualityScore: 70,
+	})
+	msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+		Reviewer:     testAddrStr(12),
+		ResearchId:   resp.ResearchId,
+		Verdict:      types.ReviewVerdict_REVIEW_VERDICT_REJECT,
+		Reasoning:    "Weak",
+		QualityScore: 40,
+	})
+
+	research, _ := k.GetResearch(ctx, resp.ResearchId)
+	if research.ReviewCount != 3 {
+		t.Errorf("expected review_count 3, got %d", research.ReviewCount)
+	}
+	if research.ApproveCount != 2 {
+		t.Errorf("expected approve_count 2, got %d", research.ApproveCount)
+	}
+	if research.RejectCount != 1 {
+		t.Errorf("expected reject_count 1, got %d", research.RejectCount)
+	}
+	// (80+70+40)/3 = 63
+	if research.AggregateScore != 63 {
+		t.Errorf("expected aggregate_score 63, got %d", research.AggregateScore)
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Resolution Edge Cases
+// -----------------------------------------------------------------------
+
+func TestResolveResearchInsufficientReviews(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	// Only 1 review (need 3)
+	msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+		Reviewer:     testAddrStr(10),
+		ResearchId:   resp.ResearchId,
+		Verdict:      types.ReviewVerdict_REVIEW_VERDICT_APPROVE,
+		Reasoning:    "Good",
+		QualityScore: 80,
+	})
+
+	_, err := msgServer.ResolveResearch(ctx, &types.MsgResolveResearch{
+		Authority:  testAuthority,
+		ResearchId: resp.ResearchId,
+	})
+	if err == nil {
+		t.Fatal("expected error for insufficient reviews, got nil")
+	}
+}
+
+func TestResolveResearchUnauthorized(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	// non-authority tries to resolve
+	_, err := msgServer.ResolveResearch(ctx, &types.MsgResolveResearch{
+		Authority:  testAddrStr(99),
+		ResearchId: resp.ResearchId,
+	})
+	if err == nil {
+		t.Fatal("expected unauthorized error, got nil")
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Challenge System
+// -----------------------------------------------------------------------
+
+func TestChallengeResearch(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	challenger := testAddr(2)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+	bk.setBalance(challenger, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	_, err := msgServer.ChallengeResearch(ctx, &types.MsgChallengeResearch{
+		Challenger: challenger.String(),
+		ResearchId: resp.ResearchId,
+		Reason:     "Methodology flawed",
+		Stake:      "1000000",
+	})
+	if err != nil {
+		t.Fatalf("ChallengeResearch failed: %v", err)
+	}
+
+	research, _ := k.GetResearch(ctx, resp.ResearchId)
+	if research.Status != "challenged" {
+		t.Errorf("expected status 'challenged', got %q", research.Status)
+	}
+}
+
+func TestChallengeResearchNotFound(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	challenger := testAddr(2)
+	bk.setBalance(challenger, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	_, err := msgServer.ChallengeResearch(ctx, &types.MsgChallengeResearch{
+		Challenger: challenger.String(),
+		ResearchId: "RES-999",
+		Reason:     "Does not exist",
+		Stake:      "1000000",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-existent research, got nil")
+	}
+}
+
+func TestChallengeResearchAlreadyAccepted(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	challenger := testAddr(2)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+	bk.setBalance(challenger, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	// Manually set status to accepted
+	research, _ := k.GetResearch(ctx, resp.ResearchId)
+	research.Status = "accepted"
+	k.SetResearch(ctx, research)
+
+	_, err := msgServer.ChallengeResearch(ctx, &types.MsgChallengeResearch{
+		Challenger: challenger.String(),
+		ResearchId: resp.ResearchId,
+		Reason:     "Too late",
+		Stake:      "1000000",
+	})
+	if err == nil {
+		t.Fatal("expected error challenging accepted research, got nil")
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Bounty Edge Cases
+// -----------------------------------------------------------------------
+
+func TestCreateBountyDeadlineTooSoon(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	_, err := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Too soon",
+		Description:    "Desc",
+		Reward:         "5000000",
+		DeadlineHeight: 200, // not far enough (need 100 + 34272 + 1)
+	})
+	if err == nil {
+		t.Fatal("expected deadline too soon error, got nil")
+	}
+}
+
+func TestCreateBountyExceedsMaxReward(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(1000000000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	_, err := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Too rich",
+		Description:    "Desc",
+		Reward:         "99999000000000", // way over max of 10000000000
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+	if err == nil {
+		t.Fatal("expected exceeds max reward error, got nil")
+	}
+}
+
+func TestClaimBountyNotOpen(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	createResp, _ := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Bounty",
+		Description:    "Test",
+		Reward:         "5000000",
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+
+	// Claim once
+	msgServer.ClaimBounty(ctx, &types.MsgClaimBounty{
+		Claimer:  testAddrStr(2),
+		BountyId: createResp.BountyId,
+	})
+
+	// Try to claim again
+	_, err := msgServer.ClaimBounty(ctx, &types.MsgClaimBounty{
+		Claimer:  testAddrStr(3),
+		BountyId: createResp.BountyId,
+	})
+	if err == nil {
+		t.Fatal("expected bounty not open error, got nil")
+	}
+}
+
+func TestClaimBountyExpired(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	createResp, _ := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Bounty",
+		Description:    "Test",
+		Reward:         "5000000",
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+
+	// Advance past deadline
+	expiredCtx := ctx.WithBlockHeight(int64(uint64(ctx.BlockHeight()) + 50001))
+
+	_, err := msgServer.ClaimBounty(expiredCtx, &types.MsgClaimBounty{
+		Claimer:  testAddrStr(2),
+		BountyId: createResp.BountyId,
+	})
+	if err == nil {
+		t.Fatal("expected bounty expired error, got nil")
+	}
+}
+
+func TestFulfillBountyNotClaimed(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	createResp, _ := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Bounty",
+		Description:    "Test",
+		Reward:         "5000000",
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+
+	// Try to fulfill without claiming
+	_, err := msgServer.FulfillBounty(ctx, &types.MsgFulfillBounty{
+		Authority: testAuthority,
+		BountyId:  createResp.BountyId,
+	})
+	if err == nil {
+		t.Fatal("expected bounty not claimed error, got nil")
+	}
+}
+
+func TestFulfillBountyUnauthorized(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	createResp, _ := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Bounty",
+		Description:    "Test",
+		Reward:         "5000000",
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+
+	claimer := testAddr(2)
+	msgServer.ClaimBounty(ctx, &types.MsgClaimBounty{
+		Claimer:  claimer.String(),
+		BountyId: createResp.BountyId,
+	})
+
+	// Non-authority tries to fulfill
+	_, err := msgServer.FulfillBounty(ctx, &types.MsgFulfillBounty{
+		Authority: testAddrStr(99),
+		BountyId:  createResp.BountyId,
+	})
+	if err == nil {
+		t.Fatal("expected unauthorized error, got nil")
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Treasury
+// -----------------------------------------------------------------------
+
+func TestFundResearch(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	funder := testAddr(1)
+	bk.setBalance(funder, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	_, err := msgServer.FundResearch(ctx, &types.MsgFundResearch{
+		Funder: funder.String(),
+		Amount: "5000000",
+	})
+	if err != nil {
+		t.Fatalf("FundResearch failed: %v", err)
+	}
+
+	bal := k.GetTreasuryBalance(ctx)
+	if bal != "5000000" {
+		t.Errorf("expected treasury balance 5000000, got %s", bal)
+	}
+
+	// Fund again
+	_, err = msgServer.FundResearch(ctx, &types.MsgFundResearch{
+		Funder: funder.String(),
+		Amount: "3000000",
+	})
+	if err != nil {
+		t.Fatalf("FundResearch (2nd) failed: %v", err)
+	}
+
+	bal = k.GetTreasuryBalance(ctx)
+	if bal != "8000000" {
+		t.Errorf("expected treasury balance 8000000, got %s", bal)
+	}
+}
+
+func TestTreasuryBalance(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	bal := k.GetTreasuryBalance(ctx)
+	if bal != "0" {
+		t.Errorf("expected initial treasury 0, got %s", bal)
+	}
+
+	k.SetTreasuryBalance(ctx, "12345")
+	bal = k.GetTreasuryBalance(ctx)
+	if bal != "12345" {
+		t.Errorf("expected treasury 12345, got %s", bal)
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: State CRUD
+// -----------------------------------------------------------------------
+
+func TestSetGetParams(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	params := k.GetParams(ctx)
+
+	if params.MinReviewerCount != 3 {
+		t.Errorf("expected min_reviewer_count 3, got %d", params.MinReviewerCount)
+	}
+	if params.AcceptanceScoreThreshold != 70 {
+		t.Errorf("expected acceptance_score_threshold 70, got %d", params.AcceptanceScoreThreshold)
+	}
+	if params.RejectionSlashBps != 330000 {
+		t.Errorf("expected rejection_slash_bps 330000, got %d", params.RejectionSlashBps)
+	}
+	if params.ReviewPeriodBlocks != 68544 {
+		t.Errorf("expected review_period_blocks 68544, got %d", params.ReviewPeriodBlocks)
+	}
+	if params.BountyMinDeadlineBlocks != 34272 {
+		t.Errorf("expected bounty_min_deadline_blocks 34272, got %d", params.BountyMinDeadlineBlocks)
+	}
+
+	// Roundtrip: set modified params and re-read
+	params.MinReviewerCount = 5
+	params.AcceptanceScoreThreshold = 80
+	k.SetParams(ctx, params)
+
+	params2 := k.GetParams(ctx)
+	if params2.MinReviewerCount != 5 {
+		t.Errorf("expected modified min_reviewer_count 5, got %d", params2.MinReviewerCount)
+	}
+	if params2.AcceptanceScoreThreshold != 80 {
+		t.Errorf("expected modified acceptance_score_threshold 80, got %d", params2.AcceptanceScoreThreshold)
+	}
+}
+
+func TestIterateResearches(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Add 5 research submissions directly
+	for i := 1; i <= 5; i++ {
+		k.SetResearch(ctx, &types.Research{
+			Id:     fmt.Sprintf("RES-%d", i),
+			Domain: "test",
+			Status: "submitted",
+		})
+	}
+
+	var count int
+	k.IterateResearches(ctx, func(r *types.Research) bool {
+		count++
+		return false
+	})
+	if count != 5 {
+		t.Errorf("expected 5 researches iterated, got %d", count)
+	}
+}
+
+func TestGetResearchesByStatus(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetResearch(ctx, &types.Research{Id: "RES-1", Status: "submitted"})
+	k.SetResearch(ctx, &types.Research{Id: "RES-2", Status: "accepted"})
+	k.SetResearch(ctx, &types.Research{Id: "RES-3", Status: "submitted"})
+
+	submitted := k.GetResearchesByStatus(ctx, types.ResearchStatusSubmitted)
+	if len(submitted) != 2 {
+		t.Errorf("expected 2 submitted, got %d", len(submitted))
+	}
+
+	accepted := k.GetResearchesByStatus(ctx, types.ResearchStatusAccepted)
+	if len(accepted) != 1 {
+		t.Errorf("expected 1 accepted, got %d", len(accepted))
+	}
+}
+
+func TestGetResearchesByDomain(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetResearch(ctx, &types.Research{Id: "RES-1", Domain: "physics"})
+	k.SetResearch(ctx, &types.Research{Id: "RES-2", Domain: "math"})
+	k.SetResearch(ctx, &types.Research{Id: "RES-3", Domain: "physics"})
+
+	physics := k.GetResearchesByDomain(ctx, "physics")
+	if len(physics) != 2 {
+		t.Errorf("expected 2 physics, got %d", len(physics))
+	}
+
+	math := k.GetResearchesByDomain(ctx, "math")
+	if len(math) != 1 {
+		t.Errorf("expected 1 math, got %d", len(math))
+	}
+}
+
+func TestGetActiveBounties(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetBounty(ctx, &types.Bounty{Id: "B-1", Status: "open"})
+	k.SetBounty(ctx, &types.Bounty{Id: "B-2", Status: "claimed"})
+	k.SetBounty(ctx, &types.Bounty{Id: "B-3", Status: "expired"})
+	k.SetBounty(ctx, &types.Bounty{Id: "B-4", Status: "fulfilled"})
+
+	active := k.GetActiveBounties(ctx)
+	if len(active) != 2 {
+		t.Errorf("expected 2 active bounties (open+claimed), got %d", len(active))
+	}
+}
+
+func TestDeleteResearch(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetResearch(ctx, &types.Research{Id: "RES-1", Domain: "test"})
+	_, found := k.GetResearch(ctx, "RES-1")
+	if !found {
+		t.Fatal("expected research to exist")
+	}
+
+	k.DeleteResearch(ctx, "RES-1")
+	_, found = k.GetResearch(ctx, "RES-1")
+	if found {
+		t.Fatal("expected research to be deleted")
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Query Server
+// -----------------------------------------------------------------------
+
+func TestQueryResearch(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Query Test",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	// Add a review
+	msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+		Reviewer:     testAddrStr(10),
+		ResearchId:   resp.ResearchId,
+		Verdict:      types.ReviewVerdict_REVIEW_VERDICT_APPROVE,
+		Reasoning:    "Good",
+		QualityScore: 75,
+	})
+
+	qs := keeper.NewQueryServerImpl(k)
+	qResp, err := qs.Research(ctx, &types.QueryResearchRequest{ResearchId: resp.ResearchId})
+	if err != nil {
+		t.Fatalf("Query Research failed: %v", err)
+	}
+	if qResp.Research.Id != resp.ResearchId {
+		t.Errorf("expected id %s, got %s", resp.ResearchId, qResp.Research.Id)
+	}
+	if len(qResp.Reviews) != 1 {
+		t.Errorf("expected 1 review, got %d", len(qResp.Reviews))
+	}
+}
+
+func TestQueryResearchNotFound(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	qs := keeper.NewQueryServerImpl(k)
+	_, err := qs.Research(ctx, &types.QueryResearchRequest{ResearchId: "RES-999"})
+	if err == nil {
+		t.Fatal("expected not found error, got nil")
+	}
+}
+
+func TestQuerySubmissions(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	for _, domain := range []string{"physics", "physics", "math"} {
+		msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+			Submitter:   submitter.String(),
+			Title:       "Research " + domain,
+			Description: "Desc",
+			Domain:      domain,
+			Stake:       "1000000",
+		})
+	}
+
+	qs := keeper.NewQueryServerImpl(k)
+
+	// Query all
+	allResp, _ := qs.Submissions(ctx, &types.QuerySubmissionsRequest{})
+	if len(allResp.Submissions) != 3 {
+		t.Errorf("expected 3 submissions, got %d", len(allResp.Submissions))
+	}
+
+	// Filter by domain
+	physResp, _ := qs.Submissions(ctx, &types.QuerySubmissionsRequest{Domain: "physics"})
+	if len(physResp.Submissions) != 2 {
+		t.Errorf("expected 2 physics submissions, got %d", len(physResp.Submissions))
+	}
+
+	// Filter by status
+	statusResp, _ := qs.Submissions(ctx, &types.QuerySubmissionsRequest{Status: "submitted"})
+	if len(statusResp.Submissions) != 3 {
+		t.Errorf("expected 3 submitted, got %d", len(statusResp.Submissions))
+	}
+}
+
+func TestQueryBounty(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	createResp, _ := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Query Bounty",
+		Description:    "Desc",
+		Reward:         "5000000",
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+
+	qs := keeper.NewQueryServerImpl(k)
+	qResp, err := qs.Bounty(ctx, &types.QueryBountyRequest{BountyId: createResp.BountyId})
+	if err != nil {
+		t.Fatalf("Query Bounty failed: %v", err)
+	}
+	if qResp.Bounty.Title != "Query Bounty" {
+		t.Errorf("expected title 'Query Bounty', got %q", qResp.Bounty.Title)
+	}
+}
+
+func TestQueryParams(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	qs := keeper.NewQueryServerImpl(k)
+	qResp, err := qs.Params(ctx, &types.QueryParamsRequest{})
+	if err != nil {
+		t.Fatalf("Query Params failed: %v", err)
+	}
+	if qResp.Params.MinReviewerCount != 3 {
+		t.Errorf("expected min_reviewer_count 3, got %d", qResp.Params.MinReviewerCount)
+	}
+	if qResp.TreasuryBalance == nil || qResp.TreasuryBalance.Balance != "0" {
+		bal := ""
+		if qResp.TreasuryBalance != nil {
+			bal = qResp.TreasuryBalance.Balance
+		}
+		t.Errorf("expected treasury_balance 0, got %s", bal)
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Full Lifecycle Integration
+// -----------------------------------------------------------------------
+
+func TestFullResearchLifecycle(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+
+	// 1. Submit
+	resp, err := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Full Lifecycle",
+		Description: "Complete test",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+	if err != nil {
+		t.Fatalf("submit failed: %v", err)
+	}
+	researchId := resp.ResearchId
+
+	// 2. Review (3 reviewers, all approve with score >= 70)
+	for i := 100; i < 103; i++ {
+		_, err := msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+			Reviewer:     testAddrStr(i),
+			ResearchId:   researchId,
+			Verdict:      types.ReviewVerdict_REVIEW_VERDICT_APPROVE,
+			Reasoning:    "Excellent",
+			QualityScore: 85,
+		})
+		if err != nil {
+			t.Fatalf("review %d failed: %v", i, err)
+		}
+	}
+
+	// 3. Verify under review status
+	research, _ := k.GetResearch(ctx, researchId)
+	if research.Status != "under_review" {
+		t.Fatalf("expected status 'under_review', got %q", research.Status)
+	}
+
+	// 4. Resolve (should accept with score 85 >= 70)
+	resolveResp, err := msgServer.ResolveResearch(ctx, &types.MsgResolveResearch{
+		Authority:  testAuthority,
+		ResearchId: researchId,
+	})
+	if err != nil {
+		t.Fatalf("resolve failed: %v", err)
+	}
+	if resolveResp.Outcome != types.ResearchOutcome_RESEARCH_OUTCOME_ACCEPTED {
+		t.Errorf("expected ACCEPTED outcome, got %v", resolveResp.Outcome)
+	}
+
+	// 5. Verify final state
+	research, _ = k.GetResearch(ctx, researchId)
+	if research.Status != "accepted" {
+		t.Errorf("expected status 'accepted', got %q", research.Status)
+	}
+}
+
+func TestFullBountyLifecycle(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	claimer := testAddr(2)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+
+	// 1. Create
+	createResp, err := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Full Bounty",
+		Description:    "Complete test",
+		Reward:         "5000000",
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+	if err != nil {
+		t.Fatalf("create bounty failed: %v", err)
+	}
+
+	// 2. Claim
+	_, err = msgServer.ClaimBounty(ctx, &types.MsgClaimBounty{
+		Claimer:  claimer.String(),
+		BountyId: createResp.BountyId,
+	})
+	if err != nil {
+		t.Fatalf("claim bounty failed: %v", err)
+	}
+
+	// 3. Fulfill
+	_, err = msgServer.FulfillBounty(ctx, &types.MsgFulfillBounty{
+		Authority: testAuthority,
+		BountyId:  createResp.BountyId,
+		Claimer:   claimer.String(),
+	})
+	if err != nil {
+		t.Fatalf("fulfill bounty failed: %v", err)
+	}
+
+	// 4. Verify final state
+	bounty, _ := k.GetBounty(ctx, createResp.BountyId)
+	if bounty.Status != "fulfilled" {
+		t.Errorf("expected status 'fulfilled', got %q", bounty.Status)
+	}
+
+	// Verify reward paid to claimer
+	claimerBal := bk.balances[claimer.String()+"/uzrn"]
+	if !claimerBal.Equal(sdkmath.NewInt(5000000)) {
+		t.Errorf("expected claimer balance 5000000, got %s", claimerBal.String())
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Genesis with PeerReviews
+// -----------------------------------------------------------------------
+
+func TestGenesisWithPeerReviews(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Genesis Review Test",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+	msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+		Reviewer:     testAddrStr(10),
+		ResearchId:   resp.ResearchId,
+		Verdict:      types.ReviewVerdict_REVIEW_VERDICT_APPROVE,
+		Reasoning:    "Good",
+		QualityScore: 75,
+	})
+
+	// Export
+	gs := k.ExportGenesis(ctx)
+	if len(gs.PeerReviews) != 1 {
+		t.Fatalf("expected 1 peer review in export, got %d", len(gs.PeerReviews))
+	}
+
+	// Re-init into fresh keeper
+	k2, ctx2, _ := setupKeeper(t)
+	k2.InitGenesis(ctx2, gs)
+
+	// Verify review survived round-trip
+	reviews := k2.GetReviewsForResearch(ctx2, resp.ResearchId)
+	if len(reviews) != 1 {
+		t.Errorf("expected 1 review after re-init, got %d", len(reviews))
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Bounty Expiry Edge Cases
+// -----------------------------------------------------------------------
+
+func TestExpireBountiesNotExpiredYet(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	createResp, _ := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Not Yet",
+		Description:    "Desc",
+		Reward:         "5000000",
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+
+	// Don't advance past deadline
+	k.ExpireBounties(ctx)
+
+	bounty, _ := k.GetBounty(ctx, createResp.BountyId)
+	if bounty.Status != "open" {
+		t.Errorf("expected status 'open' (not expired yet), got %q", bounty.Status)
+	}
+}
+
+// -----------------------------------------------------------------------
+// Ported Tests: Adversarial (OpenClaw)
+// -----------------------------------------------------------------------
+
+func TestDoubleReviewAttack(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	reviewer := testAddr(10)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Test Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	// First review
+	_, err := msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+		Reviewer:     reviewer.String(),
+		ResearchId:   resp.ResearchId,
+		Verdict:      types.ReviewVerdict_REVIEW_VERDICT_APPROVE,
+		Reasoning:    "Good",
+		QualityScore: 80,
+	})
+	if err != nil {
+		t.Fatalf("first review failed: %v", err)
+	}
+
+	// ATTACK: Same reviewer submits again
+	_, err = msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+		Reviewer:     reviewer.String(),
+		ResearchId:   resp.ResearchId,
+		Verdict:      types.ReviewVerdict_REVIEW_VERDICT_REJECT,
+		Reasoning:    "Changed mind",
+		QualityScore: 10,
+	})
+	if err == nil {
+		t.Fatal("double review attack succeeded -- should have been rejected")
+	}
+
+	// Verify original review preserved
+	research, _ := k.GetResearch(ctx, resp.ResearchId)
+	if research.ReviewCount != 1 {
+		t.Errorf("expected review_count 1, got %d", research.ReviewCount)
+	}
+	if research.AggregateScore != 80 {
+		t.Errorf("expected aggregate_score 80, got %d", research.AggregateScore)
+	}
+}
+
+func TestUnauthorizedResearchResolution(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	// Add enough reviews to make resolvable
+	for i := 100; i < 103; i++ {
+		msgServer.ReviewResearch(ctx, &types.MsgReviewResearch{
+			Reviewer:     testAddrStr(i),
+			ResearchId:   resp.ResearchId,
+			Verdict:      types.ReviewVerdict_REVIEW_VERDICT_APPROVE,
+			Reasoning:    "Good",
+			QualityScore: 80,
+		})
+	}
+
+	// ATTACK: Random user tries to resolve
+	_, err := msgServer.ResolveResearch(ctx, &types.MsgResolveResearch{
+		Authority:  testAddrStr(99),
+		ResearchId: resp.ResearchId,
+	})
+	if err == nil {
+		t.Fatal("unauthorized resolution succeeded -- should have been rejected")
+	}
+
+	// Verify still under review
+	research, _ := k.GetResearch(ctx, resp.ResearchId)
+	if research.Status == "accepted" || research.Status == "rejected" {
+		t.Errorf("research was resolved by unauthorized party: %s", research.Status)
+	}
+}
+
+func TestChallengeAcceptedResearch(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	submitter := testAddr(1)
+	challenger := testAddr(2)
+	bk.setBalance(submitter, "uzrn", sdkmath.NewInt(50000000))
+	bk.setBalance(challenger, "uzrn", sdkmath.NewInt(50000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	resp, _ := msgServer.SubmitResearch(ctx, &types.MsgSubmitResearch{
+		Submitter:   submitter.String(),
+		Title:       "Research",
+		Description: "Desc",
+		Domain:      "physics",
+		Stake:       "1000000",
+	})
+
+	// Manually accept
+	research, _ := k.GetResearch(ctx, resp.ResearchId)
+	research.Status = "accepted"
+	k.SetResearch(ctx, research)
+
+	// ATTACK: Challenge accepted research
+	_, err := msgServer.ChallengeResearch(ctx, &types.MsgChallengeResearch{
+		Challenger: challenger.String(),
+		ResearchId: resp.ResearchId,
+		Reason:     "Retroactive challenge",
+		Stake:      "1000000",
+	})
+	if err == nil {
+		t.Fatal("challenge on accepted research succeeded -- should have been rejected")
+	}
+
+	// Verify status unchanged
+	research, _ = k.GetResearch(ctx, resp.ResearchId)
+	if research.Status != "accepted" {
+		t.Errorf("expected status 'accepted' preserved, got %q", research.Status)
+	}
+}
+
+func TestBountyClaimAfterExpiry(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	creator := testAddr(1)
+	bk.setBalance(creator, "uzrn", sdkmath.NewInt(100000000))
+
+	msgServer := keeper.NewMsgServerImpl(k)
+	createResp, _ := msgServer.CreateBounty(ctx, &types.MsgCreateBounty{
+		Creator:        creator.String(),
+		Title:          "Find error",
+		Description:    "Desc",
+		Reward:         "5000000",
+		DeadlineHeight: uint64(ctx.BlockHeight()) + 50000,
+	})
+
+	// Advance past deadline
+	expiredCtx := ctx.WithBlockHeight(int64(uint64(ctx.BlockHeight()) + 50001))
+
+	// ATTACK: Claim expired bounty
+	_, err := msgServer.ClaimBounty(expiredCtx, &types.MsgClaimBounty{
+		Claimer:  testAddrStr(2),
+		BountyId: createResp.BountyId,
+	})
+	if err == nil {
+		t.Fatal("claiming expired bounty succeeded -- should have been rejected")
+	}
+
+	// Verify bounty status unchanged
+	bounty, _ := k.GetBounty(ctx, createResp.BountyId)
+	if bounty.ClaimedBy != "" {
+		t.Errorf("expected no claimer, got %q", bounty.ClaimedBy)
+	}
+}
