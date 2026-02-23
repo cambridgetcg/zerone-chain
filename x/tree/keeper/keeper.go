@@ -143,18 +143,3 @@ func (k Keeper) ExportGenesisJSON(ctx sdk.Context) json.RawMessage {
 	}
 	return bz
 }
-
-// Migrator handles module state migrations.
-type Migrator struct {
-	keeper Keeper
-}
-
-// NewMigrator returns a new Migrator.
-func NewMigrator(k Keeper) Migrator {
-	return Migrator{keeper: k}
-}
-
-// Migrate1to2 is a stub for future state migration.
-func (m Migrator) Migrate1to2(ctx sdk.Context) error {
-	return nil
-}

@@ -99,6 +99,11 @@ func (AppModule) Name() string { return types.ModuleName }
 func (am AppModule) RegisterServices(cfg module.Configurator) {
 	types.RegisterMsgServer(cfg.MsgServer(), keeper.NewMsgServerImpl(am.keeper))
 	types.RegisterQueryServer(cfg.QueryServer(), keeper.NewQueryServerImpl(am.keeper))
+
+	migrator := keeper.NewMigrator(am.keeper)
+	if err := cfg.RegisterMigration(types.ModuleName, 1, migrator.Migrate1to2); err != nil {
+		panic(fmt.Sprintf("failed to register %s migration: %v", types.ModuleName, err))
+	}
 }
 
 // RegisterInvariants is a no-op for now; invariants are added in R2-2.

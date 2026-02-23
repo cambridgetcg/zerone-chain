@@ -20,6 +20,7 @@ type Keeper struct {
 	stakingKeeper types.StakingKeeper
 	vestingKeeper types.VestingRewardsKeeper // set post-init to break circular deps
 	upgradeKeeper types.UpgradeKeeper       // set post-init to break circular deps
+	paramRouter   types.ParamRouter         // set post-init to break circular deps
 }
 
 // SetVestingKeeper sets the vesting rewards keeper (post-init to break circular deps).
@@ -35,6 +36,16 @@ func (k *Keeper) SetUpgradeKeeper(uk types.UpgradeKeeper) {
 // GetUpgradeKeeper returns the upgrade keeper.
 func (k Keeper) GetUpgradeKeeper() types.UpgradeKeeper {
 	return k.upgradeKeeper
+}
+
+// SetParamRouter sets the parameter router (post-init to break circular deps).
+func (k *Keeper) SetParamRouter(pr types.ParamRouter) {
+	k.paramRouter = pr
+}
+
+// GetParamRouter returns the parameter router.
+func (k Keeper) GetParamRouter() types.ParamRouter {
+	return k.paramRouter
 }
 
 // NewKeeper creates a new governance keeper.

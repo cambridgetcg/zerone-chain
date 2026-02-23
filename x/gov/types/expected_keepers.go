@@ -29,7 +29,14 @@ type VestingRewardsKeeper interface {
 // When an upgrade-category LIP passes with an attached plan, ScheduleUpgrade halts
 // the chain at the specified height so validators can swap binaries.
 type UpgradeKeeper interface {
-	ScheduleUpgrade(ctx context.Context, plan UpgradePlan) error
+	ScheduleUpgrade(ctx context.Context, plan *UpgradePlan) error
+}
+
+// ParamRouter dispatches parameter changes from passed LIPs to the target
+// module keepers. Each module registers itself; ApplyParamChange sets the
+// parameter identified by (module, key) to value.
+type ParamRouter interface {
+	ApplyParamChange(ctx context.Context, module, key, value string) error
 }
 
 // FundingRecorder is the interface used by the SybilFundingDecorator to record

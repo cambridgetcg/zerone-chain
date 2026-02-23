@@ -158,51 +158,47 @@ fetch_genesis() {
 # ── Configure node ───────────────────────────────────────────────────────
 
 configure_node() {
-  local config_dir="${ZERONED_HOME}/config"
+  # Delegate to configure-node.sh for standardised mode-based configuration
+  if [ -f "${PROJECT_ROOT}/scripts/configure-node.sh" ]; then
+    info "Applying recommended node configuration..."
+    bash "${PROJECT_ROOT}/scripts/configure-node.sh" \
+        --home "${ZERONED_HOME}" \
+        --mode validator \
+        --moniker "${MONIKER}"
+  else
+    warn "configure-node.sh not found; applying minimal config..."
 
-  info "Applying recommended configuration..."
+    local config_toml="${ZERONED_HOME}/config/config.toml"
+    local app_toml="${ZERONED_HOME}/config/app.toml"
 
-  # ── config.toml patches ────────────────────────────────────────────────
+    # Portable in-place sed
+    sedi() {
+      if [[ "${OS}" == "macos" ]]; then
+        sed -i '' "$@"
+      else
+        sed -i "$@"
+      fi
+    }
 
-  local config_toml="${config_dir}/config.toml"
-
-  # Portable in-place sed: macOS requires -i '' while GNU sed uses -i
-  sedi() {
-    if [[ "${OS}" == "macos" ]]; then
-      sed -i '' "$@"
-    else
-      sed -i "$@"
-    fi
-  }
-
-  # Moniker
-  sedi "s/^moniker = .*/moniker = \"${MONIKER}\"/" "${config_toml}"
-
-  # P2P seeds
-  if [[ -n "${SEEDS}" ]]; then
-    sedi "s/^seeds = .*/seeds = \"${SEEDS}\"/" "${config_toml}"
+    sedi "s/^moniker = .*/moniker = \"${MONIKER}\"/" "${config_toml}"
+    sedi "s/^timeout_commit = .*/timeout_commit = \"2521ms\"/" "${config_toml}"
+    sedi "s/^minimum-gas-prices = .*/minimum-gas-prices = \"${MIN_GAS_PRICES}\"/" "${app_toml}"
+    ok "Minimal configuration applied"
   fi
 
-  # Consensus timeouts tuned for Zerone's 2521ms block target
-  sedi "s/^timeout_commit = .*/timeout_commit = \"2521ms\"/" "${config_toml}"
-
-  # Prometheus metrics
-  sedi "s/^prometheus = false/prometheus = true/" "${config_toml}"
-
-  # ── app.toml patches ──────────────────────────────────────────────────
-
-  local app_toml="${config_dir}/app.toml"
-
-  # Minimum gas prices
-  sedi "s/^minimum-gas-prices = .*/minimum-gas-prices = \"${MIN_GAS_PRICES}\"/" "${app_toml}"
-
-  # Enable API
-  sedi "s/^enable = false/enable = true/" "${app_toml}"
-
-  # Telemetry for Prometheus
-  sedi "s/^prometheus-retention-time = 0/prometheus-retention-time = 60/" "${app_toml}"
-
-  ok "Configuration applied"
+  # Patch seeds separately (join-testnet reads them from seeds.txt)
+  if [[ -n "${SEEDS}" ]]; then
+    local config_toml="${ZERONED_HOME}/config/config.toml"
+    sedi_join() {
+      if [[ "${OS}" == "macos" ]]; then
+        sed -i '' "$@"
+      else
+        sed -i "$@"
+      fi
+    }
+    sedi_join "s/^seeds = .*/seeds = \"${SEEDS}\"/" "${config_toml}"
+    ok "Seeds configured"
+  fi
 }
 
 # ── Cosmovisor setup ─────────────────────────────────────────────────────

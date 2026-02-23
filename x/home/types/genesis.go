@@ -26,7 +26,7 @@ func DefaultGenesis() *GenesisState {
 }
 
 // Validate validates the genesis state.
-func (gs GenesisState) Validate() error {
+func (gs *GenesisState) Validate() error {
 	if gs.Params != nil {
 		if err := gs.Params.Validate(); err != nil {
 			return err
@@ -43,7 +43,7 @@ func (gs GenesisState) Validate() error {
 }
 
 // Validate validates the module parameters.
-func (p Params) Validate() error {
+func (p *Params) Validate() error {
 	if p.MaxKeysPerHome == 0 {
 		return fmt.Errorf("max_keys_per_home must be positive")
 	}

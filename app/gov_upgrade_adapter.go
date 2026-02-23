@@ -19,7 +19,7 @@ func NewGovUpgradeAdapter(k *upgradekeeper.Keeper) *GovUpgradeAdapter {
 	return &GovUpgradeAdapter{keeper: k}
 }
 
-func (a *GovUpgradeAdapter) ScheduleUpgrade(ctx context.Context, plan govtypes.UpgradePlan) error {
+func (a *GovUpgradeAdapter) ScheduleUpgrade(ctx context.Context, plan *govtypes.UpgradePlan) error {
 	return a.keeper.ScheduleUpgrade(ctx, upgradetypes.Plan{
 		Name:   plan.Name,
 		Height: plan.Height,

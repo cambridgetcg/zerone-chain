@@ -31,7 +31,7 @@ func DefaultGenesis() *GenesisState {
 }
 
 // Validate validates the genesis state.
-func (gs GenesisState) Validate() error {
+func (gs *GenesisState) Validate() error {
 	if gs.Params != nil {
 		if err := gs.Params.Validate(); err != nil {
 			return err
@@ -41,7 +41,7 @@ func (gs GenesisState) Validate() error {
 }
 
 // Validate validates the module parameters.
-func (p Params) Validate() error {
+func (p *Params) Validate() error {
 	if p.ObservationIntervalBlocks == 0 {
 		return ErrInvalidInterval
 	}

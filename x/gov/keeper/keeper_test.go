@@ -57,10 +57,10 @@ func (m *mockStakingKeeper) GetDelegatorTotalBonded(_ context.Context, addr stri
 
 type mockUpgradeKeeper struct {
 	called bool
-	plan   types.UpgradePlan
+	plan   *types.UpgradePlan
 }
 
-func (m *mockUpgradeKeeper) ScheduleUpgrade(_ context.Context, plan types.UpgradePlan) error {
+func (m *mockUpgradeKeeper) ScheduleUpgrade(_ context.Context, plan *types.UpgradePlan) error {
 	m.called = true
 	m.plan = plan
 	return nil

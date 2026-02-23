@@ -855,6 +855,7 @@ func NewZeroneApp(
 	)
 	app.ZeroneGovKeeper.SetVestingKeeper(&app.VestingRewardsKeeper)
 	app.ZeroneGovKeeper.SetUpgradeKeeper(NewGovUpgradeAdapter(app.UpgradeKeeper))
+	app.ZeroneGovKeeper.SetParamRouter(NewGovParamRouter())
 
 	app.ChannelsKeeper = zeronechannelskeeper.NewKeeper(
 		sdkruntime.NewKVStoreService(keys[zeronechannelstypes.StoreKey]),

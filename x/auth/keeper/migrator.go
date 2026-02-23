@@ -1,14 +1,21 @@
 package keeper
 
-// Migrator handles module state migrations for x/upgrade compatibility.
+import (
+	sdk "github.com/cosmos/cosmos-sdk/types"
+)
+
+// Migrator handles in-place store migrations.
 type Migrator struct {
 	keeper Keeper
 }
 
-// NewMigrator creates a new Migrator.
+// NewMigrator returns a new Migrator.
 func NewMigrator(keeper Keeper) Migrator {
 	return Migrator{keeper: keeper}
 }
 
-// Migrate1to2 will handle v1->v2 state migration when needed.
-// func (m Migrator) Migrate1to2(ctx sdk.Context) error { ... }
+// Migrate1to2 migrates from version 1 to version 2.
+// Stub — implement when v2 state changes are needed.
+func (m Migrator) Migrate1to2(_ sdk.Context) error {
+	return nil
+}

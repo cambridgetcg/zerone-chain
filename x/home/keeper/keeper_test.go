@@ -206,14 +206,14 @@ func TestParamsValidation(t *testing.T) {
 	}
 
 	// MaxKeysPerHome = 0 should fail.
-	bad := *valid
+	bad := types.DefaultParams()
 	bad.MaxKeysPerHome = 0
 	if err := bad.Validate(); err == nil {
 		t.Error("expected error for MaxKeysPerHome=0")
 	}
 
 	// DeadmanMaxThreshold <= DeadmanMinThreshold should fail.
-	bad2 := *valid
+	bad2 := types.DefaultParams()
 	bad2.DeadmanMaxThreshold = bad2.DeadmanMinThreshold
 	if err := bad2.Validate(); err == nil {
 		t.Error("expected error for DeadmanMaxThreshold <= DeadmanMinThreshold")

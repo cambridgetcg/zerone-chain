@@ -27,3 +27,4 @@ coverage.out
 
 # Vault binary
 vault/vault-*
+.worktrees/

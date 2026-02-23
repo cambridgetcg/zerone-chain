@@ -85,7 +85,7 @@ func (k Keeper) tallyAndResolve(ctx sdk.Context, lip *types.LIP, params *types.P
 		if lip.Category == types.CategoryUpgrade {
 			if plan, found := k.GetUpgradePlan(ctx, lip.Id); found {
 				if uk := k.GetUpgradeKeeper(); uk != nil {
-					if err := uk.ScheduleUpgrade(ctx, *plan); err != nil {
+					if err := uk.ScheduleUpgrade(ctx, plan); err != nil {
 						k.Logger(ctx).Error("failed to schedule upgrade from LIP",
 							"lip_id", lip.Id,
 							"upgrade_name", plan.Name,
@@ -172,12 +172,50 @@ func (k Keeper) checkQuorumAndSupport(ctx sdk.Context, lip *types.LIP, params *t
 }
 
 // executeParamChanges applies parameter changes from a passed LIP.
-// This is a stub — actual routing requires a ParamRouter registered in app.go.
 func (k Keeper) executeParamChanges(ctx sdk.Context, lip *types.LIP) {
 	logger := k.Logger(ctx)
+	router := k.GetParamRouter()
+
 	for _, pc := range lip.ParamChanges {
-		logger.Info("executing param change", "module", pc.Module, "key", pc.Key, "value", pc.Value)
-		// TODO: Wire ParamRouter in app.go post-keeper-init for actual param changes.
-		// For now, log the intended changes.
+		if router == nil {
+			logger.Error("param router not set, skipping param change",
+				"lip_id", lip.Id, "module", pc.Module, "key", pc.Key,
+			)
+			ctx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.gov.param_change_failed",
+					sdk.NewAttribute("lip_id", lip.Id),
+					sdk.NewAttribute("module", pc.Module),
+					sdk.NewAttribute("key", pc.Key),
+					sdk.NewAttribute("reason", "param router not set"),
+				),
+			)
+			continue
+		}
+
+		if err := router.ApplyParamChange(ctx, pc.Module, pc.Key, pc.Value); err != nil {
+			logger.Error("param change failed",
+				"lip_id", lip.Id, "module", pc.Module, "key", pc.Key, "error", err,
+			)
+			ctx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.gov.param_change_failed",
+					sdk.NewAttribute("lip_id", lip.Id),
+					sdk.NewAttribute("module", pc.Module),
+					sdk.NewAttribute("key", pc.Key),
+					sdk.NewAttribute("reason", err.Error()),
+				),
+			)
+		} else {
+			logger.Info("param change applied",
+				"lip_id", lip.Id, "module", pc.Module, "key", pc.Key, "value", pc.Value,
+			)
+			ctx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.gov.param_change_applied",
+					sdk.NewAttribute("lip_id", lip.Id),
+					sdk.NewAttribute("module", pc.Module),
+					sdk.NewAttribute("key", pc.Key),
+					sdk.NewAttribute("value", pc.Value),
+				),
+			)
+		}
 	}
 }
