@@ -951,6 +951,119 @@ func (*MsgSetResearchVotersResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{17}
 }
 
+// MsgAttachUpgradePlan attaches a software upgrade plan to an upgrade-category LIP.
+type MsgAttachUpgradePlan struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Proposer      string                 `protobuf:"bytes,1,opt,name=proposer,proto3" json:"proposer,omitempty"`                          // must be the LIP proposer
+	LipId         string                 `protobuf:"bytes,2,opt,name=lip_id,json=lipId,proto3" json:"lip_id,omitempty"`                   // target LIP (must be upgrade category, non-terminal)
+	UpgradeName   string                 `protobuf:"bytes,3,opt,name=upgrade_name,json=upgradeName,proto3" json:"upgrade_name,omitempty"` // must match a registered upgrade handler name
+	Height        int64                  `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`                             // block height to halt at
+	Info          string                 `protobuf:"bytes,5,opt,name=info,proto3" json:"info,omitempty"`                                  // upgrade info (release notes URL, binary hash, etc.)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAttachUpgradePlan) Reset() {
+	*x = MsgAttachUpgradePlan{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAttachUpgradePlan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAttachUpgradePlan) ProtoMessage() {}
+
+func (x *MsgAttachUpgradePlan) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAttachUpgradePlan.ProtoReflect.Descriptor instead.
+func (*MsgAttachUpgradePlan) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *MsgAttachUpgradePlan) GetProposer() string {
+	if x != nil {
+		return x.Proposer
+	}
+	return ""
+}
+
+func (x *MsgAttachUpgradePlan) GetLipId() string {
+	if x != nil {
+		return x.LipId
+	}
+	return ""
+}
+
+func (x *MsgAttachUpgradePlan) GetUpgradeName() string {
+	if x != nil {
+		return x.UpgradeName
+	}
+	return ""
+}
+
+func (x *MsgAttachUpgradePlan) GetHeight() int64 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *MsgAttachUpgradePlan) GetInfo() string {
+	if x != nil {
+		return x.Info
+	}
+	return ""
+}
+
+type MsgAttachUpgradePlanResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAttachUpgradePlanResponse) Reset() {
+	*x = MsgAttachUpgradePlanResponse{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAttachUpgradePlanResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAttachUpgradePlanResponse) ProtoMessage() {}
+
+func (x *MsgAttachUpgradePlanResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAttachUpgradePlanResponse.ProtoReflect.Descriptor instead.
+func (*MsgAttachUpgradePlanResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{19}
+}
+
 var File_zerone_gov_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_gov_v1_tx_proto_rawDesc = "" +
@@ -1011,7 +1124,14 @@ const file_zerone_gov_v1_tx_proto_rawDesc = "" +
 	"\x14MsgSetResearchVoters\x12\x1c\n" +
 	"\tauthority\x18\x01 \x01(\tR\tauthority\x129\n" +
 	"\x06voters\x18\x02 \x01(\v2!.zerone.gov.v1.ResearchFundVotersR\x06voters:\x0e\x82\xe7\xb0*\tauthority\"\x1e\n" +
-	"\x1cMsgSetResearchVotersResponse2\xb5\x06\n" +
+	"\x1cMsgSetResearchVotersResponse\"\xa7\x01\n" +
+	"\x14MsgAttachUpgradePlan\x12\x1a\n" +
+	"\bproposer\x18\x01 \x01(\tR\bproposer\x12\x15\n" +
+	"\x06lip_id\x18\x02 \x01(\tR\x05lipId\x12!\n" +
+	"\fupgrade_name\x18\x03 \x01(\tR\vupgradeName\x12\x16\n" +
+	"\x06height\x18\x04 \x01(\x03R\x06height\x12\x12\n" +
+	"\x04info\x18\x05 \x01(\tR\x04info:\r\x82\xe7\xb0*\bproposer\"\x1e\n" +
+	"\x1cMsgAttachUpgradePlanResponse2\x9c\a\n" +
 	"\x03Msg\x12M\n" +
 	"\tSubmitLIP\x12\x1b.zerone.gov.v1.MsgSubmitLIP\x1a#.zerone.gov.v1.MsgSubmitLIPResponse\x12J\n" +
 	"\bStakeLIP\x12\x1a.zerone.gov.v1.MsgStakeLIP\x1a\".zerone.gov.v1.MsgStakeLIPResponse\x12_\n" +
@@ -1021,7 +1141,8 @@ const file_zerone_gov_v1_tx_proto_rawDesc = "" +
 	"\fUpdateParams\x12\x1e.zerone.gov.v1.MsgUpdateParams\x1a&.zerone.gov.v1.MsgUpdateParamsResponse\x12k\n" +
 	"\x13SubmitResearchSpend\x12%.zerone.gov.v1.MsgSubmitResearchSpend\x1a-.zerone.gov.v1.MsgSubmitResearchSpendResponse\x12e\n" +
 	"\x11VoteResearchSpend\x12#.zerone.gov.v1.MsgVoteResearchSpend\x1a+.zerone.gov.v1.MsgVoteResearchSpendResponse\x12e\n" +
-	"\x11SetResearchVoters\x12#.zerone.gov.v1.MsgSetResearchVoters\x1a+.zerone.gov.v1.MsgSetResearchVotersResponseB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
+	"\x11SetResearchVoters\x12#.zerone.gov.v1.MsgSetResearchVoters\x1a+.zerone.gov.v1.MsgSetResearchVotersResponse\x12e\n" +
+	"\x11AttachUpgradePlan\x12#.zerone.gov.v1.MsgAttachUpgradePlan\x1a+.zerone.gov.v1.MsgAttachUpgradePlanResponseB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
 
 var (
 	file_zerone_gov_v1_tx_proto_rawDescOnce sync.Once
@@ -1035,7 +1156,7 @@ func file_zerone_gov_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_gov_v1_tx_proto_rawDescData
 }
 
-var file_zerone_gov_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_zerone_gov_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_zerone_gov_v1_tx_proto_goTypes = []any{
 	(*MsgSubmitLIP)(nil),                   // 0: zerone.gov.v1.MsgSubmitLIP
 	(*MsgSubmitLIPResponse)(nil),           // 1: zerone.gov.v1.MsgSubmitLIPResponse
@@ -1055,14 +1176,16 @@ var file_zerone_gov_v1_tx_proto_goTypes = []any{
 	(*MsgVoteResearchSpendResponse)(nil),   // 15: zerone.gov.v1.MsgVoteResearchSpendResponse
 	(*MsgSetResearchVoters)(nil),           // 16: zerone.gov.v1.MsgSetResearchVoters
 	(*MsgSetResearchVotersResponse)(nil),   // 17: zerone.gov.v1.MsgSetResearchVotersResponse
-	(*ParamChange)(nil),                    // 18: zerone.gov.v1.ParamChange
-	(*Params)(nil),                         // 19: zerone.gov.v1.Params
-	(*ResearchFundVoters)(nil),             // 20: zerone.gov.v1.ResearchFundVoters
+	(*MsgAttachUpgradePlan)(nil),           // 18: zerone.gov.v1.MsgAttachUpgradePlan
+	(*MsgAttachUpgradePlanResponse)(nil),   // 19: zerone.gov.v1.MsgAttachUpgradePlanResponse
+	(*ParamChange)(nil),                    // 20: zerone.gov.v1.ParamChange
+	(*Params)(nil),                         // 21: zerone.gov.v1.Params
+	(*ResearchFundVoters)(nil),             // 22: zerone.gov.v1.ResearchFundVoters
 }
 var file_zerone_gov_v1_tx_proto_depIdxs = []int32{
-	18, // 0: zerone.gov.v1.MsgSubmitLIP.param_changes:type_name -> zerone.gov.v1.ParamChange
-	19, // 1: zerone.gov.v1.MsgUpdateParams.params:type_name -> zerone.gov.v1.Params
-	20, // 2: zerone.gov.v1.MsgSetResearchVoters.voters:type_name -> zerone.gov.v1.ResearchFundVoters
+	20, // 0: zerone.gov.v1.MsgSubmitLIP.param_changes:type_name -> zerone.gov.v1.ParamChange
+	21, // 1: zerone.gov.v1.MsgUpdateParams.params:type_name -> zerone.gov.v1.Params
+	22, // 2: zerone.gov.v1.MsgSetResearchVoters.voters:type_name -> zerone.gov.v1.ResearchFundVoters
 	0,  // 3: zerone.gov.v1.Msg.SubmitLIP:input_type -> zerone.gov.v1.MsgSubmitLIP
 	2,  // 4: zerone.gov.v1.Msg.StakeLIP:input_type -> zerone.gov.v1.MsgStakeLIP
 	4,  // 5: zerone.gov.v1.Msg.AdvanceLIPStage:input_type -> zerone.gov.v1.MsgAdvanceLIPStage
@@ -1072,17 +1195,19 @@ var file_zerone_gov_v1_tx_proto_depIdxs = []int32{
 	12, // 9: zerone.gov.v1.Msg.SubmitResearchSpend:input_type -> zerone.gov.v1.MsgSubmitResearchSpend
 	14, // 10: zerone.gov.v1.Msg.VoteResearchSpend:input_type -> zerone.gov.v1.MsgVoteResearchSpend
 	16, // 11: zerone.gov.v1.Msg.SetResearchVoters:input_type -> zerone.gov.v1.MsgSetResearchVoters
-	1,  // 12: zerone.gov.v1.Msg.SubmitLIP:output_type -> zerone.gov.v1.MsgSubmitLIPResponse
-	3,  // 13: zerone.gov.v1.Msg.StakeLIP:output_type -> zerone.gov.v1.MsgStakeLIPResponse
-	5,  // 14: zerone.gov.v1.Msg.AdvanceLIPStage:output_type -> zerone.gov.v1.MsgAdvanceLIPStageResponse
-	7,  // 15: zerone.gov.v1.Msg.CastVote:output_type -> zerone.gov.v1.MsgCastVoteResponse
-	9,  // 16: zerone.gov.v1.Msg.WithdrawLIP:output_type -> zerone.gov.v1.MsgWithdrawLIPResponse
-	11, // 17: zerone.gov.v1.Msg.UpdateParams:output_type -> zerone.gov.v1.MsgUpdateParamsResponse
-	13, // 18: zerone.gov.v1.Msg.SubmitResearchSpend:output_type -> zerone.gov.v1.MsgSubmitResearchSpendResponse
-	15, // 19: zerone.gov.v1.Msg.VoteResearchSpend:output_type -> zerone.gov.v1.MsgVoteResearchSpendResponse
-	17, // 20: zerone.gov.v1.Msg.SetResearchVoters:output_type -> zerone.gov.v1.MsgSetResearchVotersResponse
-	12, // [12:21] is the sub-list for method output_type
-	3,  // [3:12] is the sub-list for method input_type
+	18, // 12: zerone.gov.v1.Msg.AttachUpgradePlan:input_type -> zerone.gov.v1.MsgAttachUpgradePlan
+	1,  // 13: zerone.gov.v1.Msg.SubmitLIP:output_type -> zerone.gov.v1.MsgSubmitLIPResponse
+	3,  // 14: zerone.gov.v1.Msg.StakeLIP:output_type -> zerone.gov.v1.MsgStakeLIPResponse
+	5,  // 15: zerone.gov.v1.Msg.AdvanceLIPStage:output_type -> zerone.gov.v1.MsgAdvanceLIPStageResponse
+	7,  // 16: zerone.gov.v1.Msg.CastVote:output_type -> zerone.gov.v1.MsgCastVoteResponse
+	9,  // 17: zerone.gov.v1.Msg.WithdrawLIP:output_type -> zerone.gov.v1.MsgWithdrawLIPResponse
+	11, // 18: zerone.gov.v1.Msg.UpdateParams:output_type -> zerone.gov.v1.MsgUpdateParamsResponse
+	13, // 19: zerone.gov.v1.Msg.SubmitResearchSpend:output_type -> zerone.gov.v1.MsgSubmitResearchSpendResponse
+	15, // 20: zerone.gov.v1.Msg.VoteResearchSpend:output_type -> zerone.gov.v1.MsgVoteResearchSpendResponse
+	17, // 21: zerone.gov.v1.Msg.SetResearchVoters:output_type -> zerone.gov.v1.MsgSetResearchVotersResponse
+	19, // 22: zerone.gov.v1.Msg.AttachUpgradePlan:output_type -> zerone.gov.v1.MsgAttachUpgradePlanResponse
+	13, // [13:23] is the sub-list for method output_type
+	3,  // [3:13] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -1101,7 +1226,7 @@ func file_zerone_gov_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_gov_v1_tx_proto_rawDesc), len(file_zerone_gov_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

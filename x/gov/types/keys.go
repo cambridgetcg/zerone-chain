@@ -18,6 +18,7 @@ var (
 	ResearchSpendCounterKey = []byte{0x08}
 	FundingRecordKeyPrefix  = []byte{0x0A}
 	SybilParamsKey          = []byte{0x0B}
+	UpgradePlanKeyPrefix    = []byte{0x0C}
 )
 
 // LIPKey returns the store key for a LIP by id.
@@ -46,6 +47,11 @@ func VotePrefixForLIP(lipID string) []byte {
 	key := append(VoteKeyPrefix, []byte(lipID)...)
 	key = append(key, 0x00)
 	return key
+}
+
+// UpgradePlanKey returns the store key for an upgrade plan by LIP ID.
+func UpgradePlanKey(lipID string) []byte {
+	return append(UpgradePlanKeyPrefix, []byte(lipID)...)
 }
 
 // ResearchSpendKey returns the store key for a research spend proposal by ID.

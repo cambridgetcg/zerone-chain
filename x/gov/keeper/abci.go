@@ -81,6 +81,31 @@ func (k Keeper) tallyAndResolve(ctx sdk.Context, lip *types.LIP, params *types.P
 		if lip.Category == types.CategoryParameter && len(lip.ParamChanges) > 0 {
 			k.executeParamChanges(ctx, lip)
 		}
+		// If this is an upgrade-category LIP with an attached plan, schedule the upgrade.
+		if lip.Category == types.CategoryUpgrade {
+			if plan, found := k.GetUpgradePlan(ctx, lip.Id); found {
+				if uk := k.GetUpgradeKeeper(); uk != nil {
+					if err := uk.ScheduleUpgrade(ctx, *plan); err != nil {
+						k.Logger(ctx).Error("failed to schedule upgrade from LIP",
+							"lip_id", lip.Id,
+							"upgrade_name", plan.Name,
+							"error", err,
+						)
+					} else {
+						ctx.EventManager().EmitEvent(
+							sdk.NewEvent("zerone.gov.upgrade_scheduled",
+								sdk.NewAttribute("lip_id", lip.Id),
+								sdk.NewAttribute("upgrade_name", plan.Name),
+								sdk.NewAttribute("height", fmt.Sprintf("%d", plan.Height)),
+							),
+						)
+						k.Logger(ctx).Info("software upgrade scheduled via LIP governance",
+							"lip_id", lip.Id, "upgrade_name", plan.Name, "height", plan.Height,
+						)
+					}
+				}
+			}
+		}
 	} else {
 		lip.Stage = types.StatusFailed
 		k.SetLIP(ctx, lip)

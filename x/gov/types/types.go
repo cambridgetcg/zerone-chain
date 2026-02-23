@@ -186,6 +186,29 @@ func (m *MsgWithdrawLIP) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{addr}
 }
 
+// ValidateBasic performs stateless validation on MsgAttachUpgradePlan.
+func (m *MsgAttachUpgradePlan) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Proposer); err != nil {
+		return ErrInvalidAddress
+	}
+	if m.LipId == "" {
+		return ErrInvalidParams
+	}
+	if m.UpgradeName == "" {
+		return ErrInvalidParams
+	}
+	if m.Height <= 0 {
+		return ErrInvalidParams
+	}
+	return nil
+}
+
+// GetSigners returns the expected signers for MsgAttachUpgradePlan.
+func (m *MsgAttachUpgradePlan) GetSigners() []sdk.AccAddress {
+	addr, _ := sdk.AccAddressFromBech32(m.Proposer)
+	return []sdk.AccAddress{addr}
+}
+
 // --- Research Spend Stage Constants ---
 
 type ResearchSpendStage string

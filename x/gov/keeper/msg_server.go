@@ -335,6 +335,58 @@ func (ms *msgServer) UpdateParams(goCtx context.Context, msg *types.MsgUpdatePar
 	return &types.MsgUpdateParamsResponse{}, nil
 }
 
+// AttachUpgradePlan attaches a software upgrade plan to an upgrade-category LIP.
+func (ms *msgServer) AttachUpgradePlan(goCtx context.Context, msg *types.MsgAttachUpgradePlan) (*types.MsgAttachUpgradePlanResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	lip, found := ms.GetLIP(ctx, msg.LipId)
+	if !found {
+		return nil, types.ErrLIPNotFound
+	}
+
+	// Only the proposer can attach an upgrade plan.
+	if lip.Proposer != msg.Proposer {
+		return nil, fmt.Errorf("only the LIP proposer can attach an upgrade plan")
+	}
+
+	// Only upgrade-category LIPs can carry upgrade plans.
+	if lip.Category != types.CategoryUpgrade {
+		return nil, fmt.Errorf("only upgrade-category LIPs can carry upgrade plans")
+	}
+
+	// Cannot attach to terminal LIPs.
+	if types.IsTerminal(lip.Stage) {
+		return nil, fmt.Errorf("cannot attach upgrade plan to terminal LIP")
+	}
+
+	// Check if an upgrade plan already exists for this LIP.
+	if _, exists := ms.GetUpgradePlan(ctx, msg.LipId); exists {
+		return nil, fmt.Errorf("upgrade plan already attached to LIP %s", msg.LipId)
+	}
+
+	// Validate upgrade plan fields.
+	if msg.Height <= 0 {
+		return nil, fmt.Errorf("upgrade height must be positive")
+	}
+
+	plan := &types.UpgradePlan{
+		Name:   msg.UpgradeName,
+		Height: msg.Height,
+		Info:   msg.Info,
+	}
+	ms.SetUpgradePlan(ctx, msg.LipId, plan)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.gov.upgrade_plan_attached",
+			sdk.NewAttribute("lip_id", msg.LipId),
+			sdk.NewAttribute("upgrade_name", msg.UpgradeName),
+			sdk.NewAttribute("height", fmt.Sprintf("%d", msg.Height)),
+		),
+	)
+
+	return &types.MsgAttachUpgradePlanResponse{}, nil
+}
+
 // --- Research Spend Message Handlers ---
 
 // SubmitResearchSpend delegates to the keeper's SubmitResearchSpend method.
