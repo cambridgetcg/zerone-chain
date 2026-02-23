@@ -4,6 +4,7 @@ package zerone.capture_challenge.v1;
 option go_package = "github.com/zerone-chain/zerone/x/capture_challenge/types";
 
 import "cosmos/msg/v1/msg.proto";
+import "zerone/capture_challenge/v1/genesis.proto";
 import "zerone/capture_challenge/v1/types.proto";
 
 // Msg defines the capture_challenge module transaction service.
@@ -13,6 +14,7 @@ service Msg {
   rpc AddEvidence(MsgAddEvidence) returns (MsgAddEvidenceResponse);
   rpc ResolveChallenge(MsgResolveChallenge) returns (MsgResolveChallengeResponse);
   rpc FundBountyPool(MsgFundBountyPool) returns (MsgFundBountyPoolResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
 }
 
 message MsgSubmitChallenge {
@@ -56,3 +58,10 @@ message MsgFundBountyPool {
 }
 
 message MsgFundBountyPoolResponse {}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params    = 2;
+}
+message MsgUpdateParamsResponse {}

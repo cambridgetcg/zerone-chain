@@ -4,12 +4,14 @@ package zerone.capture_defense.v1;
 option go_package = "github.com/zerone-chain/zerone/x/capture_defense/types";
 
 import "cosmos/msg/v1/msg.proto";
+import "zerone/capture_defense/v1/genesis.proto";
 
 // Msg defines the capture_defense module transaction service.
 service Msg {
   option (cosmos.msg.v1.service) = true;
   rpc RecordVerification(MsgRecordVerification) returns (MsgRecordVerificationResponse);
   rpc AnalyzeDomain(MsgAnalyzeDomain) returns (MsgAnalyzeDomainResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
 }
 
 message MsgRecordVerification {
@@ -34,3 +36,10 @@ message MsgAnalyzeDomainResponse {
   uint64 risk_score = 1;
   bool   flagged    = 2;
 }
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params    = 2;
+}
+message MsgUpdateParamsResponse {}

@@ -1102,11 +1102,99 @@ func (*MsgSetSpendingLimitResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_home_v1_tx_proto_rawDescGZIP(), []int{19}
 }
 
+type MsgUpdateParams struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Authority     string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	Params        *Params                `protobuf:"bytes,2,opt,name=params,proto3" json:"params,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateParams) Reset() {
+	*x = MsgUpdateParams{}
+	mi := &file_zerone_home_v1_tx_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateParams) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateParams) ProtoMessage() {}
+
+func (x *MsgUpdateParams) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_home_v1_tx_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateParams.ProtoReflect.Descriptor instead.
+func (*MsgUpdateParams) Descriptor() ([]byte, []int) {
+	return file_zerone_home_v1_tx_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *MsgUpdateParams) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
+func (x *MsgUpdateParams) GetParams() *Params {
+	if x != nil {
+		return x.Params
+	}
+	return nil
+}
+
+type MsgUpdateParamsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateParamsResponse) Reset() {
+	*x = MsgUpdateParamsResponse{}
+	mi := &file_zerone_home_v1_tx_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateParamsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateParamsResponse) ProtoMessage() {}
+
+func (x *MsgUpdateParamsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_home_v1_tx_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateParamsResponse.ProtoReflect.Descriptor instead.
+func (*MsgUpdateParamsResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_home_v1_tx_proto_rawDescGZIP(), []int{21}
+}
+
 var File_zerone_home_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_home_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\x17zerone/home/v1/tx.proto\x12\x0ezerone.home.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\x1azerone/home/v1/types.proto\"\x9b\x01\n" +
+	"\x17zerone/home/v1/tx.proto\x12\x0ezerone.home.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\x1czerone/home/v1/genesis.proto\x1a\x1azerone/home/v1/types.proto\"\x9b\x01\n" +
 	"\rMsgCreateHome\x12\x14\n" +
 	"\x05owner\x18\x01 \x01(\tR\x05owner\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12T\n" +
@@ -1183,7 +1271,11 @@ const file_zerone_home_v1_tx_proto_rawDesc = "" +
 	"max_amount\x18\x04 \x01(\tR\tmaxAmount\x12#\n" +
 	"\rperiod_blocks\x18\x05 \x01(\x04R\fperiodBlocks:\n" +
 	"\x82\xe7\xb0*\x05owner\"\x1d\n" +
-	"\x1bMsgSetSpendingLimitResponse2\xa2\a\n" +
+	"\x1bMsgSetSpendingLimitResponse\"o\n" +
+	"\x0fMsgUpdateParams\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x12.\n" +
+	"\x06params\x18\x02 \x01(\v2\x16.zerone.home.v1.ParamsR\x06params:\x0e\x82\xe7\xb0*\tauthority\"\x19\n" +
+	"\x17MsgUpdateParamsResponse2\xfc\a\n" +
 	"\x03Msg\x12R\n" +
 	"\n" +
 	"CreateHome\x12\x1d.zerone.home.v1.MsgCreateHome\x1a%.zerone.home.v1.MsgCreateHomeResponse\x12R\n" +
@@ -1197,7 +1289,8 @@ const file_zerone_home_v1_tx_proto_rawDesc = "" +
 	"\tRevokeKey\x12\x1c.zerone.home.v1.MsgRevokeKey\x1a$.zerone.home.v1.MsgRevokeKeyResponse\x12g\n" +
 	"\x11ConfigureGuardian\x12$.zerone.home.v1.MsgConfigureGuardian\x1a,.zerone.home.v1.MsgConfigureGuardianResponse\x12d\n" +
 	"\x10AcknowledgeAlert\x12#.zerone.home.v1.MsgAcknowledgeAlert\x1a+.zerone.home.v1.MsgAcknowledgeAlertResponse\x12d\n" +
-	"\x10SetSpendingLimit\x12#.zerone.home.v1.MsgSetSpendingLimit\x1a+.zerone.home.v1.MsgSetSpendingLimitResponse\x1a\x05\x80\xe7\xb0*\x01B-Z+github.com/zerone-chain/zerone/x/home/typesb\x06proto3"
+	"\x10SetSpendingLimit\x12#.zerone.home.v1.MsgSetSpendingLimit\x1a+.zerone.home.v1.MsgSetSpendingLimitResponse\x12X\n" +
+	"\fUpdateParams\x12\x1f.zerone.home.v1.MsgUpdateParams\x1a'.zerone.home.v1.MsgUpdateParamsResponse\x1a\x05\x80\xe7\xb0*\x01B-Z+github.com/zerone-chain/zerone/x/home/typesb\x06proto3"
 
 var (
 	file_zerone_home_v1_tx_proto_rawDescOnce sync.Once
@@ -1211,7 +1304,7 @@ func file_zerone_home_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_home_v1_tx_proto_rawDescData
 }
 
-var file_zerone_home_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_zerone_home_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_zerone_home_v1_tx_proto_goTypes = []any{
 	(*MsgCreateHome)(nil),                // 0: zerone.home.v1.MsgCreateHome
 	(*MsgCreateHomeResponse)(nil),        // 1: zerone.home.v1.MsgCreateHomeResponse
@@ -1233,37 +1326,43 @@ var file_zerone_home_v1_tx_proto_goTypes = []any{
 	(*MsgAcknowledgeAlertResponse)(nil),  // 17: zerone.home.v1.MsgAcknowledgeAlertResponse
 	(*MsgSetSpendingLimit)(nil),          // 18: zerone.home.v1.MsgSetSpendingLimit
 	(*MsgSetSpendingLimitResponse)(nil),  // 19: zerone.home.v1.MsgSetSpendingLimitResponse
-	(*HomeGuardian)(nil),                 // 20: zerone.home.v1.HomeGuardian
-	(*DeadmanConfig)(nil),                // 21: zerone.home.v1.DeadmanConfig
+	(*MsgUpdateParams)(nil),              // 20: zerone.home.v1.MsgUpdateParams
+	(*MsgUpdateParamsResponse)(nil),      // 21: zerone.home.v1.MsgUpdateParamsResponse
+	(*HomeGuardian)(nil),                 // 22: zerone.home.v1.HomeGuardian
+	(*DeadmanConfig)(nil),                // 23: zerone.home.v1.DeadmanConfig
+	(*Params)(nil),                       // 24: zerone.home.v1.Params
 }
 var file_zerone_home_v1_tx_proto_depIdxs = []int32{
-	20, // 0: zerone.home.v1.MsgCreateHome.initial_guardian_config:type_name -> zerone.home.v1.HomeGuardian
-	21, // 1: zerone.home.v1.MsgConfigureGuardian.deadman:type_name -> zerone.home.v1.DeadmanConfig
-	0,  // 2: zerone.home.v1.Msg.CreateHome:input_type -> zerone.home.v1.MsgCreateHome
-	2,  // 3: zerone.home.v1.Msg.UpdateHome:input_type -> zerone.home.v1.MsgUpdateHome
-	4,  // 4: zerone.home.v1.Msg.UpdateMemoryCID:input_type -> zerone.home.v1.MsgUpdateMemoryCID
-	6,  // 5: zerone.home.v1.Msg.StartSession:input_type -> zerone.home.v1.MsgStartSession
-	8,  // 6: zerone.home.v1.Msg.EndSession:input_type -> zerone.home.v1.MsgEndSession
-	10, // 7: zerone.home.v1.Msg.RegisterKey:input_type -> zerone.home.v1.MsgRegisterKey
-	12, // 8: zerone.home.v1.Msg.RevokeKey:input_type -> zerone.home.v1.MsgRevokeKey
-	14, // 9: zerone.home.v1.Msg.ConfigureGuardian:input_type -> zerone.home.v1.MsgConfigureGuardian
-	16, // 10: zerone.home.v1.Msg.AcknowledgeAlert:input_type -> zerone.home.v1.MsgAcknowledgeAlert
-	18, // 11: zerone.home.v1.Msg.SetSpendingLimit:input_type -> zerone.home.v1.MsgSetSpendingLimit
-	1,  // 12: zerone.home.v1.Msg.CreateHome:output_type -> zerone.home.v1.MsgCreateHomeResponse
-	3,  // 13: zerone.home.v1.Msg.UpdateHome:output_type -> zerone.home.v1.MsgUpdateHomeResponse
-	5,  // 14: zerone.home.v1.Msg.UpdateMemoryCID:output_type -> zerone.home.v1.MsgUpdateMemoryCIDResponse
-	7,  // 15: zerone.home.v1.Msg.StartSession:output_type -> zerone.home.v1.MsgStartSessionResponse
-	9,  // 16: zerone.home.v1.Msg.EndSession:output_type -> zerone.home.v1.MsgEndSessionResponse
-	11, // 17: zerone.home.v1.Msg.RegisterKey:output_type -> zerone.home.v1.MsgRegisterKeyResponse
-	13, // 18: zerone.home.v1.Msg.RevokeKey:output_type -> zerone.home.v1.MsgRevokeKeyResponse
-	15, // 19: zerone.home.v1.Msg.ConfigureGuardian:output_type -> zerone.home.v1.MsgConfigureGuardianResponse
-	17, // 20: zerone.home.v1.Msg.AcknowledgeAlert:output_type -> zerone.home.v1.MsgAcknowledgeAlertResponse
-	19, // 21: zerone.home.v1.Msg.SetSpendingLimit:output_type -> zerone.home.v1.MsgSetSpendingLimitResponse
-	12, // [12:22] is the sub-list for method output_type
-	2,  // [2:12] is the sub-list for method input_type
-	2,  // [2:2] is the sub-list for extension type_name
-	2,  // [2:2] is the sub-list for extension extendee
-	0,  // [0:2] is the sub-list for field type_name
+	22, // 0: zerone.home.v1.MsgCreateHome.initial_guardian_config:type_name -> zerone.home.v1.HomeGuardian
+	23, // 1: zerone.home.v1.MsgConfigureGuardian.deadman:type_name -> zerone.home.v1.DeadmanConfig
+	24, // 2: zerone.home.v1.MsgUpdateParams.params:type_name -> zerone.home.v1.Params
+	0,  // 3: zerone.home.v1.Msg.CreateHome:input_type -> zerone.home.v1.MsgCreateHome
+	2,  // 4: zerone.home.v1.Msg.UpdateHome:input_type -> zerone.home.v1.MsgUpdateHome
+	4,  // 5: zerone.home.v1.Msg.UpdateMemoryCID:input_type -> zerone.home.v1.MsgUpdateMemoryCID
+	6,  // 6: zerone.home.v1.Msg.StartSession:input_type -> zerone.home.v1.MsgStartSession
+	8,  // 7: zerone.home.v1.Msg.EndSession:input_type -> zerone.home.v1.MsgEndSession
+	10, // 8: zerone.home.v1.Msg.RegisterKey:input_type -> zerone.home.v1.MsgRegisterKey
+	12, // 9: zerone.home.v1.Msg.RevokeKey:input_type -> zerone.home.v1.MsgRevokeKey
+	14, // 10: zerone.home.v1.Msg.ConfigureGuardian:input_type -> zerone.home.v1.MsgConfigureGuardian
+	16, // 11: zerone.home.v1.Msg.AcknowledgeAlert:input_type -> zerone.home.v1.MsgAcknowledgeAlert
+	18, // 12: zerone.home.v1.Msg.SetSpendingLimit:input_type -> zerone.home.v1.MsgSetSpendingLimit
+	20, // 13: zerone.home.v1.Msg.UpdateParams:input_type -> zerone.home.v1.MsgUpdateParams
+	1,  // 14: zerone.home.v1.Msg.CreateHome:output_type -> zerone.home.v1.MsgCreateHomeResponse
+	3,  // 15: zerone.home.v1.Msg.UpdateHome:output_type -> zerone.home.v1.MsgUpdateHomeResponse
+	5,  // 16: zerone.home.v1.Msg.UpdateMemoryCID:output_type -> zerone.home.v1.MsgUpdateMemoryCIDResponse
+	7,  // 17: zerone.home.v1.Msg.StartSession:output_type -> zerone.home.v1.MsgStartSessionResponse
+	9,  // 18: zerone.home.v1.Msg.EndSession:output_type -> zerone.home.v1.MsgEndSessionResponse
+	11, // 19: zerone.home.v1.Msg.RegisterKey:output_type -> zerone.home.v1.MsgRegisterKeyResponse
+	13, // 20: zerone.home.v1.Msg.RevokeKey:output_type -> zerone.home.v1.MsgRevokeKeyResponse
+	15, // 21: zerone.home.v1.Msg.ConfigureGuardian:output_type -> zerone.home.v1.MsgConfigureGuardianResponse
+	17, // 22: zerone.home.v1.Msg.AcknowledgeAlert:output_type -> zerone.home.v1.MsgAcknowledgeAlertResponse
+	19, // 23: zerone.home.v1.Msg.SetSpendingLimit:output_type -> zerone.home.v1.MsgSetSpendingLimitResponse
+	21, // 24: zerone.home.v1.Msg.UpdateParams:output_type -> zerone.home.v1.MsgUpdateParamsResponse
+	14, // [14:25] is the sub-list for method output_type
+	3,  // [3:14] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_zerone_home_v1_tx_proto_init() }
@@ -1271,6 +1370,7 @@ func file_zerone_home_v1_tx_proto_init() {
 	if File_zerone_home_v1_tx_proto != nil {
 		return
 	}
+	file_zerone_home_v1_genesis_proto_init()
 	file_zerone_home_v1_types_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1278,7 +1378,7 @@ func file_zerone_home_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_home_v1_tx_proto_rawDesc), len(file_zerone_home_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

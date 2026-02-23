@@ -3,6 +3,7 @@ package zerone.home.v1;
 option go_package = "github.com/zerone-chain/zerone/x/home/types";
 
 import "cosmos/msg/v1/msg.proto";
+import "zerone/home/v1/genesis.proto";
 import "zerone/home/v1/types.proto";
 
 service Msg {
@@ -18,6 +19,7 @@ service Msg {
   rpc ConfigureGuardian(MsgConfigureGuardian) returns (MsgConfigureGuardianResponse);
   rpc AcknowledgeAlert(MsgAcknowledgeAlert) returns (MsgAcknowledgeAlertResponse);
   rpc SetSpendingLimit(MsgSetSpendingLimit) returns (MsgSetSpendingLimitResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
 }
 
 message MsgCreateHome {
@@ -112,3 +114,10 @@ message MsgSetSpendingLimit {
   uint64 period_blocks = 5;
 }
 message MsgSetSpendingLimitResponse {}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params    = 2;
+}
+message MsgUpdateParamsResponse {}

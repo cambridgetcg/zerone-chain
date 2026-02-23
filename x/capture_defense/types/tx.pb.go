@@ -246,11 +246,99 @@ func (x *MsgAnalyzeDomainResponse) GetFlagged() bool {
 	return false
 }
 
+type MsgUpdateParams struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Authority     string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	Params        *Params                `protobuf:"bytes,2,opt,name=params,proto3" json:"params,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateParams) Reset() {
+	*x = MsgUpdateParams{}
+	mi := &file_zerone_capture_defense_v1_tx_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateParams) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateParams) ProtoMessage() {}
+
+func (x *MsgUpdateParams) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_capture_defense_v1_tx_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateParams.ProtoReflect.Descriptor instead.
+func (*MsgUpdateParams) Descriptor() ([]byte, []int) {
+	return file_zerone_capture_defense_v1_tx_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *MsgUpdateParams) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
+func (x *MsgUpdateParams) GetParams() *Params {
+	if x != nil {
+		return x.Params
+	}
+	return nil
+}
+
+type MsgUpdateParamsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateParamsResponse) Reset() {
+	*x = MsgUpdateParamsResponse{}
+	mi := &file_zerone_capture_defense_v1_tx_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateParamsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateParamsResponse) ProtoMessage() {}
+
+func (x *MsgUpdateParamsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_capture_defense_v1_tx_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateParamsResponse.ProtoReflect.Descriptor instead.
+func (*MsgUpdateParamsResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_capture_defense_v1_tx_proto_rawDescGZIP(), []int{5}
+}
+
 var File_zerone_capture_defense_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_capture_defense_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\"zerone/capture_defense/v1/tx.proto\x12\x19zerone.capture_defense.v1\x1a\x17cosmos/msg/v1/msg.proto\"\xd9\x01\n" +
+	"\"zerone/capture_defense/v1/tx.proto\x12\x19zerone.capture_defense.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a'zerone/capture_defense/v1/genesis.proto\"\xd9\x01\n" +
 	"\x15MsgRecordVerification\x12\x1c\n" +
 	"\tauthority\x18\x01 \x01(\tR\tauthority\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x19\n" +
@@ -267,10 +355,15 @@ const file_zerone_capture_defense_v1_tx_proto_rawDesc = "" +
 	"\x18MsgAnalyzeDomainResponse\x12\x1d\n" +
 	"\n" +
 	"risk_score\x18\x01 \x01(\x04R\triskScore\x12\x18\n" +
-	"\aflagged\x18\x02 \x01(\bR\aflagged2\x82\x02\n" +
+	"\aflagged\x18\x02 \x01(\bR\aflagged\"z\n" +
+	"\x0fMsgUpdateParams\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x129\n" +
+	"\x06params\x18\x02 \x01(\v2!.zerone.capture_defense.v1.ParamsR\x06params:\x0e\x82\xe7\xb0*\tauthority\"\x19\n" +
+	"\x17MsgUpdateParamsResponse2\xf2\x02\n" +
 	"\x03Msg\x12\x80\x01\n" +
 	"\x12RecordVerification\x120.zerone.capture_defense.v1.MsgRecordVerification\x1a8.zerone.capture_defense.v1.MsgRecordVerificationResponse\x12q\n" +
-	"\rAnalyzeDomain\x12+.zerone.capture_defense.v1.MsgAnalyzeDomain\x1a3.zerone.capture_defense.v1.MsgAnalyzeDomainResponse\x1a\x05\x80\xe7\xb0*\x01B8Z6github.com/zerone-chain/zerone/x/capture_defense/typesb\x06proto3"
+	"\rAnalyzeDomain\x12+.zerone.capture_defense.v1.MsgAnalyzeDomain\x1a3.zerone.capture_defense.v1.MsgAnalyzeDomainResponse\x12n\n" +
+	"\fUpdateParams\x12*.zerone.capture_defense.v1.MsgUpdateParams\x1a2.zerone.capture_defense.v1.MsgUpdateParamsResponse\x1a\x05\x80\xe7\xb0*\x01B8Z6github.com/zerone-chain/zerone/x/capture_defense/typesb\x06proto3"
 
 var (
 	file_zerone_capture_defense_v1_tx_proto_rawDescOnce sync.Once
@@ -284,23 +377,29 @@ func file_zerone_capture_defense_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_capture_defense_v1_tx_proto_rawDescData
 }
 
-var file_zerone_capture_defense_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_zerone_capture_defense_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_zerone_capture_defense_v1_tx_proto_goTypes = []any{
 	(*MsgRecordVerification)(nil),         // 0: zerone.capture_defense.v1.MsgRecordVerification
 	(*MsgRecordVerificationResponse)(nil), // 1: zerone.capture_defense.v1.MsgRecordVerificationResponse
 	(*MsgAnalyzeDomain)(nil),              // 2: zerone.capture_defense.v1.MsgAnalyzeDomain
 	(*MsgAnalyzeDomainResponse)(nil),      // 3: zerone.capture_defense.v1.MsgAnalyzeDomainResponse
+	(*MsgUpdateParams)(nil),               // 4: zerone.capture_defense.v1.MsgUpdateParams
+	(*MsgUpdateParamsResponse)(nil),       // 5: zerone.capture_defense.v1.MsgUpdateParamsResponse
+	(*Params)(nil),                        // 6: zerone.capture_defense.v1.Params
 }
 var file_zerone_capture_defense_v1_tx_proto_depIdxs = []int32{
-	0, // 0: zerone.capture_defense.v1.Msg.RecordVerification:input_type -> zerone.capture_defense.v1.MsgRecordVerification
-	2, // 1: zerone.capture_defense.v1.Msg.AnalyzeDomain:input_type -> zerone.capture_defense.v1.MsgAnalyzeDomain
-	1, // 2: zerone.capture_defense.v1.Msg.RecordVerification:output_type -> zerone.capture_defense.v1.MsgRecordVerificationResponse
-	3, // 3: zerone.capture_defense.v1.Msg.AnalyzeDomain:output_type -> zerone.capture_defense.v1.MsgAnalyzeDomainResponse
-	2, // [2:4] is the sub-list for method output_type
-	0, // [0:2] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	6, // 0: zerone.capture_defense.v1.MsgUpdateParams.params:type_name -> zerone.capture_defense.v1.Params
+	0, // 1: zerone.capture_defense.v1.Msg.RecordVerification:input_type -> zerone.capture_defense.v1.MsgRecordVerification
+	2, // 2: zerone.capture_defense.v1.Msg.AnalyzeDomain:input_type -> zerone.capture_defense.v1.MsgAnalyzeDomain
+	4, // 3: zerone.capture_defense.v1.Msg.UpdateParams:input_type -> zerone.capture_defense.v1.MsgUpdateParams
+	1, // 4: zerone.capture_defense.v1.Msg.RecordVerification:output_type -> zerone.capture_defense.v1.MsgRecordVerificationResponse
+	3, // 5: zerone.capture_defense.v1.Msg.AnalyzeDomain:output_type -> zerone.capture_defense.v1.MsgAnalyzeDomainResponse
+	5, // 6: zerone.capture_defense.v1.Msg.UpdateParams:output_type -> zerone.capture_defense.v1.MsgUpdateParamsResponse
+	4, // [4:7] is the sub-list for method output_type
+	1, // [1:4] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_zerone_capture_defense_v1_tx_proto_init() }
@@ -308,13 +407,14 @@ func file_zerone_capture_defense_v1_tx_proto_init() {
 	if File_zerone_capture_defense_v1_tx_proto != nil {
 		return
 	}
+	file_zerone_capture_defense_v1_genesis_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_capture_defense_v1_tx_proto_rawDesc), len(file_zerone_capture_defense_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

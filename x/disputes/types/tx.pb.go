@@ -646,6 +646,94 @@ func (x *MsgSettleDisputeResponse) GetOutcome() DisputeOutcome {
 	return DisputeOutcome_DISPUTE_OUTCOME_UNSPECIFIED
 }
 
+type MsgUpdateParams struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Authority     string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	Params        *Params                `protobuf:"bytes,2,opt,name=params,proto3" json:"params,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateParams) Reset() {
+	*x = MsgUpdateParams{}
+	mi := &file_zerone_disputes_v1_tx_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateParams) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateParams) ProtoMessage() {}
+
+func (x *MsgUpdateParams) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_disputes_v1_tx_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateParams.ProtoReflect.Descriptor instead.
+func (*MsgUpdateParams) Descriptor() ([]byte, []int) {
+	return file_zerone_disputes_v1_tx_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *MsgUpdateParams) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
+func (x *MsgUpdateParams) GetParams() *Params {
+	if x != nil {
+		return x.Params
+	}
+	return nil
+}
+
+type MsgUpdateParamsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateParamsResponse) Reset() {
+	*x = MsgUpdateParamsResponse{}
+	mi := &file_zerone_disputes_v1_tx_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateParamsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateParamsResponse) ProtoMessage() {}
+
+func (x *MsgUpdateParamsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_disputes_v1_tx_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateParamsResponse.ProtoReflect.Descriptor instead.
+func (*MsgUpdateParamsResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_disputes_v1_tx_proto_rawDescGZIP(), []int{13}
+}
+
 var File_zerone_disputes_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_disputes_v1_tx_proto_rawDesc = "" +
@@ -696,14 +784,19 @@ const file_zerone_disputes_v1_tx_proto_rawDesc = "" +
 	"\n" +
 	"dispute_id\x18\x02 \x01(\tR\tdisputeId:\x0e\x82\xe7\xb0*\tauthority\"X\n" +
 	"\x18MsgSettleDisputeResponse\x12<\n" +
-	"\aoutcome\x18\x01 \x01(\x0e2\".zerone.disputes.v1.DisputeOutcomeR\aoutcome2\xf6\x04\n" +
+	"\aoutcome\x18\x01 \x01(\x0e2\".zerone.disputes.v1.DisputeOutcomeR\aoutcome\"s\n" +
+	"\x0fMsgUpdateParams\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x122\n" +
+	"\x06params\x18\x02 \x01(\v2\x1a.zerone.disputes.v1.ParamsR\x06params:\x0e\x82\xe7\xb0*\tauthority\"\x19\n" +
+	"\x17MsgUpdateParamsResponse2\xd8\x05\n" +
 	"\x03Msg\x12i\n" +
 	"\x0fInitiateDispute\x12&.zerone.disputes.v1.MsgInitiateDispute\x1a..zerone.disputes.v1.MsgInitiateDisputeResponse\x12f\n" +
 	"\x0eCommitEvidence\x12%.zerone.disputes.v1.MsgCommitEvidence\x1a-.zerone.disputes.v1.MsgCommitEvidenceResponse\x12f\n" +
 	"\x0eRevealEvidence\x12%.zerone.disputes.v1.MsgRevealEvidence\x1a-.zerone.disputes.v1.MsgRevealEvidenceResponse\x12]\n" +
 	"\vArbiterVote\x12\".zerone.disputes.v1.MsgArbiterVote\x1a*.zerone.disputes.v1.MsgArbiterVoteResponse\x12i\n" +
 	"\x0fEscalateDispute\x12&.zerone.disputes.v1.MsgEscalateDispute\x1a..zerone.disputes.v1.MsgEscalateDisputeResponse\x12c\n" +
-	"\rSettleDispute\x12$.zerone.disputes.v1.MsgSettleDispute\x1a,.zerone.disputes.v1.MsgSettleDisputeResponse\x1a\x05\x80\xe7\xb0*\x01B1Z/github.com/zerone-chain/zerone/x/disputes/typesb\x06proto3"
+	"\rSettleDispute\x12$.zerone.disputes.v1.MsgSettleDispute\x1a,.zerone.disputes.v1.MsgSettleDisputeResponse\x12`\n" +
+	"\fUpdateParams\x12#.zerone.disputes.v1.MsgUpdateParams\x1a+.zerone.disputes.v1.MsgUpdateParamsResponse\x1a\x05\x80\xe7\xb0*\x01B1Z/github.com/zerone-chain/zerone/x/disputes/typesb\x06proto3"
 
 var (
 	file_zerone_disputes_v1_tx_proto_rawDescOnce sync.Once
@@ -717,7 +810,7 @@ func file_zerone_disputes_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_disputes_v1_tx_proto_rawDescData
 }
 
-var file_zerone_disputes_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_zerone_disputes_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_zerone_disputes_v1_tx_proto_goTypes = []any{
 	(*MsgInitiateDispute)(nil),         // 0: zerone.disputes.v1.MsgInitiateDispute
 	(*MsgInitiateDisputeResponse)(nil), // 1: zerone.disputes.v1.MsgInitiateDisputeResponse
@@ -731,31 +824,37 @@ var file_zerone_disputes_v1_tx_proto_goTypes = []any{
 	(*MsgEscalateDisputeResponse)(nil), // 9: zerone.disputes.v1.MsgEscalateDisputeResponse
 	(*MsgSettleDispute)(nil),           // 10: zerone.disputes.v1.MsgSettleDispute
 	(*MsgSettleDisputeResponse)(nil),   // 11: zerone.disputes.v1.MsgSettleDisputeResponse
-	(DisputeTargetType)(0),             // 12: zerone.disputes.v1.DisputeTargetType
-	(ArbiterDecision)(0),               // 13: zerone.disputes.v1.ArbiterDecision
-	(DisputeOutcome)(0),                // 14: zerone.disputes.v1.DisputeOutcome
+	(*MsgUpdateParams)(nil),            // 12: zerone.disputes.v1.MsgUpdateParams
+	(*MsgUpdateParamsResponse)(nil),    // 13: zerone.disputes.v1.MsgUpdateParamsResponse
+	(DisputeTargetType)(0),             // 14: zerone.disputes.v1.DisputeTargetType
+	(ArbiterDecision)(0),               // 15: zerone.disputes.v1.ArbiterDecision
+	(DisputeOutcome)(0),                // 16: zerone.disputes.v1.DisputeOutcome
+	(*Params)(nil),                     // 17: zerone.disputes.v1.Params
 }
 var file_zerone_disputes_v1_tx_proto_depIdxs = []int32{
-	12, // 0: zerone.disputes.v1.MsgInitiateDispute.target_type:type_name -> zerone.disputes.v1.DisputeTargetType
-	13, // 1: zerone.disputes.v1.MsgArbiterVote.vote:type_name -> zerone.disputes.v1.ArbiterDecision
-	14, // 2: zerone.disputes.v1.MsgSettleDisputeResponse.outcome:type_name -> zerone.disputes.v1.DisputeOutcome
-	0,  // 3: zerone.disputes.v1.Msg.InitiateDispute:input_type -> zerone.disputes.v1.MsgInitiateDispute
-	2,  // 4: zerone.disputes.v1.Msg.CommitEvidence:input_type -> zerone.disputes.v1.MsgCommitEvidence
-	4,  // 5: zerone.disputes.v1.Msg.RevealEvidence:input_type -> zerone.disputes.v1.MsgRevealEvidence
-	6,  // 6: zerone.disputes.v1.Msg.ArbiterVote:input_type -> zerone.disputes.v1.MsgArbiterVote
-	8,  // 7: zerone.disputes.v1.Msg.EscalateDispute:input_type -> zerone.disputes.v1.MsgEscalateDispute
-	10, // 8: zerone.disputes.v1.Msg.SettleDispute:input_type -> zerone.disputes.v1.MsgSettleDispute
-	1,  // 9: zerone.disputes.v1.Msg.InitiateDispute:output_type -> zerone.disputes.v1.MsgInitiateDisputeResponse
-	3,  // 10: zerone.disputes.v1.Msg.CommitEvidence:output_type -> zerone.disputes.v1.MsgCommitEvidenceResponse
-	5,  // 11: zerone.disputes.v1.Msg.RevealEvidence:output_type -> zerone.disputes.v1.MsgRevealEvidenceResponse
-	7,  // 12: zerone.disputes.v1.Msg.ArbiterVote:output_type -> zerone.disputes.v1.MsgArbiterVoteResponse
-	9,  // 13: zerone.disputes.v1.Msg.EscalateDispute:output_type -> zerone.disputes.v1.MsgEscalateDisputeResponse
-	11, // 14: zerone.disputes.v1.Msg.SettleDispute:output_type -> zerone.disputes.v1.MsgSettleDisputeResponse
-	9,  // [9:15] is the sub-list for method output_type
-	3,  // [3:9] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	14, // 0: zerone.disputes.v1.MsgInitiateDispute.target_type:type_name -> zerone.disputes.v1.DisputeTargetType
+	15, // 1: zerone.disputes.v1.MsgArbiterVote.vote:type_name -> zerone.disputes.v1.ArbiterDecision
+	16, // 2: zerone.disputes.v1.MsgSettleDisputeResponse.outcome:type_name -> zerone.disputes.v1.DisputeOutcome
+	17, // 3: zerone.disputes.v1.MsgUpdateParams.params:type_name -> zerone.disputes.v1.Params
+	0,  // 4: zerone.disputes.v1.Msg.InitiateDispute:input_type -> zerone.disputes.v1.MsgInitiateDispute
+	2,  // 5: zerone.disputes.v1.Msg.CommitEvidence:input_type -> zerone.disputes.v1.MsgCommitEvidence
+	4,  // 6: zerone.disputes.v1.Msg.RevealEvidence:input_type -> zerone.disputes.v1.MsgRevealEvidence
+	6,  // 7: zerone.disputes.v1.Msg.ArbiterVote:input_type -> zerone.disputes.v1.MsgArbiterVote
+	8,  // 8: zerone.disputes.v1.Msg.EscalateDispute:input_type -> zerone.disputes.v1.MsgEscalateDispute
+	10, // 9: zerone.disputes.v1.Msg.SettleDispute:input_type -> zerone.disputes.v1.MsgSettleDispute
+	12, // 10: zerone.disputes.v1.Msg.UpdateParams:input_type -> zerone.disputes.v1.MsgUpdateParams
+	1,  // 11: zerone.disputes.v1.Msg.InitiateDispute:output_type -> zerone.disputes.v1.MsgInitiateDisputeResponse
+	3,  // 12: zerone.disputes.v1.Msg.CommitEvidence:output_type -> zerone.disputes.v1.MsgCommitEvidenceResponse
+	5,  // 13: zerone.disputes.v1.Msg.RevealEvidence:output_type -> zerone.disputes.v1.MsgRevealEvidenceResponse
+	7,  // 14: zerone.disputes.v1.Msg.ArbiterVote:output_type -> zerone.disputes.v1.MsgArbiterVoteResponse
+	9,  // 15: zerone.disputes.v1.Msg.EscalateDispute:output_type -> zerone.disputes.v1.MsgEscalateDisputeResponse
+	11, // 16: zerone.disputes.v1.Msg.SettleDispute:output_type -> zerone.disputes.v1.MsgSettleDisputeResponse
+	13, // 17: zerone.disputes.v1.Msg.UpdateParams:output_type -> zerone.disputes.v1.MsgUpdateParamsResponse
+	11, // [11:18] is the sub-list for method output_type
+	4,  // [4:11] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_zerone_disputes_v1_tx_proto_init() }
@@ -771,7 +870,7 @@ func file_zerone_disputes_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_disputes_v1_tx_proto_rawDesc), len(file_zerone_disputes_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -446,11 +446,99 @@ func (*MsgFundBountyPoolResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_capture_challenge_v1_tx_proto_rawDescGZIP(), []int{7}
 }
 
+type MsgUpdateParams struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Authority     string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	Params        *Params                `protobuf:"bytes,2,opt,name=params,proto3" json:"params,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateParams) Reset() {
+	*x = MsgUpdateParams{}
+	mi := &file_zerone_capture_challenge_v1_tx_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateParams) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateParams) ProtoMessage() {}
+
+func (x *MsgUpdateParams) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_capture_challenge_v1_tx_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateParams.ProtoReflect.Descriptor instead.
+func (*MsgUpdateParams) Descriptor() ([]byte, []int) {
+	return file_zerone_capture_challenge_v1_tx_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *MsgUpdateParams) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
+func (x *MsgUpdateParams) GetParams() *Params {
+	if x != nil {
+		return x.Params
+	}
+	return nil
+}
+
+type MsgUpdateParamsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateParamsResponse) Reset() {
+	*x = MsgUpdateParamsResponse{}
+	mi := &file_zerone_capture_challenge_v1_tx_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateParamsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateParamsResponse) ProtoMessage() {}
+
+func (x *MsgUpdateParamsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_capture_challenge_v1_tx_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateParamsResponse.ProtoReflect.Descriptor instead.
+func (*MsgUpdateParamsResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_capture_challenge_v1_tx_proto_rawDescGZIP(), []int{9}
+}
+
 var File_zerone_capture_challenge_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_capture_challenge_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"$zerone/capture_challenge/v1/tx.proto\x12\x1bzerone.capture_challenge.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a'zerone/capture_challenge/v1/types.proto\"\xba\x01\n" +
+	"$zerone/capture_challenge/v1/tx.proto\x12\x1bzerone.capture_challenge.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a)zerone/capture_challenge/v1/genesis.proto\x1a'zerone/capture_challenge/v1/types.proto\"\xba\x01\n" +
 	"\x12MsgSubmitChallenge\x12\x1e\n" +
 	"\n" +
 	"challenger\x18\x01 \x01(\tR\n" +
@@ -481,12 +569,17 @@ const file_zerone_capture_challenge_v1_tx_proto_rawDesc = "" +
 	"\x06sender\x18\x01 \x01(\tR\x06sender\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x16\n" +
 	"\x06amount\x18\x03 \x01(\tR\x06amount:\v\x82\xe7\xb0*\x06sender\"\x1b\n" +
-	"\x19MsgFundBountyPoolResponse2\xf4\x03\n" +
+	"\x19MsgFundBountyPoolResponse\"|\n" +
+	"\x0fMsgUpdateParams\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x12;\n" +
+	"\x06params\x18\x02 \x01(\v2#.zerone.capture_challenge.v1.ParamsR\x06params:\x0e\x82\xe7\xb0*\tauthority\"\x19\n" +
+	"\x17MsgUpdateParamsResponse2\xe8\x04\n" +
 	"\x03Msg\x12{\n" +
 	"\x0fSubmitChallenge\x12/.zerone.capture_challenge.v1.MsgSubmitChallenge\x1a7.zerone.capture_challenge.v1.MsgSubmitChallengeResponse\x12o\n" +
 	"\vAddEvidence\x12+.zerone.capture_challenge.v1.MsgAddEvidence\x1a3.zerone.capture_challenge.v1.MsgAddEvidenceResponse\x12~\n" +
 	"\x10ResolveChallenge\x120.zerone.capture_challenge.v1.MsgResolveChallenge\x1a8.zerone.capture_challenge.v1.MsgResolveChallengeResponse\x12x\n" +
-	"\x0eFundBountyPool\x12..zerone.capture_challenge.v1.MsgFundBountyPool\x1a6.zerone.capture_challenge.v1.MsgFundBountyPoolResponse\x1a\x05\x80\xe7\xb0*\x01B:Z8github.com/zerone-chain/zerone/x/capture_challenge/typesb\x06proto3"
+	"\x0eFundBountyPool\x12..zerone.capture_challenge.v1.MsgFundBountyPool\x1a6.zerone.capture_challenge.v1.MsgFundBountyPoolResponse\x12r\n" +
+	"\fUpdateParams\x12,.zerone.capture_challenge.v1.MsgUpdateParams\x1a4.zerone.capture_challenge.v1.MsgUpdateParamsResponse\x1a\x05\x80\xe7\xb0*\x01B:Z8github.com/zerone-chain/zerone/x/capture_challenge/typesb\x06proto3"
 
 var (
 	file_zerone_capture_challenge_v1_tx_proto_rawDescOnce sync.Once
@@ -500,7 +593,7 @@ func file_zerone_capture_challenge_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_capture_challenge_v1_tx_proto_rawDescData
 }
 
-var file_zerone_capture_challenge_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_zerone_capture_challenge_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_zerone_capture_challenge_v1_tx_proto_goTypes = []any{
 	(*MsgSubmitChallenge)(nil),          // 0: zerone.capture_challenge.v1.MsgSubmitChallenge
 	(*MsgSubmitChallengeResponse)(nil),  // 1: zerone.capture_challenge.v1.MsgSubmitChallengeResponse
@@ -510,23 +603,29 @@ var file_zerone_capture_challenge_v1_tx_proto_goTypes = []any{
 	(*MsgResolveChallengeResponse)(nil), // 5: zerone.capture_challenge.v1.MsgResolveChallengeResponse
 	(*MsgFundBountyPool)(nil),           // 6: zerone.capture_challenge.v1.MsgFundBountyPool
 	(*MsgFundBountyPoolResponse)(nil),   // 7: zerone.capture_challenge.v1.MsgFundBountyPoolResponse
-	(ChallengeOutcome)(0),               // 8: zerone.capture_challenge.v1.ChallengeOutcome
+	(*MsgUpdateParams)(nil),             // 8: zerone.capture_challenge.v1.MsgUpdateParams
+	(*MsgUpdateParamsResponse)(nil),     // 9: zerone.capture_challenge.v1.MsgUpdateParamsResponse
+	(ChallengeOutcome)(0),               // 10: zerone.capture_challenge.v1.ChallengeOutcome
+	(*Params)(nil),                      // 11: zerone.capture_challenge.v1.Params
 }
 var file_zerone_capture_challenge_v1_tx_proto_depIdxs = []int32{
-	8, // 0: zerone.capture_challenge.v1.MsgResolveChallenge.outcome:type_name -> zerone.capture_challenge.v1.ChallengeOutcome
-	0, // 1: zerone.capture_challenge.v1.Msg.SubmitChallenge:input_type -> zerone.capture_challenge.v1.MsgSubmitChallenge
-	2, // 2: zerone.capture_challenge.v1.Msg.AddEvidence:input_type -> zerone.capture_challenge.v1.MsgAddEvidence
-	4, // 3: zerone.capture_challenge.v1.Msg.ResolveChallenge:input_type -> zerone.capture_challenge.v1.MsgResolveChallenge
-	6, // 4: zerone.capture_challenge.v1.Msg.FundBountyPool:input_type -> zerone.capture_challenge.v1.MsgFundBountyPool
-	1, // 5: zerone.capture_challenge.v1.Msg.SubmitChallenge:output_type -> zerone.capture_challenge.v1.MsgSubmitChallengeResponse
-	3, // 6: zerone.capture_challenge.v1.Msg.AddEvidence:output_type -> zerone.capture_challenge.v1.MsgAddEvidenceResponse
-	5, // 7: zerone.capture_challenge.v1.Msg.ResolveChallenge:output_type -> zerone.capture_challenge.v1.MsgResolveChallengeResponse
-	7, // 8: zerone.capture_challenge.v1.Msg.FundBountyPool:output_type -> zerone.capture_challenge.v1.MsgFundBountyPoolResponse
-	5, // [5:9] is the sub-list for method output_type
-	1, // [1:5] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	10, // 0: zerone.capture_challenge.v1.MsgResolveChallenge.outcome:type_name -> zerone.capture_challenge.v1.ChallengeOutcome
+	11, // 1: zerone.capture_challenge.v1.MsgUpdateParams.params:type_name -> zerone.capture_challenge.v1.Params
+	0,  // 2: zerone.capture_challenge.v1.Msg.SubmitChallenge:input_type -> zerone.capture_challenge.v1.MsgSubmitChallenge
+	2,  // 3: zerone.capture_challenge.v1.Msg.AddEvidence:input_type -> zerone.capture_challenge.v1.MsgAddEvidence
+	4,  // 4: zerone.capture_challenge.v1.Msg.ResolveChallenge:input_type -> zerone.capture_challenge.v1.MsgResolveChallenge
+	6,  // 5: zerone.capture_challenge.v1.Msg.FundBountyPool:input_type -> zerone.capture_challenge.v1.MsgFundBountyPool
+	8,  // 6: zerone.capture_challenge.v1.Msg.UpdateParams:input_type -> zerone.capture_challenge.v1.MsgUpdateParams
+	1,  // 7: zerone.capture_challenge.v1.Msg.SubmitChallenge:output_type -> zerone.capture_challenge.v1.MsgSubmitChallengeResponse
+	3,  // 8: zerone.capture_challenge.v1.Msg.AddEvidence:output_type -> zerone.capture_challenge.v1.MsgAddEvidenceResponse
+	5,  // 9: zerone.capture_challenge.v1.Msg.ResolveChallenge:output_type -> zerone.capture_challenge.v1.MsgResolveChallengeResponse
+	7,  // 10: zerone.capture_challenge.v1.Msg.FundBountyPool:output_type -> zerone.capture_challenge.v1.MsgFundBountyPoolResponse
+	9,  // 11: zerone.capture_challenge.v1.Msg.UpdateParams:output_type -> zerone.capture_challenge.v1.MsgUpdateParamsResponse
+	7,  // [7:12] is the sub-list for method output_type
+	2,  // [2:7] is the sub-list for method input_type
+	2,  // [2:2] is the sub-list for extension type_name
+	2,  // [2:2] is the sub-list for extension extendee
+	0,  // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_zerone_capture_challenge_v1_tx_proto_init() }
@@ -534,6 +633,7 @@ func file_zerone_capture_challenge_v1_tx_proto_init() {
 	if File_zerone_capture_challenge_v1_tx_proto != nil {
 		return
 	}
+	file_zerone_capture_challenge_v1_genesis_proto_init()
 	file_zerone_capture_challenge_v1_types_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -541,7 +641,7 @@ func file_zerone_capture_challenge_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_capture_challenge_v1_tx_proto_rawDesc), len(file_zerone_capture_challenge_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
