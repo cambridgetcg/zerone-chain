@@ -32,6 +32,7 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryResearchSpendCmd(),
 		NewQueryResearchSpendsCmd(),
 		NewQueryResearchVotersCmd(),
+		NewQueryResearchFundGovernanceCmd(),
 	)
 
 	return queryCmd
@@ -291,6 +292,32 @@ func NewQueryResearchVotersCmd() *cobra.Command {
 			resp := &types.QueryResearchVotersResponse{}
 			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/ResearchVoters", req, resp); err != nil {
 				return fmt.Errorf("failed to query research voters: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryResearchFundGovernanceCmd returns the command to query research fund governance state.
+func NewQueryResearchFundGovernanceCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "research-fund-governance",
+		Short: "Query the research fund governance phase, state, and exit conditions",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			req := &types.QueryResearchFundGovernanceRequest{}
+			resp := &types.QueryResearchFundGovernanceResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/ResearchFundGovernance", req, resp); err != nil {
+				return fmt.Errorf("failed to query research fund governance: %w", err)
 			}
 
 			return clientCtx.PrintObjectLegacy(resp)
