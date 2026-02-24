@@ -301,8 +301,9 @@ var (
 		// ===== Zerone custom module accounts — added by batch =====
 		zeroneauthtypes.ModuleName:    {authtypes.Minter}, // Minter for bootstrap fund
 		zeronestakingtypes.ModuleName: {authtypes.Burner, authtypes.Staking},
-		vestingrewardstypes.ModuleName:        {authtypes.Minter, authtypes.Burner}, // Minter for block rewards, Burner for burn split
-		vestingrewardstypes.ResearchFundModuleName: nil,                              // research_fund: receive-only
+		vestingrewardstypes.ModuleName:        {authtypes.Minter, authtypes.Burner}, // Minter for block rewards, Burner retained for interface compat
+		vestingrewardstypes.ResearchFundModuleName:    nil,                           // research_fund: receive-only
+		vestingrewardstypes.DevelopmentFundModuleName: nil,                           // development_fund: receive-only
 		zeroneontologytypes.ModuleName:             nil,                              // ontology: receive proposal stake
 		zeroneknowledgetypes.ModuleName:            {authtypes.Burner},               // knowledge: burn slashed claim stakes
 		zeronetokenstypes.ModuleName:               {authtypes.Minter, authtypes.Burner}, // tokens: mint/burn for wrap/unwrap + emissions

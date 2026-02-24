@@ -788,7 +788,7 @@ func TestClaimRewards_NilBankKeeper(t *testing.T) {
 func TestDistributeRevenue_4WaySplit(t *testing.T) {
 	k, ctx := setupKeeper(t)
 
-	// Default split: contributor 55%, protocol 22%, research 13%, burn 10%
+	// Default split: contributor 55%, protocol 22%, research 3.33%, development 19.67%
 	routing, err := k.DistributeRevenue(ctx, types.SourceBlockProduction, "10000",
 		sdk.AccAddress("recipient___________").String(), "")
 	if err != nil {
@@ -803,13 +803,13 @@ func TestDistributeRevenue_4WaySplit(t *testing.T) {
 	if routing.ProtocolShare != "2200" {
 		t.Errorf("expected protocol share 2200, got %s", routing.ProtocolShare)
 	}
-	// 10000 * 130000 / 1000000 = 1300
-	if routing.ResearchShare != "1300" {
-		t.Errorf("expected research share 1300, got %s", routing.ResearchShare)
+	// 10000 * 33300 / 1000000 = 333
+	if routing.ResearchShare != "333" {
+		t.Errorf("expected research share 333, got %s", routing.ResearchShare)
 	}
-	// burn = 10000 - 5500 - 2200 - 1300 = 1000
-	if routing.DevelopmentAmount != "1000" {
-		t.Errorf("expected burn amount 1000, got %s", routing.DevelopmentAmount)
+	// development = 10000 - 5500 - 2200 - 333 = 1967
+	if routing.DevelopmentAmount != "1967" {
+		t.Errorf("expected development amount 1967, got %s", routing.DevelopmentAmount)
 	}
 }
 
@@ -881,9 +881,9 @@ func TestDistributeRevenue_SplitSumsToTotal(t *testing.T) {
 	}
 }
 
-// ---------- Burn Tests ----------
+// ---------- Development Fund Deposit Tests ----------
 
-func TestDistributeBlockReward_BurnsTokens(t *testing.T) {
+func TestDistributeBlockReward_DepositsToDevelopmentFund(t *testing.T) {
 	bk := newMockBankKeeper()
 	sk := &mockStakingKeeper{activeCount: 22}
 	k, ctx := setupKeeperWithBank(t, bk, sk)
@@ -895,18 +895,19 @@ func TestDistributeBlockReward_BurnsTokens(t *testing.T) {
 		t.Fatalf("distribute block reward failed: %v", err)
 	}
 
-	// 10% burn: 10000000 * 100000 / 1000000 = 1000000
+	// 19.67% development: remainder = 10000000 - 5500000 - 2200000 - 333000 = 1967000
 	if dist.DevelopmentAmount == "0" {
-		t.Fatal("expected non-zero burn amount")
+		t.Fatal("expected non-zero development amount")
 	}
 
-	if bk.burnedCoins.IsZero() {
-		t.Fatal("expected BurnCoins to be called")
+	devCoins := bk.sentToModule["development_fund"]
+	if devCoins.AmountOf("uzrn").Int64() != 1967000 {
+		t.Errorf("expected 1967000 uzrn to development_fund, got %d", devCoins.AmountOf("uzrn").Int64())
 	}
 
-	burnedAmount := bk.burnedCoins.AmountOf("uzrn").Int64()
-	if burnedAmount != 1000000 {
-		t.Errorf("expected 1000000 uzrn burned, got %d", burnedAmount)
+	// No coins should be burned
+	if !bk.burnedCoins.IsZero() {
+		t.Errorf("expected no coins burned, got %v", bk.burnedCoins)
 	}
 }
 
@@ -1319,14 +1320,14 @@ func TestDistributeBlockReward_4WayAccounting(t *testing.T) {
 		t.Errorf("expected producer reward 5500000, got %s", dist.ProducerReward)
 	}
 
-	// Research (13%): 10000000 * 130000 / 1000000 = 1300000
-	if dist.ResearchShare != "1300000" {
-		t.Errorf("expected research share 1300000, got %s", dist.ResearchShare)
+	// Research (3.33%): 10000000 * 33300 / 1000000 = 333000
+	if dist.ResearchShare != "333000" {
+		t.Errorf("expected research share 333000, got %s", dist.ResearchShare)
 	}
 
-	// Burn (10%): 1000000
-	if dist.DevelopmentAmount != "1000000" {
-		t.Errorf("expected burn amount 1000000, got %s", dist.DevelopmentAmount)
+	// Development (19.67%): remainder = 10000000 - 5500000 - 2200000 - 333000 = 1967000
+	if dist.DevelopmentAmount != "1967000" {
+		t.Errorf("expected development amount 1967000, got %s", dist.DevelopmentAmount)
 	}
 
 	// Protocol (22%): 2200000
@@ -1340,9 +1341,10 @@ func TestDistributeBlockReward_4WayAccounting(t *testing.T) {
 		t.Errorf("expected 5500000 to producer, got %d", producerCoins.AmountOf("uzrn").Int64())
 	}
 
-	burnedAmount := bk.burnedCoins.AmountOf("uzrn").Int64()
-	if burnedAmount != 1000000 {
-		t.Errorf("expected 1000000 burned, got %d", burnedAmount)
+	// Development fund receives 1967000 (no burn)
+	devCoins := bk.sentToModule["development_fund"]
+	if devCoins.AmountOf("uzrn").Int64() != 1967000 {
+		t.Errorf("expected 1967000 to development_fund, got %d", devCoins.AmountOf("uzrn").Int64())
 	}
 
 	// Verification pool split: protocol 22% = 2200000
@@ -1367,7 +1369,7 @@ func TestDistributeBlockReward_4WayAccounting(t *testing.T) {
 	retainedCitation := int64(1100000)
 	retainedTreasury := int64(440000)
 
-	// Total accounting: distributed + retained + burned = total minted
+	// Total accounting: distributed + retained = total minted (no burn)
 	var totalDistributed int64
 	for _, coins := range bk.sentToAccount {
 		totalDistributed += coins.AmountOf("uzrn").Int64()
@@ -1375,7 +1377,6 @@ func TestDistributeBlockReward_4WayAccounting(t *testing.T) {
 	for _, coins := range bk.sentToModule {
 		totalDistributed += coins.AmountOf("uzrn").Int64()
 	}
-	totalDistributed += bk.burnedCoins.AmountOf("uzrn").Int64()
 	totalDistributed += retainedCitation + retainedTreasury
 
 	if totalDistributed != 10000000 {
@@ -1400,16 +1401,21 @@ func TestRouteFees_SweepsFeeCollector(t *testing.T) {
 		t.Fatalf("RouteFees failed: %v", err)
 	}
 
-	// Research: 13% of 100000 = 13000
+	// Research: 3.33% of 100000 = 3330
 	researchCoins := bk.sentToModule["research_fund"]
-	if researchCoins.AmountOf("uzrn").Int64() != 13000 {
-		t.Errorf("expected 13000 uzrn to research_fund, got %d", researchCoins.AmountOf("uzrn").Int64())
+	if researchCoins.AmountOf("uzrn").Int64() != 3330 {
+		t.Errorf("expected 3330 uzrn to research_fund, got %d", researchCoins.AmountOf("uzrn").Int64())
 	}
 
-	// Burn: 10% of 100000 = 10000
-	burnedAmount := bk.burnedCoins.AmountOf("uzrn").Int64()
-	if burnedAmount != 10000 {
-		t.Errorf("expected 10000 uzrn burned from fees, got %d", burnedAmount)
+	// Development: 19.67% of 100000 = 19670
+	devCoins := bk.sentToModule["development_fund"]
+	if devCoins.AmountOf("uzrn").Int64() != 19670 {
+		t.Errorf("expected 19670 uzrn to development_fund, got %d", devCoins.AmountOf("uzrn").Int64())
+	}
+
+	// No coins should be burned
+	if !bk.burnedCoins.IsZero() {
+		t.Errorf("expected no coins burned, got %v", bk.burnedCoins)
 	}
 }
 
@@ -1449,8 +1455,8 @@ func TestRouteFees_OnlyProcessesUzrn(t *testing.T) {
 	}
 
 	researchCoins := bk.sentToModule["research_fund"]
-	if researchCoins.AmountOf("uzrn").Int64() != 13000 {
-		t.Errorf("expected 13000 uzrn to research_fund, got %d", researchCoins.AmountOf("uzrn").Int64())
+	if researchCoins.AmountOf("uzrn").Int64() != 3330 {
+		t.Errorf("expected 3330 uzrn to research_fund, got %d", researchCoins.AmountOf("uzrn").Int64())
 	}
 	if researchCoins.AmountOf("atom").Int64() != 0 {
 		t.Errorf("expected 0 atom to research_fund, got %d", researchCoins.AmountOf("atom").Int64())
@@ -1471,13 +1477,13 @@ func setupFounderKeeper(t *testing.T, bk *mockBankKeeper, founderAddr string, go
 func TestFounderAutoSplit(t *testing.T) {
 	// Block reward with founder: verify 7% of research goes to founder.
 	// Math (epoch 0, full validators):
-	//   Total minted:    10,000,000
-	//   Contributor 55%: 5,500,000
-	//   Protocol 22%:    2,200,000
-	//   Research 13%:    1,300,000
-	//   Burn 10%:        1,000,000
-	//   Founder (7% of research): 1,300,000 * 70000 / 1000000 = 91,000
-	//   Net research:    1,300,000 - 91,000 = 1,209,000
+	//   Total minted:       10,000,000
+	//   Contributor 55%:    5,500,000
+	//   Protocol 22%:       2,200,000
+	//   Research 3.33%:     333,000
+	//   Development 19.67%: 1,967,000 (remainder)
+	//   Founder (7% of research): 333,000 * 70000 / 1000000 = 23,310
+	//   Net research:       333,000 - 23,310 = 309,690
 	bk := newMockBankKeeper()
 	founderAddr := sdk.AccAddress("founder_____________").String()
 	k, ctx := setupFounderKeeper(t, bk, founderAddr, 0)
@@ -1491,23 +1497,23 @@ func TestFounderAutoSplit(t *testing.T) {
 	if dist.TotalMinted != "10000000" {
 		t.Errorf("expected total minted 10000000, got %s", dist.TotalMinted)
 	}
-	if dist.FounderShare != "91000" {
-		t.Errorf("expected founder share 91000, got %s", dist.FounderShare)
+	if dist.FounderShare != "23310" {
+		t.Errorf("expected founder share 23310, got %s", dist.FounderShare)
 	}
-	if dist.ResearchShare != "1209000" {
-		t.Errorf("expected net research share 1209000, got %s", dist.ResearchShare)
+	if dist.ResearchShare != "309690" {
+		t.Errorf("expected net research share 309690, got %s", dist.ResearchShare)
 	}
 	if dist.ProducerReward != "5500000" {
 		t.Errorf("expected producer reward 5500000, got %s", dist.ProducerReward)
 	}
 
 	founderCoins := bk.sentToAccount[founderAddr]
-	if founderCoins.AmountOf("uzrn").Int64() != 91000 {
-		t.Errorf("expected 91000 uzrn to founder, got %d", founderCoins.AmountOf("uzrn").Int64())
+	if founderCoins.AmountOf("uzrn").Int64() != 23310 {
+		t.Errorf("expected 23310 uzrn to founder, got %d", founderCoins.AmountOf("uzrn").Int64())
 	}
 	researchCoins := bk.sentToModule["research_fund"]
-	if researchCoins.AmountOf("uzrn").Int64() != 1209000 {
-		t.Errorf("expected 1209000 uzrn to research_fund, got %d", researchCoins.AmountOf("uzrn").Int64())
+	if researchCoins.AmountOf("uzrn").Int64() != 309690 {
+		t.Errorf("expected 309690 uzrn to research_fund, got %d", researchCoins.AmountOf("uzrn").Int64())
 	}
 }
 
@@ -1521,15 +1527,18 @@ func TestFounderSplitDisabled(t *testing.T) {
 		t.Fatalf("distribute block reward failed: %v", err)
 	}
 
-	if dist.ResearchShare != "1300000" {
-		t.Errorf("expected full research share 1300000, got %s", dist.ResearchShare)
+	// Research 3.33% = 333000 (full, no founder deduction)
+	if dist.ResearchShare != "333000" {
+		t.Errorf("expected full research share 333000, got %s", dist.ResearchShare)
 	}
 	if dist.FounderShare != "0" {
 		t.Errorf("expected founder share 0 when disabled, got %s", dist.FounderShare)
 	}
 }
 
-func TestFounderSplitSunset(t *testing.T) {
+func TestFounderSplitPermanent(t *testing.T) {
+	// Governance sunset was removed — founder share is permanent and governance-immune.
+	// Even with GovernanceActivationHeight set, founder remains active.
 	bk := newMockBankKeeper()
 	founderAddr := sdk.AccAddress("founder_____________").String()
 	k, ctx := setupFounderKeeper(t, bk, founderAddr, 500)
@@ -1540,11 +1549,13 @@ func TestFounderSplitSunset(t *testing.T) {
 		t.Fatalf("distribute block reward failed: %v", err)
 	}
 
-	if dist.FounderShare != "0" {
-		t.Errorf("expected founder share 0 after governance sunset, got %s", dist.FounderShare)
+	// Founder share is permanent: 333000 * 70000 / 1000000 = 23310
+	if dist.FounderShare != "23310" {
+		t.Errorf("expected founder share 23310 (permanent), got %s", dist.FounderShare)
 	}
-	if dist.ResearchShare != "1300000" {
-		t.Errorf("expected full research share 1300000 after sunset, got %s", dist.ResearchShare)
+	// Net research: 333000 - 23310 = 309690
+	if dist.ResearchShare != "309690" {
+		t.Errorf("expected net research share 309690, got %s", dist.ResearchShare)
 	}
 }
 
@@ -1592,7 +1603,9 @@ func TestDepositToResearchFund_NoFounderAddress(t *testing.T) {
 	}
 }
 
-func TestDepositToResearchFund_GovernanceSunset(t *testing.T) {
+func TestDepositToResearchFund_FounderPermanent(t *testing.T) {
+	// Governance sunset removed — founder share is permanent.
+	// Even with GovernanceActivationHeight set, founder split still applies.
 	bk := newMockBankKeeper()
 	founderAddr := sdk.AccAddress("founder_____________").String()
 	k, ctx := setupFounderKeeper(t, bk, founderAddr, 500)
@@ -1603,13 +1616,15 @@ func TestDepositToResearchFund_GovernanceSunset(t *testing.T) {
 		t.Fatalf("DepositToResearchFund failed: %v", err)
 	}
 
+	// 7% founder: 100000 * 70000 / 1000000 = 7000; research: 93000
 	researchCoins := bk.sentToModule["research_fund"]
-	if researchCoins.AmountOf("uzrn").Int64() != 100000 {
-		t.Errorf("expected 100000 to research_fund after governance sunset, got %d", researchCoins.AmountOf("uzrn").Int64())
+	if researchCoins.AmountOf("uzrn").Int64() != 93000 {
+		t.Errorf("expected 93000 to research_fund (founder permanent), got %d", researchCoins.AmountOf("uzrn").Int64())
 	}
 
-	if coins, ok := bk.sentToAccount[founderAddr]; ok && !coins.IsZero() {
-		t.Errorf("expected no coins to founder after sunset, got %v", coins)
+	founderCoins := bk.sentToAccount[founderAddr]
+	if founderCoins.AmountOf("uzrn").Int64() != 7000 {
+		t.Errorf("expected 7000 to founder (permanent), got %d", founderCoins.AmountOf("uzrn").Int64())
 	}
 }
 

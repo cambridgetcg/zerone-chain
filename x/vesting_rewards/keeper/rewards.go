@@ -152,13 +152,9 @@ func (k Keeper) RouteFees(ctx sdk.Context) error {
 		devTotal := totalAmount.MulRaw(int64(split.DevelopmentBps)).QuoRaw(bps)
 		if devTotal.IsPositive() {
 			devCoins := sdk.NewCoins(sdk.NewCoin(coin.Denom, devTotal))
-			// TODO(R16): route to development fund instead of burning
-			if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, authtypes.FeeCollectorName, types.ModuleName, devCoins); err != nil {
-				k.Logger(ctx).Warn("failed to escrow fee development share", "err", err)
+			if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, authtypes.FeeCollectorName, types.DevelopmentFundModuleName, devCoins); err != nil {
+				k.Logger(ctx).Warn("failed to route fee development share", "err", err)
 				continue
-			}
-			if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, devCoins); err != nil {
-				k.Logger(ctx).Warn("failed to route development fund share", "err", err)
 			}
 		}
 
@@ -254,12 +250,13 @@ func (k Keeper) DisburseFromResearchFund(ctx sdk.Context, recipient sdk.AccAddre
 	return k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ResearchFundModuleName, recipient, amount)
 }
 
-// BurnTokens burns coins from the vesting_rewards module account.
-func (k Keeper) BurnTokens(ctx sdk.Context, amount sdk.Coins) error {
+// DisburseFromDevelopmentFund sends coins from the development fund module account to a recipient.
+// Called by governance proposals for bug bounties and development grants.
+func (k Keeper) DisburseFromDevelopmentFund(ctx sdk.Context, recipient sdk.AccAddress, amount sdk.Coins) error {
 	if k.bankKeeper == nil {
 		return fmt.Errorf("bank keeper not available")
 	}
-	return k.bankKeeper.BurnCoins(ctx, types.ModuleName, amount)
+	return k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.DevelopmentFundModuleName, recipient, amount)
 }
 
 // applyDecay computes: amount * (decayBps/1000000)^epochs using integer exponentiation by squaring.
@@ -464,8 +461,7 @@ func (k Keeper) DistributeBlockReward(
 		devBig.SetString(routing.DevelopmentAmount, 10)
 		if devBig.Sign() > 0 {
 			devCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(devBig)))
-			// TODO(R16): route to development fund instead of burning
-			if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, devCoins); err != nil {
+			if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, types.DevelopmentFundModuleName, devCoins); err != nil {
 				k.Logger(ctx).Error("failed to route development fund share", "error", err)
 			}
 		}
