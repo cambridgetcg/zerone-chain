@@ -307,7 +307,7 @@ var (
 		zeroneontologytypes.ModuleName:             nil,                              // ontology: receive proposal stake
 		zeroneknowledgetypes.ModuleName:            {authtypes.Burner},               // knowledge: burn slashed claim stakes
 		zeronetokenstypes.ModuleName:               {authtypes.Minter, authtypes.Burner}, // tokens: mint/burn for wrap/unwrap + emissions
-		zeronebillingtypes.ModuleName:              {authtypes.Burner},                        // billing: burn split
+		zeronebillingtypes.ModuleName:              {authtypes.Burner},                        // billing: revenue split
 		zeronelptypes.ModuleName:                   {authtypes.Minter, authtypes.Burner}, // liquiditypool: mint/burn LP tokens
 		zeronegovtypes.ModuleName:                  nil,                                  // gov: receive stake deposits
 		zeronechannelstypes.ModuleName:             nil,                                  // channels: escrow deposits
@@ -319,7 +319,7 @@ var (
 		zeronedisputestypes.ModuleName:             {authtypes.Burner},                   // disputes: bond escrow + burn
 		zeronequalificationtypes.ModuleName:        nil,                                  // qualification: stake escrow
 		zeroneemergencytypes.ModuleName:            nil,                                  // emergency: no mint/burn — signal-only module
-		zeronecctypes.ModuleName:                   {authtypes.Burner},                   // capture_challenge: burn rejected stakes
+		zeronecctypes.ModuleName:                   {authtypes.Burner},                   // capture_challenge: rejected stakes to dev fund
 		zeronecdtypes.ModuleName:                   nil,                                  // capture_defense: no mint/burn
 		zeroneibcrltypes.ModuleName:                nil,                                  // ibcratelimit: no mint/burn — middleware only
 		zeroneicaauthtypes.ModuleName:              nil,                                  // icaauth: no mint/burn — auth wrapper only
@@ -328,9 +328,9 @@ var (
 		zeroneaptypes.ModuleName:                   nil,                                  // autopoiesis: no mint/burn — signal-only module
 		zeroneemtypes.ModuleName:                   {authtypes.Burner},                   // evidence_mgmt: burn challenged bonds
 		zeronecpottypes.ModuleName:                 nil,                                  // claiming_pot: receive-only, bank sends from module
-		zeronettreetypes.ModuleName:                {authtypes.Burner},                   // tree: burn revenue split
-		zeronepartnershipstypes.ModuleName:         {authtypes.Burner},                   // partnerships: burn dissolved stakes
-		zeronetoolboxtypes.ModuleName:              {authtypes.Burner},                   // toolbox: burn deregistration fees
+		zeronettreetypes.ModuleName:                {authtypes.Burner},                   // tree: revenue split
+		zeronepartnershipstypes.ModuleName:         {authtypes.Burner},                   // partnerships: dissolved stakes to dev fund
+		zeronetoolboxtypes.ModuleName:              {authtypes.Burner},                   // toolbox: deregistration fees
 		"treasury_protocol":                        nil,                                  // treasury_protocol: receive-only
 	}
 )
@@ -926,6 +926,7 @@ func NewZeroneApp(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		emergencyStakingAdapter,
 	)
+	app.ZeroneGovKeeper.SetEmergencyKeeper(zeroneemergencykeeper.NewGovEmergencyAdapter(app.EmergencyKeeper))
 
 	// ---- Capture Defense + Capture Challenge keepers (R6-4) ----
 	// capture_defense first (capture_challenge depends on it)

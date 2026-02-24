@@ -49,3 +49,16 @@ func (a *GovStakingKeeperAdapter) GetDelegatorTotalBonded(ctx context.Context, a
 
 	return total.String(), nil
 }
+
+// CountActiveGuardians returns the number of active Guardian-tier validators.
+func (a *GovStakingKeeperAdapter) CountActiveGuardians(ctx context.Context) (uint64, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	var count uint64
+	a.k.IterateValidators(sdkCtx, func(val *types.Validator) bool {
+		if val.Tier == types.TierGuardian && val.IsActive {
+			count++
+		}
+		return false
+	})
+	return count, nil
+}
