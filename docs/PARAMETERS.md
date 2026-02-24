@@ -215,7 +215,7 @@ Block rewards, vesting curves, and revenue distribution.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `block_reward` | string | "10000000" (10 ZRN) | Base block reward |
-| `reward_decay_bps` | uint64 | 850,000 (0.85x) | Reward decay per epoch |
+| `reward_decay_bps` | uint64 | 994,478 (~1-year half-life) | Reward decay per epoch (0.994478x) |
 | `blocks_per_reward_epoch` | uint64 | 100,000 (~2.9 days) | Blocks per reward epoch |
 | `founder_share_bps` | uint64 | 70,000 (7%) | Founder share of research fund |
 | `founder_address` | string | "" (disabled) | Founder address for share distribution |

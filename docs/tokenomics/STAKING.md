@@ -95,16 +95,17 @@ Block reward to validators = 55% × 10 ZRN × 2.0× tier multiplier
                            = 11 ZRN per block (maximum)
 ```
 
-At ~2.521s blocks, that's:
-- ~4,364 ZRN/hour (epoch 0)
-- ~3,710 ZRN/hour (epoch 1)
-- Declining per epoch
+At ~2.521s blocks (~1,428 blocks/hour), that's:
+- ~4,364 ZRN/hour total (epoch 0)
+- Rewards halve annually (~1-year half-life, 0.994478× per epoch)
 
 Shared across all active validators weighted by selection + tier multipliers. With 22 validators of equal tier:
-- ~198 ZRN/hour per validator (epoch 0)
-- ~4,754 ZRN/day per validator (epoch 0)
+- ~198 ZRN/hour per validator (year 0)
+- ~99 ZRN/hour per validator (year 1)
+- ~50 ZRN/hour per validator (year 2)
+- Floor: ~20 ZRN/hour per validator (year 6.6+)
 
-This makes early validation very lucrative (by design — bootstrapping the validator set is critical).
+The 1-year half-life balances early adopter incentive with accessibility: validators joining at year 2 earn half the genesis rate, not 1/100th.
 
 ### Qualification Module
 

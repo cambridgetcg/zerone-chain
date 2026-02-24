@@ -29,7 +29,7 @@ reward(block) = max(
 
 Where:
 - **baseReward** = 10,000,000 uzrn (10 ZRN)
-- **decayFactor** = 0.85 (850,000 on 1M BPS scale)
+- **decayFactor** = 0.994478 (994,478 on 1M BPS scale — ~1-year half-life)
 - **epoch** = floor(blockHeight / blocksPerEpoch)
 - **blocksPerEpoch** = 100,000 (~2.9 days at 2.521s blocks)
 - **floorReward** = 100,000 uzrn (0.1 ZRN)
@@ -52,19 +52,20 @@ Blocks with no Proof-of-Truth activity (no verified claims, no knowledge transac
 
 The decay uses exponentiation by squaring in fixed-point arithmetic (no floating point):
 
-| Epoch | Days (~) | Per-Block Reward | Epoch Total | Cumulative |
-|-------|----------|-----------------|-------------|------------|
-| 0 | 0–2.9 | 10.000 ZRN | 1,000,000 ZRN | 1,000,000 ZRN |
-| 1 | 2.9–5.8 | 8.500 ZRN | 850,000 ZRN | 1,850,000 ZRN |
-| 2 | 5.8–8.7 | 7.225 ZRN | 722,500 ZRN | 2,572,500 ZRN |
-| 3 | 8.7–11.6 | 6.141 ZRN | 614,125 ZRN | 3,186,625 ZRN |
-| 5 | 14.5–17.4 | 4.437 ZRN | 443,705 ZRN | 4,305,078 ZRN |
-| 10 | 29–31.9 | 1.969 ZRN | 196,874 ZRN | 6,513,216 ZRN |
-| 20 | 58–60.9 | 0.388 ZRN | 38,760 ZRN | 8,096,766 ZRN |
-| 30 | 87–89.9 | 0.100 ZRN* | 10,000 ZRN | 8,436,xxx ZRN |
-| 50 | 145+ | 0.100 ZRN* | 10,000 ZRN | 8,836,xxx ZRN |
+With a 1-year half-life, rewards halve approximately every year (~125 epochs):
 
-*Floor reward kicks in around epoch 27 (day ~78). After that, emission is constant at 0.1 ZRN/block.
+| Period | Per-Block Reward | Annual Emission | Cumulative | % of Cap |
+|--------|-----------------|----------------|------------|----------|
+| Year 0 start | 10.0 ZRN | — | — | — |
+| Year 1 end | 5.0 ZRN | ~90M ZRN | 90M | 40.7% |
+| Year 2 end | 2.5 ZRN | ~45M ZRN | 136M | 61.1% |
+| Year 3 end | 1.25 ZRN | ~23M ZRN | 158M | 71.2% |
+| Year 4 end | 0.625 ZRN | ~11M ZRN | 169M | 76.1% |
+| Year 5 end | 0.31 ZRN | ~6M ZRN | 175M | 78.9% |
+| Year 6.6 | 0.1 ZRN (floor) | ~1.26M ZRN | ~180M | ~81% |
+| Year 10+ | 0.1 ZRN (floor) | ~1.26M ZRN | ~185M+ | ~83%+ |
+
+Floor reward (0.1 ZRN) kicks in around epoch 832 (~year 6.6). After that, emission is constant at 0.1 ZRN/block.
 
 ## Long-Term Supply Projections
 
@@ -73,20 +74,27 @@ The decay uses exponentiation by squaring in fixed-point arithmetic (no floating
 - Validators participate via virtual stake (11 ZRN virtual weight)
 - Research fund, foundation, faucet all start empty
 
-### Phase 1: Rapid Emission (Months 1–3)
-- ~8M ZRN minted from block rewards alone
-- Rewards decrease rapidly (15%/epoch)
-- Research fund fills organically (13% of all rewards = ~1M ZRN)
-- Establishes initial knowledge base and economic activity
+### Phase 1: Bootstrap Emission (Year 1)
+- ~90M ZRN minted from block rewards (~40.7% of cap)
+- Rewards halve annually (1-year half-life)
+- Research fund fills organically (3.33% of all rewards)
+- Development fund receives 19.67% for ecosystem growth
+- Establishes validator economy and initial knowledge base
 
-### Phase 2: Floor Emission (Month 3+)
-- 0.1 ZRN/block = ~10,000 ZRN per epoch (~2.9 days)
-- ~1.26M ZRN/year at floor rate
+### Phase 2: Gradual Decay (Years 2–6.6)
+- Year 2: ~45M ZRN minted (2.5 ZRN/block at year end)
+- Year 5: ~6M ZRN minted (0.31 ZRN/block at year end)
+- Late joiners earn meaningful rewards: year 2 validators earn half of genesis rate, not 1/100th
 - No burn — all minted ZRN enters productive circulation
 
-### Phase 3: Cap Approach (Long-term)
-- At ~1.26M ZRN/year floor rate, reaching 222M takes ~170 years from genesis
-- In practice, higher early emission means cap approaches sooner (decades, not centuries)
+### Phase 3: Floor Emission (Year 6.6+)
+- 0.1 ZRN/block = ~1.26M ZRN/year at floor rate
+- Floor provides permanent validator incentive layer
+- Fee-based economy has ~6.5 years to develop before floor kicks in
+
+### Phase 4: Cap Approach (Long-term)
+- At floor rate (~1.26M/year), reaching 222M from ~180M takes ~33 more years
+- The economy has decades to mature before the cap binds
 - When cap binds, economy transitions to pure fee-based incentives
 
 ### Effective Circulating Supply
@@ -107,10 +115,10 @@ At that point, block reward minting stops and the economy runs purely on transac
 
 | Chain | Supply Model | Initial Emission | Decay | Cap |
 |-------|-------------|-----------------|-------|-----|
-| **Zerone** | PoT mining + burn | 10 ZRN/block | 15%/epoch | 222,222,222 |
+| **Zerone** | PoT mining | 10 ZRN/block | 50%/year | 222,222,222 |
 | Bitcoin | PoW mining | 50 BTC/block | 50%/4 years | 21,000,000 |
 | Ethereum | PoS + EIP-1559 | ~2 ETH/block + burn | None (variable) | No cap |
 | Cosmos Hub | PoS inflation | Variable | Dynamic | No cap |
 | Osmosis | Thirdening | Variable | 33%/year | 1,000,000,000 |
 
-Zerone's decay is faster than Bitcoin's halvings but reaches a permanent floor rather than zero. Unlike Bitcoin (and most chains), Zerone has no burn — every minted token does productive work. The hard cap provides scarcity; deflation doesn't need to be manufactured.
+Zerone's decay is 4× faster than Bitcoin's halvings but reaches a permanent floor (0.1 ZRN) rather than zero. Unlike Bitcoin, Zerone has no burn — every minted token does productive work. The 1-year half-life balances early adopter advantage with accessibility for late joiners: someone joining at year 2 earns 2.5 ZRN/block (half the genesis rate), not 0.01 ZRN.

@@ -546,14 +546,17 @@ func TestBillingResearchRoutedThroughDepositor(t *testing.T) {
 func TestVerificationRewardDecay_PoolSolvency(t *testing.T) {
 	// Zerone: baseReward = 10,000,000 uzrn (10 ZRN)
 	baseReward := uint64(10000000)
-	decayBps := uint64(850000)  // 0.85 per epoch
+	decayBps := uint64(994478)    // ~1-year half-life (0.994478x per epoch)
 	floorReward := uint64(100000) // 0.1 ZRN
 
 	baseRewardBig := new(big.Int).SetUint64(baseReward)
 	var prev uint64 = baseReward
 	floorReached := false
 
-	for epoch := uint64(0); epoch <= 51; epoch++ {
+	// With 1-year half-life, floor (~0.1 ZRN) is reached at ~epoch 832 (~year 6.6).
+	// Sample key epochs to verify monotonic decay without iterating all 850.
+	checkEpochs := []uint64{0, 1, 2, 5, 10, 50, 100, 125, 250, 500, 750, 832, 850}
+	for _, epoch := range checkEpochs {
 		decayed := testApplyDecay(baseRewardBig, decayBps, epoch).Uint64()
 
 		if decayed > baseReward {
@@ -572,9 +575,9 @@ func TestVerificationRewardDecay_PoolSolvency(t *testing.T) {
 			t.Errorf("epoch 0: expected %d, got %d", baseReward, decayed)
 		}
 
-		// At epoch 1, reward should be 0.85 * 10,000,000 = 8,500,000
+		// At epoch 1, reward should be 0.994478 * 10,000,000 = 9,944,780
 		if epoch == 1 {
-			expected := uint64(8500000)
+			expected := uint64(9944780)
 			if decayed != expected {
 				t.Errorf("epoch 1: expected %d, got %d", expected, decayed)
 			}
@@ -584,12 +587,13 @@ func TestVerificationRewardDecay_PoolSolvency(t *testing.T) {
 	}
 
 	if !floorReached {
-		t.Errorf("floor reward %d was never reached by epoch 51", floorReward)
+		t.Errorf("floor reward %d was never reached by epoch 850", floorReward)
 	}
 
-	deepDecay := testApplyDecay(baseRewardBig, decayBps, 30).Uint64()
+	// At epoch 850, decay should be well below floor
+	deepDecay := testApplyDecay(baseRewardBig, decayBps, 850).Uint64()
 	if deepDecay >= floorReward {
-		t.Errorf("epoch 30: expected decay below floor, got %d (floor %d)", deepDecay, floorReward)
+		t.Errorf("epoch 850: expected decay below floor, got %d (floor %d)", deepDecay, floorReward)
 	}
 }
 

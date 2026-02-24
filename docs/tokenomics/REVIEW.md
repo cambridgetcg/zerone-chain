@@ -53,16 +53,11 @@ Zero reward for blocks without PoT activity means validators earn nothing when t
 
 **Consideration:** Even a small empty block reward (e.g., 1% of base) would maintain validator incentives during quiet periods without undermining the PoT alignment.
 
-### 4. Decay Is Very Aggressive
+### 4. ~~Decay Is Very Aggressive~~ → RESOLVED
 
-15% decay per epoch (~2.9 days) means block rewards drop from 10 ZRN to 0.1 ZRN in about 78 days. This front-loads rewards heavily toward early validators, creating a gold rush dynamic.
+**Decision: 1-year half-life.** `reward_decay_bps` changed from 850,000 (15%/epoch, ~78-day collapse) to 994,478 (0.55%/epoch, ~1-year half-life). Rewards now halve annually — 4× faster than Bitcoin's 4-year halvings but 125× slower than the original design.
 
-**Tradeoffs:**
-- **Pro:** Strongly incentivises early participation when it's most needed
-- **Con:** Late entrants face 100× lower rewards, potentially discouraging growth
-- **Con:** Creates strong "original validator" wealth concentration
-
-**Comparison:** Bitcoin's halving takes 4 years for a 2× reduction. Zerone achieves 2× in ~4.6 days. That's ~300× faster.
+**Result:** Validators joining at year 2 earn 2.5 ZRN/block (half the genesis rate), not 0.001 ZRN. Floor reward (0.1 ZRN) is reached at ~year 6.6 instead of day 78. The gold rush dynamic is eliminated while still rewarding early participation.
 
 ### 5. Verification Pool Split Is Complex
 
@@ -122,7 +117,6 @@ The 2-of-2 multisig between Yu and AI for the research fund is philosophically b
 The tokenomics are **significantly more thoughtful than typical crypto projects**. The truth-linked vesting, 4-way split, and anti-capture infrastructure show genuine economic design rather than token-bolted-on-afterwards thinking.
 
 The main risks are:
-- **Early validator wealth concentration** from aggressive decay
 - **Bootstrap friction** — zero genesis supply means slow early funding for ecosystem
 - **Complexity** — 32 modules with independent parameters create a large governance surface area
 
@@ -131,4 +125,4 @@ The main strengths are:
 - **Knowledge-aligned incentives** that reward truth production over capital accumulation
 - **Self-healing economics** via autopoiesis/alignment
 
-For testnet, the priority should be empirically validating the decay curve, empty block economics, and vesting clawback flows. These are the mechanisms most likely to surprise when real actors interact with them.
+For testnet, the priority should be empirically validating the empty block economics and vesting clawback flows. These are the mechanisms most likely to surprise when real actors interact with them. The decay curve (1-year half-life) is well-tested in unit and integration tests.
