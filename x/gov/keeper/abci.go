@@ -68,6 +68,18 @@ func (k Keeper) BeginBlocker(ctx sdk.Context) {
 
 	// 4. Process research spend proposal expiry.
 	k.ProcessResearchSpendExpiry(ctx, currentHeight)
+
+	// 5. Process seat election stage transitions (nominated→expired, discussion→voting).
+	k.ProcessSeatElectionExpiry(ctx, currentHeight)
+
+	// 6. Tally expired seat elections.
+	k.TallySeatElections(ctx)
+
+	// 7. Check community seat term expiry.
+	k.CheckSeatTermExpiry(ctx)
+
+	// 8. Check for long-vacant seats.
+	k.CheckSeatVacancy(ctx)
 }
 
 // tallyAndResolve tallies votes and sets the LIP to passed or failed.

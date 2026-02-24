@@ -517,6 +517,17 @@ func (k Keeper) InitGenesis(ctx sdk.Context, gs *types.GenesisState) {
 	} else {
 		k.SetResearchFundGovernanceState(ctx, types.DefaultResearchFundGovernanceState())
 	}
+
+	// Restore seat elections.
+	for _, se := range gs.SeatElections {
+		k.SetSeatElection(ctx, se)
+	}
+	for _, v := range gs.SeatElectionVotes {
+		k.SetSeatElectionVote(ctx, v)
+	}
+	if gs.NextSeatElectionNumber > 0 {
+		k.SetNextSeatElectionID(ctx, gs.NextSeatElectionNumber)
+	}
 }
 
 // ExportGenesis exports the module's current state as a genesis state.
@@ -551,5 +562,8 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) *types.GenesisState {
 		NextLipNumber:          k.GetNextLIPNumber(ctx),
 		UpgradePlans:           upgradePlans,
 		ResearchFundGovernance: k.GetResearchFundGovernanceState(ctx),
+		SeatElections:          k.GetAllSeatElections(ctx),
+		SeatElectionVotes:      k.GetAllSeatElectionVotes(ctx),
+		NextSeatElectionNumber: k.GetNextSeatElectionID(ctx),
 	}
 }

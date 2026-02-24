@@ -32,6 +32,9 @@ func NewTxCmd() *cobra.Command {
 		NewSubmitResearchSpendCmd(),
 		NewVoteResearchSpendCmd(),
 		NewSetResearchVotersCmd(),
+		NewNominateSeatElectionCmd(),
+		NewAcceptSeatNominationCmd(),
+		NewVoteSeatElectionCmd(),
 	)
 
 	return txCmd
@@ -257,6 +260,100 @@ func NewSetResearchVotersCmd() *cobra.Command {
 		},
 	}
 
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewNominateSeatElectionCmd creates a CLI command for MsgNominateSeatElection.
+func NewNominateSeatElectionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "nominate-research-seat",
+		Short: "Nominate a candidate for a research fund community seat",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			candidate, _ := cmd.Flags().GetString("candidate")
+			seatIndex, _ := cmd.Flags().GetUint32("seat-index")
+			statement, _ := cmd.Flags().GetString("statement")
+
+			msg := &types.MsgNominateSeatElection{
+				Proposer:  clientCtx.GetFromAddress().String(),
+				Candidate: candidate,
+				SeatIndex: seatIndex,
+				Statement: statement,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().String("candidate", "", "Candidate bech32 address")
+	cmd.Flags().Uint32("seat-index", 0, "Seat index (0 for Phase 1; 0-2 for Phase 2)")
+	cmd.Flags().String("statement", "", "Candidate's governance statement (max 2000 chars)")
+	_ = cmd.MarkFlagRequired("candidate")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewAcceptSeatNominationCmd creates a CLI command for MsgAcceptSeatNomination.
+func NewAcceptSeatNominationCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "accept-research-nomination",
+		Short: "Accept a pending seat election nomination",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			proposalID, _ := cmd.Flags().GetUint64("proposal-id")
+
+			msg := &types.MsgAcceptSeatNomination{
+				Candidate:  clientCtx.GetFromAddress().String(),
+				ProposalId: proposalID,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().Uint64("proposal-id", 0, "Seat election proposal ID")
+	_ = cmd.MarkFlagRequired("proposal-id")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewVoteSeatElectionCmd creates a CLI command for MsgVoteSeatElection.
+func NewVoteSeatElectionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "vote-seat-election",
+		Short: "Cast a vote on a seat election",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			proposalID, _ := cmd.Flags().GetUint64("proposal-id")
+			option, _ := cmd.Flags().GetString("option")
+
+			msg := &types.MsgVoteSeatElection{
+				Voter:      clientCtx.GetFromAddress().String(),
+				ProposalId: proposalID,
+				Option:     option,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().Uint64("proposal-id", 0, "Seat election proposal ID")
+	cmd.Flags().String("option", "", "Vote option: yes, no, abstain")
+	_ = cmd.MarkFlagRequired("proposal-id")
+	_ = cmd.MarkFlagRequired("option")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
