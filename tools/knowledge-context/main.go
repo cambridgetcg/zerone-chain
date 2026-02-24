@@ -244,6 +244,13 @@ func formatXML(facts []Fact, query string) string {
 		if len(f.References) > 0 {
 			b.WriteString(fmt.Sprintf("    <references>%s</references>\n", strings.Join(f.References, ",")))
 		}
+		// Include typed relations if available
+		if rels, err := fetchFactRelations(f.ID, "outgoing"); err == nil && len(rels) > 0 {
+			for _, rel := range rels {
+				rt := humanRelationType(rel.Relation)
+				b.WriteString(fmt.Sprintf("    <%s>%s</%s>\n", rt, rel.TargetFactId, rt))
+			}
+		}
 		b.WriteString("  </fact>\n")
 	}
 
@@ -259,15 +266,24 @@ func formatXML(facts []Fact, query string) string {
 }
 
 func formatJSON(facts []Fact) string {
+	type relationsOut struct {
+		Supports    []string `json:"supports,omitempty"`
+		Contradicts []string `json:"contradicts,omitempty"`
+		Requires    []string `json:"requires,omitempty"`
+		Refines     []string `json:"refines,omitempty"`
+		Generalizes []string `json:"generalizes,omitempty"`
+		Supersedes  []string `json:"supersedes,omitempty"`
+	}
 	type factOut struct {
-		ID            string   `json:"id"`
-		Domain        string   `json:"domain"`
-		Content       string   `json:"content"`
-		ConfidencePct float64  `json:"confidence_pct"`
-		Status        string   `json:"status"`
-		Category      string   `json:"category"`
-		ClaimType     string   `json:"claim_type"`
-		References    []string `json:"references,omitempty"`
+		ID            string        `json:"id"`
+		Domain        string        `json:"domain"`
+		Content       string        `json:"content"`
+		ConfidencePct float64       `json:"confidence_pct"`
+		Status        string        `json:"status"`
+		Category      string        `json:"category"`
+		ClaimType     string        `json:"claim_type"`
+		References    []string      `json:"references,omitempty"`
+		Relations     *relationsOut `json:"relations,omitempty"`
 	}
 	type output struct {
 		Source    string    `json:"source"`
@@ -286,7 +302,7 @@ func formatJSON(facts []Fact) string {
 		if status == "" {
 			status = f.Status
 		}
-		o.Facts = append(o.Facts, factOut{
+		fo := factOut{
 			ID:            f.ID,
 			Domain:        f.Domain,
 			Content:       f.Content,
@@ -295,7 +311,30 @@ func formatJSON(facts []Fact) string {
 			Category:      f.Category,
 			ClaimType:     humanClaimType(f.ClaimType),
 			References:    f.References,
-		})
+		}
+		// Fetch and group typed relations
+		if rels, err := fetchFactRelations(f.ID, "outgoing"); err == nil && len(rels) > 0 {
+			ro := &relationsOut{}
+			for _, rel := range rels {
+				rt := humanRelationType(rel.Relation)
+				switch rt {
+				case "supports":
+					ro.Supports = append(ro.Supports, rel.TargetFactId)
+				case "contradicts":
+					ro.Contradicts = append(ro.Contradicts, rel.TargetFactId)
+				case "requires":
+					ro.Requires = append(ro.Requires, rel.TargetFactId)
+				case "refines":
+					ro.Refines = append(ro.Refines, rel.TargetFactId)
+				case "generalizes":
+					ro.Generalizes = append(ro.Generalizes, rel.TargetFactId)
+				case "supersedes":
+					ro.Supersedes = append(ro.Supersedes, rel.TargetFactId)
+				}
+			}
+			fo.Relations = ro
+		}
+		o.Facts = append(o.Facts, fo)
 	}
 	data, _ := json.MarshalIndent(o, "", "  ")
 	return string(data)
@@ -393,6 +432,114 @@ func domainsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(domains)
 }
 
+func graphHandler(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	factID := q.Get("fact_id")
+	if factID == "" {
+		http.Error(w, `{"error": "fact_id is required"}`, http.StatusBadRequest)
+		return
+	}
+
+	maxDepth := 2
+	if d := q.Get("depth"); d != "" {
+		if v, err := strconv.Atoi(d); err == nil && v > 0 {
+			maxDepth = v
+		}
+	}
+	if maxDepth > 5 {
+		maxDepth = 5
+	}
+
+	// Parse relation filter
+	relationFilter := make(map[string]bool)
+	if rf := q.Get("relation"); rf != "" {
+		for _, r := range strings.Split(rf, ",") {
+			relationFilter[strings.TrimSpace(r)] = true
+		}
+	}
+
+	type graphNode struct {
+		Fact      *Fact          `json:"fact"`
+		Relations []FactRelation `json:"relations,omitempty"`
+	}
+
+	visited := make(map[string]bool)
+	var nodes []graphNode
+
+	// BFS traversal
+	queue := []struct {
+		id    string
+		depth int
+	}{{factID, 0}}
+
+	for len(queue) > 0 {
+		item := queue[0]
+		queue = queue[1:]
+
+		if visited[item.id] || item.depth > maxDepth {
+			continue
+		}
+		visited[item.id] = true
+
+		// Fetch fact
+		resp, err := http.Get(fmt.Sprintf("%s/zerone/knowledge/v1/facts/%s", *nodeURL, item.id))
+		if err != nil {
+			continue
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		var factResp struct {
+			Fact Fact `json:"fact"`
+		}
+		if json.Unmarshal(body, &factResp) != nil {
+			continue
+		}
+
+		// Fetch relations
+		rels, _ := fetchFactRelations(item.id, "both")
+
+		// Filter relations if specified
+		var filteredRels []FactRelation
+		for _, rel := range rels {
+			rt := humanRelationType(rel.Relation)
+			if len(relationFilter) == 0 || relationFilter[rt] {
+				filteredRels = append(filteredRels, rel)
+			}
+		}
+
+		nodes = append(nodes, graphNode{Fact: &factResp.Fact, Relations: filteredRels})
+
+		// Enqueue connected facts for deeper traversal
+		if item.depth < maxDepth {
+			for _, rel := range filteredRels {
+				if rel.TargetFactId != item.id {
+					queue = append(queue, struct {
+						id    string
+						depth int
+					}{rel.TargetFactId, item.depth + 1})
+				}
+				if rel.SourceFactId != item.id {
+					queue = append(queue, struct {
+						id    string
+						depth int
+					}{rel.SourceFactId, item.depth + 1})
+				}
+			}
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("X-Node-Count", strconv.Itoa(len(nodes)))
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"root_fact_id": factID,
+		"depth":        maxDepth,
+		"node_count":   len(nodes),
+		"nodes":        nodes,
+	})
+}
+
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	// Check node connectivity
 	_, err := fetchFacts()
@@ -409,12 +556,14 @@ func main() {
 
 	http.HandleFunc("/context", contextHandler)
 	http.HandleFunc("/domains", domainsHandler)
+	http.HandleFunc("/graph", graphHandler)
 	http.HandleFunc("/health", healthHandler)
 
 	addr := fmt.Sprintf(":%d", *port)
 	log.Printf("Knowledge context server starting on %s (node: %s)", addr, *nodeURL)
 	log.Printf("Endpoints:")
 	log.Printf("  GET /context?domains=physics,math&min_confidence=50&format=xml&query=...")
+	log.Printf("  GET /graph?fact_id=abc123&depth=2&relation=supports,requires")
 	log.Printf("  GET /domains")
 	log.Printf("  GET /health")
 	log.Fatal(http.ListenAndServe(addr, nil))

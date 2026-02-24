@@ -33,7 +33,7 @@ func DefaultParams() Params {
 		// ─── Claim validation ─────────────────────────────────────────────────
 		MinClaimTextLength: 20,
 		MaxClaimTextLength: 1_000,
-		MinClaimStake:      "1000000", // 1 ZRN in uzrn
+		MinClaimStake:      "100000", // 0.1 ZRN in uzrn (becomes non-refundable review fee in R19-6)
 
 		// ─── Adversarial verification ─────────────────────────────────────────
 		AdversarialVerificationEnabled: true,

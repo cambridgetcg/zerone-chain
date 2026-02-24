@@ -31,7 +31,7 @@ string min_review_fee = X;  // Minimum non-refundable fee for claim submission (
 In `x/knowledge/types/genesis.go`, update defaults:
 
 ```go
-MinReviewFee: "1000000",  // 1 ZRN — non-refundable review fee
+MinReviewFee: "100000",  // 0.1 ZRN — non-refundable review fee
 ```
 
 Keep `min_challenge_stake` as-is — challenges are a different mechanism (stake is still at-risk for the challenger).
@@ -244,7 +244,7 @@ In genesis defaults:
 InvalidClaimSlashBps: 220_000,  // no longer needed
 
 // Rename:
-MinReviewFee: "1000000",  // 1 ZRN non-refundable review fee (was MinClaimStake)
+MinReviewFee: "100000",  // 0.1 ZRN non-refundable review fee (was MinClaimStake)
 ```
 
 Add validation:
