@@ -148,6 +148,8 @@ message Fact {
   repeated FactRelation outgoing_relations = 25;  // Relations this fact declares
   repeated FactRelation incoming_relations = 26;  // Relations pointing to this fact
   ClaimStructure structure = 27;  // Machine-readable decomposition (optional)
+  string canonical_form      = 28;  // Machine-readable normalized form
+  string canonical_hash      = 29;  // SHA-256 of canonical_form for dedup
 }
 
 // Claim is an unverified submission awaiting or undergoing verification.
@@ -169,6 +171,8 @@ message Claim {
   ClaimType claim_type          = 15;
   repeated ClaimRelation relations = 16;  // Typed relationships to existing facts
   ClaimStructure structure = 17;  // Machine-readable decomposition (optional)
+  string canonical_form      = 18;  // Machine-readable normalized form
+  string canonical_hash      = 19;  // SHA-256 of canonical_form for dedup
 }
 
 // VerificationRound tracks one commit-reveal verification cycle.
