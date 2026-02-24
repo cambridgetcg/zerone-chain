@@ -56,6 +56,44 @@ enum Verdict {
   VERDICT_MALFORMED    = 4; // Claim is not truth-apt (paradox, category error, nonsense)
 }
 
+// ClaimType classifies the epistemic shape of a knowledge claim.
+// Agents use this to filter and prioritize facts for prompt injection.
+enum ClaimType {
+  CLAIM_TYPE_UNSPECIFIED = 0;  // Legacy/untyped — treated as assertion
+  CLAIM_TYPE_ASSERTION   = 1;  // "X is true" — direct factual statement
+  CLAIM_TYPE_RELATION    = 2;  // "X relates to Y via Z" — graph edge
+  CLAIM_TYPE_DEFINITION  = 3;  // "X means Y" — term/concept definition
+  CLAIM_TYPE_CONSTRAINT  = 4;  // "X must/cannot Y" — rule or boundary
+  CLAIM_TYPE_NEGATION    = 5;  // "X is NOT true" — explicit falsity marker
+  CLAIM_TYPE_OBSERVATION = 6;  // "X was observed at time/place" — empirical data point
+}
+
+// RelationType defines how one fact relates to another.
+enum RelationType {
+  RELATION_TYPE_UNSPECIFIED  = 0;
+  RELATION_TYPE_SUPPORTS     = 1;  // This fact provides evidence for the target
+  RELATION_TYPE_CONTRADICTS  = 2;  // This fact conflicts with the target
+  RELATION_TYPE_REQUIRES     = 3;  // This fact depends on the target being true
+  RELATION_TYPE_REFINES      = 4;  // This fact is a more precise version of the target
+  RELATION_TYPE_GENERALIZES  = 5;  // This fact is a broader version of the target
+  RELATION_TYPE_SUPERSEDES   = 6;  // This fact replaces the target (newer/better)
+}
+
+// FactRelation is a typed, directional edge in the knowledge graph.
+message FactRelation {
+  string source_fact_id   = 1;  // The fact declaring the relationship
+  string target_fact_id   = 2;  // The fact being referenced
+  RelationType relation   = 3;  // How source relates to target
+  uint64 created_at_block = 4;
+  string creator          = 5;  // Address that declared this relation
+}
+
+// ClaimRelation declares a typed relationship from a claim to an existing fact.
+message ClaimRelation {
+  string target_fact_id = 1;
+  RelationType relation = 2;
+}
+
 // DomainStatus tracks whether an epistemic domain is active or proposed.
 enum DomainStatus {
   DOMAIN_STATUS_UNSPECIFIED = 0;
@@ -93,6 +131,9 @@ message Fact {
   string stratum               = 21;
   string maturity              = 22; // "emerging", "established", "canonical"
   uint64 incoming_citation_count = 23;
+  ClaimType claim_type = 24;
+  repeated FactRelation outgoing_relations = 25;  // Relations this fact declares
+  repeated FactRelation incoming_relations = 26;  // Relations pointing to this fact
 }
 
 // Claim is an unverified submission awaiting or undergoing verification.
@@ -111,6 +152,8 @@ message Claim {
   uint64 challenge_window_end  = 12;
   string provisional_fact_id   = 13;
   string content_hash          = 14; // SHA-256 of fact_content for duplicate detection
+  ClaimType claim_type          = 15;
+  repeated ClaimRelation relations = 16;  // Typed relationships to existing facts
 }
 
 // VerificationRound tracks one commit-reveal verification cycle.

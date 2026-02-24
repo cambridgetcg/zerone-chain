@@ -473,6 +473,67 @@ func (k Keeper) GetActiveRounds(ctx context.Context) []*types.VerificationRound 
 	return rounds
 }
 
+// ─── Fact Relation CRUD ──────────────────────────────────────────────────────
+
+// SetFactRelation stores a fact relation with dual-write (forward + reverse index).
+func (k Keeper) SetFactRelation(ctx context.Context, rel *types.FactRelation) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(rel)
+	if err != nil {
+		return fmt.Errorf("failed to marshal fact relation: %w", err)
+	}
+	// Forward index: source → target
+	if err := store.Set(types.FactRelationKey(rel.SourceFactId, rel.TargetFactId), bz); err != nil {
+		return err
+	}
+	// Reverse index: target → source
+	return store.Set(types.FactRelationReverseKey(rel.TargetFactId, rel.SourceFactId), bz)
+}
+
+// GetFactRelations returns all outgoing relations from a fact.
+func (k Keeper) GetFactRelations(ctx context.Context, factID string) ([]*types.FactRelation, error) {
+	return k.iterateRelationsWithPrefix(ctx, types.FactRelationsBySourcePrefix(factID))
+}
+
+// GetIncomingRelations returns all incoming relations pointing to a fact.
+func (k Keeper) GetIncomingRelations(ctx context.Context, factID string) ([]*types.FactRelation, error) {
+	return k.iterateRelationsWithPrefix(ctx, types.FactRelationsByTargetPrefix(factID))
+}
+
+// GetRelationsByType returns outgoing relations from a fact filtered by type.
+func (k Keeper) GetRelationsByType(ctx context.Context, factID string, relType types.RelationType) ([]*types.FactRelation, error) {
+	all, err := k.GetFactRelations(ctx, factID)
+	if err != nil {
+		return nil, err
+	}
+	var filtered []*types.FactRelation
+	for _, rel := range all {
+		if rel.Relation == relType {
+			filtered = append(filtered, rel)
+		}
+	}
+	return filtered, nil
+}
+
+func (k Keeper) iterateRelationsWithPrefix(ctx context.Context, pfx []byte) ([]*types.FactRelation, error) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(pfx, prefixEndBytes(pfx))
+	if err != nil {
+		return nil, err
+	}
+	defer iter.Close()
+
+	var relations []*types.FactRelation
+	for ; iter.Valid(); iter.Next() {
+		var rel types.FactRelation
+		if err := proto.Unmarshal(iter.Value(), &rel); err != nil {
+			continue
+		}
+		relations = append(relations, &rel)
+	}
+	return relations, nil
+}
+
 // ─── Store helpers ───────────────────────────────────────────────────────────
 
 func activeRoundKey(roundID string) []byte {

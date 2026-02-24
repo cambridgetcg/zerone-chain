@@ -31,6 +31,7 @@ const (
 	Query_Domains_FullMethodName           = "/zerone.knowledge.v1.Query/Domains"
 	Query_FactConfidence_FullMethodName    = "/zerone.knowledge.v1.Query/FactConfidence"
 	Query_FactCitationCount_FullMethodName = "/zerone.knowledge.v1.Query/FactCitationCount"
+	Query_FactRelations_FullMethodName     = "/zerone.knowledge.v1.Query/FactRelations"
 )
 
 // QueryClient is the client API for Query service.
@@ -63,6 +64,8 @@ type QueryClient interface {
 	FactConfidence(ctx context.Context, in *QueryFactConfidenceRequest, opts ...grpc.CallOption) (*QueryFactConfidenceResponse, error)
 	// FactCitationCount queries the citation count of a fact.
 	FactCitationCount(ctx context.Context, in *QueryFactCitationCountRequest, opts ...grpc.CallOption) (*QueryFactCitationCountResponse, error)
+	// FactRelations queries typed relations for a fact (knowledge graph edges).
+	FactRelations(ctx context.Context, in *QueryFactRelationsRequest, opts ...grpc.CallOption) (*QueryFactRelationsResponse, error)
 }
 
 type queryClient struct {
@@ -193,6 +196,16 @@ func (c *queryClient) FactCitationCount(ctx context.Context, in *QueryFactCitati
 	return out, nil
 }
 
+func (c *queryClient) FactRelations(ctx context.Context, in *QueryFactRelationsRequest, opts ...grpc.CallOption) (*QueryFactRelationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactRelationsResponse)
+	err := c.cc.Invoke(ctx, Query_FactRelations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -223,6 +236,8 @@ type QueryServer interface {
 	FactConfidence(context.Context, *QueryFactConfidenceRequest) (*QueryFactConfidenceResponse, error)
 	// FactCitationCount queries the citation count of a fact.
 	FactCitationCount(context.Context, *QueryFactCitationCountRequest) (*QueryFactCitationCountResponse, error)
+	// FactRelations queries typed relations for a fact (knowledge graph edges).
+	FactRelations(context.Context, *QueryFactRelationsRequest) (*QueryFactRelationsResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -268,6 +283,9 @@ func (UnimplementedQueryServer) FactConfidence(context.Context, *QueryFactConfid
 }
 func (UnimplementedQueryServer) FactCitationCount(context.Context, *QueryFactCitationCountRequest) (*QueryFactCitationCountResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FactCitationCount not implemented")
+}
+func (UnimplementedQueryServer) FactRelations(context.Context, *QueryFactRelationsRequest) (*QueryFactRelationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactRelations not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -506,6 +524,24 @@ func _Query_FactCitationCount_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_FactRelations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactRelationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactRelations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactRelations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactRelations(ctx, req.(*QueryFactRelationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -560,6 +596,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FactCitationCount",
 			Handler:    _Query_FactCitationCount_Handler,
+		},
+		{
+			MethodName: "FactRelations",
+			Handler:    _Query_FactRelations_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

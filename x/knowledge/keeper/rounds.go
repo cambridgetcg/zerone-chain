@@ -203,6 +203,7 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		References:        claim.References,
 		Status:            types.FactStatus_FACT_STATUS_VERIFIED,
 		ClaimId:           claim.Id,
+		ClaimType:         claim.ClaimType,
 	}
 
 	// Apply stratum confidence ceiling if ontology keeper is available
@@ -219,6 +220,27 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 
 	if err := k.SetFact(ctx, fact); err != nil {
 		return err
+	}
+
+	// Convert claim relations to fact relations and store in graph index
+	for _, claimRel := range claim.Relations {
+		factRel := &types.FactRelation{
+			SourceFactId:   factID,
+			TargetFactId:   claimRel.TargetFactId,
+			Relation:       claimRel.Relation,
+			CreatedAtBlock: height,
+			Creator:        claim.Submitter,
+		}
+		if err := k.SetFactRelation(ctx, factRel); err != nil {
+			return fmt.Errorf("failed to store fact relation: %w", err)
+		}
+
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.fact_relation_created",
+			sdk.NewAttribute("source", factRel.SourceFactId),
+			sdk.NewAttribute("target", factRel.TargetFactId),
+			sdk.NewAttribute("relation", factRel.Relation.String()),
+		))
 	}
 
 	// Create vesting schedule via vesting_rewards keeper

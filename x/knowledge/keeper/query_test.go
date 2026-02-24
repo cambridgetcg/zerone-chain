@@ -394,3 +394,61 @@ func TestQuery_FactCitationCount_EmptyID(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "required")
 }
+
+// ─── ClaimType Filter Query ─────────────────────────────────────────────────
+
+func TestQuery_Facts_FilterByClaimType(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	// Create facts with different claim types
+	assertionFact := &types.Fact{
+		Id:        "qfct-assertion",
+		Content:   "Water freezes at zero degrees Celsius",
+		Domain:    "physics",
+		Category:  "empirical",
+		Status:    types.FactStatus_FACT_STATUS_VERIFIED,
+		ClaimType: types.ClaimType_CLAIM_TYPE_ASSERTION,
+	}
+	definitionFact := &types.Fact{
+		Id:        "qfct-definition",
+		Content:   "Entropy means the measure of disorder in a system",
+		Domain:    "physics",
+		Category:  "empirical",
+		Status:    types.FactStatus_FACT_STATUS_VERIFIED,
+		ClaimType: types.ClaimType_CLAIM_TYPE_DEFINITION,
+	}
+	constraintFact := &types.Fact{
+		Id:        "qfct-constraint",
+		Content:   "Energy must be conserved in all physical processes",
+		Domain:    "physics",
+		Category:  "empirical",
+		Status:    types.FactStatus_FACT_STATUS_VERIFIED,
+		ClaimType: types.ClaimType_CLAIM_TYPE_CONSTRAINT,
+	}
+	require.NoError(t, k.SetFact(ctx, assertionFact))
+	require.NoError(t, k.SetFact(ctx, definitionFact))
+	require.NoError(t, k.SetFact(ctx, constraintFact))
+
+	// Filter by DEFINITION — should return only the definition fact
+	resp, err := qs.Facts(ctx, &types.QueryFactsRequest{
+		ClaimType: types.ClaimType_CLAIM_TYPE_DEFINITION,
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Facts, 1)
+	require.Equal(t, "qfct-definition", resp.Facts[0].Id)
+	require.Equal(t, types.ClaimType_CLAIM_TYPE_DEFINITION, resp.Facts[0].ClaimType)
+
+	// Filter by ASSERTION — should return only the assertion fact
+	resp, err = qs.Facts(ctx, &types.QueryFactsRequest{
+		ClaimType: types.ClaimType_CLAIM_TYPE_ASSERTION,
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Facts, 1)
+	require.Equal(t, "qfct-assertion", resp.Facts[0].Id)
+
+	// No filter (UNSPECIFIED) — should return all 3
+	resp, err = qs.Facts(ctx, &types.QueryFactsRequest{})
+	require.NoError(t, err)
+	require.Len(t, resp.Facts, 3)
+}

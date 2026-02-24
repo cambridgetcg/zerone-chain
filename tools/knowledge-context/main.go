@@ -42,6 +42,19 @@ type Fact struct {
 	Stratum    string   `json:"stratum,omitempty"`
 	References []string `json:"references,omitempty"`
 	ClaimID    string   `json:"claim_id,omitempty"`
+	ClaimType  string   `json:"claim_type,omitempty"`
+}
+
+type FactRelation struct {
+	SourceFactId   string `json:"source_fact_id"`
+	TargetFactId   string `json:"target_fact_id"`
+	Relation       string `json:"relation"`
+	CreatedAtBlock string `json:"created_at_block"`
+	Creator        string `json:"creator"`
+}
+
+type FactRelationsResponse struct {
+	Relations []FactRelation `json:"relations"`
 }
 
 type FactsResponse struct {
@@ -101,6 +114,39 @@ func fetchFacts() ([]Fact, error) {
 	return fr.Facts, nil
 }
 
+// relationTypeToHuman maps protobuf enum names to short human-readable strings.
+var relationTypeToHuman = map[string]string{
+	"RELATION_TYPE_UNSPECIFIED": "unspecified",
+	"RELATION_TYPE_SUPPORTS":   "supports",
+	"RELATION_TYPE_CONTRADICTS": "contradicts",
+	"RELATION_TYPE_REQUIRES":   "requires",
+	"RELATION_TYPE_REFINES":    "refines",
+	"RELATION_TYPE_GENERALIZES": "generalizes",
+	"RELATION_TYPE_SUPERSEDES": "supersedes",
+}
+
+func humanRelationType(rt string) string {
+	if h, ok := relationTypeToHuman[rt]; ok {
+		return h
+	}
+	return rt
+}
+
+func fetchFactRelations(factID, direction string) ([]FactRelation, error) {
+	url := fmt.Sprintf("%s/zerone/knowledge/v1/facts/%s/relations?direction=%s", *nodeURL, factID, direction)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("node unreachable: %w", err)
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	var fr FactRelationsResponse
+	if err := json.Unmarshal(body, &fr); err != nil {
+		return nil, fmt.Errorf("bad response: %w", err)
+	}
+	return fr.Relations, nil
+}
+
 func fetchDomains() ([]Domain, error) {
 	resp, err := http.Get(*nodeURL + "/zerone/knowledge/v1/domains")
 	if err != nil {
@@ -115,7 +161,28 @@ func fetchDomains() ([]Domain, error) {
 
 // ─── Filtering ───────────────────────────────────────────────────────────────
 
-func filterFacts(facts []Fact, domains map[string]bool, minConf float64, includeChallenged bool) []Fact {
+// claimTypeToHuman maps protobuf enum names to short human-readable strings.
+var claimTypeToHuman = map[string]string{
+	"CLAIM_TYPE_UNSPECIFIED": "assertion",
+	"CLAIM_TYPE_ASSERTION":  "assertion",
+	"CLAIM_TYPE_RELATION":   "relation",
+	"CLAIM_TYPE_DEFINITION": "definition",
+	"CLAIM_TYPE_CONSTRAINT": "constraint",
+	"CLAIM_TYPE_NEGATION":   "negation",
+	"CLAIM_TYPE_OBSERVATION": "observation",
+}
+
+func humanClaimType(ct string) string {
+	if h, ok := claimTypeToHuman[ct]; ok {
+		return h
+	}
+	if ct == "" || ct == "0" {
+		return "assertion"
+	}
+	return ct
+}
+
+func filterFacts(facts []Fact, domains map[string]bool, minConf float64, includeChallenged bool, claimTypes map[string]bool) []Fact {
 	allowed := trustedStatuses
 	if includeChallenged {
 		allowed = allNonTerminalStatuses
@@ -131,6 +198,9 @@ func filterFacts(facts []Fact, domains map[string]bool, minConf float64, include
 			continue
 		}
 		if len(domains) > 0 && !domains[f.Domain] {
+			continue
+		}
+		if len(claimTypes) > 0 && !claimTypes[humanClaimType(f.ClaimType)] {
 			continue
 		}
 		out = append(out, f)
@@ -167,8 +237,9 @@ func formatXML(facts []Fact, query string) string {
 			status = f.Status
 		}
 		conf := parseConfidence(f.Confidence)
-		b.WriteString(fmt.Sprintf("  <fact id=\"%s\" domain=\"%s\" confidence=\"%.1f%%\" status=\"%s\" category=\"%s\">\n",
-			f.ID, f.Domain, conf, status, f.Category))
+		ct := humanClaimType(f.ClaimType)
+		b.WriteString(fmt.Sprintf("  <fact id=\"%s\" domain=\"%s\" confidence=\"%.1f%%\" status=\"%s\" category=\"%s\" type=\"%s\">\n",
+			f.ID, f.Domain, conf, status, f.Category, ct))
 		b.WriteString(fmt.Sprintf("    %s\n", f.Content))
 		if len(f.References) > 0 {
 			b.WriteString(fmt.Sprintf("    <references>%s</references>\n", strings.Join(f.References, ",")))
@@ -195,6 +266,7 @@ func formatJSON(facts []Fact) string {
 		ConfidencePct float64  `json:"confidence_pct"`
 		Status        string   `json:"status"`
 		Category      string   `json:"category"`
+		ClaimType     string   `json:"claim_type"`
 		References    []string `json:"references,omitempty"`
 	}
 	type output struct {
@@ -221,6 +293,7 @@ func formatJSON(facts []Fact) string {
 			ConfidencePct: parseConfidence(f.Confidence),
 			Status:        status,
 			Category:      f.Category,
+			ClaimType:     humanClaimType(f.ClaimType),
 			References:    f.References,
 		})
 	}
@@ -266,6 +339,14 @@ func contextHandler(w http.ResponseWriter, r *http.Request) {
 	// Include challenged facts?
 	includeChallenged := q.Get("include_challenged") == "true" || q.Get("include_challenged") == "1"
 
+	// Parse claim type filter
+	claimTypes := make(map[string]bool)
+	if t := q.Get("type"); t != "" {
+		for _, ct := range strings.Split(t, ",") {
+			claimTypes[strings.TrimSpace(ct)] = true
+		}
+	}
+
 	// Format
 	format := q.Get("format")
 	if format == "" {
@@ -282,7 +363,7 @@ func contextHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filtered := filterFacts(facts, domains, minConf, includeChallenged)
+	filtered := filterFacts(facts, domains, minConf, includeChallenged, claimTypes)
 
 	// Format response
 	var body string

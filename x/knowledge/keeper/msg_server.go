@@ -59,6 +59,16 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		return nil, fmt.Errorf("stake %s below minimum %s", msg.Stake, params.MinClaimStake)
 	}
 
+	// Validate typed relations — target facts must exist
+	for _, rel := range msg.Relations {
+		if rel.Relation == types.RelationType_RELATION_TYPE_UNSPECIFIED {
+			return nil, fmt.Errorf("relation type must be specified")
+		}
+		if _, found := m.keeper.GetFact(ctx, rel.TargetFactId); !found {
+			return nil, fmt.Errorf("relation target fact %s not found", rel.TargetFactId)
+		}
+	}
+
 	// Check content hash dedup
 	contentHash := ComputeClaimContentHash(msg.FactContent, msg.Domain)
 	if existingID, exists := m.keeper.GetClaimByContentHash(ctx, contentHash); exists {
@@ -80,6 +90,12 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 	// Generate claim ID
 	claimID := GenerateClaimID(msg.Submitter, contentHash, height)
 
+	// Default unspecified to assertion (backward compat)
+	claimType := msg.ClaimType
+	if claimType == types.ClaimType_CLAIM_TYPE_UNSPECIFIED {
+		claimType = types.ClaimType_CLAIM_TYPE_ASSERTION
+	}
+
 	claim := &types.Claim{
 		Id:               claimID,
 		FactContent:      msg.FactContent,
@@ -92,10 +108,24 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		Stake:            msg.Stake,
 		PartnershipId:    msg.PartnershipId,
 		ContentHash:      contentHash,
+		ClaimType:        claimType,
+		Relations:        msg.Relations,
 	}
 
 	if err := m.keeper.SetClaim(ctx, claim); err != nil {
 		return nil, err
+	}
+
+	// Contradiction detection: auto-mark target facts as CONTESTED
+	for _, rel := range msg.Relations {
+		if rel.Relation == types.RelationType_RELATION_TYPE_CONTRADICTS {
+			targetFact, found := m.keeper.GetFact(ctx, rel.TargetFactId)
+			if found && (targetFact.Status == types.FactStatus_FACT_STATUS_VERIFIED ||
+				targetFact.Status == types.FactStatus_FACT_STATUS_ACTIVE) {
+				targetFact.Status = types.FactStatus_FACT_STATUS_CONTESTED
+				_ = m.keeper.SetFact(ctx, targetFact)
+			}
+		}
 	}
 
 	// Create verification round
@@ -110,6 +140,7 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 			sdk.NewAttribute("domain", msg.Domain),
 			sdk.NewAttribute("stake", msg.Stake),
 			sdk.NewAttribute("content_hash", contentHash),
+			sdk.NewAttribute("claim_type", claimType.String()),
 		),
 	)
 

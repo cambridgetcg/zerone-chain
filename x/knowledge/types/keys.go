@@ -70,6 +70,10 @@ var (
 
 	// ─── Partnership citation stats ──────────────────────────────────────────
 	PartnershipCitationStatsPrefix = []byte{0x2c}
+
+	// ─── Semantic relations (knowledge graph edges) ──────────────────────────
+	FactRelationPrefix        = []byte{0x30} // 0x30 | source_fact_id / target_fact_id → FactRelation
+	FactRelationReversePrefix = []byte{0x31} // 0x31 | target_fact_id / source_fact_id → FactRelation (reverse index)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -116,4 +120,30 @@ func FactByDomainKey(domain, factID string) []byte {
 	key := append(append([]byte{}, DomainFactIndexPrefix...), []byte(domain)...)
 	key = append(key, '/')
 	return append(key, []byte(factID)...)
+}
+
+// FactRelationKey returns the forward index key for a fact relation.
+func FactRelationKey(sourceFactID, targetFactID string) []byte {
+	key := append(append([]byte{}, FactRelationPrefix...), []byte(sourceFactID)...)
+	key = append(key, '/')
+	return append(key, []byte(targetFactID)...)
+}
+
+// FactRelationReverseKey returns the reverse index key for a fact relation.
+func FactRelationReverseKey(targetFactID, sourceFactID string) []byte {
+	key := append(append([]byte{}, FactRelationReversePrefix...), []byte(targetFactID)...)
+	key = append(key, '/')
+	return append(key, []byte(sourceFactID)...)
+}
+
+// FactRelationsBySourcePrefix returns the prefix for iterating all relations from a source fact.
+func FactRelationsBySourcePrefix(sourceFactID string) []byte {
+	key := append(append([]byte{}, FactRelationPrefix...), []byte(sourceFactID)...)
+	return append(key, '/')
+}
+
+// FactRelationsByTargetPrefix returns the prefix for iterating all relations to a target fact.
+func FactRelationsByTargetPrefix(targetFactID string) []byte {
+	key := append(append([]byte{}, FactRelationReversePrefix...), []byte(targetFactID)...)
+	return append(key, '/')
 }

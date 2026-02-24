@@ -69,6 +69,11 @@ service Query {
   rpc FactCitationCount(QueryFactCitationCountRequest) returns (QueryFactCitationCountResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/facts/{id}/citations";
   }
+
+  // FactRelations queries typed relations for a fact (knowledge graph edges).
+  rpc FactRelations(QueryFactRelationsRequest) returns (QueryFactRelationsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts/{fact_id}/relations";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -92,6 +97,7 @@ message QueryFactsRequest {
   string   status     = 2;
   string   category   = 3;
   cosmos.base.query.v1beta1.PageRequest pagination = 4;
+  ClaimType claim_type = 5; // Optional filter by claim type
 }
 
 message QueryFactsResponse {
@@ -175,4 +181,14 @@ message QueryFactCitationCountRequest {
 
 message QueryFactCitationCountResponse {
   uint64 count = 1;
+}
+
+message QueryFactRelationsRequest {
+  string fact_id           = 1;
+  RelationType relation    = 2;  // Optional: filter by type (0 = all)
+  string direction         = 3;  // "outgoing", "incoming", or "both" (default: "both")
+}
+
+message QueryFactRelationsResponse {
+  repeated FactRelation relations = 1;
 }

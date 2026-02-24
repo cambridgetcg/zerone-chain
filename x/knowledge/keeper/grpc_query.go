@@ -46,7 +46,7 @@ func (q *queryServer) Facts(ctx context.Context, req *types.QueryFactsRequest) (
 		q.keeper.IterateFactsByDomain(ctx, req.Domain, func(factID string) bool {
 			fact, found := q.keeper.GetFact(ctx, factID)
 			if found {
-				if matchesFactFilters(fact, req.Status, req.Category) {
+				if matchesFactFilters(fact, req.Status, req.Category, req.ClaimType) {
 					facts = append(facts, fact)
 				}
 			}
@@ -54,7 +54,7 @@ func (q *queryServer) Facts(ctx context.Context, req *types.QueryFactsRequest) (
 		})
 	} else {
 		q.keeper.IterateFacts(ctx, func(fact *types.Fact) bool {
-			if matchesFactFilters(fact, req.Status, req.Category) {
+			if matchesFactFilters(fact, req.Status, req.Category, req.ClaimType) {
 				facts = append(facts, fact)
 			}
 			return false
@@ -175,8 +175,55 @@ func (q *queryServer) FactCitationCount(ctx context.Context, req *types.QueryFac
 	}, nil
 }
 
-// matchesFactFilters checks if a fact passes optional status and category filters.
-func matchesFactFilters(fact *types.Fact, statusFilter, categoryFilter string) bool {
+func (q *queryServer) FactRelations(ctx context.Context, req *types.QueryFactRelationsRequest) (*types.QueryFactRelationsResponse, error) {
+	if req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id is required")
+	}
+
+	// Verify fact exists
+	if _, found := q.keeper.GetFact(ctx, req.FactId); !found {
+		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.FactId)
+	}
+
+	direction := req.Direction
+	if direction == "" {
+		direction = "both"
+	}
+
+	var relations []*types.FactRelation
+
+	if direction == "outgoing" || direction == "both" {
+		outgoing, err := q.keeper.GetFactRelations(ctx, req.FactId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		relations = append(relations, outgoing...)
+	}
+
+	if direction == "incoming" || direction == "both" {
+		incoming, err := q.keeper.GetIncomingRelations(ctx, req.FactId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		relations = append(relations, incoming...)
+	}
+
+	// Apply optional type filter
+	if req.Relation != types.RelationType_RELATION_TYPE_UNSPECIFIED {
+		var filtered []*types.FactRelation
+		for _, rel := range relations {
+			if rel.Relation == req.Relation {
+				filtered = append(filtered, rel)
+			}
+		}
+		relations = filtered
+	}
+
+	return &types.QueryFactRelationsResponse{Relations: relations}, nil
+}
+
+// matchesFactFilters checks if a fact passes optional status, category, and claim type filters.
+func matchesFactFilters(fact *types.Fact, statusFilter, categoryFilter string, claimTypeFilter types.ClaimType) bool {
 	if statusFilter != "" {
 		if fact.Status.String() != statusFilter {
 			return false
@@ -184,6 +231,11 @@ func matchesFactFilters(fact *types.Fact, statusFilter, categoryFilter string) b
 	}
 	if categoryFilter != "" {
 		if fact.Category != categoryFilter {
+			return false
+		}
+	}
+	if claimTypeFilter != types.ClaimType_CLAIM_TYPE_UNSPECIFIED {
+		if fact.ClaimType != claimTypeFilter {
 			return false
 		}
 	}

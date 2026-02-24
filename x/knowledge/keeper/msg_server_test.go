@@ -793,3 +793,109 @@ func TestMsgServer_UpdateExtendedParams_Unauthorized(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unauthorized")
 }
+
+// ─── ClaimType Tests ────────────────────────────────────────────────────────
+
+func TestMsgServer_SubmitClaim_DefaultType(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	submitter := makeValidBech32Addr("submitter1")
+
+	// Submit without specifying claim_type (should default to ASSERTION)
+	resp, err := ms.SubmitClaim(ctx, &types.MsgSubmitClaim{
+		Submitter:   submitter,
+		FactContent: "Untyped claim defaults to assertion type",
+		Domain:      "physics",
+		Category:    "empirical",
+		Stake:       "1000000",
+	})
+	require.NoError(t, err)
+
+	claim, found := k.GetClaim(ctx, resp.ClaimId)
+	require.True(t, found)
+	require.Equal(t, types.ClaimType_CLAIM_TYPE_ASSERTION, claim.ClaimType)
+}
+
+func TestMsgServer_SubmitClaim_ExplicitType(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	submitter := makeValidBech32Addr("submitter1")
+
+	testCases := []struct {
+		name      string
+		claimType types.ClaimType
+		content   string
+	}{
+		{"assertion", types.ClaimType_CLAIM_TYPE_ASSERTION, "Water freezes at zero degrees Celsius"},
+		{"relation", types.ClaimType_CLAIM_TYPE_RELATION, "Thermodynamics relates to statistical mechanics via entropy"},
+		{"definition", types.ClaimType_CLAIM_TYPE_DEFINITION, "Entropy means the measure of disorder in a system"},
+		{"constraint", types.ClaimType_CLAIM_TYPE_CONSTRAINT, "Energy must be conserved in all physical processes"},
+		{"negation", types.ClaimType_CLAIM_TYPE_NEGATION, "Perpetual motion machines are NOT possible"},
+		{"observation", types.ClaimType_CLAIM_TYPE_OBSERVATION, "BTC was observed at fifty thousand on 2026-01-01"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := ms.SubmitClaim(ctx, &types.MsgSubmitClaim{
+				Submitter:   submitter,
+				FactContent: tc.content,
+				Domain:      "physics",
+				Category:    "empirical",
+				Stake:       "1000000",
+				ClaimType:   tc.claimType,
+			})
+			require.NoError(t, err)
+
+			claim, found := k.GetClaim(ctx, resp.ClaimId)
+			require.True(t, found)
+			require.Equal(t, tc.claimType, claim.ClaimType)
+		})
+	}
+}
+
+func TestMsgServer_CreateFactFromClaim_PropagatesType(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	submitter := makeValidBech32Addr("submitter1")
+
+	// Submit a definition-typed claim
+	resp, err := ms.SubmitClaim(ctx, &types.MsgSubmitClaim{
+		Submitter:   submitter,
+		FactContent: "Entropy means the measure of disorder in a thermodynamic system",
+		Domain:      "physics",
+		Category:    "empirical",
+		Stake:       "1000000",
+		ClaimType:   types.ClaimType_CLAIM_TYPE_DEFINITION,
+	})
+	require.NoError(t, err)
+
+	claim, found := k.GetClaim(ctx, resp.ClaimId)
+	require.True(t, found)
+	require.Equal(t, types.ClaimType_CLAIM_TYPE_DEFINITION, claim.ClaimType)
+
+	// Get the verification round
+	round, found := k.GetVerificationRound(ctx, claim.VerificationRoundId)
+	require.True(t, found)
+
+	// Complete the round with ACCEPT verdict
+	err = k.CompleteRound(ctx, round, &keeper.VerificationResult{
+		Verdict:    types.Verdict_VERDICT_ACCEPT,
+		Confidence: 800_000,
+	})
+	require.NoError(t, err)
+
+	// Find the fact created from this claim
+	var createdFact *types.Fact
+	k.IterateFacts(ctx, func(fact *types.Fact) bool {
+		if fact.ClaimId == claim.Id {
+			createdFact = fact
+			return true
+		}
+		return false
+	})
+	require.NotNil(t, createdFact, "expected a fact to be created from the accepted claim")
+	require.Equal(t, types.ClaimType_CLAIM_TYPE_DEFINITION, createdFact.ClaimType)
+}

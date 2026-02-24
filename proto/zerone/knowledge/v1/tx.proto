@@ -4,6 +4,7 @@ package zerone.knowledge.v1;
 option go_package = "github.com/zerone-chain/zerone/x/knowledge/types";
 
 import "cosmos/msg/v1/msg.proto";
+import "zerone/knowledge/v1/types.proto";
 import "zerone/knowledge/v1/genesis.proto";
 
 // Msg defines the knowledge module's transaction service.
@@ -88,6 +89,10 @@ message MsgSubmitClaim {
   string          stake         = 5; // uzrn amount
   repeated string references    = 6; // fact IDs cited
   string          partnership_id = 7;
+  ClaimType       claim_type    = 8; // Optional — defaults to ASSERTION if unset
+  // Typed relationships to existing facts.
+  // Replaces untyped `references` for new claims (references kept for backward compat).
+  repeated ClaimRelation relations = 9;
 }
 
 message MsgSubmitClaimResponse {
