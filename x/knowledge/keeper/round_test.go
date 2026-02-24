@@ -560,8 +560,7 @@ func TestCompleteRound_AcceptCreatesFactAndReturnsStake(t *testing.T) {
 	})
 	require.True(t, factFound, "accepted claim should create a fact")
 
-	// Note: returnClaimStake calls sdk.AccAddressFromBech32 which requires
-	// valid bech32 addresses; test submitter "zrn1sub" doesn't have checksum
+	// Review fee is non-refundable (R19-6) — no stake return on accept.
 	_ = bk
 }
 
@@ -592,9 +591,8 @@ func TestCompleteRound_RejectSlashesStake(t *testing.T) {
 	updatedClaim, _ := k.GetClaim(ctx, "claim-reject")
 	require.Equal(t, types.ClaimStatus_CLAIM_STATUS_REJECTED, updatedClaim.Status)
 
-	// Bank should send coins (slash to development fund or return remainder)
-	require.True(t, len(bk.sendCalls) > 0,
-		"rejected claim should trigger send to development fund or return remainder")
+	// Review fee is non-refundable (R19-6) — no bank calls expected on rejection
+	_ = bk // bank keeper not used for rejection anymore
 }
 
 func TestCompleteRound_Inconclusive(t *testing.T) {

@@ -102,7 +102,7 @@ func TestParamsValidate_AllSlashCombinations(t *testing.T) {
 		{"WrongVerificationSlashBps=0", func(p *types.Params) { p.WrongVerificationSlashBps = 0 }},
 		{"MissedRevealSlashBps=0", func(p *types.Params) { p.MissedRevealSlashBps = 0 }},
 		{"EquivocationSlashBps=0", func(p *types.Params) { p.EquivocationSlashBps = 0 }},
-		{"InvalidClaimSlashBps=0", func(p *types.Params) { p.InvalidClaimSlashBps = 0 }},
+		// InvalidClaimSlashBps=0 no longer fails validation (R19-6: deprecated)
 	}
 
 	for _, sf := range slashFields {
@@ -148,7 +148,7 @@ func TestDefaultParams_ClaimValidation(t *testing.T) {
 	p := types.DefaultParams()
 
 	require.Equal(t, uint64(20), p.MinClaimTextLength)
-	require.Equal(t, uint64(10_000), p.MaxClaimTextLength)
+	require.Equal(t, uint64(1_000), p.MaxClaimTextLength)
 	require.Equal(t, "100000", p.MinReviewFee)
 }
 

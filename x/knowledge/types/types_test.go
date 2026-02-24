@@ -19,8 +19,7 @@ func TestDefaultParams_AllSlashParamsNonZero(t *testing.T) {
 		"missed_reveal_slash_bps must be > 0")
 	require.Greater(t, p.EquivocationSlashBps, uint64(0),
 		"equivocation_slash_bps must be > 0")
-	require.Greater(t, p.InvalidClaimSlashBps, uint64(0),
-		"invalid_claim_slash_bps must be > 0")
+	// InvalidClaimSlashBps deprecated (R19-6): review fee is non-refundable
 }
 
 // TestDefaultParams_Validate verifies that DefaultParams passes all validation rules.

@@ -88,12 +88,11 @@ func (k Keeper) AdvanceRoundPhases(ctx context.Context) error {
 				if err := k.SetVerificationRound(ctx, round); err != nil {
 					continue
 				}
-				// Return claim stake
+				// Review fee is non-refundable — mark claim as insufficient
 				claim, found := k.GetClaim(ctx, round.ClaimId)
 				if found {
 					claim.Status = types.ClaimStatus_CLAIM_STATUS_INSUFFICIENT
 					_ = k.SetClaim(ctx, claim)
-					_ = k.returnClaimStake(ctx, claim)
 				}
 				sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 					"zerone.knowledge.round_expired",

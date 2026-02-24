@@ -90,7 +90,7 @@ func TestMsgServer_SubmitClaim_StakeBelowMinimum(t *testing.T) {
 		Submitter:   makeValidBech32Addr("submitter1"),
 		FactContent: "This claim has stake below the minimum",
 		Domain:      "physics",
-		Stake:       "100", // below MinClaimStake of 1000000
+		Stake:       "100", // below MinReviewFee of 100000
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "below minimum")
@@ -107,7 +107,7 @@ func TestMsgServer_SubmitClaim_InvalidStake(t *testing.T) {
 		Stake:       "not_a_number",
 	})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "invalid stake")
+	require.Contains(t, err.Error(), "invalid review fee")
 }
 
 func TestMsgServer_SubmitClaim_ZeroStake(t *testing.T) {

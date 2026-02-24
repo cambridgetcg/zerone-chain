@@ -56,7 +56,7 @@ func TestScenario10_AllModulesDefaultGenesisValid(t *testing.T) {
 	require.Greater(t, p.WrongVerificationSlashBps, uint64(0))
 	require.Greater(t, p.MissedRevealSlashBps, uint64(0))
 	require.Greater(t, p.EquivocationSlashBps, uint64(0))
-	require.Greater(t, p.InvalidClaimSlashBps, uint64(0))
+	// InvalidClaimSlashBps deprecated (R19-6): review fee is non-refundable
 
 	// Verify BPS values on 1M scale
 	require.LessOrEqual(t, p.InitialConfidence, uint64(1_000_000))

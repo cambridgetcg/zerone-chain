@@ -629,15 +629,8 @@ func TestMalformedSlash_SubmitterPenalized(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, types.ClaimStatus_CLAIM_STATUS_MALFORMED, updatedClaim.Status)
 
-	// Verify slashed stake was routed to development fund (50% of 1,000,000 = 500,000)
-	var devFundSend *sendRecord
-	for i, s := range bk.sendCalls {
-		if s.to == "development_fund" {
-			devFundSend = &bk.sendCalls[i]
-		}
-	}
-	require.NotNil(t, devFundSend, "malformed claim stake must be slashed to development fund")
-	require.Equal(t, "knowledge", devFundSend.from)
+	// Review fee is non-refundable (R19-6) — no slashing on malformed claims
+	_ = bk // bank keeper not used for malformed claim slashing anymore
 
 	// No fact should be created
 	var factFound bool

@@ -54,7 +54,8 @@ func TestSlashParams_ExactDefaultValues(t *testing.T) {
 	require.Equal(t, uint64(50_000), p.WrongVerificationSlashBps, "wrong verification = 5%")
 	require.Equal(t, uint64(100_000), p.MissedRevealSlashBps, "missed reveal = 10%")
 	require.Equal(t, uint64(200_000), p.EquivocationSlashBps, "equivocation = 20%")
-	require.Equal(t, uint64(220_000), p.InvalidClaimSlashBps, "invalid claim = 22%")
+	// InvalidClaimSlashBps deprecated (R19-6): review fee is non-refundable
+	require.Equal(t, uint64(0), p.InvalidClaimSlashBps, "invalid claim slash deprecated")
 }
 
 func TestSlashParams_NonZeroInDefault(t *testing.T) {
@@ -64,7 +65,7 @@ func TestSlashParams_NonZeroInDefault(t *testing.T) {
 	require.Greater(t, p.WrongVerificationSlashBps, uint64(0))
 	require.Greater(t, p.MissedRevealSlashBps, uint64(0))
 	require.Greater(t, p.EquivocationSlashBps, uint64(0))
-	require.Greater(t, p.InvalidClaimSlashBps, uint64(0))
+	// InvalidClaimSlashBps deprecated (R19-6): no longer required > 0
 }
 
 func TestSlashParams_CannotSetToZero(t *testing.T) {
@@ -76,7 +77,7 @@ func TestSlashParams_CannotSetToZero(t *testing.T) {
 		{"WrongVerification=0", func(p *types.Params) { p.WrongVerificationSlashBps = 0 }},
 		{"MissedReveal=0", func(p *types.Params) { p.MissedRevealSlashBps = 0 }},
 		{"Equivocation=0", func(p *types.Params) { p.EquivocationSlashBps = 0 }},
-		{"InvalidClaim=0", func(p *types.Params) { p.InvalidClaimSlashBps = 0 }},
+		// InvalidClaim=0 no longer fails validation (R19-6: deprecated)
 	}
 
 	for _, tc := range tests {
@@ -246,6 +247,5 @@ func TestSlashOrdering_WrongLessThanMissedLessThanEquivocation(t *testing.T) {
 		"wrong verification slash should be less than missed reveal")
 	require.Less(t, p.MissedRevealSlashBps, p.EquivocationSlashBps,
 		"missed reveal slash should be less than equivocation")
-	require.Less(t, p.EquivocationSlashBps, p.InvalidClaimSlashBps,
-		"equivocation slash should be less than invalid claim")
+	// InvalidClaimSlashBps ordering check removed (R19-6: deprecated)
 }
