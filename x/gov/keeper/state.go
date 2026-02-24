@@ -305,6 +305,34 @@ func (k Keeper) IncrementProposalsExecuted(ctx sdk.Context) {
 	k.SetResearchFundGovernanceState(ctx, state)
 }
 
+// ---------- Distinct Voter Tracking ----------
+
+// RecordDistinctVoter records a unique governance participant. Append-only:
+// once a voter is recorded, they are counted forever.
+func (k Keeper) RecordDistinctVoter(ctx sdk.Context, voter string) {
+	store := ctx.KVStore(k.storeKey)
+	key := types.DistinctVoterKey(voter)
+	if store.Has(key) {
+		return
+	}
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, uint64(ctx.BlockHeight()))
+	store.Set(key, bz)
+}
+
+// CountDistinctVoters iterates the distinct voter prefix and counts entries.
+func (k Keeper) CountDistinctVoters(ctx sdk.Context) uint64 {
+	store := ctx.KVStore(k.storeKey)
+	iter := storetypes.KVStorePrefixIterator(store, types.DistinctVoterKeyPrefix)
+	defer iter.Close()
+
+	var count uint64
+	for ; iter.Valid(); iter.Next() {
+		count++
+	}
+	return count
+}
+
 // ---------- Genesis ----------
 
 // InitGenesis initializes the module's state from a genesis state.

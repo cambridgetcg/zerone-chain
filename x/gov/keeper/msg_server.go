@@ -258,6 +258,9 @@ func (ms *msgServer) CastVote(goCtx context.Context, msg *types.MsgCastVote) (*t
 	}
 	ms.SetVote(ctx, vote)
 
+	// Track distinct governance participants for phase exit conditions.
+	ms.RecordDistinctVoter(ctx, msg.Voter)
+
 	// Accumulate tally.
 	switch msg.Option {
 	case types.VoteYes:

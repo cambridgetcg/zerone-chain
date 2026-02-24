@@ -1723,3 +1723,38 @@ func TestIncrementProposalsExecuted(t *testing.T) {
 		t.Errorf("expected 2, got %d", state.ProposalsExecutedInPhase)
 	}
 }
+
+// ---------- Distinct Voter Tracking Tests ----------
+
+func TestDistinctVoterTracking_RecordAndCount(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	// Initially zero.
+	count := k.CountDistinctVoters(ctx)
+	if count != 0 {
+		t.Errorf("expected 0 distinct voters, got %d", count)
+	}
+
+	// Record three distinct voters.
+	k.RecordDistinctVoter(ctx, testAddr("alice"))
+	k.RecordDistinctVoter(ctx, testAddr("bob"))
+	k.RecordDistinctVoter(ctx, testAddr("charlie"))
+
+	count = k.CountDistinctVoters(ctx)
+	if count != 3 {
+		t.Errorf("expected 3 distinct voters, got %d", count)
+	}
+}
+
+func TestDistinctVoterTracking_Deduplication(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	// Record same voter twice.
+	k.RecordDistinctVoter(ctx, testAddr("alice"))
+	k.RecordDistinctVoter(ctx, testAddr("alice"))
+
+	count := k.CountDistinctVoters(ctx)
+	if count != 1 {
+		t.Errorf("expected 1 (deduped), got %d", count)
+	}
+}
