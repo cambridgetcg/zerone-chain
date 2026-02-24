@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -1766,5 +1767,78 @@ func TestGetResearchFundBalance_NilBankKeeper(t *testing.T) {
 	balance := k.GetResearchFundBalance(ctx)
 	if !balance.IsZero() {
 		t.Errorf("expected zero balance with nil bank keeper, got %s", balance)
+	}
+}
+
+// ---------- Mock Emergency Keeper ----------
+
+type mockEmergencyKeeper struct {
+	halts map[string]uint64
+}
+
+func (m *mockEmergencyKeeper) CountHaltsForReason(_ context.Context, reason string) uint64 {
+	if m.halts != nil {
+		return m.halts[reason]
+	}
+	return 0
+}
+
+// ---------- Phase Exit Condition Tests ----------
+
+func TestCheckPhaseExitConditions_GenesisPair_NotMet(t *testing.T) {
+	k, ctx, mockSK := setupWithStaking(t, "1000000000000")
+
+	// Wire mocks.
+	mockSK.guardianCount = 5
+	mockEK := &mockEmergencyKeeper{halts: map[string]uint64{}}
+	k.SetEmergencyKeeper(mockEK)
+
+	// Record 10 distinct voters.
+	for i := 0; i < 10; i++ {
+		k.RecordDistinctVoter(ctx, testAddr(fmt.Sprintf("voter%d", i)))
+	}
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.DistinctLipVoters != 10 {
+		t.Errorf("expected 10 distinct voters, got %d", conditions.DistinctLipVoters)
+	}
+	if conditions.ActiveGuardians != 5 {
+		t.Errorf("expected 5 active guardians, got %d", conditions.ActiveGuardians)
+	}
+	if conditions.ChainAgeBlocks != 100 {
+		t.Errorf("expected chain age 100, got %d", conditions.ChainAgeBlocks)
+	}
+
+	// Should not be all met — chain age is only 100, needs 2,200,000.
+	if allMet {
+		t.Error("conditions should NOT all be met (chain age too low)")
+	}
+}
+
+func TestCheckPhaseExitConditions_NilKeepers(t *testing.T) {
+	k, ctx := setupKeeper(t) // nil staking and emergency keepers
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.ActiveGuardians != 0 {
+		t.Errorf("expected 0 guardians with nil keeper, got %d", conditions.ActiveGuardians)
+	}
+	if conditions.EmergencyHaltsFromMisuse != 0 {
+		t.Errorf("expected 0 halts with nil keeper, got %d", conditions.EmergencyHaltsFromMisuse)
+	}
+	if allMet {
+		t.Error("should not be met with nil keepers")
+	}
+}
+
+func TestCheckPhaseExitConditions_FullGovernance(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	k.SetResearchFundPhase(ctx, types.ResearchFundPhase_RESEARCH_FUND_PHASE_FULL_GOVERNANCE)
+
+	_, allMet := k.CheckPhaseExitConditions(ctx)
+	// Full governance has no exit conditions — allMet should be false (no transition possible).
+	if allMet {
+		t.Error("full governance should not have exit conditions met")
 	}
 }

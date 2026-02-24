@@ -453,3 +453,84 @@ func (k Keeper) GetResearchFundBalance(ctx sdk.Context) sdk.Coins {
 	}
 	return k.bankKeeper.GetAllBalances(ctx, authtypes.NewModuleAddress("research_fund"))
 }
+
+// --- Phase Exit Condition Checking ---
+
+// CheckPhaseExitConditions gathers live metrics and checks whether all
+// conditions to transition out of the current phase are met.
+func (k Keeper) CheckPhaseExitConditions(ctx sdk.Context) (*types.PhaseTransitionConditions, bool) {
+	state := k.GetResearchFundGovernanceState(ctx)
+
+	// Gather live metrics.
+	var activeGuardians uint64
+	if k.stakingKeeper != nil {
+		ag, err := k.stakingKeeper.CountActiveGuardians(ctx)
+		if err == nil {
+			activeGuardians = ag
+		}
+	}
+
+	var researchFundBalance string
+	balance := k.GetResearchFundBalance(ctx)
+	if uzrn := balance.AmountOf("uzrn"); !uzrn.IsZero() {
+		researchFundBalance = uzrn.String()
+	} else {
+		researchFundBalance = "0"
+	}
+
+	var emergencyHalts uint64
+	if k.emergencyKeeper != nil {
+		emergencyHalts = k.emergencyKeeper.CountHaltsForReason(ctx, "research_fund")
+	}
+
+	conditions := &types.PhaseTransitionConditions{
+		DistinctLipVoters:          k.CountDistinctVoters(ctx),
+		ActiveGuardians:            activeGuardians,
+		ResearchFundBalance:        researchFundBalance,
+		ChainAgeBlocks:             uint64(ctx.BlockHeight()),
+		ProposalsExecutedInPhase:   state.ProposalsExecutedInPhase,
+		CommunitySeatParticipation: k.CountCommunitySeatVotes(ctx, state),
+		EmergencyHaltsFromMisuse:   emergencyHalts,
+	}
+
+	// Check against exit conditions for current phase.
+	exitConditions, exists := types.DefaultPhaseExitConditions[state.CurrentPhase]
+	if !exists {
+		// Full governance or unspecified — no exit conditions.
+		return conditions, false
+	}
+
+	allMet := checkAllConditionsMet(conditions, &exitConditions)
+	return conditions, allMet
+}
+
+// checkAllConditionsMet compares actual conditions against required thresholds.
+func checkAllConditionsMet(actual *types.PhaseTransitionConditions, required *types.PhaseExitConditions) bool {
+	if actual.DistinctLipVoters < required.MinDistinctVoters {
+		return false
+	}
+	if actual.ActiveGuardians < required.MinActiveGuardians {
+		return false
+	}
+	if actual.ChainAgeBlocks < required.MinChainAgeBlocks {
+		return false
+	}
+	if actual.ProposalsExecutedInPhase < required.MinProposalsExecuted {
+		return false
+	}
+	if required.MinCommunitySeatVotes > 0 && actual.CommunitySeatParticipation < required.MinCommunitySeatVotes {
+		return false
+	}
+	if actual.EmergencyHaltsFromMisuse > required.MaxEmergencyHalts {
+		return false
+	}
+	// Balance check.
+	if required.MinResearchFundBalance != "" && required.MinResearchFundBalance != "0" {
+		actualBal, ok1 := new(big.Int).SetString(actual.ResearchFundBalance, 10)
+		requiredBal, ok2 := new(big.Int).SetString(required.MinResearchFundBalance, 10)
+		if !ok1 || !ok2 || actualBal.Cmp(requiredBal) < 0 {
+			return false
+		}
+	}
+	return true
+}
