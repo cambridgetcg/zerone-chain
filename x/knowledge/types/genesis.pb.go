@@ -41,14 +41,14 @@ type Params struct {
 	WrongVerificationSlashBps uint64 `protobuf:"varint,11,opt,name=wrong_verification_slash_bps,json=wrongVerificationSlashBps,proto3" json:"wrong_verification_slash_bps,omitempty"` // default: 50,000  (5%)
 	MissedRevealSlashBps      uint64 `protobuf:"varint,12,opt,name=missed_reveal_slash_bps,json=missedRevealSlashBps,proto3" json:"missed_reveal_slash_bps,omitempty"`                // default: 100,000 (10%)
 	EquivocationSlashBps      uint64 `protobuf:"varint,13,opt,name=equivocation_slash_bps,json=equivocationSlashBps,proto3" json:"equivocation_slash_bps,omitempty"`                  // default: 200,000 (20%)
-	InvalidClaimSlashBps      uint64 `protobuf:"varint,14,opt,name=invalid_claim_slash_bps,json=invalidClaimSlashBps,proto3" json:"invalid_claim_slash_bps,omitempty"`                // default: 220,000 (22%)
+	InvalidClaimSlashBps      uint64 `protobuf:"varint,14,opt,name=invalid_claim_slash_bps,json=invalidClaimSlashBps,proto3" json:"invalid_claim_slash_bps,omitempty"`                // DEPRECATED (R19-6): no longer used — review fee is non-refundable
 	// ─── Rewards ─────────────────────────────────────────────────────────────
 	VerificationReward         string `protobuf:"bytes,15,opt,name=verification_reward,json=verificationReward,proto3" json:"verification_reward,omitempty"`                              // default: "3000000" (3 ZRN in uzrn)
 	VerificationRewardDecayBps uint64 `protobuf:"varint,16,opt,name=verification_reward_decay_bps,json=verificationRewardDecayBps,proto3" json:"verification_reward_decay_bps,omitempty"` // default: 999,000 (0.999× per epoch)
 	// ─── Claim validation ────────────────────────────────────────────────────
 	MinClaimTextLength uint64 `protobuf:"varint,17,opt,name=min_claim_text_length,json=minClaimTextLength,proto3" json:"min_claim_text_length,omitempty"` // default: 20
 	MaxClaimTextLength uint64 `protobuf:"varint,18,opt,name=max_claim_text_length,json=maxClaimTextLength,proto3" json:"max_claim_text_length,omitempty"` // default: 10,000
-	MinClaimStake      string `protobuf:"bytes,19,opt,name=min_claim_stake,json=minClaimStake,proto3" json:"min_claim_stake,omitempty"`                   // default: "1000000" (1 ZRN in uzrn)
+	MinReviewFee       string `protobuf:"bytes,19,opt,name=min_review_fee,json=minReviewFee,proto3" json:"min_review_fee,omitempty"`                      // default: "100000" (0.1 ZRN) — non-refundable review fee
 	// ─── Adversarial verification ────────────────────────────────────────────
 	AdversarialVerificationEnabled bool   `protobuf:"varint,20,opt,name=adversarial_verification_enabled,json=adversarialVerificationEnabled,proto3" json:"adversarial_verification_enabled,omitempty"` // default: true
 	ProvisionalThreshold           uint64 `protobuf:"varint,21,opt,name=provisional_threshold,json=provisionalThreshold,proto3" json:"provisional_threshold,omitempty"`                                 // default: 500,000 (50%)
@@ -246,9 +246,9 @@ func (x *Params) GetMaxClaimTextLength() uint64 {
 	return 0
 }
 
-func (x *Params) GetMinClaimStake() string {
+func (x *Params) GetMinReviewFee() string {
 	if x != nil {
-		return x.MinClaimStake
+		return x.MinReviewFee
 	}
 	return ""
 }
@@ -551,7 +551,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x88\x16\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x86\x16\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -571,8 +571,8 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x13verification_reward\x18\x0f \x01(\tR\x12verificationReward\x12A\n" +
 	"\x1dverification_reward_decay_bps\x18\x10 \x01(\x04R\x1averificationRewardDecayBps\x121\n" +
 	"\x15min_claim_text_length\x18\x11 \x01(\x04R\x12minClaimTextLength\x121\n" +
-	"\x15max_claim_text_length\x18\x12 \x01(\x04R\x12maxClaimTextLength\x12&\n" +
-	"\x0fmin_claim_stake\x18\x13 \x01(\tR\rminClaimStake\x12H\n" +
+	"\x15max_claim_text_length\x18\x12 \x01(\x04R\x12maxClaimTextLength\x12$\n" +
+	"\x0emin_review_fee\x18\x13 \x01(\tR\fminReviewFee\x12H\n" +
 	" adversarial_verification_enabled\x18\x14 \x01(\bR\x1eadversarialVerificationEnabled\x123\n" +
 	"\x15provisional_threshold\x18\x15 \x01(\x04R\x14provisionalThreshold\x12)\n" +
 	"\x10reject_threshold\x18\x16 \x01(\x04R\x0frejectThreshold\x12:\n" +

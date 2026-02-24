@@ -604,6 +604,101 @@ func (x *ClaimRelation) GetRelation() RelationType {
 	return RelationType_RELATION_TYPE_UNSPECIFIED
 }
 
+// ClaimStructure provides machine-readable decomposition of a claim.
+// The full claim text (fact_content) remains the canonical human-readable form.
+// Structure is optional but strongly encouraged — agents prioritize structured facts.
+type ClaimStructure struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subject       string                 `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`                                  // What the claim is about: "entropy of a closed system"
+	Predicate     string                 `protobuf:"bytes,2,opt,name=predicate,proto3" json:"predicate,omitempty"`                              // What is being asserted: "cannot decrease spontaneously"
+	Object        string                 `protobuf:"bytes,3,opt,name=object,proto3" json:"object,omitempty"`                                    // Optional target: "second law of thermodynamics"
+	Scope         string                 `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`                                      // Conditions/context: "classical thermodynamics, isolated systems"
+	TemporalScope string                 `protobuf:"bytes,5,opt,name=temporal_scope,json=temporalScope,proto3" json:"temporal_scope,omitempty"` // Time bounds if any: "post-Big-Bang", "since 2024", "" for timeless
+	Negatable     bool                   `protobuf:"varint,6,opt,name=negatable,proto3" json:"negatable,omitempty"`                             // Can this claim be meaningfully negated? (false for definitions)
+	Tags          []string               `protobuf:"bytes,7,rep,name=tags,proto3" json:"tags,omitempty"`                                        // Free-form searchable tags: ["thermodynamics", "entropy", "physics"]
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimStructure) Reset() {
+	*x = ClaimStructure{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimStructure) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimStructure) ProtoMessage() {}
+
+func (x *ClaimStructure) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimStructure.ProtoReflect.Descriptor instead.
+func (*ClaimStructure) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ClaimStructure) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetPredicate() string {
+	if x != nil {
+		return x.Predicate
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetObject() string {
+	if x != nil {
+		return x.Object
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetTemporalScope() string {
+	if x != nil {
+		return x.TemporalScope
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetNegatable() bool {
+	if x != nil {
+		return x.Negatable
+	}
+	return false
+}
+
+func (x *ClaimStructure) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
 // Fact represents a piece of verified knowledge in the protocol.
 // Confidence is measured on a 0-1,000,000 BPS scale (1,000,000 = 100%).
 type Fact struct {
@@ -637,13 +732,14 @@ type Fact struct {
 	ClaimType             ClaimType       `protobuf:"varint,24,opt,name=claim_type,json=claimType,proto3,enum=zerone.knowledge.v1.ClaimType" json:"claim_type,omitempty"`
 	OutgoingRelations     []*FactRelation `protobuf:"bytes,25,rep,name=outgoing_relations,json=outgoingRelations,proto3" json:"outgoing_relations,omitempty"` // Relations this fact declares
 	IncomingRelations     []*FactRelation `protobuf:"bytes,26,rep,name=incoming_relations,json=incomingRelations,proto3" json:"incoming_relations,omitempty"` // Relations pointing to this fact
+	Structure             *ClaimStructure `protobuf:"bytes,27,opt,name=structure,proto3" json:"structure,omitempty"`                                          // Machine-readable decomposition (optional)
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Fact) Reset() {
 	*x = Fact{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -655,7 +751,7 @@ func (x *Fact) String() string {
 func (*Fact) ProtoMessage() {}
 
 func (x *Fact) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -668,7 +764,7 @@ func (x *Fact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Fact.ProtoReflect.Descriptor instead.
 func (*Fact) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Fact) GetId() string {
@@ -853,6 +949,13 @@ func (x *Fact) GetIncomingRelations() []*FactRelation {
 	return nil
 }
 
+func (x *Fact) GetStructure() *ClaimStructure {
+	if x != nil {
+		return x.Structure
+	}
+	return nil
+}
+
 // Claim is an unverified submission awaiting or undergoing verification.
 type Claim struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
@@ -872,13 +975,14 @@ type Claim struct {
 	ContentHash         string                 `protobuf:"bytes,14,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"` // SHA-256 of fact_content for duplicate detection
 	ClaimType           ClaimType              `protobuf:"varint,15,opt,name=claim_type,json=claimType,proto3,enum=zerone.knowledge.v1.ClaimType" json:"claim_type,omitempty"`
 	Relations           []*ClaimRelation       `protobuf:"bytes,16,rep,name=relations,proto3" json:"relations,omitempty"` // Typed relationships to existing facts
+	Structure           *ClaimStructure        `protobuf:"bytes,17,opt,name=structure,proto3" json:"structure,omitempty"` // Machine-readable decomposition (optional)
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Claim) Reset() {
 	*x = Claim{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -890,7 +994,7 @@ func (x *Claim) String() string {
 func (*Claim) ProtoMessage() {}
 
 func (x *Claim) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -903,7 +1007,7 @@ func (x *Claim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Claim.ProtoReflect.Descriptor instead.
 func (*Claim) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Claim) GetId() string {
@@ -1018,6 +1122,13 @@ func (x *Claim) GetRelations() []*ClaimRelation {
 	return nil
 }
 
+func (x *Claim) GetStructure() *ClaimStructure {
+	if x != nil {
+		return x.Structure
+	}
+	return nil
+}
+
 // VerificationRound tracks one commit-reveal verification cycle.
 type VerificationRound struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
@@ -1039,7 +1150,7 @@ type VerificationRound struct {
 
 func (x *VerificationRound) Reset() {
 	*x = VerificationRound{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1051,7 +1162,7 @@ func (x *VerificationRound) String() string {
 func (*VerificationRound) ProtoMessage() {}
 
 func (x *VerificationRound) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1064,7 +1175,7 @@ func (x *VerificationRound) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerificationRound.ProtoReflect.Descriptor instead.
 func (*VerificationRound) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *VerificationRound) GetId() string {
@@ -1163,7 +1274,7 @@ type CommitEntry struct {
 
 func (x *CommitEntry) Reset() {
 	*x = CommitEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1175,7 +1286,7 @@ func (x *CommitEntry) String() string {
 func (*CommitEntry) ProtoMessage() {}
 
 func (x *CommitEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1188,7 +1299,7 @@ func (x *CommitEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitEntry.ProtoReflect.Descriptor instead.
 func (*CommitEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CommitEntry) GetVerifier() string {
@@ -1225,7 +1336,7 @@ type RevealEntry struct {
 
 func (x *RevealEntry) Reset() {
 	*x = RevealEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1237,7 +1348,7 @@ func (x *RevealEntry) String() string {
 func (*RevealEntry) ProtoMessage() {}
 
 func (x *RevealEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1250,7 +1361,7 @@ func (x *RevealEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevealEntry.ProtoReflect.Descriptor instead.
 func (*RevealEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RevealEntry) GetVerifier() string {
@@ -1294,7 +1405,7 @@ type VRFProof struct {
 
 func (x *VRFProof) Reset() {
 	*x = VRFProof{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1306,7 +1417,7 @@ func (x *VRFProof) String() string {
 func (*VRFProof) ProtoMessage() {}
 
 func (x *VRFProof) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1319,7 +1430,7 @@ func (x *VRFProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VRFProof.ProtoReflect.Descriptor instead.
 func (*VRFProof) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *VRFProof) GetProof() []byte {
@@ -1367,7 +1478,7 @@ type Domain struct {
 
 func (x *Domain) Reset() {
 	*x = Domain{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1379,7 +1490,7 @@ func (x *Domain) String() string {
 func (*Domain) ProtoMessage() {}
 
 func (x *Domain) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1392,7 +1503,7 @@ func (x *Domain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Domain.ProtoReflect.Descriptor instead.
 func (*Domain) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *Domain) GetName() string {
@@ -1465,7 +1576,7 @@ type ValidatorInfo struct {
 
 func (x *ValidatorInfo) Reset() {
 	*x = ValidatorInfo{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1477,7 +1588,7 @@ func (x *ValidatorInfo) String() string {
 func (*ValidatorInfo) ProtoMessage() {}
 
 func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1490,7 +1601,7 @@ func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatorInfo.ProtoReflect.Descriptor instead.
 func (*ValidatorInfo) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ValidatorInfo) GetAddress() string {
@@ -1555,7 +1666,7 @@ type ProvisionalChallenge struct {
 
 func (x *ProvisionalChallenge) Reset() {
 	*x = ProvisionalChallenge{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1567,7 +1678,7 @@ func (x *ProvisionalChallenge) String() string {
 func (*ProvisionalChallenge) ProtoMessage() {}
 
 func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1580,7 +1691,7 @@ func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProvisionalChallenge.ProtoReflect.Descriptor instead.
 func (*ProvisionalChallenge) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ProvisionalChallenge) GetId() string {
@@ -1701,7 +1812,15 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\acreator\x18\x05 \x01(\tR\acreator\"t\n" +
 	"\rClaimRelation\x12$\n" +
 	"\x0etarget_fact_id\x18\x01 \x01(\tR\ftargetFactId\x12=\n" +
-	"\brelation\x18\x02 \x01(\x0e2!.zerone.knowledge.v1.RelationTypeR\brelation\"\xce\b\n" +
+	"\brelation\x18\x02 \x01(\x0e2!.zerone.knowledge.v1.RelationTypeR\brelation\"\xcf\x01\n" +
+	"\x0eClaimStructure\x12\x18\n" +
+	"\asubject\x18\x01 \x01(\tR\asubject\x12\x1c\n" +
+	"\tpredicate\x18\x02 \x01(\tR\tpredicate\x12\x16\n" +
+	"\x06object\x18\x03 \x01(\tR\x06object\x12\x14\n" +
+	"\x05scope\x18\x04 \x01(\tR\x05scope\x12%\n" +
+	"\x0etemporal_scope\x18\x05 \x01(\tR\rtemporalScope\x12\x1c\n" +
+	"\tnegatable\x18\x06 \x01(\bR\tnegatable\x12\x12\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\"\x91\t\n" +
 	"\x04Fact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
@@ -1734,7 +1853,8 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\n" +
 	"claim_type\x18\x18 \x01(\x0e2\x1e.zerone.knowledge.v1.ClaimTypeR\tclaimType\x12P\n" +
 	"\x12outgoing_relations\x18\x19 \x03(\v2!.zerone.knowledge.v1.FactRelationR\x11outgoingRelations\x12P\n" +
-	"\x12incoming_relations\x18\x1a \x03(\v2!.zerone.knowledge.v1.FactRelationR\x11incomingRelations\"\x8b\x05\n" +
+	"\x12incoming_relations\x18\x1a \x03(\v2!.zerone.knowledge.v1.FactRelationR\x11incomingRelations\x12A\n" +
+	"\tstructure\x18\x1b \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\"\xce\x05\n" +
 	"\x05Claim\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\ffact_content\x18\x02 \x01(\tR\vfactContent\x12\x16\n" +
@@ -1755,7 +1875,8 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\fcontent_hash\x18\x0e \x01(\tR\vcontentHash\x12=\n" +
 	"\n" +
 	"claim_type\x18\x0f \x01(\x0e2\x1e.zerone.knowledge.v1.ClaimTypeR\tclaimType\x12@\n" +
-	"\trelations\x18\x10 \x03(\v2\".zerone.knowledge.v1.ClaimRelationR\trelations\"\xaf\x04\n" +
+	"\trelations\x18\x10 \x03(\v2\".zerone.knowledge.v1.ClaimRelationR\trelations\x12A\n" +
+	"\tstructure\x18\x11 \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\"\xaf\x04\n" +
 	"\x11VerificationRound\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bclaim_id\x18\x02 \x01(\tR\aclaimId\x12(\n" +
@@ -1900,7 +2021,7 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),              // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),             // 1: zerone.knowledge.v1.ClaimStatus
@@ -1911,15 +2032,16 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(DomainStatus)(0),            // 6: zerone.knowledge.v1.DomainStatus
 	(*FactRelation)(nil),         // 7: zerone.knowledge.v1.FactRelation
 	(*ClaimRelation)(nil),        // 8: zerone.knowledge.v1.ClaimRelation
-	(*Fact)(nil),                 // 9: zerone.knowledge.v1.Fact
-	(*Claim)(nil),                // 10: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),    // 11: zerone.knowledge.v1.VerificationRound
-	(*CommitEntry)(nil),          // 12: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),          // 13: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),             // 14: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),               // 15: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),        // 16: zerone.knowledge.v1.ValidatorInfo
-	(*ProvisionalChallenge)(nil), // 17: zerone.knowledge.v1.ProvisionalChallenge
+	(*ClaimStructure)(nil),       // 9: zerone.knowledge.v1.ClaimStructure
+	(*Fact)(nil),                 // 10: zerone.knowledge.v1.Fact
+	(*Claim)(nil),                // 11: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),    // 12: zerone.knowledge.v1.VerificationRound
+	(*CommitEntry)(nil),          // 13: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),          // 14: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),             // 15: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),               // 16: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),        // 17: zerone.knowledge.v1.ValidatorInfo
+	(*ProvisionalChallenge)(nil), // 18: zerone.knowledge.v1.ProvisionalChallenge
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
@@ -1928,19 +2050,21 @@ var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	4,  // 3: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
 	7,  // 4: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
 	7,  // 5: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
-	1,  // 6: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
-	4,  // 7: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	8,  // 8: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
-	2,  // 9: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	12, // 10: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	13, // 11: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
-	3,  // 12: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
-	6,  // 13: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	9,  // 6: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	1,  // 7: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
+	4,  // 8: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
+	8,  // 9: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
+	9,  // 10: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	2,  // 11: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
+	13, // 12: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	14, // 13: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	3,  // 14: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
+	6,  // 15: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_types_proto_init() }
@@ -1954,7 +2078,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

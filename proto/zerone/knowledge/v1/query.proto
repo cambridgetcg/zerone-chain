@@ -74,6 +74,16 @@ service Query {
   rpc FactRelations(QueryFactRelationsRequest) returns (QueryFactRelationsResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/facts/{fact_id}/relations";
   }
+
+  // FactsBySubject queries facts by structured subject within a domain.
+  rpc FactsBySubject(QueryFactsBySubjectRequest) returns (QueryFactsBySubjectResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts_by_subject/{domain}/{subject}";
+  }
+
+  // FactsByTag queries facts by a searchable tag.
+  rpc FactsByTag(QueryFactsByTagRequest) returns (QueryFactsByTagResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts_by_tag/{tag}";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -191,4 +201,21 @@ message QueryFactRelationsRequest {
 
 message QueryFactRelationsResponse {
   repeated FactRelation relations = 1;
+}
+
+message QueryFactsBySubjectRequest {
+  string domain  = 1;
+  string subject = 2;
+}
+
+message QueryFactsBySubjectResponse {
+  repeated Fact facts = 1;
+}
+
+message QueryFactsByTagRequest {
+  string tag = 1;
+}
+
+message QueryFactsByTagResponse {
+  repeated Fact facts = 1;
 }

@@ -222,6 +222,48 @@ func (q *queryServer) FactRelations(ctx context.Context, req *types.QueryFactRel
 	return &types.QueryFactRelationsResponse{Relations: relations}, nil
 }
 
+func (q *queryServer) FactsBySubject(ctx context.Context, req *types.QueryFactsBySubjectRequest) (*types.QueryFactsBySubjectResponse, error) {
+	if req.Domain == "" {
+		return nil, status.Error(codes.InvalidArgument, "domain is required")
+	}
+	if req.Subject == "" {
+		return nil, status.Error(codes.InvalidArgument, "subject is required")
+	}
+
+	factID := q.keeper.FindFactBySubjectPredicate(ctx, req.Domain, req.Subject, "")
+	if factID == "" {
+		return &types.QueryFactsBySubjectResponse{}, nil
+	}
+
+	fact, found := q.keeper.GetFact(ctx, factID)
+	if !found {
+		return &types.QueryFactsBySubjectResponse{}, nil
+	}
+
+	return &types.QueryFactsBySubjectResponse{Facts: []*types.Fact{fact}}, nil
+}
+
+func (q *queryServer) FactsByTag(ctx context.Context, req *types.QueryFactsByTagRequest) (*types.QueryFactsByTagResponse, error) {
+	if req.Tag == "" {
+		return nil, status.Error(codes.InvalidArgument, "tag is required")
+	}
+
+	factIDs, err := q.keeper.FindFactsByTag(ctx, req.Tag)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	var facts []*types.Fact
+	for _, id := range factIDs {
+		fact, found := q.keeper.GetFact(ctx, id)
+		if found {
+			facts = append(facts, fact)
+		}
+	}
+
+	return &types.QueryFactsByTagResponse{Facts: facts}, nil
+}
+
 // matchesFactFilters checks if a fact passes optional status, category, and claim type filters.
 func matchesFactFilters(fact *types.Fact, statusFilter, categoryFilter string, claimTypeFilter types.ClaimType) bool {
 	if statusFilter != "" {

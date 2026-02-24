@@ -102,6 +102,19 @@ enum DomainStatus {
   DOMAIN_STATUS_PROPOSED    = 3;
 }
 
+// ClaimStructure provides machine-readable decomposition of a claim.
+// The full claim text (fact_content) remains the canonical human-readable form.
+// Structure is optional but strongly encouraged — agents prioritize structured facts.
+message ClaimStructure {
+  string subject           = 1;  // What the claim is about: "entropy of a closed system"
+  string predicate         = 2;  // What is being asserted: "cannot decrease spontaneously"
+  string object            = 3;  // Optional target: "second law of thermodynamics"
+  string scope             = 4;  // Conditions/context: "classical thermodynamics, isolated systems"
+  string temporal_scope    = 5;  // Time bounds if any: "post-Big-Bang", "since 2024", "" for timeless
+  bool   negatable         = 6;  // Can this claim be meaningfully negated? (false for definitions)
+  repeated string tags     = 7;  // Free-form searchable tags: ["thermodynamics", "entropy", "physics"]
+}
+
 // Fact represents a piece of verified knowledge in the protocol.
 // Confidence is measured on a 0-1,000,000 BPS scale (1,000,000 = 100%).
 message Fact {
@@ -134,6 +147,7 @@ message Fact {
   ClaimType claim_type = 24;
   repeated FactRelation outgoing_relations = 25;  // Relations this fact declares
   repeated FactRelation incoming_relations = 26;  // Relations pointing to this fact
+  ClaimStructure structure = 27;  // Machine-readable decomposition (optional)
 }
 
 // Claim is an unverified submission awaiting or undergoing verification.
@@ -154,6 +168,7 @@ message Claim {
   string content_hash          = 14; // SHA-256 of fact_content for duplicate detection
   ClaimType claim_type          = 15;
   repeated ClaimRelation relations = 16;  // Typed relationships to existing facts
+  ClaimStructure structure = 17;  // Machine-readable decomposition (optional)
 }
 
 // VerificationRound tracks one commit-reveal verification cycle.

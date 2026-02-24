@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 
@@ -532,6 +533,97 @@ func (k Keeper) iterateRelationsWithPrefix(ctx context.Context, pfx []byte) ([]*
 		relations = append(relations, &rel)
 	}
 	return relations, nil
+}
+
+// ─── Structured claim indexes ────────────────────────────────────────────────
+
+// normalizeSubject lowercases and trims a subject for consistent indexing.
+func normalizeSubject(subject string) string {
+	return strings.ToLower(strings.TrimSpace(subject))
+}
+
+// subjectHash returns a hex SHA-256 hash of the normalized subject for use as a store key.
+func subjectHash(subject string) string {
+	h := sha256.Sum256([]byte(normalizeSubject(subject)))
+	return hex.EncodeToString(h[:])
+}
+
+// IndexFactBySubject indexes a fact by its structured subject and tags.
+// Called after creating a fact from a claim that has structure.
+func (k Keeper) IndexFactBySubject(ctx context.Context, fact *types.Fact) error {
+	if fact.Structure == nil {
+		return nil
+	}
+	store := k.storeService.OpenKVStore(ctx)
+
+	// Subject index: domain/subject_hash → fact_id
+	if fact.Structure.Subject != "" {
+		key := types.FactSubjectKey(fact.Domain, subjectHash(fact.Structure.Subject))
+		if err := store.Set(key, []byte(fact.Id)); err != nil {
+			return err
+		}
+	}
+
+	// Tag index: tag/fact_id → 0x01
+	for _, tag := range fact.Structure.Tags {
+		normalized := strings.ToLower(strings.TrimSpace(tag))
+		if normalized == "" {
+			continue
+		}
+		key := types.FactTagKey(normalized, fact.Id)
+		if err := store.Set(key, []byte{0x01}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// FindFactBySubjectPredicate finds an existing fact with the same subject in a domain.
+// Returns the fact ID if found, empty string otherwise.
+// Note: only matches by subject hash (not predicate) since the index is subject-based.
+// Predicate matching is done by loading the fact and comparing.
+func (k Keeper) FindFactBySubjectPredicate(ctx context.Context, domain, subject, predicate string) string {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.FactSubjectKey(domain, subjectHash(subject))
+	bz, err := store.Get(key)
+	if err != nil || bz == nil {
+		return ""
+	}
+	factID := string(bz)
+
+	// If predicate matching is requested, verify the fact's predicate matches
+	if predicate != "" {
+		fact, found := k.GetFact(ctx, factID)
+		if !found || fact.Structure == nil {
+			return ""
+		}
+		if normalizeSubject(fact.Structure.Predicate) != normalizeSubject(predicate) {
+			return ""
+		}
+	}
+	return factID
+}
+
+// FindFactsByTag returns all fact IDs tagged with the given tag.
+func (k Keeper) FindFactsByTag(ctx context.Context, tag string) ([]string, error) {
+	normalized := strings.ToLower(strings.TrimSpace(tag))
+	if normalized == "" {
+		return nil, nil
+	}
+	store := k.storeService.OpenKVStore(ctx)
+	pfx := types.FactTagsByTagPrefix(normalized)
+	iter, err := store.Iterator(pfx, prefixEndBytes(pfx))
+	if err != nil {
+		return nil, err
+	}
+	defer iter.Close()
+
+	var factIDs []string
+	for ; iter.Valid(); iter.Next() {
+		factID := string(iter.Key()[len(pfx):])
+		factIDs = append(factIDs, factID)
+	}
+	return factIDs, nil
 }
 
 // ─── Store helpers ───────────────────────────────────────────────────────────

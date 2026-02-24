@@ -49,14 +49,14 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		}
 	}
 
-	// Validate stake
+	// Validate review fee
 	stakeAmt, ok := new(big.Int).SetString(msg.Stake, 10)
 	if !ok || stakeAmt.Sign() <= 0 {
-		return nil, fmt.Errorf("invalid stake amount: %s", msg.Stake)
+		return nil, fmt.Errorf("invalid review fee amount: %s", msg.Stake)
 	}
-	minStake, _ := new(big.Int).SetString(params.MinClaimStake, 10)
-	if minStake != nil && stakeAmt.Cmp(minStake) < 0 {
-		return nil, fmt.Errorf("stake %s below minimum %s", msg.Stake, params.MinClaimStake)
+	minFee, _ := new(big.Int).SetString(params.MinReviewFee, 10)
+	if minFee != nil && stakeAmt.Cmp(minFee) < 0 {
+		return nil, fmt.Errorf("review fee %s below minimum %s", msg.Stake, params.MinReviewFee)
 	}
 
 	// Validate typed relations — target facts must exist
@@ -69,10 +69,39 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		}
 	}
 
+	// Validate structure if provided
+	if msg.Structure != nil {
+		if msg.Structure.Subject == "" {
+			return nil, fmt.Errorf("claim structure: subject is required when structure is provided")
+		}
+		if msg.Structure.Predicate == "" {
+			return nil, fmt.Errorf("claim structure: predicate is required when structure is provided")
+		}
+		if len(msg.Structure.Tags) > 10 {
+			return nil, fmt.Errorf("claim structure: max 10 tags allowed")
+		}
+		for _, tag := range msg.Structure.Tags {
+			if len(tag) > 50 {
+				return nil, fmt.Errorf("claim structure: tag too long (max 50 chars): %s", tag)
+			}
+		}
+	}
+
 	// Check content hash dedup
 	contentHash := ComputeClaimContentHash(msg.FactContent, msg.Domain)
 	if existingID, exists := m.keeper.GetClaimByContentHash(ctx, contentHash); exists {
 		return nil, fmt.Errorf("duplicate claim: content hash matches existing claim %s", existingID)
+	}
+
+	// Subject-based dedup warning (structured claims only)
+	if msg.Structure != nil && msg.Structure.Subject != "" {
+		if existingFactID := m.keeper.FindFactBySubjectPredicate(ctx, msg.Domain, msg.Structure.Subject, msg.Structure.Predicate); existingFactID != "" {
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"zerone.knowledge.duplicate_subject_warning",
+				sdk.NewAttribute("existing_fact_id", existingFactID),
+				sdk.NewAttribute("subject", msg.Structure.Subject),
+			))
+		}
 	}
 
 	// Lock stake via BankKeeper
@@ -110,6 +139,7 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		ContentHash:      contentHash,
 		ClaimType:        claimType,
 		Relations:        msg.Relations,
+		Structure:        msg.Structure,
 	}
 
 	if err := m.keeper.SetClaim(ctx, claim); err != nil {

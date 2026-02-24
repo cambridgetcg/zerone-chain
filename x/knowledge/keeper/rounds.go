@@ -204,6 +204,7 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		Status:            types.FactStatus_FACT_STATUS_VERIFIED,
 		ClaimId:           claim.Id,
 		ClaimType:         claim.ClaimType,
+		Structure:         claim.Structure,
 	}
 
 	// Apply stratum confidence ceiling if ontology keeper is available
@@ -220,6 +221,13 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 
 	if err := k.SetFact(ctx, fact); err != nil {
 		return err
+	}
+
+	// Index fact by structured subject and tags
+	if fact.Structure != nil {
+		if err := k.IndexFactBySubject(ctx, fact); err != nil {
+			return fmt.Errorf("failed to index fact by subject: %w", err)
+		}
 	}
 
 	// Convert claim relations to fact relations and store in graph index

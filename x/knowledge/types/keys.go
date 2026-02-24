@@ -74,6 +74,10 @@ var (
 	// ─── Semantic relations (knowledge graph edges) ──────────────────────────
 	FactRelationPrefix        = []byte{0x30} // 0x30 | source_fact_id / target_fact_id → FactRelation
 	FactRelationReversePrefix = []byte{0x31} // 0x31 | target_fact_id / source_fact_id → FactRelation (reverse index)
+
+	// ─── Structured claim indexes ────────────────────────────────────────────
+	FactSubjectPrefix = []byte{0x32} // 0x32 | domain / subject_hash → fact_id
+	FactTagPrefix     = []byte{0x33} // 0x33 | tag / fact_id → []byte{1}
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -145,5 +149,26 @@ func FactRelationsBySourcePrefix(sourceFactID string) []byte {
 // FactRelationsByTargetPrefix returns the prefix for iterating all relations to a target fact.
 func FactRelationsByTargetPrefix(targetFactID string) []byte {
 	key := append(append([]byte{}, FactRelationReversePrefix...), []byte(targetFactID)...)
+	return append(key, '/')
+}
+
+// FactSubjectKey returns the index key for a fact's subject within a domain.
+// Subject is stored as a SHA-256 hash to normalize and bound key length.
+func FactSubjectKey(domain, subjectHash string) []byte {
+	key := append(append([]byte{}, FactSubjectPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(subjectHash)...)
+}
+
+// FactTagKey returns the index key for a fact tagged with a given tag.
+func FactTagKey(tag, factID string) []byte {
+	key := append(append([]byte{}, FactTagPrefix...), []byte(tag)...)
+	key = append(key, '/')
+	return append(key, []byte(factID)...)
+}
+
+// FactTagsByTagPrefix returns the prefix for iterating all facts with a given tag.
+func FactTagsByTagPrefix(tag string) []byte {
+	key := append(append([]byte{}, FactTagPrefix...), []byte(tag)...)
 	return append(key, '/')
 }

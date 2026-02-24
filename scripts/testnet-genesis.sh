@@ -169,12 +169,12 @@ cmd_init() {
     .app_state.knowledge.params.wrong_verification_slash_bps = 50000 |
     .app_state.knowledge.params.missed_reveal_slash_bps = 100000 |
     .app_state.knowledge.params.equivocation_slash_bps = 200000 |
-    .app_state.knowledge.params.invalid_claim_slash_bps = 220000 |
+    .app_state.knowledge.params.invalid_claim_slash_bps = 0 |
     .app_state.knowledge.params.verification_reward = "3000000" |
     .app_state.knowledge.params.verification_reward_decay_bps = 999000 |
     .app_state.knowledge.params.min_claim_text_length = 20 |
     .app_state.knowledge.params.max_claim_text_length = 10000 |
-    .app_state.knowledge.params.min_claim_stake = "1000000" |
+    .app_state.knowledge.params.min_review_fee = "100000" |
     .app_state.knowledge.params.adversarial_verification_enabled = true |
     .app_state.knowledge.params.provisional_threshold = 500000 |
     .app_state.knowledge.params.reject_threshold = 300000 |

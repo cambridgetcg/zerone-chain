@@ -32,6 +32,8 @@ const (
 	Query_FactConfidence_FullMethodName    = "/zerone.knowledge.v1.Query/FactConfidence"
 	Query_FactCitationCount_FullMethodName = "/zerone.knowledge.v1.Query/FactCitationCount"
 	Query_FactRelations_FullMethodName     = "/zerone.knowledge.v1.Query/FactRelations"
+	Query_FactsBySubject_FullMethodName    = "/zerone.knowledge.v1.Query/FactsBySubject"
+	Query_FactsByTag_FullMethodName        = "/zerone.knowledge.v1.Query/FactsByTag"
 )
 
 // QueryClient is the client API for Query service.
@@ -66,6 +68,10 @@ type QueryClient interface {
 	FactCitationCount(ctx context.Context, in *QueryFactCitationCountRequest, opts ...grpc.CallOption) (*QueryFactCitationCountResponse, error)
 	// FactRelations queries typed relations for a fact (knowledge graph edges).
 	FactRelations(ctx context.Context, in *QueryFactRelationsRequest, opts ...grpc.CallOption) (*QueryFactRelationsResponse, error)
+	// FactsBySubject queries facts by structured subject within a domain.
+	FactsBySubject(ctx context.Context, in *QueryFactsBySubjectRequest, opts ...grpc.CallOption) (*QueryFactsBySubjectResponse, error)
+	// FactsByTag queries facts by a searchable tag.
+	FactsByTag(ctx context.Context, in *QueryFactsByTagRequest, opts ...grpc.CallOption) (*QueryFactsByTagResponse, error)
 }
 
 type queryClient struct {
@@ -206,6 +212,26 @@ func (c *queryClient) FactRelations(ctx context.Context, in *QueryFactRelationsR
 	return out, nil
 }
 
+func (c *queryClient) FactsBySubject(ctx context.Context, in *QueryFactsBySubjectRequest, opts ...grpc.CallOption) (*QueryFactsBySubjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactsBySubjectResponse)
+	err := c.cc.Invoke(ctx, Query_FactsBySubject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactsByTag(ctx context.Context, in *QueryFactsByTagRequest, opts ...grpc.CallOption) (*QueryFactsByTagResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactsByTagResponse)
+	err := c.cc.Invoke(ctx, Query_FactsByTag_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -238,6 +264,10 @@ type QueryServer interface {
 	FactCitationCount(context.Context, *QueryFactCitationCountRequest) (*QueryFactCitationCountResponse, error)
 	// FactRelations queries typed relations for a fact (knowledge graph edges).
 	FactRelations(context.Context, *QueryFactRelationsRequest) (*QueryFactRelationsResponse, error)
+	// FactsBySubject queries facts by structured subject within a domain.
+	FactsBySubject(context.Context, *QueryFactsBySubjectRequest) (*QueryFactsBySubjectResponse, error)
+	// FactsByTag queries facts by a searchable tag.
+	FactsByTag(context.Context, *QueryFactsByTagRequest) (*QueryFactsByTagResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -286,6 +316,12 @@ func (UnimplementedQueryServer) FactCitationCount(context.Context, *QueryFactCit
 }
 func (UnimplementedQueryServer) FactRelations(context.Context, *QueryFactRelationsRequest) (*QueryFactRelationsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FactRelations not implemented")
+}
+func (UnimplementedQueryServer) FactsBySubject(context.Context, *QueryFactsBySubjectRequest) (*QueryFactsBySubjectResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactsBySubject not implemented")
+}
+func (UnimplementedQueryServer) FactsByTag(context.Context, *QueryFactsByTagRequest) (*QueryFactsByTagResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactsByTag not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -542,6 +578,42 @@ func _Query_FactRelations_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_FactsBySubject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactsBySubjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactsBySubject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactsBySubject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactsBySubject(ctx, req.(*QueryFactsBySubjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactsByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactsByTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactsByTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactsByTag_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactsByTag(ctx, req.(*QueryFactsByTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -600,6 +672,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FactRelations",
 			Handler:    _Query_FactRelations_Handler,
+		},
+		{
+			MethodName: "FactsBySubject",
+			Handler:    _Query_FactsBySubject_Handler,
+		},
+		{
+			MethodName: "FactsByTag",
+			Handler:    _Query_FactsByTag_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

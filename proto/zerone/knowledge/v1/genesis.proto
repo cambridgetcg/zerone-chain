@@ -26,7 +26,7 @@ message Params {
   uint64 wrong_verification_slash_bps = 11; // default: 50,000  (5%)
   uint64 missed_reveal_slash_bps      = 12; // default: 100,000 (10%)
   uint64 equivocation_slash_bps       = 13; // default: 200,000 (20%)
-  uint64 invalid_claim_slash_bps      = 14; // default: 220,000 (22%)
+  uint64 invalid_claim_slash_bps      = 14; // DEPRECATED (R19-6): no longer used — review fee is non-refundable
 
   // ─── Rewards ─────────────────────────────────────────────────────────────
   string verification_reward           = 15; // default: "3000000" (3 ZRN in uzrn)
@@ -35,7 +35,7 @@ message Params {
   // ─── Claim validation ────────────────────────────────────────────────────
   uint64 min_claim_text_length = 17; // default: 20
   uint64 max_claim_text_length = 18; // default: 10,000
-  string min_claim_stake       = 19; // default: "1000000" (1 ZRN in uzrn)
+  string min_review_fee        = 19; // default: "100000" (0.1 ZRN) — non-refundable review fee
 
   // ─── Adversarial verification ────────────────────────────────────────────
   bool   adversarial_verification_enabled = 20; // default: true

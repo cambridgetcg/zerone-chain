@@ -93,6 +93,7 @@ message MsgSubmitClaim {
   // Typed relationships to existing facts.
   // Replaces untyped `references` for new claims (references kept for backward compat).
   repeated ClaimRelation relations = 9;
+  ClaimStructure structure = 10;  // Optional structured decomposition
 }
 
 message MsgSubmitClaimResponse {

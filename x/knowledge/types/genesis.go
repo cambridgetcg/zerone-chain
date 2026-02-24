@@ -24,7 +24,7 @@ func DefaultParams() Params {
 		WrongVerificationSlashBps: 50_000,  // 5%
 		MissedRevealSlashBps:      100_000, // 10%
 		EquivocationSlashBps:      200_000, // 20%
-		InvalidClaimSlashBps:      220_000, // 22%
+		InvalidClaimSlashBps:      0,       // DEPRECATED (R19-6): unused — review fee is non-refundable
 
 		// ─── Rewards ─────────────────────────────────────────────────────────
 		VerificationReward:          "3000000", // 3 ZRN in uzrn
@@ -33,7 +33,7 @@ func DefaultParams() Params {
 		// ─── Claim validation ─────────────────────────────────────────────────
 		MinClaimTextLength: 20,
 		MaxClaimTextLength: 1_000,
-		MinClaimStake:      "100000", // 0.1 ZRN in uzrn (becomes non-refundable review fee in R19-6)
+		MinReviewFee:       "100000", // 0.1 ZRN — non-refundable review fee
 
 		// ─── Adversarial verification ─────────────────────────────────────────
 		AdversarialVerificationEnabled: true,
@@ -231,9 +231,7 @@ func (p *Params) Validate() error {
 	if p.EquivocationSlashBps == 0 {
 		return fmt.Errorf("equivocation_slash_bps must be > 0")
 	}
-	if p.InvalidClaimSlashBps == 0 {
-		return fmt.Errorf("invalid_claim_slash_bps must be > 0")
-	}
+	// InvalidClaimSlashBps deprecated (R19-6): review fee is non-refundable, no stake to slash.
 	if p.MalformedClaimSlashBps == 0 {
 		return fmt.Errorf("malformed_claim_slash_bps must be > 0")
 	}
@@ -268,6 +266,11 @@ func (p *Params) Validate() error {
 	}
 	if p.MaxClaimTextLength < p.MinClaimTextLength {
 		return fmt.Errorf("max_claim_text_length must be >= min_claim_text_length")
+	}
+
+	// Review fee must be positive.
+	if p.MinReviewFee == "" || p.MinReviewFee == "0" {
+		return fmt.Errorf("min_review_fee must be > 0")
 	}
 
 	return nil
