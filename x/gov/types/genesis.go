@@ -17,7 +17,9 @@ func DefaultParams() *Params {
 			{Category: CategoryText, RequiredStakeBps: "400000000", ReviewBlocks: 17136},             // 400 ZRN, ~12h
 			{Category: CategoryResearchSpend, RequiredStakeBps: "200000000", ReviewBlocks: 17136},    // 200 ZRN, ~12h
 			// TODO: rename RequiredStakeBps → RequiredStakeUzrn (misnomer storing raw uzrn)
-			{Category: CategorySeatElection, RequiredStakeBps: "500000000", ReviewBlocks: 34272}, // 500 ZRN, ~1 day
+			{Category: CategorySeatElection, RequiredStakeBps: "500000000", ReviewBlocks: 34272},           // 500 ZRN, ~1 day
+			{Category: CategoryPhaseTransition, RequiredStakeBps: "1000000000000", ReviewBlocks: 1030000},  // 1,000 ZRN, ~30 days
+			{Category: CategoryPhaseRollback, RequiredStakeBps: "500000000000", ReviewBlocks: 240000},      // 500 ZRN, ~7 days
 		},
 		ResearchFundVoters:       nil,
 		ResearchDiscussionBlocks: 68544,

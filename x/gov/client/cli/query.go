@@ -36,6 +36,7 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryResearchFundSeatsCmd(),
 		NewQuerySeatElectionCmd(),
 		NewQuerySeatElectionsCmd(),
+		NewQueryPendingPhaseTransitionCmd(),
 	)
 
 	return queryCmd
@@ -419,6 +420,52 @@ func NewQuerySeatElectionsCmd() *cobra.Command {
 	cmd.Flags().String("stage", "", "Filter by stage")
 	cmd.Flags().Uint64("limit", 100, "Max results")
 	cmd.Flags().Uint64("offset", 0, "Result offset")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryPendingPhaseTransitionCmd returns the command to query pending phase transitions.
+// Uses the LIP query filtered by phase transition categories.
+func NewQueryPendingPhaseTransitionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "pending-phase-transition",
+		Short: "Query pending phase transition proposals",
+		Long:  "Query LIPs with research_phase_transition or research_phase_rollback categories that are not in terminal state.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			// Query phase transition LIPs.
+			req := &types.QueryLIPsRequest{
+				Category: types.CategoryPhaseTransition,
+				Limit:    100,
+			}
+			resp := &types.QueryLIPsResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/LIPs", req, resp); err != nil {
+				return fmt.Errorf("failed to query phase transition LIPs: %w", err)
+			}
+
+			// Also query rollback LIPs.
+			reqRollback := &types.QueryLIPsRequest{
+				Category: types.CategoryPhaseRollback,
+				Limit:    100,
+			}
+			respRollback := &types.QueryLIPsResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/LIPs", reqRollback, respRollback); err != nil {
+				return fmt.Errorf("failed to query phase rollback LIPs: %w", err)
+			}
+
+			// Merge results.
+			resp.Lips = append(resp.Lips, respRollback.Lips...)
+			resp.Total += respRollback.Total
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }

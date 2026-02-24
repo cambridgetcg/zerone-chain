@@ -78,6 +78,14 @@ func (ms *msgServer) SubmitLIP(goCtx context.Context, msg *types.MsgSubmitLIP) (
 		CreatedAtBlock: uint64(ctx.BlockHeight()),
 		ParamChanges:   msg.ParamChanges,
 	}
+
+	// Validate phase transition/rollback categories and create metadata.
+	if types.IsPhaseTransitionCategory(category) {
+		if err := ms.ValidatePhaseTransitionLIP(ctx, lip); err != nil {
+			return nil, err
+		}
+	}
+
 	ms.SetLIP(ctx, lip)
 
 	ctx.EventManager().EmitEvent(

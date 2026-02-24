@@ -35,6 +35,8 @@ func NewTxCmd() *cobra.Command {
 		NewNominateSeatElectionCmd(),
 		NewAcceptSeatNominationCmd(),
 		NewVoteSeatElectionCmd(),
+		NewProposePhaseTransitionCmd(),
+		NewProposePhaseRollbackCmd(),
 	)
 
 	return txCmd
@@ -354,6 +356,84 @@ func NewVoteSeatElectionCmd() *cobra.Command {
 	cmd.Flags().String("option", "", "Vote option: yes, no, abstain")
 	_ = cmd.MarkFlagRequired("proposal-id")
 	_ = cmd.MarkFlagRequired("option")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewProposePhaseTransitionCmd creates a CLI command to propose a phase transition.
+// Internally submits a LIP with category "research_phase_transition".
+func NewProposePhaseTransitionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "propose-phase-transition",
+		Short: "Propose a research fund governance phase transition",
+		Long:  "Propose advancing the research fund to the next governance phase. Requires exit conditions to be met. Submits a LIP with supermajority (66.7%) voting threshold and 7-day activation delay.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			targetPhase, _ := cmd.Flags().GetUint32("target-phase")
+			justification, _ := cmd.Flags().GetString("justification")
+			amount, _ := cmd.Flags().GetString("amount")
+
+			// Encode target phase as JSON in the description field.
+			description := fmt.Sprintf(`{"target_phase":%d}`, targetPhase)
+
+			msg := &types.MsgSubmitLIP{
+				Proposer:     clientCtx.GetFromAddress().String(),
+				Title:        justification,
+				Description:  description,
+				Category:     types.CategoryPhaseTransition,
+				InitialStake: amount,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().Uint32("target-phase", 0, "Target phase number (must be current + 1)")
+	cmd.Flags().String("justification", "", "Justification for why the community is ready")
+	cmd.Flags().String("amount", "", "Stake amount in uzrn")
+	_ = cmd.MarkFlagRequired("target-phase")
+	_ = cmd.MarkFlagRequired("justification")
+	_ = cmd.MarkFlagRequired("amount")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewProposePhaseRollbackCmd creates a CLI command to propose a phase rollback.
+// Internally submits a LIP with category "research_phase_rollback".
+func NewProposePhaseRollbackCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "propose-phase-rollback",
+		Short: "Propose a research fund governance phase rollback",
+		Long:  "Propose rolling back the research fund to the previous governance phase. Requires gridlock (3+ expired proposals) or emergency halt evidence.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			justification, _ := cmd.Flags().GetString("justification")
+			amount, _ := cmd.Flags().GetString("amount")
+
+			msg := &types.MsgSubmitLIP{
+				Proposer:     clientCtx.GetFromAddress().String(),
+				Title:        justification,
+				Description:  "Phase rollback proposal",
+				Category:     types.CategoryPhaseRollback,
+				InitialStake: amount,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().String("justification", "", "Justification for rollback (gridlock or emergency halt)")
+	cmd.Flags().String("amount", "", "Stake amount in uzrn")
+	_ = cmd.MarkFlagRequired("justification")
+	_ = cmd.MarkFlagRequired("amount")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }

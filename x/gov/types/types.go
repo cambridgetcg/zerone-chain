@@ -19,11 +19,13 @@ const (
 
 // LIP category constants.
 const (
-	CategoryParameter    = "parameter"
-	CategoryUpgrade      = "upgrade"
-	CategoryText         = "text"
-	CategoryResearchSpend  = "research_spend"
-	CategorySeatElection   = "research_seat_election"
+	CategoryParameter       = "parameter"
+	CategoryUpgrade         = "upgrade"
+	CategoryText            = "text"
+	CategoryResearchSpend   = "research_spend"
+	CategorySeatElection    = "research_seat_election"
+	CategoryPhaseTransition = "research_phase_transition"
+	CategoryPhaseRollback   = "research_phase_rollback"
 )
 
 // Vote option constants.
@@ -378,7 +380,43 @@ const (
 	TransitionActivationDelay  = uint64(240_000)   // ~7 days
 	TransitionSupermajorityBps = uint64(667_000)    // 66.7% on 1M scale
 	RollbackCooldownBlocks     = uint64(3_700_000)  // ~3 months
+	RollbackReviewBlocks       = uint64(240_000)    // ~7 days (faster than forward)
+	RollbackGridlockThreshold  = 3                  // consecutive expired proposals
 )
+
+// Phase transition proposal stage constants.
+const (
+	PhaseTransitionStageDiscussion = "discussion"
+	PhaseTransitionStageVoting     = "voting"
+	PhaseTransitionStagePassed     = "passed"
+	PhaseTransitionStageFailed     = "failed"
+	PhaseTransitionStagePending    = "pending_activation"
+	PhaseTransitionStageActivated  = "activated"
+	PhaseTransitionStageCancelled  = "cancelled"
+)
+
+// PhaseTransitionProposal is metadata linked to a LIP that tracks the
+// post-vote phase transition lifecycle (activation delay, condition recheck).
+// Voting is handled through the standard LIP voting system with supermajority.
+type PhaseTransitionProposal struct {
+	LipID              string                    `json:"lip_id"`
+	TargetPhase        ResearchFundPhase         `json:"target_phase"`
+	ConditionsSnapshot *PhaseTransitionConditions `json:"conditions_snapshot,omitempty"`
+	Stage              string                    `json:"stage"` // pending_activation, activated, cancelled
+	ActivationBlock    uint64                    `json:"activation_block"`
+	IsRollback         bool                      `json:"is_rollback"`
+	CancelReason       string                    `json:"cancel_reason,omitempty"`
+}
+
+// IsTerminalPhaseTransitionStage returns true if the stage is terminal.
+func IsTerminalPhaseTransitionStage(stage string) bool {
+	switch stage {
+	case PhaseTransitionStagePassed, PhaseTransitionStageFailed,
+		PhaseTransitionStageActivated, PhaseTransitionStageCancelled:
+		return true
+	}
+	return false
+}
 
 // --- Research Spend Stage Constants ---
 
@@ -482,5 +520,18 @@ func (m *MsgUpdateParams) ValidateBasic() error {
 func (m *MsgUpdateParams) GetSigners() []sdk.AccAddress {
 	addr, _ := sdk.AccAddressFromBech32(m.Authority)
 	return []sdk.AccAddress{addr}
+}
+
+// --- Phase Transition Helpers ---
+
+// PhaseTransitionMeta encodes the target phase for a phase transition LIP's Description.
+// The Description field carries JSON: {"target_phase": N}
+type PhaseTransitionMeta struct {
+	TargetPhase uint32 `json:"target_phase"`
+}
+
+// IsPhaseTransitionCategory returns true if the category is a phase transition or rollback.
+func IsPhaseTransitionCategory(category string) bool {
+	return category == CategoryPhaseTransition || category == CategoryPhaseRollback
 }
 

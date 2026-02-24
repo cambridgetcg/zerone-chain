@@ -25,7 +25,8 @@ var (
 	SeatElectionKeyPrefix          = []byte{0x10}
 	SeatElectionVoteKeyPrefix      = []byte{0x11}
 	SeatElectionCounterKey         = []byte{0x12}
-	SeatElectionVoteDedupePrefix   = []byte{0x13}
+	SeatElectionVoteDedupePrefix       = []byte{0x13}
+	PhaseTransitionKeyPrefix = []byte{0x14} // lip_id -> PhaseTransitionProposal
 )
 
 // LIPKey returns the store key for a LIP by id.
@@ -180,4 +181,9 @@ func SeatElectionVotePrefixForProposal(proposalID uint64) []byte {
 	key := append(SeatElectionVoteKeyPrefix, bz...)
 	key = append(key, 0x00)
 	return key
+}
+
+// PhaseTransitionKey returns the store key for phase transition metadata by LIP ID.
+func PhaseTransitionKey(lipID string) []byte {
+	return append(PhaseTransitionKeyPrefix, []byte(lipID)...)
 }

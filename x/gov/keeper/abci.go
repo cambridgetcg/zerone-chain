@@ -80,21 +80,32 @@ func (k Keeper) BeginBlocker(ctx sdk.Context) {
 
 	// 8. Check for long-vacant seats.
 	k.CheckSeatVacancy(ctx)
+
+	// 9. Process pending phase transitions (activation delay + condition recheck).
+	k.BeginBlockPhaseTransition(ctx)
 }
 
 // tallyAndResolve tallies votes and sets the LIP to passed or failed.
 func (k Keeper) tallyAndResolve(ctx sdk.Context, lip *types.LIP, params *types.Params) {
-	quorumMet, passed := k.checkQuorumAndSupport(ctx, lip, params)
+	// Phase transition categories use supermajority (66.7%), others use standard (50%).
+	var quorumMet, passed bool
+	if types.IsPhaseTransitionCategory(lip.Category) {
+		quorumMet, passed = k.checkQuorumAndSupermajority(ctx, lip, params)
+	} else {
+		quorumMet, passed = k.checkQuorumAndSupport(ctx, lip, params)
+	}
 
 	if quorumMet && passed {
 		lip.Stage = types.StatusPassed
 		k.SetLIP(ctx, lip)
-		// Execute param changes for parameter-category LIPs.
-		if lip.Category == types.CategoryParameter && len(lip.ParamChanges) > 0 {
-			k.executeParamChanges(ctx, lip)
-		}
-		// If this is an upgrade-category LIP with an attached plan, schedule the upgrade.
-		if lip.Category == types.CategoryUpgrade {
+
+		// Category-specific post-pass handling.
+		switch lip.Category {
+		case types.CategoryParameter:
+			if len(lip.ParamChanges) > 0 {
+				k.executeParamChanges(ctx, lip)
+			}
+		case types.CategoryUpgrade:
 			if plan, found := k.GetUpgradePlan(ctx, lip.Id); found {
 				if uk := k.GetUpgradeKeeper(); uk != nil {
 					if err := uk.ScheduleUpgrade(ctx, plan); err != nil {
@@ -117,10 +128,18 @@ func (k Keeper) tallyAndResolve(ctx sdk.Context, lip *types.LIP, params *types.P
 					}
 				}
 			}
+		case types.CategoryPhaseTransition, types.CategoryPhaseRollback:
+			// Phase transitions don't execute immediately — enter activation delay.
+			k.HandlePhaseTransitionPass(ctx, lip.Id)
 		}
 	} else {
 		lip.Stage = types.StatusFailed
 		k.SetLIP(ctx, lip)
+
+		// Notify metadata of failure for phase transition categories.
+		if types.IsPhaseTransitionCategory(lip.Category) {
+			k.HandlePhaseTransitionFail(ctx, lip.Id)
+		}
 	}
 
 	ctx.EventManager().EmitEvent(
@@ -178,6 +197,54 @@ func (k Keeper) checkQuorumAndSupport(ctx sdk.Context, lip *types.LIP, params *t
 		supportBps := new(big.Int).Mul(yesBig, big.NewInt(int64(types.BPSScale)))
 		supportBps.Div(supportBps, yesNoTotal)
 		passed = quorumMet && supportBps.Uint64() >= params.SupportThresholdBps
+	}
+
+	return quorumMet, passed
+}
+
+// checkQuorumAndSupermajority checks quorum and a 66.7% supermajority threshold
+// for phase transition proposals.
+func (k Keeper) checkQuorumAndSupermajority(ctx sdk.Context, lip *types.LIP, params *types.Params) (quorumMet bool, passed bool) {
+	yesBig, _ := new(big.Int).SetString(lip.YesStake, 10)
+	if yesBig == nil {
+		yesBig = big.NewInt(0)
+	}
+	noBig, _ := new(big.Int).SetString(lip.NoStake, 10)
+	if noBig == nil {
+		noBig = big.NewInt(0)
+	}
+	abstainBig, _ := new(big.Int).SetString(lip.AbstainStake, 10)
+	if abstainBig == nil {
+		abstainBig = big.NewInt(0)
+	}
+
+	totalVoted := new(big.Int).Add(yesBig, noBig)
+	totalVoted.Add(totalVoted, abstainBig)
+
+	// Get total bonded stake.
+	totalBonded := big.NewInt(0)
+	if k.stakingKeeper != nil {
+		bondedStr, err := k.stakingKeeper.GetTotalBondedStake(ctx)
+		if err == nil {
+			if tb, ok := new(big.Int).SetString(bondedStr, 10); ok {
+				totalBonded = tb
+			}
+		}
+	}
+
+	// Quorum check: same as standard (33.4%).
+	if totalBonded.Sign() > 0 {
+		actualBps := new(big.Int).Mul(totalVoted, big.NewInt(int64(types.BPSScale)))
+		actualBps.Div(actualBps, totalBonded)
+		quorumMet = actualBps.Uint64() >= params.QuorumThresholdBps
+	}
+
+	// Supermajority: 66.7% of non-abstain votes.
+	yesNoTotal := new(big.Int).Add(yesBig, noBig)
+	if yesNoTotal.Sign() > 0 {
+		supportBps := new(big.Int).Mul(yesBig, big.NewInt(int64(types.BPSScale)))
+		supportBps.Div(supportBps, yesNoTotal)
+		passed = quorumMet && supportBps.Uint64() >= types.TransitionSupermajorityBps
 	}
 
 	return quorumMet, passed
