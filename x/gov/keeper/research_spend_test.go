@@ -469,3 +469,234 @@ func TestResearchVoters_GovernanceOnly(t *testing.T) {
 		t.Errorf("voter2: got %s, want %s", voters.Voter2, testAddr("v2"))
 	}
 }
+
+// ---------- Phase-Aware Multisig Tests ----------
+
+func TestResearchSpend_PhaseFullGovernance_RejectsMultisig(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, _ := setupResearchVoters(t, k, ctx)
+
+	// Set phase to full governance.
+	k.SetResearchFundPhase(ctx, types.ResearchFundPhase_RESEARCH_FUND_PHASE_FULL_GOVERNANCE)
+
+	// Submit should fail — full governance uses standard LIP path.
+	_, err := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "Should fail in full governance",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+	if err == nil {
+		t.Error("expected error in full governance phase")
+	}
+	if err != types.ErrPhaseFullGovernance {
+		t.Errorf("expected ErrPhaseFullGovernance, got %v", err)
+	}
+}
+
+func TestResearchSpend_PhaseGenesisPair_IncrementsCounter(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, voter2 := setupResearchVoters(t, k, ctx)
+	mock := &mockVestingKeeper{}
+	k.SetVestingKeeper(mock)
+
+	// Default is phase 0 (genesis pair).
+	resp, _ := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "Phase 0 counter test",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+
+	// Advance to voting.
+	prop, _ := k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	prop.Stage = string(types.ResearchStageVoting)
+	k.SetResearchSpendProposal(ctx, prop)
+
+	// Both vote yes.
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter2, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage != string(types.ResearchStageExecuted) {
+		t.Errorf("expected executed, got %s", prop.Stage)
+	}
+
+	// Verify proposals executed counter incremented.
+	state := k.GetResearchFundGovernanceState(ctx)
+	if state.ProposalsExecutedInPhase != 1 {
+		t.Errorf("expected ProposalsExecutedInPhase=1, got %d", state.ProposalsExecutedInPhase)
+	}
+}
+
+func TestResearchSpend_PhaseObserver_2of3(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, voter2 := setupResearchVoters(t, k, ctx)
+	mock := &mockVestingKeeper{}
+	k.SetVestingKeeper(mock)
+
+	// Set phase to Observer (2-of-3) with one community seat.
+	community1 := testAddr("community1")
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER
+	state.CommunitySeats = []string{community1}
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Submit proposal.
+	resp, err := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "Phase 1 test",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+	if err != nil {
+		t.Fatalf("submit failed: %v", err)
+	}
+
+	// Advance to voting.
+	prop, _ := k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	prop.Stage = string(types.ResearchStageVoting)
+	k.SetResearchSpendProposal(ctx, prop)
+
+	// Voter1 votes yes — 1-of-3, not enough.
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage == string(types.ResearchStageExecuted) {
+		t.Error("should not execute with only 1-of-3 approvals")
+	}
+
+	// Voter2 votes yes — 2-of-3, should execute.
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter2, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage != string(types.ResearchStageExecuted) {
+		t.Errorf("expected executed with 2-of-3, got %s", prop.Stage)
+	}
+}
+
+func TestResearchSpend_PhaseObserver_CommunityVoterCanVote(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, _ := setupResearchVoters(t, k, ctx)
+	mock := &mockVestingKeeper{}
+	k.SetVestingKeeper(mock)
+
+	// Set phase to Observer (2-of-3) with one community seat.
+	community1 := testAddr("community1")
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER
+	state.CommunitySeats = []string{community1}
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Submit proposal.
+	resp, _ := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "Community voter test",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+
+	// Advance to voting.
+	prop, _ := k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	prop.Stage = string(types.ResearchStageVoting)
+	k.SetResearchSpendProposal(ctx, prop)
+
+	// Community voter votes yes.
+	_, err := k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: community1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	if err != nil {
+		t.Fatalf("community voter should be able to vote: %v", err)
+	}
+
+	// Voter1 votes yes — 2-of-3, should execute (community1 + voter1).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage != string(types.ResearchStageExecuted) {
+		t.Errorf("expected executed with voter1+community1 (2-of-3), got %s", prop.Stage)
+	}
+}
+
+func TestResearchSpend_NonDesignatedVoter_PhaseBased(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, _ := setupResearchVoters(t, k, ctx)
+
+	// Set phase to Observer with specific community seats.
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER
+	state.CommunitySeats = []string{testAddr("community1")}
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Submit proposal.
+	resp, _ := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "Non-voter test",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+
+	// Advance to voting.
+	prop, _ := k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	prop.Stage = string(types.ResearchStageVoting)
+	k.SetResearchSpendProposal(ctx, prop)
+
+	// Random outsider tries to vote — should fail.
+	_, err := k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: testAddr("outsider"), ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	if err == nil {
+		t.Error("expected error for non-designated voter")
+	}
+}
+
+func TestResearchSpend_CommunityVoterDoubleVote(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, _ := setupResearchVoters(t, k, ctx)
+
+	// Set phase to Observer with one community seat.
+	community1 := testAddr("community1")
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER
+	state.CommunitySeats = []string{community1}
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Submit proposal.
+	resp, _ := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "Community double vote test",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+
+	// Advance to voting.
+	prop, _ := k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	prop.Stage = string(types.ResearchStageVoting)
+	k.SetResearchSpendProposal(ctx, prop)
+
+	// Community voter votes once — should succeed.
+	_, err := k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: community1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	if err != nil {
+		t.Fatalf("first vote failed: %v", err)
+	}
+
+	// Community voter votes again — should fail.
+	_, err = k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: community1, ProposalId: resp.ProposalId, Vote: "no",
+	})
+	if err == nil {
+		t.Error("expected error for community voter double vote")
+	}
+	if err != types.ErrResearchAlreadyVoted {
+		t.Errorf("expected ErrResearchAlreadyVoted, got %v", err)
+	}
+}

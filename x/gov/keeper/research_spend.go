@@ -115,6 +115,72 @@ func (k Keeper) GetAllResearchSpendProposals(ctx sdk.Context) []*types.ResearchS
 	return props
 }
 
+// --- Phase-Aware Voter Helpers ---
+
+// isDesignatedResearchVoter checks if an address is authorized to vote on
+// research spend proposals in the current phase.
+func (k Keeper) isDesignatedResearchVoter(ctx sdk.Context, voter string) bool {
+	voters := k.GetResearchFundVoters(ctx)
+	if voters != nil && (voter == voters.Voter1 || voter == voters.Voter2) {
+		return true
+	}
+	state := k.GetResearchFundGovernanceState(ctx)
+	for _, seat := range state.CommunitySeats {
+		if voter == seat {
+			return true
+		}
+	}
+	return false
+}
+
+// SetResearchCommunityVote records a community seat holder's vote on a research proposal.
+func (k Keeper) SetResearchCommunityVote(ctx sdk.Context, proposalID uint64, voter, vote string) {
+	store := ctx.KVStore(k.storeKey)
+	store.Set(types.ResearchCommunityVoteKey(proposalID, voter), []byte(vote))
+}
+
+// GetResearchCommunityVote returns a community seat holder's vote, or "" if not voted.
+func (k Keeper) GetResearchCommunityVote(ctx sdk.Context, proposalID uint64, voter string) string {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.ResearchCommunityVoteKey(proposalID, voter))
+	if bz == nil {
+		return ""
+	}
+	return string(bz)
+}
+
+// countResearchSpendApprovals counts all "yes" votes on a research proposal
+// across core voters (voter1, voter2) and community seat holders.
+func (k Keeper) countResearchSpendApprovals(ctx sdk.Context, prop *types.ResearchSpendProposal) uint32 {
+	var count uint32
+	if prop.Voter1Vote == "yes" {
+		count++
+	}
+	if prop.Voter2Vote == "yes" {
+		count++
+	}
+	// Count community seat votes.
+	state := k.GetResearchFundGovernanceState(ctx)
+	for _, seat := range state.CommunitySeats {
+		if k.GetResearchCommunityVote(ctx, prop.ProposalId, seat) == "yes" {
+			count++
+		}
+	}
+	return count
+}
+
+// CountCommunitySeatVotes counts how many community seat votes exist in the store.
+func (k Keeper) CountCommunitySeatVotes(ctx sdk.Context, state *types.ResearchFundGovernanceState) uint64 {
+	var count uint64
+	store := ctx.KVStore(k.storeKey)
+	iter := storetypes.KVStorePrefixIterator(store, types.ResearchCommunityVotePrefix)
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		count++
+	}
+	return count
+}
+
 // --- Handler Functions ---
 
 // SubmitResearchSpend creates a new research fund spend proposal.
@@ -127,8 +193,14 @@ func (k Keeper) SubmitResearchSpend(ctx sdk.Context, msg *types.MsgSubmitResearc
 		return nil, types.ErrResearchVotersNotSet
 	}
 
-	// Only designated voters can submit.
-	if msg.Proposer != voters.Voter1 && msg.Proposer != voters.Voter2 {
+	// Phase 3 (full governance) does not use multisig — reject.
+	state := k.GetResearchFundGovernanceState(ctx)
+	if state.CurrentPhase == types.ResearchFundPhase_RESEARCH_FUND_PHASE_FULL_GOVERNANCE {
+		return nil, types.ErrPhaseFullGovernance
+	}
+
+	// Only designated voters (voter1, voter2, community seats) can submit.
+	if !k.isDesignatedResearchVoter(ctx, msg.Proposer) {
 		return nil, types.ErrNotDesignatedVoter
 	}
 
@@ -200,8 +272,8 @@ func (k Keeper) VoteResearchSpend(ctx sdk.Context, msg *types.MsgVoteResearchSpe
 		return nil, types.ErrResearchVotersNotSet
 	}
 
-	// Only designated voters can vote.
-	if msg.Voter != voters.Voter1 && msg.Voter != voters.Voter2 {
+	// Only designated voters for current phase can vote.
+	if !k.isDesignatedResearchVoter(ctx, msg.Voter) {
 		return nil, types.ErrNotDesignatedVoter
 	}
 
@@ -226,8 +298,10 @@ func (k Keeper) VoteResearchSpend(ctx sdk.Context, msg *types.MsgVoteResearchSpe
 		}
 	}
 
-	// Determine voter slot and check for double-vote.
+	// Determine voter slot and record vote.
 	isVoter1 := msg.Voter == voters.Voter1
+	isVoter2 := msg.Voter == voters.Voter2
+
 	if isVoter1 {
 		if prop.Voter1Vote != "" {
 			return nil, types.ErrResearchAlreadyVoted
@@ -235,22 +309,35 @@ func (k Keeper) VoteResearchSpend(ctx sdk.Context, msg *types.MsgVoteResearchSpe
 		prop.Voter1Vote = msg.Vote
 		prop.Voter1Reason = msg.Reasoning
 		prop.Voter1VotedAt = currentHeight
-	} else {
+	} else if isVoter2 {
 		if prop.Voter2Vote != "" {
 			return nil, types.ErrResearchAlreadyVoted
 		}
 		prop.Voter2Vote = msg.Vote
 		prop.Voter2Reason = msg.Reasoning
 		prop.Voter2VotedAt = currentHeight
+	} else {
+		// Community seat voter.
+		if k.GetResearchCommunityVote(ctx, msg.ProposalId, msg.Voter) != "" {
+			return nil, types.ErrResearchAlreadyVoted
+		}
+		k.SetResearchCommunityVote(ctx, msg.ProposalId, msg.Voter, msg.Vote)
 	}
 
-	// Check for immediate resolution.
+	// Check for immediate resolution — phase-aware.
 	if prop.Voter1Vote == "no" || prop.Voter2Vote == "no" {
-		// Any NO → rejected immediately.
+		// Any core voter NO → rejected immediately.
 		prop.Stage = string(types.ResearchStageRejected)
-	} else if prop.Voter1Vote == "yes" && prop.Voter2Vote == "yes" {
-		// Both YES → execute immediately.
-		k.executeResearchSpend(ctx, prop)
+	} else {
+		state := k.GetResearchFundGovernanceState(ctx)
+		required, _ := types.GetResearchFundThreshold(state.CurrentPhase)
+		approvals := k.countResearchSpendApprovals(ctx, prop)
+		if approvals >= required {
+			k.executeResearchSpend(ctx, prop)
+			if prop.Stage == string(types.ResearchStageExecuted) {
+				k.IncrementProposalsExecuted(ctx)
+			}
+		}
 	}
 
 	k.SetResearchSpendProposal(ctx, prop)
