@@ -84,6 +84,11 @@ service Query {
   rpc FactsByTag(QueryFactsByTagRequest) returns (QueryFactsByTagResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/facts_by_tag/{tag}";
   }
+
+  // FactByCanonical queries a fact by its canonical form hash.
+  rpc FactByCanonical(QueryFactByCanonicalRequest) returns (QueryFactByCanonicalResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fact_by_canonical/{canonical_hash}";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -218,4 +223,13 @@ message QueryFactsByTagRequest {
 
 message QueryFactsByTagResponse {
   repeated Fact facts = 1;
+}
+
+message QueryFactByCanonicalRequest {
+  string canonical_hash = 1;  // SHA-256 hex of normalized canonical form
+  string canonical_form = 2;  // Or provide the form directly (server hashes it)
+}
+
+message QueryFactByCanonicalResponse {
+  Fact fact = 1;
 }
