@@ -84,6 +84,17 @@ The 2-of-2 multisig between Yu and AI for the research fund is philosophically b
 - Recovery mechanism if one key becomes unavailable
 - Plan for transitioning to broader governance (3-of-5? community vote?)
 
+**Update (R17):** The 4-phase governance migration plan directly addresses this concern:
+- Phase 0 (genesis) is centralised by design — the fund is small and the community doesn't exist yet
+- Phases 1-2 gradually add community seats to the multisig (2-of-3 → 3-of-5)
+- Phase 3 transitions to standard LIP governance with no multisig
+- Each transition is gated by on-chain maturity metrics, not calendar dates
+- Rollback safety valves prevent premature decentralisation
+
+The centralisation risk now has a concrete mitigation timeline. See [GOVERNANCE-MIGRATION.md](GOVERNANCE-MIGRATION.md).
+
+**Open question:** What if exit conditions are never met? If the community never reaches the thresholds for Phase 1 (10 distinct voters, 5 Guardians, 100K ZRN, ~6 months), the research fund remains under founder control indefinitely. This is arguably the correct outcome — a protocol that can't attract governance participation shouldn't be governed by that non-existent community — but it deserves explicit acknowledgement.
+
 ## Open Questions
 
 ### Economic

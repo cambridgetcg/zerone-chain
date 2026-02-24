@@ -63,6 +63,14 @@ func (m *mockStakingKeeper) IsGuardian(_ context.Context, addr string) (bool, er
 	return false, nil
 }
 
+func (m *mockStakingKeeper) IsJailed(_ context.Context, _ string) (bool, error) {
+	return false, nil
+}
+
+func (m *mockStakingKeeper) GetSlashCount(_ context.Context, _ string) (uint64, error) {
+	return 0, nil
+}
+
 // ---------- Mock Upgrade Keeper ----------
 
 type mockUpgradeKeeper struct {
@@ -2779,5 +2787,304 @@ func TestValidateBasic_MsgAttachUpgradePlan(t *testing.T) {
 				t.Errorf("ValidateBasic() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+	}
+}
+
+// ========== Phase Exit Condition Isolation Tests ==========
+
+// TestExitConditions_Phase0_VotersMissing verifies that Phase 0 exit fails
+// when distinct voter count is below the 10-voter threshold, even if all
+// other conditions are satisfied.
+func TestExitConditions_Phase0_VotersMissing(t *testing.T) {
+	k, ctx, mockSK := setupWithStaking(t, "1000000000000")
+
+	mockSK.guardianCount = 5
+	mockEK := &mockEmergencyKeeper{halts: map[string]uint64{}}
+	k.SetEmergencyKeeper(mockEK)
+
+	// Only record 5 voters (need 10 for Phase 0 exit).
+	for i := 0; i < 5; i++ {
+		k.RecordDistinctVoter(ctx, testAddr(fmt.Sprintf("voter%d", i)))
+	}
+
+	// Satisfy chain age threshold.
+	ctx = ctx.WithBlockHeight(2_300_000)
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.DistinctLipVoters != 5 {
+		t.Errorf("expected 5 distinct voters, got %d", conditions.DistinctLipVoters)
+	}
+	if allMet {
+		t.Error("conditions should NOT all be met (only 5 of 10 required voters)")
+	}
+}
+
+// TestExitConditions_Phase0_GuardiansMissing verifies that Phase 0 exit fails
+// when active guardian count is below the 5-guardian threshold, even if voters
+// and chain age are satisfied.
+func TestExitConditions_Phase0_GuardiansMissing(t *testing.T) {
+	k, ctx, mockSK := setupWithStaking(t, "1000000000000")
+
+	// Only 3 guardians (need 5).
+	mockSK.guardianCount = 3
+	mockEK := &mockEmergencyKeeper{halts: map[string]uint64{}}
+	k.SetEmergencyKeeper(mockEK)
+
+	// Record 10 distinct voters (satisfies voter threshold).
+	for i := 0; i < 10; i++ {
+		k.RecordDistinctVoter(ctx, testAddr(fmt.Sprintf("voter%d", i)))
+	}
+
+	ctx = ctx.WithBlockHeight(2_300_000)
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.ActiveGuardians != 3 {
+		t.Errorf("expected 3 active guardians, got %d", conditions.ActiveGuardians)
+	}
+	if allMet {
+		t.Error("conditions should NOT all be met (only 3 of 5 required guardians)")
+	}
+}
+
+// TestExitConditions_Phase1_AllMet verifies that Phase 1 (Observer) exit
+// succeeds when all conditions are met: 25+ voters, 10+ guardians,
+// chain age 5.7M+, 3+ proposals executed, 2+ community seat votes,
+// and zero emergency halts.
+func TestExitConditions_Phase1_AllMet(t *testing.T) {
+	k, ctx, mockSK := setupWithStaking(t, "1000000000000")
+
+	// Set phase to Observer.
+	k.SetResearchFundPhase(ctx, types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER)
+
+	// Set up community seat and governance state.
+	community1 := testAddr("community1")
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER
+	state.CommunitySeats = []string{community1}
+	state.ProposalsExecutedInPhase = 5
+	state.PhaseStartedAtBlock = 50
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Set up research voters so we can create proposals for community votes.
+	voter1, _ := setupResearchVoters(t, k, ctx)
+
+	// Create 2 proposals and record community votes on them (need 2 MinCommunitySeatVotes).
+	for i := 0; i < 2; i++ {
+		resp, err := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+			Proposer:  voter1,
+			Title:     fmt.Sprintf("Proposal %d", i+1),
+			Recipient: testAddr("recipient"),
+			Amount:    "100000000",
+		})
+		if err != nil {
+			t.Fatalf("submit %d failed: %v", i+1, err)
+		}
+		k.SetResearchCommunityVote(ctx, resp.ProposalId, community1, "yes")
+	}
+
+	// Wire mocks: 12 guardians, 0 halts.
+	mockSK.guardianCount = 12
+	mockEK := &mockEmergencyKeeper{halts: map[string]uint64{}}
+	k.SetEmergencyKeeper(mockEK)
+
+	// Record 30 distinct voters (need 25).
+	for i := 0; i < 30; i++ {
+		k.RecordDistinctVoter(ctx, testAddr(fmt.Sprintf("voter%d", i)))
+	}
+
+	// Chain age 6M (need 5.7M).
+	ctx = ctx.WithBlockHeight(6_000_000)
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.DistinctLipVoters != 30 {
+		t.Errorf("expected 30 voters, got %d", conditions.DistinctLipVoters)
+	}
+	if conditions.ActiveGuardians != 12 {
+		t.Errorf("expected 12 guardians, got %d", conditions.ActiveGuardians)
+	}
+	if conditions.ProposalsExecutedInPhase != 5 {
+		t.Errorf("expected 5 proposals executed, got %d", conditions.ProposalsExecutedInPhase)
+	}
+	if conditions.CommunitySeatParticipation < 2 {
+		t.Errorf("expected >= 2 community seat votes, got %d", conditions.CommunitySeatParticipation)
+	}
+	if !allMet {
+		t.Error("all Phase 1 exit conditions should be met")
+	}
+}
+
+// TestExitConditions_Phase1_ProposalCountInsufficient verifies that Phase 1
+// exit fails when ProposalsExecutedInPhase is below the 3-proposal threshold.
+func TestExitConditions_Phase1_ProposalCountInsufficient(t *testing.T) {
+	k, ctx, mockSK := setupWithStaking(t, "1000000000000")
+
+	// Set phase to Observer.
+	k.SetResearchFundPhase(ctx, types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER)
+
+	community1 := testAddr("community1")
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER
+	state.CommunitySeats = []string{community1}
+	state.ProposalsExecutedInPhase = 1 // need 3
+	state.PhaseStartedAtBlock = 50
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	voter1, _ := setupResearchVoters(t, k, ctx)
+
+	// Create 2 proposals with community votes (satisfies MinCommunitySeatVotes=2).
+	for i := 0; i < 2; i++ {
+		resp, err := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+			Proposer:  voter1,
+			Title:     fmt.Sprintf("Proposal %d", i+1),
+			Recipient: testAddr("recipient"),
+			Amount:    "100000000",
+		})
+		if err != nil {
+			t.Fatalf("submit %d failed: %v", i+1, err)
+		}
+		k.SetResearchCommunityVote(ctx, resp.ProposalId, community1, "yes")
+	}
+
+	mockSK.guardianCount = 12
+	mockEK := &mockEmergencyKeeper{halts: map[string]uint64{}}
+	k.SetEmergencyKeeper(mockEK)
+
+	for i := 0; i < 30; i++ {
+		k.RecordDistinctVoter(ctx, testAddr(fmt.Sprintf("voter%d", i)))
+	}
+
+	ctx = ctx.WithBlockHeight(6_000_000)
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.ProposalsExecutedInPhase != 1 {
+		t.Errorf("expected 1 proposal executed, got %d", conditions.ProposalsExecutedInPhase)
+	}
+	if allMet {
+		t.Error("conditions should NOT be met (only 1 of 3 required proposals executed)")
+	}
+}
+
+// TestExitConditions_Phase1_CommunitySeatInactive verifies that Phase 1 exit
+// fails when community seat participation is below the 2-vote threshold.
+func TestExitConditions_Phase1_CommunitySeatInactive(t *testing.T) {
+	k, ctx, mockSK := setupWithStaking(t, "1000000000000")
+
+	// Set phase to Observer.
+	k.SetResearchFundPhase(ctx, types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER)
+
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER
+	state.CommunitySeats = []string{testAddr("community1")}
+	state.ProposalsExecutedInPhase = 5
+	state.PhaseStartedAtBlock = 50
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// No community votes recorded — 0 of 2 required.
+
+	mockSK.guardianCount = 12
+	mockEK := &mockEmergencyKeeper{halts: map[string]uint64{}}
+	k.SetEmergencyKeeper(mockEK)
+
+	for i := 0; i < 30; i++ {
+		k.RecordDistinctVoter(ctx, testAddr(fmt.Sprintf("voter%d", i)))
+	}
+
+	ctx = ctx.WithBlockHeight(6_000_000)
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.CommunitySeatParticipation != 0 {
+		t.Errorf("expected 0 community seat votes, got %d", conditions.CommunitySeatParticipation)
+	}
+	if allMet {
+		t.Error("conditions should NOT be met (0 of 2 required community seat votes)")
+	}
+}
+
+// TestExitConditions_Phase2_AllMet verifies that Phase 2 (Balanced) exit
+// succeeds when all conditions are met: 50+ voters, 22+ guardians,
+// chain age 12.6M+, 10+ proposals executed, and zero emergency halts.
+func TestExitConditions_Phase2_AllMet(t *testing.T) {
+	k, ctx, mockSK := setupWithStaking(t, "1000000000000")
+
+	// Set phase to Balanced.
+	k.SetResearchFundPhase(ctx, types.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED)
+
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED
+	state.ProposalsExecutedInPhase = 12
+	state.PhaseStartedAtBlock = 50
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	mockSK.guardianCount = 25
+	mockEK := &mockEmergencyKeeper{halts: map[string]uint64{}}
+	k.SetEmergencyKeeper(mockEK)
+
+	// Record 55 distinct voters (need 50).
+	for i := 0; i < 55; i++ {
+		k.RecordDistinctVoter(ctx, testAddr(fmt.Sprintf("voter%d", i)))
+	}
+
+	// Chain age 13M (need 12.6M).
+	ctx = ctx.WithBlockHeight(13_000_000)
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.DistinctLipVoters != 55 {
+		t.Errorf("expected 55 voters, got %d", conditions.DistinctLipVoters)
+	}
+	if conditions.ActiveGuardians != 25 {
+		t.Errorf("expected 25 guardians, got %d", conditions.ActiveGuardians)
+	}
+	if conditions.ProposalsExecutedInPhase != 12 {
+		t.Errorf("expected 12 proposals executed, got %d", conditions.ProposalsExecutedInPhase)
+	}
+	if conditions.EmergencyHaltsFromMisuse != 0 {
+		t.Errorf("expected 0 emergency halts, got %d", conditions.EmergencyHaltsFromMisuse)
+	}
+	if !allMet {
+		t.Error("all Phase 2 exit conditions should be met")
+	}
+}
+
+// TestExitConditions_Phase2_EmergencyHaltBlocksTransition verifies that
+// a single emergency halt in Phase 2 blocks the transition to Phase 3,
+// even when all other conditions are met (zero tolerance policy).
+func TestExitConditions_Phase2_EmergencyHaltBlocksTransition(t *testing.T) {
+	k, ctx, mockSK := setupWithStaking(t, "1000000000000")
+
+	// Set phase to Balanced.
+	k.SetResearchFundPhase(ctx, types.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED)
+
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED
+	state.ProposalsExecutedInPhase = 12
+	state.PhaseStartedAtBlock = 50
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	mockSK.guardianCount = 25
+	// One emergency halt — should block transition.
+	mockEK := &mockEmergencyKeeper{halts: map[string]uint64{
+		"research_fund": 1,
+	}}
+	k.SetEmergencyKeeper(mockEK)
+
+	for i := 0; i < 55; i++ {
+		k.RecordDistinctVoter(ctx, testAddr(fmt.Sprintf("voter%d", i)))
+	}
+
+	ctx = ctx.WithBlockHeight(13_000_000)
+
+	conditions, allMet := k.CheckPhaseExitConditions(ctx)
+
+	if conditions.EmergencyHaltsFromMisuse != 1 {
+		t.Errorf("expected 1 emergency halt, got %d", conditions.EmergencyHaltsFromMisuse)
+	}
+	if allMet {
+		t.Error("conditions should NOT be met (emergency halt blocks transition)")
 	}
 }

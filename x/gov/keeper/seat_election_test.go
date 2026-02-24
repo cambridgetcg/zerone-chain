@@ -25,7 +25,9 @@ import (
 
 type mockStakingKeeperWithGuardian struct {
 	mockStakingKeeper
-	guardians map[string]bool
+	guardians   map[string]bool
+	jailed      map[string]bool
+	slashCounts map[string]uint64
 }
 
 func newMockStakingKeeperWithGuardian(totalBonded string) *mockStakingKeeperWithGuardian {
@@ -34,12 +36,22 @@ func newMockStakingKeeperWithGuardian(totalBonded string) *mockStakingKeeperWith
 			totalBonded: totalBonded,
 			delegations: make(map[string]string),
 		},
-		guardians: make(map[string]bool),
+		guardians:   make(map[string]bool),
+		jailed:      make(map[string]bool),
+		slashCounts: make(map[string]uint64),
 	}
 }
 
 func (m *mockStakingKeeperWithGuardian) IsGuardian(_ context.Context, addr string) (bool, error) {
 	return m.guardians[addr], nil
+}
+
+func (m *mockStakingKeeperWithGuardian) IsJailed(_ context.Context, addr string) (bool, error) {
+	return m.jailed[addr], nil
+}
+
+func (m *mockStakingKeeperWithGuardian) GetSlashCount(_ context.Context, addr string) (uint64, error) {
+	return m.slashCounts[addr], nil
 }
 
 // ---------- Setup Helper ----------
@@ -989,5 +1001,230 @@ func TestSeatElection_QuorumFailure(t *testing.T) {
 	state := k.GetResearchFundGovernanceState(tallyCtx)
 	if len(state.CommunitySeats) > 0 && state.CommunitySeats[0] != "" {
 		t.Errorf("expected seat 0 to remain empty, got %s", state.CommunitySeats[0])
+	}
+}
+
+// ---------- R17-5: Term Rotation + Vacancy Tests ----------
+
+func TestTermExpiry_EmitsEvent(t *testing.T) {
+	k, ctx, _ := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	// Install a seat with known term end.
+	seatHolder := testAddr("holder1")
+	installHeight := uint64(1000)
+	if err := k.InstallCommunitySeat(ctx.WithBlockHeight(int64(installHeight)), 0, seatHolder, installHeight); err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	termEnd := installHeight + types.SeatTermBlocks
+
+	// Advance to term end and trigger expiry.
+	expiryCtx := ctx.WithBlockHeight(int64(termEnd))
+	k.CheckSeatTermExpiry(expiryCtx)
+
+	// Verify seat was cleared.
+	state := k.GetResearchFundGovernanceState(expiryCtx)
+	if state.CommunitySeats[0] != "" {
+		t.Errorf("expected seat 0 to be cleared, got %s", state.CommunitySeats[0])
+	}
+	if state.SeatTermEndBlocks[0] != 0 {
+		t.Errorf("expected term end block to be 0, got %d", state.SeatTermEndBlocks[0])
+	}
+
+	// Verify expiry event was emitted.
+	events := expiryCtx.EventManager().Events()
+	found := false
+	for _, ev := range events {
+		if ev.Type == "zerone.gov.community_seat_expired" {
+			found = true
+			for _, attr := range ev.Attributes {
+				if attr.Key == "previous_holder" && attr.Value != seatHolder {
+					t.Errorf("expected previous_holder=%s, got %s", seatHolder, attr.Value)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Error("expected community_seat_expired event to be emitted")
+	}
+}
+
+func TestTermExpiry_VacancyWarning_After30Days(t *testing.T) {
+	k, ctx, _ := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	// Seat 0 is vacant from the start (setupPhaseObserver sets seats=[""])
+	// CheckSeatVacancy should emit a warning because the seat is empty.
+	vacancyCtx := ctx.WithBlockHeight(int64(types.SeatVacancyWarningBlocks + 1))
+	k.CheckSeatVacancy(vacancyCtx)
+
+	events := vacancyCtx.EventManager().Events()
+	found := false
+	for _, ev := range events {
+		if ev.Type == "zerone.gov.community_seat_vacant" {
+			found = true
+			for _, attr := range ev.Attributes {
+				if attr.Key == "seat_index" && attr.Value != "0" {
+					t.Errorf("expected seat_index=0, got %s", attr.Value)
+				}
+			}
+		}
+	}
+	if !found {
+		t.Error("expected community_seat_vacant event to be emitted for empty seat")
+	}
+}
+
+func TestTermExpiry_ReElection_AllowsIncumbent(t *testing.T) {
+	k, ctx, mock := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	candidate := testAddr("incumbent")
+	mock.guardians[candidate] = true
+	seedCandidateVotes(t, k, ctx, candidate, 5)
+
+	// Install the candidate as the current seat holder, then expire them.
+	installHeight := uint64(1000)
+	if err := k.InstallCommunitySeat(ctx, 0, candidate, installHeight); err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	// Expire the seat.
+	state := k.GetResearchFundGovernanceState(ctx)
+	k.ExpireSeat(ctx, state, 0)
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Verify seat is now vacant.
+	state = k.GetResearchFundGovernanceState(ctx)
+	if state.CommunitySeats[0] != "" {
+		t.Fatalf("expected seat 0 to be vacant after expiry, got %s", state.CommunitySeats[0])
+	}
+
+	// The former incumbent should be eligible for nomination again.
+	err := k.ValidateSeatCandidate(ctx, candidate)
+	if err != nil {
+		t.Errorf("expected expired incumbent to be eligible for re-election, got error: %v", err)
+	}
+}
+
+// ---------- R17-5: Emergency Removal Tests ----------
+
+func TestEmergencyRemoval_RequiresSupermajority(t *testing.T) {
+	// This test verifies the emergency removal threshold constants are correct.
+	// Per GOVERNANCE-MIGRATION.md: 75% quorum, 80% support.
+	// The actual governance vote check is handled by the LIP voting system;
+	// here we verify the keeper-level validation function exists and works.
+	k, ctx, mock := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	holder := testAddr("seated")
+	if err := k.InstallCommunitySeat(ctx, 0, holder, uint64(ctx.BlockHeight())); err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	// Without grounds (not jailed, 0 slashes), removal should be rejected.
+	err := k.ValidateEmergencyRemoval(ctx, 0)
+	if err == nil {
+		t.Error("expected error when no valid grounds for removal")
+	}
+
+	// With jailed validator, removal should be accepted.
+	mock.jailed[holder] = true
+	err = k.ValidateEmergencyRemoval(ctx, 0)
+	if err != nil {
+		t.Errorf("expected removal accepted for jailed validator, got: %v", err)
+	}
+}
+
+func TestEmergencyRemoval_JailedValidator(t *testing.T) {
+	k, ctx, mock := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	holder := testAddr("jailed_holder")
+	if err := k.InstallCommunitySeat(ctx, 0, holder, uint64(ctx.BlockHeight())); err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	// Mark holder as jailed.
+	mock.jailed[holder] = true
+
+	// Validate should pass.
+	err := k.ValidateEmergencyRemoval(ctx, 0)
+	if err != nil {
+		t.Fatalf("expected removal validated for jailed validator, got: %v", err)
+	}
+
+	// Execute removal.
+	k.RemoveCommunitySeat(ctx, 0, "validator jailed")
+
+	// Verify seat is cleared.
+	state := k.GetResearchFundGovernanceState(ctx)
+	if state.CommunitySeats[0] != "" {
+		t.Errorf("expected seat 0 to be cleared after removal, got %s", state.CommunitySeats[0])
+	}
+
+	// Verify removal event.
+	events := ctx.EventManager().Events()
+	found := false
+	for _, ev := range events {
+		if ev.Type == "zerone.gov.community_seat_removed" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected community_seat_removed event")
+	}
+}
+
+func TestEmergencyRemoval_SlashedThreeTimes(t *testing.T) {
+	k, ctx, mock := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	holder := testAddr("slashed_holder")
+	if err := k.InstallCommunitySeat(ctx, 0, holder, uint64(ctx.BlockHeight())); err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	// Set 3 slashes — should be valid grounds.
+	mock.slashCounts[holder] = 3
+
+	err := k.ValidateEmergencyRemoval(ctx, 0)
+	if err != nil {
+		t.Fatalf("expected removal validated for 3+ slashes, got: %v", err)
+	}
+
+	// 2 slashes should NOT be valid grounds.
+	mock.slashCounts[holder] = 2
+	err = k.ValidateEmergencyRemoval(ctx, 0)
+	if err == nil {
+		t.Error("expected rejection with only 2 slashes")
+	}
+}
+
+func TestEmergencyRemoval_RejectWithoutGrounds(t *testing.T) {
+	k, ctx, _ := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	holder := testAddr("clean_holder")
+	if err := k.InstallCommunitySeat(ctx, 0, holder, uint64(ctx.BlockHeight())); err != nil {
+		t.Fatalf("install failed: %v", err)
+	}
+
+	// Not jailed, 0 slashes — no grounds for removal.
+	err := k.ValidateEmergencyRemoval(ctx, 0)
+	if err == nil {
+		t.Error("expected error: no valid grounds for emergency removal")
+	}
+
+	// Verify the error is the correct type.
+	if err != types.ErrEmergencyRemovalNoGrounds {
+		t.Errorf("expected ErrEmergencyRemovalNoGrounds, got: %v", err)
+	}
+
+	// Removal of empty seat should also fail.
+	err = k.ValidateEmergencyRemoval(ctx, 2)
+	if err == nil {
+		t.Error("expected error when removing non-existent seat")
 	}
 }

@@ -9,6 +9,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 
+	govkeeper "github.com/zerone-chain/zerone/x/gov/keeper"
+	govtypes "github.com/zerone-chain/zerone/x/gov/types"
 	vestingkeeper "github.com/zerone-chain/zerone/x/vesting_rewards/keeper"
 )
 
@@ -227,6 +229,7 @@ type simTool struct {
 type SimState struct {
 	bank          *simBankKeeper
 	vestingKeeper vestingkeeper.Keeper
+	govKeeper     *govkeeper.Keeper // optional — nil when gov module is not wired
 	ctx           sdk.Context
 
 	validators  []*simValidator
@@ -273,6 +276,7 @@ func EpochInvariants() []Invariant {
 	return []Invariant{
 		{"StakingRatios", checkStakingRatios},
 		{"ValidatorSetStability", checkValidatorSetStability},
+		{"PhaseConsistency", checkPhaseConsistency},
 	}
 }
 
@@ -497,6 +501,82 @@ func checkNoBurn(s *SimState) error {
 	if cumulBurned.IsPositive() {
 		return fmt.Errorf("tokens were burned: %s uzrn (no-burn invariant violated)", cumulBurned)
 	}
+	return nil
+}
+
+// checkPhaseConsistency verifies that the governance phase state is internally
+// consistent: multisig threshold matches phase, community seat count matches
+// phase requirements, and no seat terms exceed the maximum.
+func checkPhaseConsistency(s *SimState) error {
+	if s.govKeeper == nil {
+		return nil // gov module not wired — skip silently
+	}
+
+	state := s.govKeeper.GetResearchFundGovernanceState(s.ctx)
+	phase := state.CurrentPhase
+
+	// 1. Verify multisig threshold matches phase.
+	required, total := govtypes.GetResearchFundThreshold(phase)
+	switch phase {
+	case govtypes.ResearchFundPhase_RESEARCH_FUND_PHASE_GENESIS_PAIR:
+		if required != 2 || total != 2 {
+			return fmt.Errorf("phase 0 threshold mismatch: expected 2/2, got %d/%d", required, total)
+		}
+	case govtypes.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER:
+		if required != 2 || total != 3 {
+			return fmt.Errorf("phase 1 threshold mismatch: expected 2/3, got %d/%d", required, total)
+		}
+	case govtypes.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED:
+		if required != 3 || total != 5 {
+			return fmt.Errorf("phase 2 threshold mismatch: expected 3/5, got %d/%d", required, total)
+		}
+	case govtypes.ResearchFundPhase_RESEARCH_FUND_PHASE_FULL_GOVERNANCE:
+		if required != 0 || total != 0 {
+			return fmt.Errorf("phase 3 threshold mismatch: expected 0/0, got %d/%d", required, total)
+		}
+	}
+
+	// 2. Verify community seat count matches phase requirements.
+	seatCount := len(state.CommunitySeats)
+	switch phase {
+	case govtypes.ResearchFundPhase_RESEARCH_FUND_PHASE_GENESIS_PAIR:
+		if seatCount != 0 {
+			return fmt.Errorf("phase 0 should have 0 community seats, got %d", seatCount)
+		}
+	case govtypes.ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER:
+		if seatCount != 1 {
+			return fmt.Errorf("phase 1 should have 1 community seat slot, got %d", seatCount)
+		}
+	case govtypes.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED:
+		if seatCount != 3 {
+			return fmt.Errorf("phase 2 should have 3 community seat slots, got %d", seatCount)
+		}
+	case govtypes.ResearchFundPhase_RESEARCH_FUND_PHASE_FULL_GOVERNANCE:
+		if seatCount != 0 {
+			return fmt.Errorf("phase 3 should have 0 community seats, got %d", seatCount)
+		}
+	}
+
+	// 3. Verify no seat term exceeds the maximum.
+	for i, termEnd := range state.SeatTermEndBlocks {
+		if termEnd == 0 {
+			continue // vacant seat — no term
+		}
+		termStart := termEnd - govtypes.SeatTermBlocks
+		termDuration := termEnd - termStart
+		if termDuration > govtypes.SeatTermBlocks {
+			return fmt.Errorf("seat %d term duration %d exceeds max %d",
+				i, termDuration, govtypes.SeatTermBlocks)
+		}
+	}
+
+	// 4. Verify seat term end blocks array length matches seats array.
+	termBlockCount := len(state.SeatTermEndBlocks)
+	if termBlockCount != seatCount {
+		return fmt.Errorf("seat term end blocks count %d != community seats count %d",
+			termBlockCount, seatCount)
+	}
+
 	return nil
 }
 

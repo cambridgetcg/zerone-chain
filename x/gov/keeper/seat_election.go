@@ -746,3 +746,56 @@ func maxSeatIndexForPhase(phase types.ResearchFundPhase) uint32 {
 		return 0 // No community seats in Phase 0 or Phase 3
 	}
 }
+
+// ---------- Emergency Removal ----------
+
+// ValidateEmergencyRemoval checks whether a community seat holder can be
+// removed for cause. Grounds: validator jailed, or slashed 3+ times during term.
+func (k Keeper) ValidateEmergencyRemoval(ctx sdk.Context, seatIndex uint32) error {
+	state := k.GetResearchFundGovernanceState(ctx)
+
+	if seatIndex >= uint32(len(state.CommunitySeats)) || state.CommunitySeats[seatIndex] == "" {
+		return types.ErrSeatElectionNotFound
+	}
+
+	holder := state.CommunitySeats[seatIndex]
+
+	if k.stakingKeeper == nil {
+		return types.ErrEmergencyRemovalNoGrounds
+	}
+
+	jailed, err := k.stakingKeeper.IsJailed(ctx, holder)
+	if err == nil && jailed {
+		return nil // jailed validator is valid grounds
+	}
+
+	slashCount, err := k.stakingKeeper.GetSlashCount(ctx, holder)
+	if err == nil && slashCount >= 3 {
+		return nil // 3+ slashes is valid grounds
+	}
+
+	return types.ErrEmergencyRemovalNoGrounds
+}
+
+// RemoveCommunitySeat removes a community seat holder and emits an event.
+func (k Keeper) RemoveCommunitySeat(ctx sdk.Context, seatIndex uint32, reason string) {
+	state := k.GetResearchFundGovernanceState(ctx)
+
+	if seatIndex >= uint32(len(state.CommunitySeats)) {
+		return
+	}
+
+	oldAddr := state.CommunitySeats[seatIndex]
+	state.CommunitySeats[seatIndex] = ""
+	state.SeatTermEndBlocks[seatIndex] = 0
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			"zerone.gov.community_seat_removed",
+			sdk.NewAttribute("seat_index", fmt.Sprintf("%d", seatIndex)),
+			sdk.NewAttribute("removed_address", oldAddr),
+			sdk.NewAttribute("reason", reason),
+		),
+	)
+}

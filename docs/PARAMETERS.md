@@ -290,6 +290,58 @@ Governance and Living Improvement Proposals (LIPs).
 | Text | 400 ZRN | ~12h (17,136 blocks) |
 | Research Spend | 200 ZRN | ~12h (17,136 blocks) |
 
+### Governance Migration Parameters
+
+Phase transition thresholds, community seat election mechanics, and rollback safety.
+
+#### Phase Exit Conditions
+
+| Phase | Min Voters | Min Guardians | Min Balance | Min Chain Age | Min Proposals | Min Seat Votes | Max Halts |
+|-------|-----------|---------------|-------------|---------------|---------------|----------------|-----------|
+| 0 → 1 | 10 | 5 | 100,000 ZRN | ~6mo (2,200,000 blocks) | 0 | 0 | 0 |
+| 1 → 2 | 25 | 10 | 0 | ~18mo (5,700,000 blocks) | 3 | 2 | 0 |
+| 2 → 3 | 50 | 22 | 0 | ~3yr (12,600,000 blocks) | 10 | 0 | 0 |
+
+#### Transition Proposal Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `transition_stake` | 1,000 ZRN | Stake required to propose a phase transition |
+| `transition_discussion_blocks` | 1,030,000 (~30 days) | Discussion period before voting |
+| `transition_activation_delay` | 240,000 (~7 days) | Delay after vote passes before activation |
+| `transition_supermajority_bps` | 667,000 (66.7%) | Supermajority threshold for transition votes |
+
+#### Rollback Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `rollback_stake` | 500 ZRN | Stake required to propose a rollback |
+| `rollback_review_blocks` | 240,000 (~7 days) | Faster review than forward transitions |
+| `rollback_cooldown_blocks` | 3,700,000 (~3 months) | Cooldown before re-attempting forward transition |
+| `rollback_gridlock_threshold` | 3 | Consecutive expired proposals to trigger gridlock |
+
+#### Community Seat Election Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `seat_acceptance_blocks` | 34,272 (~1 day) | Deadline for candidate to accept nomination |
+| `seat_discussion_blocks` | 34,272 (~1 day) | Discussion period after acceptance |
+| `seat_voting_blocks` | 102,816 (~3 days) | Voting period for seat elections |
+| `seat_term_blocks` | 6,400,000 (~6 months) | Term length for community seats |
+| `seat_vacancy_warning_blocks` | 1,030,000 (~30 days) | Warning emitted after this long vacant |
+| `seat_vacancy_notice_blocks` | 3,090,000 (~90 days) | Auto-submit governance notice |
+| `seat_runoff_threshold_bps` | 50,000 (5%) | Margin within which runoff is triggered |
+| `seat_election_stake` | 500 ZRN | Stake required to nominate a candidate |
+| `min_candidate_lip_votes` | 5 | Minimum LIP votes required for candidacy |
+
+#### Phase 2 Stagger Offsets
+
+| Seat | Offset | Description |
+|------|--------|-------------|
+| Seat 0 | 2,133,333 (~2 months) | First term expires earliest |
+| Seat 1 | 4,266,666 (~4 months) | Second term |
+| Seat 2 | 6,400,000 (~6 months) | Third term — full cycle |
+
 ---
 
 ## ontology

@@ -977,3 +977,184 @@ func TestResearchSpend_QueryByStage(t *testing.T) {
 		t.Errorf("expected 2 total, got %d", resp.Total)
 	}
 }
+
+// ========== Multisig Threshold Tests ==========
+
+// TestThreshold_Phase2_VacantSeat_AdjustsTotal verifies that vacant community
+// seats in Phase 2 (Balanced, 3-of-5) reduce the pool of possible approvers.
+// With 2 vacant seats, only 3 voters remain (2 core + 1 community), so all
+// three must approve to reach the required threshold of 3.
+func TestThreshold_Phase2_VacantSeat_AdjustsTotal(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, voter2 := setupResearchVoters(t, k, ctx)
+	mock := &mockVestingKeeper{}
+	k.SetVestingKeeper(mock)
+
+	// Phase 2 with 2 vacant seats (empty strings) and 1 filled community seat.
+	communityAddr := testAddr("community1")
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED
+	state.CommunitySeats = []string{"", communityAddr, ""}
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Submit proposal.
+	resp, err := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "Vacant seat test",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+	if err != nil {
+		t.Fatalf("submit failed: %v", err)
+	}
+
+	// Advance to voting.
+	prop, _ := k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	prop.Stage = string(types.ResearchStageVoting)
+	k.SetResearchSpendProposal(ctx, prop)
+
+	// Voter1 votes yes (1 approval).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage == string(types.ResearchStageExecuted) {
+		t.Error("should not execute with only 1 approval")
+	}
+
+	// Voter2 votes yes (2 approvals).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter2, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage == string(types.ResearchStageExecuted) {
+		t.Error("should not execute with only 2-of-3 (need 3 required in Phase 2)")
+	}
+
+	// Community seat votes yes (3 approvals — reaches required threshold of 3).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: communityAddr, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage != string(types.ResearchStageExecuted) {
+		t.Errorf("expected executed with 3-of-3 (all remaining voters), got %s", prop.Stage)
+	}
+}
+
+// TestThreshold_Phase2_AllCommunityApprove verifies that in Phase 2 with all
+// 3 community seats filled, reaching 3-of-5 with 1 core + 2 community
+// approvals triggers execution.
+func TestThreshold_Phase2_AllCommunityApprove(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, _ := setupResearchVoters(t, k, ctx)
+	mock := &mockVestingKeeper{}
+	k.SetVestingKeeper(mock)
+
+	// Phase 2 with all 3 community seats filled.
+	community1 := testAddr("community1")
+	community2 := testAddr("community2")
+	community3 := testAddr("community3")
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED
+	state.CommunitySeats = []string{community1, community2, community3}
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Submit proposal.
+	resp, err := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "All community approve test",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+	if err != nil {
+		t.Fatalf("submit failed: %v", err)
+	}
+
+	// Advance to voting.
+	prop, _ := k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	prop.Stage = string(types.ResearchStageVoting)
+	k.SetResearchSpendProposal(ctx, prop)
+
+	// Voter1 votes yes (1-of-5).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+
+	// Community1 votes yes (2-of-5).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: community1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage == string(types.ResearchStageExecuted) {
+		t.Error("should not execute with only 2-of-5")
+	}
+
+	// Community2 votes yes (3-of-5 — meets threshold).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: community2, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage != string(types.ResearchStageExecuted) {
+		t.Errorf("expected executed with 3-of-5 (voter1+community1+community2), got %s", prop.Stage)
+	}
+}
+
+// TestThreshold_Phase2_RejectIfOnlyTwo verifies that in Phase 2 with 3
+// community seats, only 2 approvals (below the 3-of-5 threshold) does
+// not trigger execution.
+func TestThreshold_Phase2_RejectIfOnlyTwo(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	voter1, voter2 := setupResearchVoters(t, k, ctx)
+
+	// Phase 2 with all 3 community seats filled.
+	community1 := testAddr("community1")
+	community2 := testAddr("community2")
+	community3 := testAddr("community3")
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.CurrentPhase = types.ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED
+	state.CommunitySeats = []string{community1, community2, community3}
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	// Submit proposal.
+	resp, err := k.SubmitResearchSpend(ctx, &types.MsgSubmitResearchSpend{
+		Proposer:  voter1,
+		Title:     "Two approvals test",
+		Recipient: testAddr("recipient"),
+		Amount:    "100000000",
+	})
+	if err != nil {
+		t.Fatalf("submit failed: %v", err)
+	}
+
+	// Advance to voting.
+	prop, _ := k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	prop.Stage = string(types.ResearchStageVoting)
+	k.SetResearchSpendProposal(ctx, prop)
+
+	// Voter1 votes yes (1-of-5).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+
+	// Community1 votes yes (2-of-5).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: community1, ProposalId: resp.ProposalId, Vote: "yes",
+	})
+
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage == string(types.ResearchStageExecuted) {
+		t.Error("should NOT execute with only 2-of-5 approvals in Phase 2")
+	}
+	if prop.Stage != string(types.ResearchStageVoting) {
+		t.Errorf("expected still in voting, got %s", prop.Stage)
+	}
+
+	// Voter2 votes NO — triggers immediate rejection (any core NO rejects).
+	k.VoteResearchSpend(ctx, &types.MsgVoteResearchSpend{
+		Voter: voter2, ProposalId: resp.ProposalId, Vote: "no",
+	})
+	prop, _ = k.GetResearchSpendProposal(ctx, resp.ProposalId)
+	if prop.Stage != string(types.ResearchStageRejected) {
+		t.Errorf("expected rejected after core voter NO, got %s", prop.Stage)
+	}
+}

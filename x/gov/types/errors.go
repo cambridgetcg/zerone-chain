@@ -45,4 +45,5 @@ var (
 	ErrPhaseTransitionNotVoting  = errors.Register(ModuleName, 41, "phase transition proposal is not in voting stage")
 	ErrPhaseTransitionVoted      = errors.Register(ModuleName, 42, "already voted on this phase transition proposal")
 	ErrPendingTransitionExists   = errors.Register(ModuleName, 43, "a pending phase transition already exists")
+	ErrEmergencyRemovalNoGrounds = errors.Register(ModuleName, 44, "emergency removal requires valid grounds (jailed or 3+ slashes)")
 )

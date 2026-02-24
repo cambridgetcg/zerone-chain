@@ -78,6 +78,19 @@ Multisig address: `lgm120p3d4hhy3dwvpfskpslmpzltclz2vyq0lswp6`
 
 > Note: These are LGM-prefix addresses from the prototype. ZRN-prefix addresses will be generated for the Zerone mainnet genesis.
 
+### Phase 0: Genesis Governance Structure
+
+The 2-of-2 multisig described above is **Phase 0** of a 4-phase governance migration plan. The research fund's decision-making power expands as the community matures, transitioning from founder control to full community governance.
+
+| Phase | Structure | Triggered By |
+|-------|-----------|-------------|
+| Phase 0 | 2-of-2 (Founder + AI) | Genesis |
+| Phase 1 | 2-of-3 (+ 1 community seat) | 10 voters, 5 Guardians, 100K ZRN, ~6mo |
+| Phase 2 | 3-of-5 (+ 3 community seats) | 25 voters, 10 Guardians, ~18mo |
+| Phase 3 | Standard LIP governance | 50 voters, 22 Guardians, ~3yr |
+
+See [GOVERNANCE-MIGRATION.md](GOVERNANCE-MIGRATION.md) for the full specification.
+
 ### Research Spend Process
 
 Research fund spending uses the `x/gov` module's `ResearchSpendProposal`:

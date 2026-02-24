@@ -16,6 +16,10 @@ type StakingKeeper interface {
 	CountActiveGuardians(ctx context.Context) (uint64, error)
 	// IsGuardian returns true if the address is Guardian tier (tier 4) and active.
 	IsGuardian(ctx context.Context, addr string) (bool, error)
+	// IsJailed returns true if the validator at the given address is jailed.
+	IsJailed(ctx context.Context, addr string) (bool, error)
+	// GetSlashCount returns the number of times a validator has been slashed.
+	GetSlashCount(ctx context.Context, addr string) (uint64, error)
 }
 
 // BankKeeper defines the bank module interface required by governance.
