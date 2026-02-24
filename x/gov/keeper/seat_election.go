@@ -14,14 +14,19 @@ import (
 // CountCandidateGovernanceVotes counts the number of distinct LIPs on which
 // the candidate has cast a governance vote.
 func (k Keeper) CountCandidateGovernanceVotes(ctx sdk.Context, candidate string) uint64 {
+	var count uint64
 	seen := make(map[string]bool)
 	allVotes := k.GetAllVotes(ctx)
 	for _, v := range allVotes {
 		if v.Voter == candidate && !seen[v.LipId] {
 			seen[v.LipId] = true
+			count++
+			if count >= types.MinCandidateGovernanceVotes {
+				return count // early exit — threshold reached
+			}
 		}
 	}
-	return uint64(len(seen))
+	return count
 }
 
 // ValidateSeatCandidate checks whether a candidate is eligible for a community seat:
@@ -259,52 +264,108 @@ func (k Keeper) TallySeatElections(ctx sdk.Context) {
 	}
 
 	for seatIndex, candidates := range bySeat {
-		if len(candidates) == 1 || candidates[0].IsRunoff {
-			// Single candidate or runoff: standard quorum + support check.
-			for _, prop := range candidates {
-				quorumMet, passed := k.checkSeatElectionQuorum(ctx, prop, params)
-				if quorumMet && passed {
-					prop.Stage = types.SeatStagePassed
-					k.SetSeatElection(ctx, prop)
-					if err := k.InstallCommunitySeat(ctx, prop.SeatIndex, prop.Candidate, currentHeight); err != nil {
-						k.Logger(ctx).Error("failed to install community seat",
-							"proposal_id", prop.ProposalId,
-							"candidate", prop.Candidate,
-							"error", err,
-						)
-					}
-				} else {
-					prop.Stage = types.SeatStageFailed
-					k.SetSeatElection(ctx, prop)
+		if len(candidates) == 1 {
+			// Single candidate: standard quorum + support check.
+			prop := candidates[0]
+			quorumMet, passed := k.checkSeatElectionQuorum(ctx, prop, params)
+			if quorumMet && passed {
+				prop.Stage = types.SeatStagePassed
+				k.SetSeatElection(ctx, prop)
+				if err := k.InstallCommunitySeat(ctx, prop.SeatIndex, prop.Candidate, currentHeight); err != nil {
+					k.Logger(ctx).Error("failed to install community seat",
+						"proposal_id", prop.ProposalId,
+						"candidate", prop.Candidate,
+						"error", err,
+					)
 				}
-
-				ctx.EventManager().EmitEvent(
-					sdk.NewEvent(
-						"zerone.gov.seat_election_tallied",
-						sdk.NewAttribute("proposal_id", fmt.Sprintf("%d", prop.ProposalId)),
-						sdk.NewAttribute("outcome", prop.Stage),
-						sdk.NewAttribute("yes_stake", prop.YesStake),
-						sdk.NewAttribute("no_stake", prop.NoStake),
-					),
-				)
+			} else {
+				prop.Stage = types.SeatStageFailed
+				k.SetSeatElection(ctx, prop)
 			}
+
+			ctx.EventManager().EmitEvent(
+				sdk.NewEvent(
+					"zerone.gov.seat_election_tallied",
+					sdk.NewAttribute("proposal_id", fmt.Sprintf("%d", prop.ProposalId)),
+					sdk.NewAttribute("outcome", prop.Stage),
+					sdk.NewAttribute("yes_stake", prop.YesStake),
+					sdk.NewAttribute("no_stake", prop.NoStake),
+				),
+			)
+		} else if candidates[0].IsRunoff {
+			// Runoff: pick highest yes_stake among those passing quorum+support.
+			k.resolveRunoff(ctx, seatIndex, candidates, params, currentHeight)
 		} else {
-			// Multiple candidates for same seat: rank by yes_stake.
+			// Multiple candidates for same seat: rank by yes_stake with quorum filter.
 			k.resolveContestedSeat(ctx, seatIndex, candidates, currentHeight)
 		}
 	}
 }
 
 // resolveContestedSeat resolves a contested seat election with multiple candidates.
-// If the leading candidate has >5% margin over second place, they win.
-// Otherwise, a runoff is triggered between the top two.
+// Each candidate must pass quorum+support to be eligible. Among eligible candidates:
+// - If the leader has >5% margin over second place, they win.
+// - If top two are within 5%, a runoff is triggered.
+// - If only one passes quorum+support, that one wins regardless of stake rank.
+// - If none pass, all fail.
 func (k Keeper) resolveContestedSeat(ctx sdk.Context, seatIndex uint32, candidates []*types.SeatElectionProposal, currentHeight uint64) {
-	// Sort by yes_stake descending (simple selection for top 2).
+	params := k.GetParams(ctx)
+
+	// Filter candidates that pass quorum + support.
+	var eligible []*types.SeatElectionProposal
+	for _, c := range candidates {
+		quorumMet, passed := k.checkSeatElectionQuorum(ctx, c, params)
+		if quorumMet && passed {
+			eligible = append(eligible, c)
+		}
+	}
+
+	if len(eligible) == 0 {
+		// No candidate passes quorum+support — all fail.
+		for _, c := range candidates {
+			c.Stage = types.SeatStageFailed
+			k.SetSeatElection(ctx, c)
+		}
+		return
+	}
+
+	if len(eligible) == 1 {
+		// Exactly one candidate passes — that one wins, rest fail.
+		winner := eligible[0]
+		winner.Stage = types.SeatStagePassed
+		k.SetSeatElection(ctx, winner)
+		if err := k.InstallCommunitySeat(ctx, seatIndex, winner.Candidate, currentHeight); err != nil {
+			k.Logger(ctx).Error("failed to install community seat",
+				"proposal_id", winner.ProposalId,
+				"candidate", winner.Candidate,
+				"error", err,
+			)
+		}
+
+		for _, c := range candidates {
+			if c.ProposalId != winner.ProposalId {
+				c.Stage = types.SeatStageFailed
+				k.SetSeatElection(ctx, c)
+			}
+		}
+
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				"zerone.gov.seat_election_contested_resolved",
+				sdk.NewAttribute("seat_index", fmt.Sprintf("%d", seatIndex)),
+				sdk.NewAttribute("winner", winner.Candidate),
+				sdk.NewAttribute("winner_stake", winner.YesStake),
+			),
+		)
+		return
+	}
+
+	// Multiple eligible candidates — rank by yes_stake descending (top 2).
 	var first, second *types.SeatElectionProposal
 	firstStake := big.NewInt(0)
 	secondStake := big.NewInt(0)
 
-	for _, c := range candidates {
+	for _, c := range eligible {
 		cStake, ok := new(big.Int).SetString(c.YesStake, 10)
 		if !ok {
 			cStake = big.NewInt(0)
@@ -318,15 +379,6 @@ func (k Keeper) resolveContestedSeat(ctx sdk.Context, seatIndex uint32, candidat
 			second = c
 			secondStake = cStake
 		}
-	}
-
-	if first == nil {
-		// No candidates with stake — all fail.
-		for _, c := range candidates {
-			c.Stage = types.SeatStageFailed
-			k.SetSeatElection(ctx, c)
-		}
-		return
 	}
 
 	// Check if gap between #1 and #2 > 5% of #1's yes_stake.
@@ -433,6 +485,55 @@ func (k Keeper) createRunoff(ctx sdk.Context, seatIndex uint32, first, second *t
 			sdk.NewAttribute("candidate_2", second.Candidate),
 		),
 	)
+}
+
+// resolveRunoff resolves a runoff election. Among candidates that pass quorum+support,
+// the one with the highest yes_stake wins. If none pass, all fail.
+func (k Keeper) resolveRunoff(ctx sdk.Context, seatIndex uint32, candidates []*types.SeatElectionProposal, params *types.Params, currentHeight uint64) {
+	var winner *types.SeatElectionProposal
+	winnerStake := big.NewInt(0)
+
+	for _, c := range candidates {
+		quorumMet, passed := k.checkSeatElectionQuorum(ctx, c, params)
+		if quorumMet && passed {
+			cStake, ok := new(big.Int).SetString(c.YesStake, 10)
+			if !ok {
+				cStake = big.NewInt(0)
+			}
+			if cStake.Cmp(winnerStake) > 0 {
+				winner = c
+				winnerStake = cStake
+			}
+		}
+	}
+
+	if winner != nil {
+		winner.Stage = types.SeatStagePassed
+		k.SetSeatElection(ctx, winner)
+		if err := k.InstallCommunitySeat(ctx, seatIndex, winner.Candidate, currentHeight); err != nil {
+			k.Logger(ctx).Error("failed to install community seat",
+				"proposal_id", winner.ProposalId,
+				"candidate", winner.Candidate,
+				"error", err,
+			)
+		}
+	}
+
+	for _, c := range candidates {
+		if winner == nil || c.ProposalId != winner.ProposalId {
+			c.Stage = types.SeatStageFailed
+			k.SetSeatElection(ctx, c)
+		}
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				"zerone.gov.seat_election_tallied",
+				sdk.NewAttribute("proposal_id", fmt.Sprintf("%d", c.ProposalId)),
+				sdk.NewAttribute("outcome", c.Stage),
+				sdk.NewAttribute("yes_stake", c.YesStake),
+				sdk.NewAttribute("no_stake", c.NoStake),
+			),
+		)
+	}
 }
 
 // checkSeatElectionQuorum checks quorum (33.4%) and support (50%) for a seat election.

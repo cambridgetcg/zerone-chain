@@ -841,3 +841,153 @@ func TestSeatElection_NominationAutoExpiry(t *testing.T) {
 		t.Errorf("expected expired, got %s", prop.Stage)
 	}
 }
+
+func TestSeatElection_RunoffResolution(t *testing.T) {
+	k, ctx, mock := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	candidate1 := testAddr("candidate1")
+	candidate2 := testAddr("candidate2")
+	voter1 := testAddr("voter1")
+	voter2 := testAddr("voter2")
+
+	// Voter1 has 50% stake, voter2 has 40%.
+	mock.delegations[voter1] = "500000000000"
+	mock.delegations[voter2] = "400000000000"
+
+	// Create two runoff proposals (is_runoff=true, stage=voting).
+	k.SetSeatElection(ctx, &types.SeatElectionProposal{
+		ProposalId:        1,
+		Proposer:          testAddr("nom1"),
+		Candidate:         candidate1,
+		SeatIndex:         0,
+		Stage:             types.SeatStageVoting,
+		Statement:         "Runoff candidate 1",
+		YesStake:          "0",
+		NoStake:           "0",
+		AbstainStake:      "0",
+		VotingEndBlock:    200,
+		CreatedAtBlock:    100,
+		CandidateAccepted: true,
+		IsRunoff:          true,
+		RunoffParentIds:   []uint64{10, 11},
+	})
+	k.SetSeatElection(ctx, &types.SeatElectionProposal{
+		ProposalId:        2,
+		Proposer:          testAddr("nom2"),
+		Candidate:         candidate2,
+		SeatIndex:         0,
+		Stage:             types.SeatStageVoting,
+		Statement:         "Runoff candidate 2",
+		YesStake:          "0",
+		NoStake:           "0",
+		AbstainStake:      "0",
+		VotingEndBlock:    200,
+		CreatedAtBlock:    100,
+		CandidateAccepted: true,
+		IsRunoff:          true,
+		RunoffParentIds:   []uint64{10, 11},
+	})
+	k.SetNextSeatElectionID(ctx, 3)
+
+	// Cast votes: voter1 (50%) votes yes on candidate1, voter2 (40%) votes yes on candidate2.
+	votingCtx := ctx.WithBlockHeight(150)
+	_, err := k.VoteSeatElection(votingCtx, &types.MsgVoteSeatElection{
+		Voter:      voter1,
+		ProposalId: 1,
+		Option:     types.VoteYes,
+	})
+	if err != nil {
+		t.Fatalf("vote on runoff 1 failed: %v", err)
+	}
+	_, err = k.VoteSeatElection(votingCtx, &types.MsgVoteSeatElection{
+		Voter:      voter2,
+		ProposalId: 2,
+		Option:     types.VoteYes,
+	})
+	if err != nil {
+		t.Fatalf("vote on runoff 2 failed: %v", err)
+	}
+
+	// Tally after voting period ends.
+	tallyCtx := ctx.WithBlockHeight(200)
+	k.TallySeatElections(tallyCtx)
+
+	// Candidate1 (higher yes_stake) should win.
+	prop1, _ := k.GetSeatElection(tallyCtx, 1)
+	prop2, _ := k.GetSeatElection(tallyCtx, 2)
+
+	if prop1.Stage != types.SeatStagePassed {
+		t.Errorf("expected runoff candidate1 to pass, got %s", prop1.Stage)
+	}
+	if prop2.Stage != types.SeatStageFailed {
+		t.Errorf("expected runoff candidate2 to fail, got %s", prop2.Stage)
+	}
+
+	// Verify seat installed for winner.
+	state := k.GetResearchFundGovernanceState(tallyCtx)
+	if len(state.CommunitySeats) == 0 || state.CommunitySeats[0] != candidate1 {
+		t.Errorf("expected community seat 0 = %s, got %v", candidate1, state.CommunitySeats)
+	}
+
+	// Verify no further runoff proposals were created (runoff resolves directly).
+	_, found := k.GetSeatElection(tallyCtx, 3)
+	if found {
+		t.Error("expected no further runoff proposals, but proposal 3 exists")
+	}
+}
+
+func TestSeatElection_QuorumFailure(t *testing.T) {
+	k, ctx, mock := setupWithGuardianStaking(t, "1000000000000")
+	setupPhaseObserver(t, k, ctx)
+
+	candidate := testAddr("candidate")
+	voter := testAddr("smallvoter")
+
+	// Voter has only 1% of total bonded stake (10B out of 1T).
+	// Quorum requires 33.4%, so 1% is far below threshold.
+	mock.delegations[voter] = "10000000000"
+
+	// Create a single-candidate election already in voting stage.
+	k.SetSeatElection(ctx, &types.SeatElectionProposal{
+		ProposalId:        1,
+		Proposer:          testAddr("nominator"),
+		Candidate:         candidate,
+		SeatIndex:         0,
+		Stage:             types.SeatStageVoting,
+		Statement:         "Low turnout candidate",
+		YesStake:          "0",
+		NoStake:           "0",
+		AbstainStake:      "0",
+		VotingEndBlock:    200,
+		CreatedAtBlock:    100,
+		CandidateAccepted: true,
+	})
+
+	// Cast a small yes vote (1% of total bonded).
+	votingCtx := ctx.WithBlockHeight(150)
+	_, err := k.VoteSeatElection(votingCtx, &types.MsgVoteSeatElection{
+		Voter:      voter,
+		ProposalId: 1,
+		Option:     types.VoteYes,
+	})
+	if err != nil {
+		t.Fatalf("vote failed: %v", err)
+	}
+
+	// Tally after voting period.
+	tallyCtx := ctx.WithBlockHeight(200)
+	k.TallySeatElections(tallyCtx)
+
+	// Proposal should fail due to insufficient quorum.
+	prop, _ := k.GetSeatElection(tallyCtx, 1)
+	if prop.Stage != types.SeatStageFailed {
+		t.Errorf("expected proposal to fail due to quorum, got stage=%s", prop.Stage)
+	}
+
+	// Verify seat was NOT installed.
+	state := k.GetResearchFundGovernanceState(tallyCtx)
+	if len(state.CommunitySeats) > 0 && state.CommunitySeats[0] != "" {
+		t.Errorf("expected seat 0 to remain empty, got %s", state.CommunitySeats[0])
+	}
+}
