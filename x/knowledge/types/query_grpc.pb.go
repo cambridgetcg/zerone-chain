@@ -37,6 +37,7 @@ const (
 	Query_FactByCanonical_FullMethodName     = "/zerone.knowledge.v1.Query/FactByCanonical"
 	Query_FactsByFitness_FullMethodName      = "/zerone.knowledge.v1.Query/FactsByFitness"
 	Query_BootstrapFundStatus_FullMethodName = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
+	Query_FactsAtRisk_FullMethodName         = "/zerone.knowledge.v1.Query/FactsAtRisk"
 )
 
 // QueryClient is the client API for Query service.
@@ -81,6 +82,8 @@ type QueryClient interface {
 	FactsByFitness(ctx context.Context, in *QueryFactsByFitnessRequest, opts ...grpc.CallOption) (*QueryFactsByFitnessResponse, error)
 	// BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
 	BootstrapFundStatus(ctx context.Context, in *QueryBootstrapFundStatusRequest, opts ...grpc.CallOption) (*QueryBootstrapFundStatusResponse, error)
+	// FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
+	FactsAtRisk(ctx context.Context, in *QueryFactsAtRiskRequest, opts ...grpc.CallOption) (*QueryFactsAtRiskResponse, error)
 }
 
 type queryClient struct {
@@ -271,6 +274,16 @@ func (c *queryClient) BootstrapFundStatus(ctx context.Context, in *QueryBootstra
 	return out, nil
 }
 
+func (c *queryClient) FactsAtRisk(ctx context.Context, in *QueryFactsAtRiskRequest, opts ...grpc.CallOption) (*QueryFactsAtRiskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactsAtRiskResponse)
+	err := c.cc.Invoke(ctx, Query_FactsAtRisk_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -313,6 +326,8 @@ type QueryServer interface {
 	FactsByFitness(context.Context, *QueryFactsByFitnessRequest) (*QueryFactsByFitnessResponse, error)
 	// BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
 	BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error)
+	// FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
+	FactsAtRisk(context.Context, *QueryFactsAtRiskRequest) (*QueryFactsAtRiskResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -376,6 +391,9 @@ func (UnimplementedQueryServer) FactsByFitness(context.Context, *QueryFactsByFit
 }
 func (UnimplementedQueryServer) BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BootstrapFundStatus not implemented")
+}
+func (UnimplementedQueryServer) FactsAtRisk(context.Context, *QueryFactsAtRiskRequest) (*QueryFactsAtRiskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactsAtRisk not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -722,6 +740,24 @@ func _Query_BootstrapFundStatus_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_FactsAtRisk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactsAtRiskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactsAtRisk(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactsAtRisk_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactsAtRisk(ctx, req.(*QueryFactsAtRiskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -800,6 +836,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "BootstrapFundStatus",
 			Handler:    _Query_BootstrapFundStatus_Handler,
+		},
+		{
+			MethodName: "FactsAtRisk",
+			Handler:    _Query_FactsAtRisk_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

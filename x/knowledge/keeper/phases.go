@@ -24,6 +24,11 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		return nil // non-fatal: don't block consensus for param read failure
 	}
 	if params.FitnessEpochBlocks > 0 && height > 0 && height%params.FitnessEpochBlocks == 0 {
+		epoch := height / params.FitnessEpochBlocks
+		// Metabolism processing at epoch boundaries (runs before fitness so energy state is current)
+		if err := k.ProcessMetabolism(ctx, epoch); err != nil {
+			k.Logger(ctx).Error("metabolism processing failed", "epoch", epoch, "error", err)
+		}
 		if err := k.UpdateAllFitnessScores(ctx); err != nil {
 			k.Logger(ctx).Error("fitness update failed", "error", err)
 		}

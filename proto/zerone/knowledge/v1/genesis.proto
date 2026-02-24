@@ -98,6 +98,19 @@ message Params {
   string bootstrap_fund_max_per_epoch   = 63; // Max sponsored claims per epoch (rate limit)
   uint64 bootstrap_fund_epoch_blocks    = 64; // Epoch length in blocks for rate limiting
   string bootstrap_fund_fee_cap         = 65; // Max fee the fund will cover per claim (uzrn)
+
+  // ─── Metabolism ──────────────────────────────────────────────────────────
+  uint64 metabolism_base_cost                = 66;  // Base energy drain per epoch
+  uint64 metabolism_content_length_bps       = 67;  // Additional cost per 100 chars of content (BPS of base)
+  uint64 metabolism_domain_competition_bps   = 68;  // Additional cost per 100 facts in domain (BPS of base)
+  uint64 metabolism_energy_per_query         = 69;  // Energy gained per query
+  uint64 metabolism_energy_per_citation      = 70;  // Energy gained per new citation
+  uint64 metabolism_energy_per_patronage     = 71;  // Energy gained per patronage epoch
+  uint64 metabolism_energy_challenge_survival = 72; // One-time energy for surviving challenge
+  uint64 metabolism_energy_cap               = 73;  // Maximum energy a fact can hold
+  uint64 metabolism_initial_energy           = 74;  // Starting energy for new facts
+  uint64 metabolism_at_risk_epochs           = 75;  // Epochs at 0 energy before expiry
+  uint64 metabolism_expired_to_pruned_epochs = 76;  // Epochs after expiry before pruning
 }
 
 // GenesisState is the genesis state of the knowledge module.

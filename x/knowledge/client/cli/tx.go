@@ -158,6 +158,7 @@ func NewSubmitClaimCmd() *cobra.Command {
 			}
 
 			canonicalForm, _ := cmd.Flags().GetString("canonical")
+			sponsored, _ := cmd.Flags().GetBool("sponsored")
 
 			msg := &types.MsgSubmitClaim{
 				Submitter:     clientCtx.GetFromAddress().String(),
@@ -171,6 +172,7 @@ func NewSubmitClaimCmd() *cobra.Command {
 				Relations:     relations,
 				Structure:     structure,
 				CanonicalForm: canonicalForm,
+				Sponsored:     sponsored,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -189,6 +191,7 @@ func NewSubmitClaimCmd() *cobra.Command {
 	cmd.Flags().Bool("negatable", true, "Mark claim as negatable (default true)")
 	cmd.Flags().String("tags", "", "Comma-separated tags")
 	cmd.Flags().String("canonical", "", "Explicit canonical form (auto-derived from structure if omitted)")
+	cmd.Flags().Bool("sponsored", false, "Request bootstrap fund sponsorship (fund pays review fee)")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }

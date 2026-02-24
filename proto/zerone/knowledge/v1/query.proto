@@ -99,6 +99,11 @@ service Query {
   rpc BootstrapFundStatus(QueryBootstrapFundStatusRequest) returns (QueryBootstrapFundStatusResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/bootstrap_fund";
   }
+
+  // FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
+  rpc FactsAtRisk(QueryFactsAtRiskRequest) returns (QueryFactsAtRiskResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts_at_risk";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -264,4 +269,13 @@ message QueryBootstrapFundStatusResponse {
   string total_claims_funded  = 3;  // Lifetime count of sponsored claims
   string total_amount_spent   = 4;  // Lifetime amount distributed (uzrn)
   string remaining_per_epoch  = 5;  // Remaining sponsored claims this epoch
+}
+
+message QueryFactsAtRiskRequest {
+  string domain = 1;  // Optional domain filter
+  uint64 limit  = 2;  // Max results (default 50)
+}
+
+message QueryFactsAtRiskResponse {
+  repeated Fact facts = 1;
 }

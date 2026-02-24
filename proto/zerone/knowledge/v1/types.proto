@@ -157,6 +157,12 @@ message Fact {
   uint64 query_count             = 32;  // Lifetime query count
   uint64 query_count_epoch       = 33;  // Queries in current epoch
   uint64 epoch_born              = 34;  // Epoch when fact was created
+
+  // ─── Metabolism (energy budget) ─────────────────────────────────────────
+  uint64 energy                  = 35;  // Current energy budget (0-10,000)
+  uint64 energy_cap              = 36;  // Maximum energy (governance-adjustable per domain)
+  uint64 energy_last_updated     = 37;  // Block height of last energy update
+  uint64 at_risk_since_epoch     = 38;  // Epoch when energy first hit 0 (0 = not at risk)
 }
 
 // Claim is an unverified submission awaiting or undergoing verification.

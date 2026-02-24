@@ -498,14 +498,15 @@ func (m *msgServer) ChallengeFact(ctx context.Context, msg *types.MsgChallengeFa
 	// Create a challenge claim and round
 	challengeClaimID := GenerateClaimID(msg.Challenger, msg.FactId, height)
 	challengeClaim := &types.Claim{
-		Id:               challengeClaimID,
-		FactContent:      fmt.Sprintf("Challenge of fact %s: %s", msg.FactId, msg.Reason),
-		Domain:           fact.Domain,
-		Category:         fact.Category,
-		Submitter:        msg.Challenger,
-		SubmittedAtBlock: height,
-		Status:           types.ClaimStatus_CLAIM_STATUS_PENDING,
-		Stake:            msg.Stake,
+		Id:                challengeClaimID,
+		FactContent:       fmt.Sprintf("Challenge of fact %s: %s", msg.FactId, msg.Reason),
+		Domain:            fact.Domain,
+		Category:          fact.Category,
+		Submitter:         msg.Challenger,
+		SubmittedAtBlock:  height,
+		Status:            types.ClaimStatus_CLAIM_STATUS_PENDING,
+		Stake:             msg.Stake,
+		ProvisionalFactId: msg.FactId, // Track challenged fact for resolution
 	}
 	if err := m.keeper.SetClaim(ctx, challengeClaim); err != nil {
 		return nil, err
@@ -563,14 +564,15 @@ func (m *msgServer) ChallengeProvisionalFact(ctx context.Context, msg *types.Msg
 
 	challengeClaimID := GenerateClaimID(msg.Challenger, msg.FactId, height)
 	challengeClaim := &types.Claim{
-		Id:               challengeClaimID,
-		FactContent:      fmt.Sprintf("Provisional challenge of fact %s: %s", msg.FactId, msg.Reason),
-		Domain:           fact.Domain,
-		Category:         fact.Category,
-		Submitter:        msg.Challenger,
-		SubmittedAtBlock: height,
-		Status:           types.ClaimStatus_CLAIM_STATUS_PENDING,
-		Stake:            msg.Stake,
+		Id:                challengeClaimID,
+		FactContent:       fmt.Sprintf("Provisional challenge of fact %s: %s", msg.FactId, msg.Reason),
+		Domain:            fact.Domain,
+		Category:          fact.Category,
+		Submitter:         msg.Challenger,
+		SubmittedAtBlock:  height,
+		Status:            types.ClaimStatus_CLAIM_STATUS_PENDING,
+		Stake:             msg.Stake,
+		ProvisionalFactId: msg.FactId, // Track challenged fact for resolution
 	}
 	_ = m.keeper.SetClaim(ctx, challengeClaim)
 	round, err := m.keeper.CreateVerificationRound(ctx, challengeClaim)

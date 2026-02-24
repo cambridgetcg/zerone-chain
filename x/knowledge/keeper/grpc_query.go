@@ -377,3 +377,25 @@ func (q *queryServer) BootstrapFundStatus(ctx context.Context, _ *types.QueryBoo
 		RemainingPerEpoch:  fmt.Sprintf("%d", remaining),
 	}, nil
 }
+
+func (q *queryServer) FactsAtRisk(ctx context.Context, req *types.QueryFactsAtRiskRequest) (*types.QueryFactsAtRiskResponse, error) {
+	limit := req.Limit
+	if limit == 0 {
+		limit = 50
+	}
+
+	var facts []*types.Fact
+	q.keeper.IterateFacts(ctx, func(fact *types.Fact) bool {
+		if fact.Status != types.FactStatus_FACT_STATUS_AT_RISK &&
+			fact.Status != types.FactStatus_FACT_STATUS_EXPIRED {
+			return false
+		}
+		if req.Domain != "" && fact.Domain != req.Domain {
+			return false
+		}
+		facts = append(facts, fact)
+		return uint64(len(facts)) >= limit
+	})
+
+	return &types.QueryFactsAtRiskResponse{Facts: facts}, nil
+}

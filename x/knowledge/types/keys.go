@@ -87,6 +87,9 @@ var (
 	// ─── Bootstrap fund tracking ─────────────────────────────────────────────
 	BootstrapClaimCountPrefix = []byte{0x35} // 0x35 | address → uint64 (lifetime sponsored count)
 	BootstrapEpochCountPrefix = []byte{0x36} // 0x36 | epoch_number → uint64 (epoch-wide count)
+
+	// ─── Metabolism tracking ────────────────────────────────────────────────
+	NewCitationsEpochPrefix = []byte{0x37} // 0x37 | fact_id → uint64 (new citations this epoch)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────

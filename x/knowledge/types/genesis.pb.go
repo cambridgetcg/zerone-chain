@@ -103,8 +103,20 @@ type Params struct {
 	BootstrapFundMaxPerEpoch   string `protobuf:"bytes,63,opt,name=bootstrap_fund_max_per_epoch,json=bootstrapFundMaxPerEpoch,proto3" json:"bootstrap_fund_max_per_epoch,omitempty"`       // Max sponsored claims per epoch (rate limit)
 	BootstrapFundEpochBlocks   uint64 `protobuf:"varint,64,opt,name=bootstrap_fund_epoch_blocks,json=bootstrapFundEpochBlocks,proto3" json:"bootstrap_fund_epoch_blocks,omitempty"`        // Epoch length in blocks for rate limiting
 	BootstrapFundFeeCap        string `protobuf:"bytes,65,opt,name=bootstrap_fund_fee_cap,json=bootstrapFundFeeCap,proto3" json:"bootstrap_fund_fee_cap,omitempty"`                        // Max fee the fund will cover per claim (uzrn)
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	// ─── Metabolism ──────────────────────────────────────────────────────────
+	MetabolismBaseCost                uint64 `protobuf:"varint,66,opt,name=metabolism_base_cost,json=metabolismBaseCost,proto3" json:"metabolism_base_cost,omitempty"`                                                // Base energy drain per epoch
+	MetabolismContentLengthBps        uint64 `protobuf:"varint,67,opt,name=metabolism_content_length_bps,json=metabolismContentLengthBps,proto3" json:"metabolism_content_length_bps,omitempty"`                      // Additional cost per 100 chars of content (BPS of base)
+	MetabolismDomainCompetitionBps    uint64 `protobuf:"varint,68,opt,name=metabolism_domain_competition_bps,json=metabolismDomainCompetitionBps,proto3" json:"metabolism_domain_competition_bps,omitempty"`          // Additional cost per 100 facts in domain (BPS of base)
+	MetabolismEnergyPerQuery          uint64 `protobuf:"varint,69,opt,name=metabolism_energy_per_query,json=metabolismEnergyPerQuery,proto3" json:"metabolism_energy_per_query,omitempty"`                            // Energy gained per query
+	MetabolismEnergyPerCitation       uint64 `protobuf:"varint,70,opt,name=metabolism_energy_per_citation,json=metabolismEnergyPerCitation,proto3" json:"metabolism_energy_per_citation,omitempty"`                   // Energy gained per new citation
+	MetabolismEnergyPerPatronage      uint64 `protobuf:"varint,71,opt,name=metabolism_energy_per_patronage,json=metabolismEnergyPerPatronage,proto3" json:"metabolism_energy_per_patronage,omitempty"`                // Energy gained per patronage epoch
+	MetabolismEnergyChallengeSurvival uint64 `protobuf:"varint,72,opt,name=metabolism_energy_challenge_survival,json=metabolismEnergyChallengeSurvival,proto3" json:"metabolism_energy_challenge_survival,omitempty"` // One-time energy for surviving challenge
+	MetabolismEnergyCap               uint64 `protobuf:"varint,73,opt,name=metabolism_energy_cap,json=metabolismEnergyCap,proto3" json:"metabolism_energy_cap,omitempty"`                                             // Maximum energy a fact can hold
+	MetabolismInitialEnergy           uint64 `protobuf:"varint,74,opt,name=metabolism_initial_energy,json=metabolismInitialEnergy,proto3" json:"metabolism_initial_energy,omitempty"`                                 // Starting energy for new facts
+	MetabolismAtRiskEpochs            uint64 `protobuf:"varint,75,opt,name=metabolism_at_risk_epochs,json=metabolismAtRiskEpochs,proto3" json:"metabolism_at_risk_epochs,omitempty"`                                  // Epochs at 0 energy before expiry
+	MetabolismExpiredToPrunedEpochs   uint64 `protobuf:"varint,76,opt,name=metabolism_expired_to_pruned_epochs,json=metabolismExpiredToPrunedEpochs,proto3" json:"metabolism_expired_to_pruned_epochs,omitempty"`     // Epochs after expiry before pruning
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -592,6 +604,83 @@ func (x *Params) GetBootstrapFundFeeCap() string {
 	return ""
 }
 
+func (x *Params) GetMetabolismBaseCost() uint64 {
+	if x != nil {
+		return x.MetabolismBaseCost
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismContentLengthBps() uint64 {
+	if x != nil {
+		return x.MetabolismContentLengthBps
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismDomainCompetitionBps() uint64 {
+	if x != nil {
+		return x.MetabolismDomainCompetitionBps
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyPerQuery() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyPerQuery
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyPerCitation() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyPerCitation
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyPerPatronage() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyPerPatronage
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyChallengeSurvival() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyChallengeSurvival
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyCap() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyCap
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismInitialEnergy() uint64 {
+	if x != nil {
+		return x.MetabolismInitialEnergy
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismAtRiskEpochs() uint64 {
+	if x != nil {
+		return x.MetabolismAtRiskEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismExpiredToPrunedEpochs() uint64 {
+	if x != nil {
+		return x.MetabolismExpiredToPrunedEpochs
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState `protogen:"open.v1"`
@@ -681,7 +770,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xe3\x1c\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xb8\"\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -748,7 +837,18 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x1ebootstrap_fund_max_per_address\x18> \x01(\tR\x1abootstrapFundMaxPerAddress\x12>\n" +
 	"\x1cbootstrap_fund_max_per_epoch\x18? \x01(\tR\x18bootstrapFundMaxPerEpoch\x12=\n" +
 	"\x1bbootstrap_fund_epoch_blocks\x18@ \x01(\x04R\x18bootstrapFundEpochBlocks\x123\n" +
-	"\x16bootstrap_fund_fee_cap\x18A \x01(\tR\x13bootstrapFundFeeCap\"\xf7\x02\n" +
+	"\x16bootstrap_fund_fee_cap\x18A \x01(\tR\x13bootstrapFundFeeCap\x120\n" +
+	"\x14metabolism_base_cost\x18B \x01(\x04R\x12metabolismBaseCost\x12A\n" +
+	"\x1dmetabolism_content_length_bps\x18C \x01(\x04R\x1ametabolismContentLengthBps\x12I\n" +
+	"!metabolism_domain_competition_bps\x18D \x01(\x04R\x1emetabolismDomainCompetitionBps\x12=\n" +
+	"\x1bmetabolism_energy_per_query\x18E \x01(\x04R\x18metabolismEnergyPerQuery\x12C\n" +
+	"\x1emetabolism_energy_per_citation\x18F \x01(\x04R\x1bmetabolismEnergyPerCitation\x12E\n" +
+	"\x1fmetabolism_energy_per_patronage\x18G \x01(\x04R\x1cmetabolismEnergyPerPatronage\x12O\n" +
+	"$metabolism_energy_challenge_survival\x18H \x01(\x04R!metabolismEnergyChallengeSurvival\x122\n" +
+	"\x15metabolism_energy_cap\x18I \x01(\x04R\x13metabolismEnergyCap\x12:\n" +
+	"\x19metabolism_initial_energy\x18J \x01(\x04R\x17metabolismInitialEnergy\x129\n" +
+	"\x19metabolism_at_risk_epochs\x18K \x01(\x04R\x16metabolismAtRiskEpochs\x12L\n" +
+	"#metabolism_expired_to_pruned_epochs\x18L \x01(\x04R\x1fmetabolismExpiredToPrunedEpochs\"\xf7\x02\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

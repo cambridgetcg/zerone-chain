@@ -62,6 +62,8 @@ func GetQueryCmd() *cobra.Command {
 		NewQueryFactsBySubjectCmd(),
 		NewQueryFactsByTagCmd(),
 		NewQueryFactByCanonicalCmd(),
+		NewQueryBootstrapFundStatusCmd(),
+		NewQueryFactsAtRiskCmd(),
 	)
 
 	return queryCmd
@@ -476,6 +478,59 @@ func NewQueryFactByCanonicalCmd() *cobra.Command {
 			return clientCtx.PrintObjectLegacy(resp)
 		},
 	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryBootstrapFundStatusCmd creates a CLI command for querying bootstrap fund status.
+func NewQueryBootstrapFundStatusCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "bootstrap-fund-status",
+		Short: "Query the knowledge bootstrap fund status",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryBootstrapFundStatusRequest{}
+			resp := &types.QueryBootstrapFundStatusResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/BootstrapFundStatus", req, resp); err != nil {
+				return fmt.Errorf("failed to query bootstrap fund status: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryFactsAtRiskCmd creates a CLI command for querying facts at risk of expiry.
+func NewQueryFactsAtRiskCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "facts-at-risk",
+		Short: "Query facts whose energy has reached zero (at-risk of expiry)",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			domain, _ := cmd.Flags().GetString("domain")
+			limit, _ := cmd.Flags().GetUint64("limit")
+			req := &types.QueryFactsAtRiskRequest{
+				Domain: domain,
+				Limit:  limit,
+			}
+			resp := &types.QueryFactsAtRiskResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/FactsAtRisk", req, resp); err != nil {
+				return fmt.Errorf("failed to query facts at risk: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	cmd.Flags().String("domain", "", "Filter by domain")
+	cmd.Flags().Uint64("limit", 50, "Max results")
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }

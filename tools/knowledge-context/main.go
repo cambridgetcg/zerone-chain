@@ -57,6 +57,8 @@ type Fact struct {
 	CanonicalForm string          `json:"canonical_form,omitempty"`
 	CanonicalHash string          `json:"canonical_hash,omitempty"`
 	FitnessScore  string          `json:"fitness_score,omitempty"`
+	Energy        string          `json:"energy,omitempty"`
+	EnergyCap     string          `json:"energy_cap,omitempty"`
 }
 
 type FactRelation struct {
@@ -274,8 +276,12 @@ func formatXML(facts []Fact, query string, showCanonical bool) string {
 		ct := humanClaimType(f.ClaimType)
 		fitness := parseFitness(f.FitnessScore)
 		fl := fitnessLabel(fitness)
-		b.WriteString(fmt.Sprintf("  <fact id=\"%s\" domain=\"%s\" confidence=\"%.1f%%\" status=\"%s\" category=\"%s\" type=\"%s\" fitness=\"%.0f\" fitness_label=\"%s\">\n",
-			f.ID, f.Domain, conf, status, f.Category, ct, fitness, fl))
+		energyAttr := ""
+		if f.Energy != "" && f.Energy != "0" {
+			energyAttr = fmt.Sprintf(" energy=\"%s/%s\"", f.Energy, f.EnergyCap)
+		}
+		b.WriteString(fmt.Sprintf("  <fact id=\"%s\" domain=\"%s\" confidence=\"%.1f%%\" status=\"%s\" category=\"%s\" type=\"%s\" fitness=\"%.0f\" fitness_label=\"%s\"%s>\n",
+			f.ID, f.Domain, conf, status, f.Category, ct, fitness, fl, energyAttr))
 		b.WriteString(fmt.Sprintf("    <content>%s</content>\n", f.Content))
 		if f.Structure != nil {
 			b.WriteString("    <structure>\n")
@@ -360,6 +366,9 @@ func formatJSON(facts []Fact) string {
 		References    []string      `json:"references,omitempty"`
 		Structure     *structureOut `json:"structure,omitempty"`
 		Relations     *relationsOut `json:"relations,omitempty"`
+		Energy        uint64        `json:"energy,omitempty"`
+		EnergyCap     uint64        `json:"energy_cap,omitempty"`
+		EnergyPct     float64       `json:"energy_pct,omitempty"`
 	}
 	type output struct {
 		Source    string    `json:"source"`
@@ -379,6 +388,12 @@ func formatJSON(facts []Fact) string {
 			status = f.Status
 		}
 		fitness := parseFitness(f.FitnessScore)
+		energy, _ := strconv.ParseUint(f.Energy, 10, 64)
+		energyCap, _ := strconv.ParseUint(f.EnergyCap, 10, 64)
+		var energyPct float64
+		if energyCap > 0 {
+			energyPct = float64(energy) / float64(energyCap) * 100.0
+		}
 		fo := factOut{
 			ID:            f.ID,
 			Domain:        f.Domain,
@@ -393,6 +408,9 @@ func formatJSON(facts []Fact) string {
 			CanonicalForm: f.CanonicalForm,
 			CanonicalHash: f.CanonicalHash,
 			References:    f.References,
+			Energy:        energy,
+			EnergyCap:     energyCap,
+			EnergyPct:     energyPct,
 		}
 		if f.Structure != nil {
 			fo.Structure = &structureOut{

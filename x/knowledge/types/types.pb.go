@@ -741,8 +741,13 @@ type Fact struct {
 	QueryCount          uint64 `protobuf:"varint,32,opt,name=query_count,json=queryCount,proto3" json:"query_count,omitempty"`                              // Lifetime query count
 	QueryCountEpoch     uint64 `protobuf:"varint,33,opt,name=query_count_epoch,json=queryCountEpoch,proto3" json:"query_count_epoch,omitempty"`             // Queries in current epoch
 	EpochBorn           uint64 `protobuf:"varint,34,opt,name=epoch_born,json=epochBorn,proto3" json:"epoch_born,omitempty"`                                 // Epoch when fact was created
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// ─── Metabolism (energy budget) ─────────────────────────────────────────
+	Energy            uint64 `protobuf:"varint,35,opt,name=energy,proto3" json:"energy,omitempty"`                                                  // Current energy budget (0-10,000)
+	EnergyCap         uint64 `protobuf:"varint,36,opt,name=energy_cap,json=energyCap,proto3" json:"energy_cap,omitempty"`                           // Maximum energy (governance-adjustable per domain)
+	EnergyLastUpdated uint64 `protobuf:"varint,37,opt,name=energy_last_updated,json=energyLastUpdated,proto3" json:"energy_last_updated,omitempty"` // Block height of last energy update
+	AtRiskSinceEpoch  uint64 `protobuf:"varint,38,opt,name=at_risk_since_epoch,json=atRiskSinceEpoch,proto3" json:"at_risk_since_epoch,omitempty"`  // Epoch when energy first hit 0 (0 = not at risk)
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Fact) Reset() {
@@ -1009,6 +1014,34 @@ func (x *Fact) GetQueryCountEpoch() uint64 {
 func (x *Fact) GetEpochBorn() uint64 {
 	if x != nil {
 		return x.EpochBorn
+	}
+	return 0
+}
+
+func (x *Fact) GetEnergy() uint64 {
+	if x != nil {
+		return x.Energy
+	}
+	return 0
+}
+
+func (x *Fact) GetEnergyCap() uint64 {
+	if x != nil {
+		return x.EnergyCap
+	}
+	return 0
+}
+
+func (x *Fact) GetEnergyLastUpdated() uint64 {
+	if x != nil {
+		return x.EnergyLastUpdated
+	}
+	return 0
+}
+
+func (x *Fact) GetAtRiskSinceEpoch() uint64 {
+	if x != nil {
+		return x.AtRiskSinceEpoch
 	}
 	return 0
 }
@@ -1893,7 +1926,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\x12%\n" +
 	"\x0etemporal_scope\x18\x05 \x01(\tR\rtemporalScope\x12\x1c\n" +
 	"\tnegatable\x18\x06 \x01(\bR\tnegatable\x12\x12\n" +
-	"\x04tags\x18\a \x03(\tR\x04tags\"\xa4\v\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\"\xba\f\n" +
 	"\x04Fact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
@@ -1936,7 +1969,12 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"queryCount\x12*\n" +
 	"\x11query_count_epoch\x18! \x01(\x04R\x0fqueryCountEpoch\x12\x1d\n" +
 	"\n" +
-	"epoch_born\x18\" \x01(\x04R\tepochBorn\"\x9c\x06\n" +
+	"epoch_born\x18\" \x01(\x04R\tepochBorn\x12\x16\n" +
+	"\x06energy\x18# \x01(\x04R\x06energy\x12\x1d\n" +
+	"\n" +
+	"energy_cap\x18$ \x01(\x04R\tenergyCap\x12.\n" +
+	"\x13energy_last_updated\x18% \x01(\x04R\x11energyLastUpdated\x12-\n" +
+	"\x13at_risk_since_epoch\x18& \x01(\x04R\x10atRiskSinceEpoch\"\x9c\x06\n" +
 	"\x05Claim\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\ffact_content\x18\x02 \x01(\tR\vfactContent\x12\x16\n" +

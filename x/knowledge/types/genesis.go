@@ -96,6 +96,19 @@ func DefaultParams() Params {
 		BootstrapFundMaxPerEpoch:    "100",       // 100 sponsored claims per epoch across all users
 		BootstrapFundEpochBlocks:    50_000,      // ~1.5 days at 2.5s blocks
 		BootstrapFundFeeCap:         "5000000",   // Fund covers up to 5 ZRN per claim
+
+		// ─── Metabolism ─────────────────────────────────────────────────────
+		MetabolismBaseCost:                100,    // 100 energy drain per epoch
+		MetabolismContentLengthBps:        10_000, // +1% base cost per 100 chars
+		MetabolismDomainCompetitionBps:    5_000,  // +0.5% base cost per 100 domain facts
+		MetabolismEnergyPerQuery:          10,     // 10 energy per agent query
+		MetabolismEnergyPerCitation:       50,     // 50 energy per new citation
+		MetabolismEnergyPerPatronage:      200,    // 200 energy per patronage epoch
+		MetabolismEnergyChallengeSurvival: 500,    // 500 energy one-time for surviving challenge
+		MetabolismEnergyCap:               10_000, // Max 10,000 energy
+		MetabolismInitialEnergy:           5_000,  // Born with 50 epochs of base maintenance
+		MetabolismAtRiskEpochs:            5,      // 5 epochs at zero before expiry
+		MetabolismExpiredToPrunedEpochs:   20,     // 20 epochs after expiry before archive
 	}
 }
 
@@ -316,6 +329,23 @@ func (p *Params) Validate() error {
 	}
 	if p.FitnessInitialScore > 1_000_000 {
 		return fmt.Errorf("fitness_initial_score must be <= 1,000,000")
+	}
+
+	// ─── Metabolism params ──────────────────────────────────────────────
+	if p.MetabolismBaseCost == 0 {
+		return fmt.Errorf("metabolism_base_cost must be > 0")
+	}
+	if p.MetabolismEnergyCap == 0 {
+		return fmt.Errorf("metabolism_energy_cap must be > 0")
+	}
+	if p.MetabolismInitialEnergy > p.MetabolismEnergyCap {
+		return fmt.Errorf("metabolism_initial_energy (%d) must be <= metabolism_energy_cap (%d)", p.MetabolismInitialEnergy, p.MetabolismEnergyCap)
+	}
+	if p.MetabolismAtRiskEpochs == 0 {
+		return fmt.Errorf("metabolism_at_risk_epochs must be > 0")
+	}
+	if p.MetabolismExpiredToPrunedEpochs == 0 {
+		return fmt.Errorf("metabolism_expired_to_pruned_epochs must be > 0")
 	}
 
 	// ─── Bootstrap fund params ──────────────────────────────────────────

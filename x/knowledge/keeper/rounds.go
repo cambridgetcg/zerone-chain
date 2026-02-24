@@ -80,6 +80,8 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 	case types.Verdict_VERDICT_REJECT:
 		// Review fee already distributed at submission time — the fee IS the cost of rejection.
 		claim.Status = types.ClaimStatus_CLAIM_STATUS_REJECTED
+		// If this was a challenge claim, the original fact survived — energy boost
+		k.handleChallengeSurvival(ctx, claim)
 
 	case types.Verdict_VERDICT_MALFORMED:
 		// Review fee already distributed at submission time — no additional slashing needed.
@@ -179,6 +181,10 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		FitnessScore:       params.FitnessInitialScore,
 		FitnessUpdatedBlock: height,
 		EpochBorn:          epochBorn,
+		// Metabolism fields
+		Energy:           params.MetabolismInitialEnergy,
+		EnergyCap:        params.MetabolismEnergyCap,
+		EnergyLastUpdated: height,
 	}
 
 	// Apply stratum confidence ceiling if ontology keeper is available
@@ -224,6 +230,9 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 			return fmt.Errorf("failed to store fact relation: %w", err)
 		}
 
+		// Track new citation for metabolism energy income
+		k.IncrementNewCitationEpoch(ctx, claimRel.TargetFactId)
+
 		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 			"zerone.knowledge.fact_relation_created",
 			sdk.NewAttribute("source", factRel.SourceFactId),
@@ -248,6 +257,29 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 	))
 
 	return nil
+}
+
+// handleChallengeSurvival restores a challenged fact and grants survival energy
+// when a challenge claim is rejected (the original fact survived).
+func (k Keeper) handleChallengeSurvival(ctx context.Context, challengeClaim *types.Claim) {
+	if challengeClaim.ProvisionalFactId == "" {
+		return
+	}
+	originalFact, found := k.GetFact(ctx, challengeClaim.ProvisionalFactId)
+	if !found {
+		return
+	}
+	params, _ := k.GetParams(ctx)
+
+	// Energy boost for surviving a challenge
+	originalFact.Energy += params.MetabolismEnergyChallengeSurvival
+	if originalFact.Energy > params.MetabolismEnergyCap {
+		originalFact.Energy = params.MetabolismEnergyCap
+	}
+	// Restore from challenged status
+	originalFact.Status = types.FactStatus_FACT_STATUS_ACTIVE
+	originalFact.AtRiskSinceEpoch = 0
+	_ = k.SetFact(ctx, originalFact)
 }
 
 // distributeVerifierReward sends a verification reward to a verifier.

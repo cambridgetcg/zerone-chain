@@ -1,0 +1,232 @@
+package keeper
+
+import (
+	"context"
+	"encoding/binary"
+	"fmt"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	"github.com/zerone-chain/zerone/x/knowledge/types"
+)
+
+// ProcessMetabolism runs one epoch of energy accounting for all active facts.
+// Deducts maintenance cost, adds energy income, and transitions fact status
+// based on energy levels.
+func (k Keeper) ProcessMetabolism(ctx context.Context, epoch uint64) error {
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Collect facts to process (avoid modifying store during iteration)
+	var factsToProcess []*types.Fact
+	k.IterateFacts(ctx, func(fact *types.Fact) bool {
+		// Process all facts that are alive (not already pruned)
+		if fact.Status == types.FactStatus_FACT_STATUS_VERIFIED ||
+			fact.Status == types.FactStatus_FACT_STATUS_ACTIVE ||
+			fact.Status == types.FactStatus_FACT_STATUS_PROVISIONAL ||
+			fact.Status == types.FactStatus_FACT_STATUS_AT_RISK ||
+			fact.Status == types.FactStatus_FACT_STATUS_EXPIRED {
+			factsToProcess = append(factsToProcess, fact)
+		}
+		return false
+	})
+
+	domainCounts := k.CountFactsByDomain(ctx)
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	for _, fact := range factsToProcess {
+		// ─── Calculate maintenance cost ───────────────────
+		cost := k.calculateMaintenanceCost(fact, params, domainCounts)
+
+		// ─── Calculate energy income ──────────────────────
+		income := k.calculateEnergyIncome(ctx, fact, params)
+
+		// ─── Update energy ────────────────────────────────
+		newEnergy := fact.Energy + income
+		if cost > newEnergy {
+			newEnergy = 0
+		} else {
+			newEnergy -= cost
+		}
+		if newEnergy > params.MetabolismEnergyCap {
+			newEnergy = params.MetabolismEnergyCap
+		}
+
+		// ─── State transitions ────────────────────────────
+		oldStatus := fact.Status
+
+		if newEnergy == 0 && fact.AtRiskSinceEpoch == 0 {
+			// Just hit zero — enter at-risk
+			fact.AtRiskSinceEpoch = epoch
+			fact.Status = types.FactStatus_FACT_STATUS_AT_RISK
+		} else if newEnergy == 0 && fact.AtRiskSinceEpoch > 0 {
+			// Still at zero — check if expired or pruned
+			atRiskDuration := epoch - fact.AtRiskSinceEpoch
+			if atRiskDuration >= params.MetabolismAtRiskEpochs+params.MetabolismExpiredToPrunedEpochs {
+				fact.Status = types.FactStatus_FACT_STATUS_PRUNED
+			} else if atRiskDuration >= params.MetabolismAtRiskEpochs {
+				fact.Status = types.FactStatus_FACT_STATUS_EXPIRED
+			}
+		} else if newEnergy > 0 && fact.AtRiskSinceEpoch > 0 {
+			// Recovered! Someone queried or patronized
+			fact.AtRiskSinceEpoch = 0
+			fact.Status = types.FactStatus_FACT_STATUS_ACTIVE
+		}
+
+		fact.Energy = newEnergy
+		fact.EnergyLastUpdated = uint64(sdkCtx.BlockHeight())
+		if err := k.SetFact(ctx, fact); err != nil {
+			k.Logger(ctx).Error("failed to update fact energy", "fact_id", fact.Id, "error", err)
+			continue
+		}
+
+		// Emit event on status change
+		if oldStatus != fact.Status {
+			k.emitMetabolismStatusEvent(ctx, fact, oldStatus, epoch)
+		}
+	}
+
+	// Reset epoch citation counters for all facts
+	k.ResetEpochCitationCounters(ctx)
+
+	k.Logger(ctx).Info("metabolism processed",
+		"facts_processed", len(factsToProcess),
+		"epoch", epoch,
+	)
+
+	return nil
+}
+
+// calculateMaintenanceCost returns the energy drain for a fact this epoch.
+func (k Keeper) calculateMaintenanceCost(fact *types.Fact, params *types.Params, domainCounts map[string]uint64) uint64 {
+	base := params.MetabolismBaseCost
+
+	// Content length factor: scaled by BPS per 100 chars
+	contentLen := uint64(len(fact.Content))
+	contentFactor := safeMulDiv(base, params.MetabolismContentLengthBps*(contentLen/100), 1_000_000)
+
+	// Domain competition factor: scaled by BPS per 100 facts in domain
+	domainCount := domainCounts[fact.Domain]
+	competitionFactor := safeMulDiv(base, params.MetabolismDomainCompetitionBps*(domainCount/100), 1_000_000)
+
+	return base + contentFactor + competitionFactor
+}
+
+// calculateEnergyIncome returns the energy gained this epoch.
+func (k Keeper) calculateEnergyIncome(ctx context.Context, fact *types.Fact, params *types.Params) uint64 {
+	income := uint64(0)
+
+	// Query energy
+	income += fact.QueryCountEpoch * params.MetabolismEnergyPerQuery
+
+	// Citation energy (new citations this epoch)
+	newCitations := k.GetNewCitationsThisEpoch(ctx, fact.Id)
+	income += newCitations * params.MetabolismEnergyPerCitation
+
+	// Patronage energy
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	if fact.PatronageAmount != "" && fact.PatronageAmount != "0" {
+		if uint64(sdkCtx.BlockHeight()) < fact.PatronageExpiryBlock {
+			income += params.MetabolismEnergyPerPatronage
+		}
+	}
+
+	return income
+}
+
+// CountFactsByDomain returns a map of domain → active fact count.
+func (k Keeper) CountFactsByDomain(ctx context.Context) map[string]uint64 {
+	counts := make(map[string]uint64)
+	k.IterateFacts(ctx, func(fact *types.Fact) bool {
+		if fact.Status == types.FactStatus_FACT_STATUS_VERIFIED ||
+			fact.Status == types.FactStatus_FACT_STATUS_ACTIVE ||
+			fact.Status == types.FactStatus_FACT_STATUS_PROVISIONAL ||
+			fact.Status == types.FactStatus_FACT_STATUS_AT_RISK {
+			counts[fact.Domain]++
+		}
+		return false
+	})
+	return counts
+}
+
+// GetNewCitationsThisEpoch returns the number of new incoming citations for a fact this epoch.
+func (k Keeper) GetNewCitationsThisEpoch(ctx context.Context, factID string) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	key := append(append([]byte{}, types.NewCitationsEpochPrefix...), []byte(factID)...)
+	bz, err := store.Get(key)
+	if err != nil || bz == nil || len(bz) < 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+// IncrementNewCitationEpoch increments the new citation counter for a fact in the current epoch.
+func (k Keeper) IncrementNewCitationEpoch(ctx context.Context, factID string) {
+	store := k.storeService.OpenKVStore(ctx)
+	key := append(append([]byte{}, types.NewCitationsEpochPrefix...), []byte(factID)...)
+	count := k.GetNewCitationsThisEpoch(ctx, factID) + 1
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, count)
+	_ = store.Set(key, bz)
+}
+
+// ResetEpochCitationCounters clears all per-epoch citation counters.
+func (k Keeper) ResetEpochCitationCounters(ctx context.Context) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.NewCitationsEpochPrefix, prefixEndBytes(types.NewCitationsEpochPrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+
+	var keysToDelete [][]byte
+	for ; iter.Valid(); iter.Next() {
+		keysToDelete = append(keysToDelete, iter.Key())
+	}
+	for _, key := range keysToDelete {
+		_ = store.Delete(key)
+	}
+}
+
+// emitMetabolismStatusEvent emits events for fact status changes due to metabolism.
+func (k Keeper) emitMetabolismStatusEvent(ctx context.Context, fact *types.Fact, oldStatus types.FactStatus, epoch uint64) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	switch fact.Status {
+	case types.FactStatus_FACT_STATUS_AT_RISK:
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.fact_at_risk",
+			sdk.NewAttribute("fact_id", fact.Id),
+			sdk.NewAttribute("energy", "0"),
+			sdk.NewAttribute("domain", fact.Domain),
+		))
+	case types.FactStatus_FACT_STATUS_EXPIRED:
+		atRiskDuration := epoch - fact.AtRiskSinceEpoch
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.fact_expired",
+			sdk.NewAttribute("fact_id", fact.Id),
+			sdk.NewAttribute("at_risk_epochs", fmt.Sprintf("%d", atRiskDuration)),
+		))
+	case types.FactStatus_FACT_STATUS_PRUNED:
+		contentPreview := fact.Content
+		if len(contentPreview) > 100 {
+			contentPreview = contentPreview[:100]
+		}
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.fact_pruned",
+			sdk.NewAttribute("fact_id", fact.Id),
+			sdk.NewAttribute("content_preview", contentPreview),
+		))
+	case types.FactStatus_FACT_STATUS_ACTIVE:
+		if oldStatus == types.FactStatus_FACT_STATUS_AT_RISK ||
+			oldStatus == types.FactStatus_FACT_STATUS_EXPIRED {
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"zerone.knowledge.fact_recovered",
+				sdk.NewAttribute("fact_id", fact.Id),
+				sdk.NewAttribute("energy", fmt.Sprintf("%d", fact.Energy)),
+			))
+		}
+	}
+}
