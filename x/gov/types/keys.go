@@ -22,6 +22,10 @@ var (
 	ResearchFundGovernanceKey      = []byte{0x0D}
 	DistinctVoterKeyPrefix         = []byte{0x0E}
 	ResearchCommunityVotePrefix    = []byte{0x0F}
+	SeatElectionKeyPrefix          = []byte{0x10}
+	SeatElectionVoteKeyPrefix      = []byte{0x11}
+	SeatElectionCounterKey         = []byte{0x12}
+	SeatElectionVoteDedupePrefix   = []byte{0x13}
 )
 
 // LIPKey returns the store key for a LIP by id.
@@ -110,6 +114,70 @@ func ResearchCommunityVotePrefixForProposal(proposalID uint64) []byte {
 	bz[6] = byte(proposalID >> 8)
 	bz[7] = byte(proposalID)
 	key := append(ResearchCommunityVotePrefix, bz...)
+	key = append(key, 0x00)
+	return key
+}
+
+// SeatElectionKey returns the store key for a seat election proposal by ID.
+func SeatElectionKey(proposalID uint64) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	return append(SeatElectionKeyPrefix, bz...)
+}
+
+// SeatElectionVoteKey returns the store key for a seat election vote.
+func SeatElectionVoteKey(proposalID uint64, voter string) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	key := append(SeatElectionVoteKeyPrefix, bz...)
+	key = append(key, 0x00)
+	key = append(key, []byte(voter)...)
+	return key
+}
+
+// SeatElectionVoteDedupeKey returns the dedupe key for a seat election vote.
+func SeatElectionVoteDedupeKey(proposalID uint64, voter string) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	key := append(SeatElectionVoteDedupePrefix, bz...)
+	key = append(key, 0x00)
+	key = append(key, []byte(voter)...)
+	return key
+}
+
+// SeatElectionVotePrefixForProposal returns the prefix for iterating all votes on a seat election.
+func SeatElectionVotePrefixForProposal(proposalID uint64) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	key := append(SeatElectionVoteKeyPrefix, bz...)
 	key = append(key, 0x00)
 	return key
 }

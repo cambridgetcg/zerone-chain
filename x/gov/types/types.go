@@ -22,7 +22,8 @@ const (
 	CategoryParameter    = "parameter"
 	CategoryUpgrade      = "upgrade"
 	CategoryText         = "text"
-	CategoryResearchSpend = "research_spend"
+	CategoryResearchSpend  = "research_spend"
+	CategorySeatElection   = "research_seat_election"
 )
 
 // Vote option constants.
@@ -31,6 +32,51 @@ const (
 	VoteNo      = "no"
 	VoteAbstain = "abstain"
 )
+
+// Seat election stage constants.
+const (
+	SeatStageNominated  = "nominated"
+	SeatStageAccepted   = "accepted"
+	SeatStageDiscussion = "discussion"
+	SeatStageVoting     = "voting"
+	SeatStageRunoff     = "runoff"
+	SeatStagePassed     = "passed"
+	SeatStageFailed     = "failed"
+	SeatStageExpired    = "expired"
+)
+
+// Seat election timing constants.
+const (
+	SeatAcceptanceBlocks     = uint64(34_272)    // ~1 day
+	SeatDiscussionBlocks     = uint64(34_272)    // ~1 day
+	SeatVotingBlocks         = uint64(102_816)   // ~3 days
+	SeatTermBlocks           = uint64(6_400_000) // ~6 months
+	SeatVacancyWarningBlocks = uint64(1_030_000) // ~30 days
+	SeatVacancyNoticeBlocks  = uint64(3_090_000) // ~90 days
+	SeatRunoffThresholdBps   = uint64(50_000)    // 5% on 1M scale
+)
+
+// Phase 2 initial stagger offsets.
+const (
+	SeatStaggerOffset0 = uint64(2_133_333) // ~2 months
+	SeatStaggerOffset1 = uint64(4_266_666) // ~4 months
+	SeatStaggerOffset2 = uint64(6_400_000) // ~6 months
+)
+
+// SeatStatementMaxLen is the maximum length of a candidate's governance statement.
+const SeatStatementMaxLen = 2000
+
+// MinCandidateGovernanceVotes is the minimum LIP votes required for candidacy.
+const MinCandidateGovernanceVotes = uint64(5)
+
+// IsTerminalSeatStage returns true if the stage is terminal.
+func IsTerminalSeatStage(stage string) bool {
+	switch stage {
+	case SeatStagePassed, SeatStageFailed, SeatStageExpired:
+		return true
+	}
+	return false
+}
 
 // BPSScale is the basis point scale used for quorum and support thresholds.
 const BPSScale = uint64(1_000_000)
@@ -206,6 +252,59 @@ func (m *MsgAttachUpgradePlan) ValidateBasic() error {
 // GetSigners returns the expected signers for MsgAttachUpgradePlan.
 func (m *MsgAttachUpgradePlan) GetSigners() []sdk.AccAddress {
 	addr, _ := sdk.AccAddressFromBech32(m.Proposer)
+	return []sdk.AccAddress{addr}
+}
+
+// --- Seat Election Messages ---
+
+func (m *MsgNominateSeatElection) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Proposer); err != nil {
+		return ErrInvalidAddress
+	}
+	if _, err := sdk.AccAddressFromBech32(m.Candidate); err != nil {
+		return ErrInvalidAddress
+	}
+	if len(m.Statement) > SeatStatementMaxLen {
+		return ErrInvalidParams
+	}
+	return nil
+}
+
+func (m *MsgNominateSeatElection) GetSigners() []sdk.AccAddress {
+	addr, _ := sdk.AccAddressFromBech32(m.Proposer)
+	return []sdk.AccAddress{addr}
+}
+
+func (m *MsgAcceptSeatNomination) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Candidate); err != nil {
+		return ErrInvalidAddress
+	}
+	if m.ProposalId == 0 {
+		return ErrInvalidParams
+	}
+	return nil
+}
+
+func (m *MsgAcceptSeatNomination) GetSigners() []sdk.AccAddress {
+	addr, _ := sdk.AccAddressFromBech32(m.Candidate)
+	return []sdk.AccAddress{addr}
+}
+
+func (m *MsgVoteSeatElection) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Voter); err != nil {
+		return ErrInvalidAddress
+	}
+	if m.ProposalId == 0 {
+		return ErrInvalidParams
+	}
+	if m.Option != VoteYes && m.Option != VoteNo && m.Option != VoteAbstain {
+		return ErrInvalidParams
+	}
+	return nil
+}
+
+func (m *MsgVoteSeatElection) GetSigners() []sdk.AccAddress {
+	addr, _ := sdk.AccAddressFromBech32(m.Voter)
 	return []sdk.AccAddress{addr}
 }
 

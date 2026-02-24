@@ -14,6 +14,8 @@ type StakingKeeper interface {
 	GetDelegatorTotalBonded(ctx context.Context, addr string) (string, error)
 	// CountActiveGuardians returns the number of active Guardian-tier validators.
 	CountActiveGuardians(ctx context.Context) (uint64, error)
+	// IsGuardian returns true if the address is Guardian tier (tier 4) and active.
+	IsGuardian(ctx context.Context, addr string) (bool, error)
 }
 
 // BankKeeper defines the bank module interface required by governance.

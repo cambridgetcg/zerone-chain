@@ -18,6 +18,9 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgVoteResearchSpend{}, "zerone_gov/MsgVoteResearchSpend", nil)
 	cdc.RegisterConcrete(&MsgSetResearchVoters{}, "zerone_gov/MsgSetResearchVoters", nil)
 	cdc.RegisterConcrete(&MsgAttachUpgradePlan{}, "zerone_gov/MsgAttachUpgradePlan", nil)
+	cdc.RegisterConcrete(&MsgNominateSeatElection{}, "zerone_gov/MsgNominateSeatElection", nil)
+	cdc.RegisterConcrete(&MsgAcceptSeatNomination{}, "zerone_gov/MsgAcceptSeatNomination", nil)
+	cdc.RegisterConcrete(&MsgVoteSeatElection{}, "zerone_gov/MsgVoteSeatElection", nil)
 }
 
 // RegisterInterfaces registers module types with the interface registry.
@@ -33,5 +36,8 @@ func RegisterInterfaces(registry codectypes.InterfaceRegistry) {
 		&MsgVoteResearchSpend{},
 		&MsgSetResearchVoters{},
 		&MsgAttachUpgradePlan{},
+		&MsgNominateSeatElection{},
+		&MsgAcceptSeatNomination{},
+		&MsgVoteSeatElection{},
 	)
 }

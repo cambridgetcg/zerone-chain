@@ -59,6 +59,10 @@ func (m *mockStakingKeeper) CountActiveGuardians(_ context.Context) (uint64, err
 	return m.guardianCount, nil
 }
 
+func (m *mockStakingKeeper) IsGuardian(_ context.Context, addr string) (bool, error) {
+	return false, nil
+}
+
 // ---------- Mock Upgrade Keeper ----------
 
 type mockUpgradeKeeper struct {

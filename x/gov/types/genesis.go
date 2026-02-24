@@ -16,6 +16,8 @@ func DefaultParams() *Params {
 			{Category: CategoryUpgrade, RequiredStakeBps: "800000000", ReviewBlocks: 34272},          // 800 ZRN, ~1 day
 			{Category: CategoryText, RequiredStakeBps: "400000000", ReviewBlocks: 17136},             // 400 ZRN, ~12h
 			{Category: CategoryResearchSpend, RequiredStakeBps: "200000000", ReviewBlocks: 17136},    // 200 ZRN, ~12h
+			// TODO: rename RequiredStakeBps → RequiredStakeUzrn (misnomer storing raw uzrn)
+			{Category: CategorySeatElection, RequiredStakeBps: "500000000", ReviewBlocks: 34272}, // 500 ZRN, ~1 day
 		},
 		ResearchFundVoters:       nil,
 		ResearchDiscussionBlocks: 68544,
@@ -23,13 +25,28 @@ func DefaultParams() *Params {
 	}
 }
 
+// DefaultResearchFundGovernanceState returns the default governance state (Phase 0 at block 0).
+func DefaultResearchFundGovernanceState() *ResearchFundGovernanceState {
+	return &ResearchFundGovernanceState{
+		CurrentPhase:             ResearchFundPhase_RESEARCH_FUND_PHASE_GENESIS_PAIR,
+		PhaseStartedAtBlock:      0,
+		ProposalsExecutedInPhase: 0,
+		LastTransitionBlock:      0,
+		CommunitySeats:           nil,
+		SeatTermEndBlocks:        nil,
+		RollbackCooldownUntil:    0,
+	}
+}
+
 // DefaultGenesisState returns the default genesis state for the governance module.
 func DefaultGenesisState() *GenesisState {
 	return &GenesisState{
-		Params:        DefaultParams(),
-		Lips:          nil,
-		Votes:         nil,
-		NextLipNumber: 1,
+		Params:                  DefaultParams(),
+		Lips:                    nil,
+		Votes:                   nil,
+		NextLipNumber:           1,
+		NextSeatElectionNumber: 1,
+		ResearchFundGovernance:  DefaultResearchFundGovernanceState(),
 	}
 }
 
@@ -51,6 +68,26 @@ func (gs *GenesisState) Validate() error {
 			return fmt.Errorf("duplicate LIP id: %s", lip.Id)
 		}
 		seen[lip.Id] = true
+	}
+	// Check for duplicate seat election IDs.
+	seenElections := make(map[uint64]bool)
+	for _, se := range gs.SeatElections {
+		if seenElections[se.ProposalId] {
+			return fmt.Errorf("duplicate seat election id: %d", se.ProposalId)
+		}
+		seenElections[se.ProposalId] = true
+	}
+	// Validate research fund governance state if present.
+	if gs.ResearchFundGovernance != nil {
+		rfg := gs.ResearchFundGovernance
+		if rfg.CurrentPhase < ResearchFundPhase_RESEARCH_FUND_PHASE_GENESIS_PAIR ||
+			rfg.CurrentPhase > ResearchFundPhase_RESEARCH_FUND_PHASE_FULL_GOVERNANCE {
+			return fmt.Errorf("invalid research fund phase: %d", rfg.CurrentPhase)
+		}
+		if len(rfg.CommunitySeats) != len(rfg.SeatTermEndBlocks) {
+			return fmt.Errorf("community_seats length (%d) must match seat_term_end_blocks length (%d)",
+				len(rfg.CommunitySeats), len(rfg.SeatTermEndBlocks))
+		}
 	}
 	return nil
 }
