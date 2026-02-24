@@ -172,3 +172,15 @@ func (qs *queryServer) ResearchVoters(goCtx context.Context, _ *types.QueryResea
 	voters := qs.GetResearchFundVoters(ctx)
 	return &types.QueryResearchVotersResponse{Voters: voters}, nil
 }
+
+// ResearchFundGovernance returns the current governance state and a live snapshot of exit conditions.
+func (qs *queryServer) ResearchFundGovernance(goCtx context.Context, _ *types.QueryResearchFundGovernanceRequest) (*types.QueryResearchFundGovernanceResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	state := qs.GetResearchFundGovernanceState(ctx)
+	conditions, _ := qs.CheckPhaseExitConditions(ctx)
+
+	return &types.QueryResearchFundGovernanceResponse{
+		State:             state,
+		CurrentConditions: conditions,
+	}, nil
+}
