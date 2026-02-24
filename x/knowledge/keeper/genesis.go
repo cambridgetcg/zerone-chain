@@ -2,6 +2,11 @@ package keeper
 
 import (
 	"context"
+	"fmt"
+	"math/big"
+
+	sdkmath "cosmossdk.io/math"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
@@ -50,6 +55,17 @@ func (k Keeper) InitGenesis(ctx context.Context, gs *types.GenesisState) error {
 		}
 	}
 
+	// Fund the bootstrap fund from genesis allocation (R19-7)
+	if gs.BootstrapFundAllocation != "" && gs.BootstrapFundAllocation != "0" {
+		alloc, ok := new(big.Int).SetString(gs.BootstrapFundAllocation, 10)
+		if ok && alloc.Sign() > 0 && k.bankKeeper != nil {
+			coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(alloc)))
+			if err := k.bankKeeper.MintCoins(ctx, types.BootstrapFundModuleName, coins); err != nil {
+				return fmt.Errorf("failed to mint bootstrap fund: %w", err)
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -85,11 +101,16 @@ func (k Keeper) ExportGenesis(ctx context.Context) *types.GenesisState {
 		return false
 	})
 
+	// Export bootstrap fund balance as allocation (for restart)
+	fundBalance := k.GetBootstrapFundBalance(ctx)
+	allocation := fundBalance.Amount.String()
+
 	return &types.GenesisState{
-		Params:        params,
-		Facts:         facts,
-		PendingClaims: claims,
-		Domains:       domains,
-		ActiveRounds:  rounds,
+		Params:                  params,
+		Facts:                   facts,
+		PendingClaims:           claims,
+		Domains:                 domains,
+		ActiveRounds:            rounds,
+		BootstrapFundAllocation: allocation,
 	}
 }

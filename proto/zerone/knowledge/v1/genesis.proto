@@ -79,6 +79,25 @@ message Params {
 
   // ─── Malformed claim slashing ──────────────────────────────────────────
   uint64 malformed_claim_slash_bps = 50; // default: 500,000 (50%) — harsher than invalid_claim (22%)
+
+  // ─── Fitness scoring ─────────────────────────────────────────────────────
+  uint64 fitness_epoch_blocks        = 51;  // Blocks per fitness epoch
+  uint64 fitness_weight_query_bps    = 52;  // Weight for query rate
+  uint64 fitness_weight_citation_bps = 53;  // Weight for citation rate
+  uint64 fitness_weight_bridge_bps   = 54;  // Weight for bridge score
+  uint64 fitness_weight_depth_bps    = 55;  // Weight for dependency depth
+  uint64 fitness_weight_patron_bps   = 56;  // Weight for active patronage
+  uint64 fitness_weight_unique_bps   = 57;  // Weight for uniqueness
+  uint64 fitness_weight_age_bps      = 58;  // Weight for age penalty
+  uint64 fitness_initial_score       = 59;  // Score assigned at birth (grace period)
+  uint64 fitness_grace_epochs        = 60;  // Epochs before age penalty kicks in
+
+  // ─── Bootstrap fund (R19-7) ────────────────────────────────────────────
+  bool   bootstrap_fund_enabled         = 61; // Whether sponsored claims are accepted
+  string bootstrap_fund_max_per_address = 62; // Max sponsored claims per address (lifetime)
+  string bootstrap_fund_max_per_epoch   = 63; // Max sponsored claims per epoch (rate limit)
+  uint64 bootstrap_fund_epoch_blocks    = 64; // Epoch length in blocks for rate limiting
+  string bootstrap_fund_fee_cap         = 65; // Max fee the fund will cover per claim (uzrn)
 }
 
 // GenesisState is the genesis state of the knowledge module.
@@ -88,4 +107,5 @@ message GenesisState {
   repeated Claim            pending_claims = 3;
   repeated VerificationRound active_rounds = 4;
   repeated Domain           domains       = 5;
+  string bootstrap_fund_allocation        = 6; // Initial fund allocation (uzrn) — one-time genesis mint
 }

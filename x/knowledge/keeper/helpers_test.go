@@ -16,6 +16,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
 
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -64,13 +65,31 @@ func (bk *trackingBankKeeper) SendCoinsFromAccountToModule(_ context.Context, se
 
 func (bk *trackingBankKeeper) SendCoinsFromModuleToModule(_ context.Context, senderModule, recipientModule string, amt sdk.Coins) error {
 	bk.sendCalls = append(bk.sendCalls, sendRecord{senderModule, recipientModule, amt})
+	// Track module balance changes for bootstrap fund tests
+	if bal, ok := bk.moduleBalances[senderModule]; ok {
+		bk.moduleBalances[senderModule] = bal.Sub(amt...)
+	}
+	bk.moduleBalances[recipientModule] = bk.moduleBalances[recipientModule].Add(amt...)
 	return nil
 }
 
 
+func (bk *trackingBankKeeper) MintCoins(_ context.Context, moduleName string, amt sdk.Coins) error {
+	bk.minted = bk.minted.Add(amt...)
+	bk.moduleBalances[moduleName] = bk.moduleBalances[moduleName].Add(amt...)
+	return nil
+}
+
 func (bk *trackingBankKeeper) GetBalance(_ context.Context, addr sdk.AccAddress, denom string) sdk.Coin {
 	if coins, ok := bk.balances[addr.String()]; ok {
 		return sdk.NewCoin(denom, coins.AmountOf(denom))
+	}
+	// Check module balances by iterating known modules and matching addresses
+	for modName, coins := range bk.moduleBalances {
+		modAddr := sdk.AccAddress(authtypes.NewModuleAddress(modName))
+		if addr.Equals(modAddr) {
+			return sdk.NewCoin(denom, coins.AmountOf(denom))
+		}
 	}
 	return sdk.NewInt64Coin(denom, 0)
 }

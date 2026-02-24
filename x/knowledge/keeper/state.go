@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"strings"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -646,6 +649,74 @@ func (k Keeper) GetClaimByCanonicalHash(ctx context.Context, hash string) (strin
 		return "", false
 	}
 	return string(bz), true
+}
+
+// ─── Bootstrap fund tracking (R19-7) ─────────────────────────────────────────
+
+// GetBootstrapClaimCount returns the lifetime count of sponsored claims for an address.
+func (k Keeper) GetBootstrapClaimCount(ctx context.Context, address string) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	key := append(append([]byte{}, types.BootstrapClaimCountPrefix...), []byte(address)...)
+	bz, err := store.Get(key)
+	if err != nil || bz == nil || len(bz) < 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+// IncrementBootstrapClaimCount increments the lifetime sponsored claim count for an address.
+func (k Keeper) IncrementBootstrapClaimCount(ctx context.Context, address string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	key := append(append([]byte{}, types.BootstrapClaimCountPrefix...), []byte(address)...)
+	count := k.GetBootstrapClaimCount(ctx, address) + 1
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, count)
+	return store.Set(key, bz)
+}
+
+// GetBootstrapEpochCount returns the number of sponsored claims in a given epoch.
+func (k Keeper) GetBootstrapEpochCount(ctx context.Context, epoch uint64) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	epochBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(epochBz, epoch)
+	key := append(append([]byte{}, types.BootstrapEpochCountPrefix...), epochBz...)
+	bz, err := store.Get(key)
+	if err != nil || bz == nil || len(bz) < 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+// IncrementBootstrapEpochCount increments the sponsored claim count for a given epoch.
+func (k Keeper) IncrementBootstrapEpochCount(ctx context.Context, epoch uint64) error {
+	store := k.storeService.OpenKVStore(ctx)
+	epochBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(epochBz, epoch)
+	key := append(append([]byte{}, types.BootstrapEpochCountPrefix...), epochBz...)
+	count := k.GetBootstrapEpochCount(ctx, epoch) + 1
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, count)
+	return store.Set(key, bz)
+}
+
+// GetBootstrapFundBalance returns the current balance of the bootstrap fund module account.
+func (k Keeper) GetBootstrapFundBalance(ctx context.Context) sdk.Coin {
+	if k.bankKeeper == nil {
+		return sdk.NewInt64Coin("uzrn", 0)
+	}
+	addr := authtypes.NewModuleAddress(types.BootstrapFundModuleName)
+	return k.bankKeeper.GetBalance(ctx, addr, "uzrn")
+}
+
+// CurrentEpoch returns the current epoch number based on block height and epoch length.
+func (k Keeper) CurrentEpoch(ctx context.Context) uint64 {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+	params, err := k.GetParams(ctx)
+	if err != nil || params.BootstrapFundEpochBlocks == 0 {
+		return 0
+	}
+	return height / params.BootstrapFundEpochBlocks
 }
 
 // ─── Store helpers ───────────────────────────────────────────────────────────

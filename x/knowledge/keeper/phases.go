@@ -10,9 +10,26 @@ import (
 )
 
 // BeginBlocker runs knowledge module begin-block logic.
-// Advances verification round phases by deadline.
+// Advances verification round phases by deadline and triggers fitness epoch updates.
 func (k Keeper) BeginBlocker(ctx context.Context) error {
-	return k.AdvanceRoundPhases(ctx)
+	if err := k.AdvanceRoundPhases(ctx); err != nil {
+		return err
+	}
+
+	// Check if we're at a fitness epoch boundary
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return nil // non-fatal: don't block consensus for param read failure
+	}
+	if params.FitnessEpochBlocks > 0 && height > 0 && height%params.FitnessEpochBlocks == 0 {
+		if err := k.UpdateAllFitnessScores(ctx); err != nil {
+			k.Logger(ctx).Error("fitness update failed", "error", err)
+		}
+	}
+
+	return nil
 }
 
 // AdvanceRoundPhases iterates all active rounds and transitions phases by deadline.

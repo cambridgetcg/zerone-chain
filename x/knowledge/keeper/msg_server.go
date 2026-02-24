@@ -121,18 +121,30 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 	}
 
 	// Collect non-refundable review fee and distribute immediately via revenue split.
+	sponsored := msg.Sponsored
+	feeAmount := stakeAmt.Uint64()
+
 	if m.keeper.bankKeeper != nil {
-		submitterAddr, err := sdk.AccAddressFromBech32(msg.Submitter)
-		if err != nil {
-			return nil, fmt.Errorf("invalid submitter address: %w", err)
-		}
 		feeCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(stakeAmt)))
-		if err := m.keeper.bankKeeper.SendCoinsFromAccountToModule(ctx, submitterAddr, types.ModuleName, feeCoins); err != nil {
-			return nil, fmt.Errorf("failed to collect review fee: %w", err)
+
+		if sponsored {
+			// ─── Bootstrap fund sponsored path (R19-7) ──────────────────────
+			if err := m.keeper.validateAndPayFromBootstrapFund(ctx, msg.Submitter, stakeAmt, feeCoins, params); err != nil {
+				return nil, err
+			}
+		} else {
+			// ─── Normal path: submitter pays fee directly ───────────────────
+			submitterAddr, err := sdk.AccAddressFromBech32(msg.Submitter)
+			if err != nil {
+				return nil, fmt.Errorf("invalid submitter address: %w", err)
+			}
+			if err := m.keeper.bankKeeper.SendCoinsFromAccountToModule(ctx, submitterAddr, types.ModuleName, feeCoins); err != nil {
+				return nil, fmt.Errorf("failed to collect review fee: %w", err)
+			}
 		}
 
-		// Distribute: 55% verifier pool (stays in module), 22% protocol, 19.67% dev, 3.33% research
-		if err := m.keeper.distributeReviewFee(ctx, stakeAmt.Uint64()); err != nil {
+		// Distribute fee via revenue split (same path regardless of who paid)
+		if err := m.keeper.distributeReviewFee(ctx, feeAmount); err != nil {
 			m.keeper.Logger(ctx).Error("failed to distribute review fee", "error", err)
 		}
 	}
@@ -186,7 +198,6 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		return nil, fmt.Errorf("failed to create verification round: %w", err)
 	}
 
-	feeAmt := stakeAmt.Uint64()
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.knowledge.submit_claim",
 			sdk.NewAttribute("claim_id", claimID),
@@ -195,18 +206,32 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 			sdk.NewAttribute("review_fee", msg.Stake),
 			sdk.NewAttribute("content_hash", contentHash),
 			sdk.NewAttribute("claim_type", claimType.String()),
+			sdk.NewAttribute("sponsored", fmt.Sprintf("%t", sponsored)),
 		),
 	)
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.knowledge.review_fee_distributed",
 			sdk.NewAttribute("claim_id", claimID),
 			sdk.NewAttribute("fee_amount", msg.Stake),
-			sdk.NewAttribute("verifier_pool", fmt.Sprintf("%d", verifierPoolFromFee(feeAmt))),
-			sdk.NewAttribute("protocol", fmt.Sprintf("%d", safeMulDiv(feeAmt, reviewFeeProtocolBps, 1_000_000))),
-			sdk.NewAttribute("development", fmt.Sprintf("%d", safeMulDiv(feeAmt, reviewFeeDevelopmentBps, 1_000_000))),
-			sdk.NewAttribute("research", fmt.Sprintf("%d", feeAmt-verifierPoolFromFee(feeAmt)-safeMulDiv(feeAmt, reviewFeeProtocolBps, 1_000_000)-safeMulDiv(feeAmt, reviewFeeDevelopmentBps, 1_000_000))),
+			sdk.NewAttribute("verifier_pool", fmt.Sprintf("%d", verifierPoolFromFee(feeAmount))),
+			sdk.NewAttribute("protocol", fmt.Sprintf("%d", safeMulDiv(feeAmount, reviewFeeProtocolBps, 1_000_000))),
+			sdk.NewAttribute("development", fmt.Sprintf("%d", safeMulDiv(feeAmount, reviewFeeDevelopmentBps, 1_000_000))),
+			sdk.NewAttribute("research", fmt.Sprintf("%d", feeAmount-verifierPoolFromFee(feeAmount)-safeMulDiv(feeAmount, reviewFeeProtocolBps, 1_000_000)-safeMulDiv(feeAmount, reviewFeeDevelopmentBps, 1_000_000))),
 		),
 	)
+
+	if sponsored {
+		addressCount := m.keeper.GetBootstrapClaimCount(ctx, msg.Submitter)
+		fundBalance := m.keeper.GetBootstrapFundBalance(ctx)
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.bootstrap_sponsored",
+			sdk.NewAttribute("claim_id", claimID),
+			sdk.NewAttribute("submitter", msg.Submitter),
+			sdk.NewAttribute("fee_amount", msg.Stake),
+			sdk.NewAttribute("fund_balance_after", fundBalance.Amount.String()),
+			sdk.NewAttribute("address_claims_used", fmt.Sprintf("%d", addressCount)),
+		))
+	}
 
 	return &types.MsgSubmitClaimResponse{ClaimId: claimID}, nil
 }

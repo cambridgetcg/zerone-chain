@@ -89,6 +89,16 @@ service Query {
   rpc FactByCanonical(QueryFactByCanonicalRequest) returns (QueryFactByCanonicalResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/fact_by_canonical/{canonical_hash}";
   }
+
+  // FactsByFitness queries facts sorted by fitness score.
+  rpc FactsByFitness(QueryFactsByFitnessRequest) returns (QueryFactsByFitnessResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts_by_fitness";
+  }
+
+  // BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
+  rpc BootstrapFundStatus(QueryBootstrapFundStatusRequest) returns (QueryBootstrapFundStatusResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/bootstrap_fund";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -100,7 +110,8 @@ message QueryParamsResponse {
 }
 
 message QueryFactRequest {
-  string id = 1;
+  string id         = 1;
+  bool track_query  = 2;  // Increment query counter (agents set this)
 }
 
 message QueryFactResponse {
@@ -232,4 +243,25 @@ message QueryFactByCanonicalRequest {
 
 message QueryFactByCanonicalResponse {
   Fact fact = 1;
+}
+
+message QueryFactsByFitnessRequest {
+  string domain          = 1;  // Optional domain filter
+  uint64 min_fitness     = 2;  // Minimum fitness score
+  uint64 limit           = 3;  // Max results (default 50)
+  string order           = 4;  // "desc" (default) or "asc"
+}
+
+message QueryFactsByFitnessResponse {
+  repeated Fact facts = 1;
+}
+
+message QueryBootstrapFundStatusRequest {}
+
+message QueryBootstrapFundStatusResponse {
+  string balance              = 1;  // Current fund balance (uzrn)
+  bool   enabled              = 2;  // Whether sponsorship is active
+  string total_claims_funded  = 3;  // Lifetime count of sponsored claims
+  string total_amount_spent   = 4;  // Lifetime amount distributed (uzrn)
+  string remaining_per_epoch  = 5;  // Remaining sponsored claims this epoch
 }

@@ -77,6 +77,25 @@ func DefaultParams() Params {
 
 		// ─── Malformed claim slashing ────────────────────────────────────────
 		MalformedClaimSlashBps: 500_000, // 50% — submitting garbage wastes verifier time
+
+		// ─── Fitness scoring ─────────────────────────────────────────────────
+		FitnessEpochBlocks:       10_000,  // ~7 hours at 2.5s blocks
+		FitnessWeightQueryBps:    300_000, // 30% — agent usage is the primary signal
+		FitnessWeightCitationBps: 250_000, // 25% — facts cited by other facts are foundational
+		FitnessWeightBridgeBps:   100_000, // 10% — cross-domain facts are rare and valuable
+		FitnessWeightDepthBps:    100_000, // 10% — facts with deep dependency trees are load-bearing
+		FitnessWeightPatronBps:    50_000, // 5%  — someone willing to pay for this fact's survival
+		FitnessWeightUniqueBps:   100_000, // 10% — non-redundant facts score higher
+		FitnessWeightAgeBps:      100_000, // 10% — uncited old facts decay
+		FitnessInitialScore:      500_000, // born healthy — 50%
+		FitnessGraceEpochs:       10,      // ~3 days before age penalty kicks in
+
+		// ─── Bootstrap fund (R19-7) ─────────────────────────────────────────
+		BootstrapFundEnabled:        true,
+		BootstrapFundMaxPerAddress:  "10",        // 10 sponsored claims per address lifetime
+		BootstrapFundMaxPerEpoch:    "100",       // 100 sponsored claims per epoch across all users
+		BootstrapFundEpochBlocks:    50_000,      // ~1.5 days at 2.5s blocks
+		BootstrapFundFeeCap:         "5000000",   // Fund covers up to 5 ZRN per claim
 	}
 }
 
@@ -84,11 +103,12 @@ func DefaultParams() Params {
 func DefaultGenesis() *GenesisState {
 	p := DefaultParams()
 	return &GenesisState{
-		Params:        &p,
-		Facts:         []*Fact{},
-		PendingClaims: []*Claim{},
-		ActiveRounds:  []*VerificationRound{},
-		Domains:       DefaultDomains(),
+		Params:                  &p,
+		Facts:                   []*Fact{},
+		PendingClaims:           []*Claim{},
+		ActiveRounds:            []*VerificationRound{},
+		Domains:                 DefaultDomains(),
+		BootstrapFundAllocation: "22222000000", // 22,222 ZRN (0.01% of max supply)
 	}
 }
 
@@ -271,6 +291,47 @@ func (p *Params) Validate() error {
 	// Review fee must be positive.
 	if p.MinReviewFee == "" || p.MinReviewFee == "0" {
 		return fmt.Errorf("min_review_fee must be > 0")
+	}
+
+	// ─── Fitness params ──────────────────────────────────────────────────
+	if p.FitnessEpochBlocks == 0 {
+		return fmt.Errorf("fitness_epoch_blocks must be > 0")
+	}
+	// Weights are BPS — each must be <= 1,000,000.
+	for _, w := range []struct {
+		name string
+		val  uint64
+	}{
+		{"fitness_weight_query_bps", p.FitnessWeightQueryBps},
+		{"fitness_weight_citation_bps", p.FitnessWeightCitationBps},
+		{"fitness_weight_bridge_bps", p.FitnessWeightBridgeBps},
+		{"fitness_weight_depth_bps", p.FitnessWeightDepthBps},
+		{"fitness_weight_patron_bps", p.FitnessWeightPatronBps},
+		{"fitness_weight_unique_bps", p.FitnessWeightUniqueBps},
+		{"fitness_weight_age_bps", p.FitnessWeightAgeBps},
+	} {
+		if w.val > 1_000_000 {
+			return fmt.Errorf("%s must be <= 1,000,000", w.name)
+		}
+	}
+	if p.FitnessInitialScore > 1_000_000 {
+		return fmt.Errorf("fitness_initial_score must be <= 1,000,000")
+	}
+
+	// ─── Bootstrap fund params ──────────────────────────────────────────
+	if p.BootstrapFundEnabled {
+		if p.BootstrapFundEpochBlocks == 0 {
+			return fmt.Errorf("bootstrap_fund_epoch_blocks must be > 0 when fund is enabled")
+		}
+		if p.BootstrapFundMaxPerAddress == "" || p.BootstrapFundMaxPerAddress == "0" {
+			return fmt.Errorf("bootstrap_fund_max_per_address must be > 0 when fund is enabled")
+		}
+		if p.BootstrapFundMaxPerEpoch == "" || p.BootstrapFundMaxPerEpoch == "0" {
+			return fmt.Errorf("bootstrap_fund_max_per_epoch must be > 0 when fund is enabled")
+		}
+		if p.BootstrapFundFeeCap == "" || p.BootstrapFundFeeCap == "0" {
+			return fmt.Errorf("bootstrap_fund_fee_cap must be > 0 when fund is enabled")
+		}
 	}
 
 	return nil

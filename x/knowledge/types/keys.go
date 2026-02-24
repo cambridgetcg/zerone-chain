@@ -13,6 +13,8 @@ const (
 	Version = "zrn-knowledge-1"
 	// RouterKey is the message routing key.
 	RouterKey = ModuleName
+	// BootstrapFundModuleName is the module account that holds the knowledge bootstrap fund.
+	BootstrapFundModuleName = "knowledge_bootstrap_fund"
 )
 
 // Store key prefixes — one byte per sub-namespace.
@@ -81,6 +83,10 @@ var (
 
 	// ─── Canonical form dedup ────────────────────────────────────────────────
 	CanonicalHashPrefix = []byte{0x34} // 0x34 | canonical_hash → claim_id/fact_id
+
+	// ─── Bootstrap fund tracking ─────────────────────────────────────────────
+	BootstrapClaimCountPrefix = []byte{0x35} // 0x35 | address → uint64 (lifetime sponsored count)
+	BootstrapEpochCountPrefix = []byte{0x36} // 0x36 | epoch_number → uint64 (epoch-wide count)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────

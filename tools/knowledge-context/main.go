@@ -56,6 +56,7 @@ type Fact struct {
 	Structure     *ClaimStructure `json:"structure,omitempty"`
 	CanonicalForm string          `json:"canonical_form,omitempty"`
 	CanonicalHash string          `json:"canonical_hash,omitempty"`
+	FitnessScore  string          `json:"fitness_score,omitempty"`
 }
 
 type FactRelation struct {
@@ -235,6 +236,26 @@ func parseConfidence(s string) float64 {
 	return v / 10000 // BPS → percentage
 }
 
+func parseFitness(s string) float64 {
+	v, _ := strconv.ParseFloat(s, 64)
+	return v
+}
+
+func fitnessLabel(score float64) string {
+	switch {
+	case score >= 800000:
+		return "keystone"
+	case score >= 600000:
+		return "thriving"
+	case score >= 300000:
+		return "healthy"
+	case score >= 100000:
+		return "low"
+	default:
+		return "critical"
+	}
+}
+
 // ─── Formatters ──────────────────────────────────────────────────────────────
 
 func formatXML(facts []Fact, query string, showCanonical bool) string {
@@ -251,8 +272,10 @@ func formatXML(facts []Fact, query string, showCanonical bool) string {
 		}
 		conf := parseConfidence(f.Confidence)
 		ct := humanClaimType(f.ClaimType)
-		b.WriteString(fmt.Sprintf("  <fact id=\"%s\" domain=\"%s\" confidence=\"%.1f%%\" status=\"%s\" category=\"%s\" type=\"%s\">\n",
-			f.ID, f.Domain, conf, status, f.Category, ct))
+		fitness := parseFitness(f.FitnessScore)
+		fl := fitnessLabel(fitness)
+		b.WriteString(fmt.Sprintf("  <fact id=\"%s\" domain=\"%s\" confidence=\"%.1f%%\" status=\"%s\" category=\"%s\" type=\"%s\" fitness=\"%.0f\" fitness_label=\"%s\">\n",
+			f.ID, f.Domain, conf, status, f.Category, ct, fitness, fl))
 		b.WriteString(fmt.Sprintf("    <content>%s</content>\n", f.Content))
 		if f.Structure != nil {
 			b.WriteString("    <structure>\n")
@@ -326,6 +349,9 @@ func formatJSON(facts []Fact) string {
 		Domain        string        `json:"domain"`
 		Content       string        `json:"content"`
 		ConfidencePct float64       `json:"confidence_pct"`
+		FitnessScore  float64       `json:"fitness_score"`
+		FitnessPct    float64       `json:"fitness_pct"`
+		FitnessLabel  string        `json:"fitness_label"`
 		Status        string        `json:"status"`
 		Category      string        `json:"category"`
 		ClaimType     string        `json:"claim_type"`
@@ -352,11 +378,15 @@ func formatJSON(facts []Fact) string {
 		if status == "" {
 			status = f.Status
 		}
+		fitness := parseFitness(f.FitnessScore)
 		fo := factOut{
 			ID:            f.ID,
 			Domain:        f.Domain,
 			Content:       f.Content,
 			ConfidencePct: parseConfidence(f.Confidence),
+			FitnessScore:  fitness,
+			FitnessPct:    fitness / 10000, // BPS → percentage
+			FitnessLabel:  fitnessLabel(fitness),
 			Status:        status,
 			Category:      f.Category,
 			ClaimType:     humanClaimType(f.ClaimType),
@@ -474,6 +504,15 @@ func contextHandler(w http.ResponseWriter, r *http.Request) {
 	// Include canonical forms in output?
 	showCanonical := q.Get("canonical") == "true" || q.Get("canonical") == "1"
 
+	// Fitness filter and sort
+	sortBy := q.Get("sort") // "fitness" or default (confidence)
+	minFitness := 0.0
+	if mf := q.Get("min_fitness"); mf != "" {
+		if v, err := strconv.ParseFloat(mf, 64); err == nil {
+			minFitness = v
+		}
+	}
+
 	// Subject and tag filters (structured claims)
 	subjectFilter := strings.ToLower(strings.TrimSpace(q.Get("subject")))
 	var tagFilters []string
@@ -512,6 +551,26 @@ func contextHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		filtered = tagFiltered
+	}
+
+	// Apply fitness filter
+	if minFitness > 0 {
+		var fitnessFiltered []Fact
+		for _, f := range filtered {
+			if parseFitness(f.FitnessScore) >= minFitness {
+				fitnessFiltered = append(fitnessFiltered, f)
+			}
+		}
+		filtered = fitnessFiltered
+	}
+
+	// Sort by fitness if requested
+	if sortBy == "fitness" {
+		sort.Slice(filtered, func(i, j int) bool {
+			fi := parseFitness(filtered[i].FitnessScore)
+			fj := parseFitness(filtered[j].FitnessScore)
+			return fi > fj
+		})
 	}
 
 	// Format response

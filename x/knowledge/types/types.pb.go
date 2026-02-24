@@ -735,8 +735,14 @@ type Fact struct {
 	Structure             *ClaimStructure `protobuf:"bytes,27,opt,name=structure,proto3" json:"structure,omitempty"`                                          // Machine-readable decomposition (optional)
 	CanonicalForm         string          `protobuf:"bytes,28,opt,name=canonical_form,json=canonicalForm,proto3" json:"canonical_form,omitempty"`             // Machine-readable normalized form
 	CanonicalHash         string          `protobuf:"bytes,29,opt,name=canonical_hash,json=canonicalHash,proto3" json:"canonical_hash,omitempty"`             // SHA-256 of canonical_form for dedup
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// ─── Fitness scoring ──────────────────────────────────────────────────────
+	FitnessScore        uint64 `protobuf:"varint,30,opt,name=fitness_score,json=fitnessScore,proto3" json:"fitness_score,omitempty"`                        // 0-1,000,000 composite fitness
+	FitnessUpdatedBlock uint64 `protobuf:"varint,31,opt,name=fitness_updated_block,json=fitnessUpdatedBlock,proto3" json:"fitness_updated_block,omitempty"` // Last block fitness was recalculated
+	QueryCount          uint64 `protobuf:"varint,32,opt,name=query_count,json=queryCount,proto3" json:"query_count,omitempty"`                              // Lifetime query count
+	QueryCountEpoch     uint64 `protobuf:"varint,33,opt,name=query_count_epoch,json=queryCountEpoch,proto3" json:"query_count_epoch,omitempty"`             // Queries in current epoch
+	EpochBorn           uint64 `protobuf:"varint,34,opt,name=epoch_born,json=epochBorn,proto3" json:"epoch_born,omitempty"`                                 // Epoch when fact was created
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Fact) Reset() {
@@ -970,6 +976,41 @@ func (x *Fact) GetCanonicalHash() string {
 		return x.CanonicalHash
 	}
 	return ""
+}
+
+func (x *Fact) GetFitnessScore() uint64 {
+	if x != nil {
+		return x.FitnessScore
+	}
+	return 0
+}
+
+func (x *Fact) GetFitnessUpdatedBlock() uint64 {
+	if x != nil {
+		return x.FitnessUpdatedBlock
+	}
+	return 0
+}
+
+func (x *Fact) GetQueryCount() uint64 {
+	if x != nil {
+		return x.QueryCount
+	}
+	return 0
+}
+
+func (x *Fact) GetQueryCountEpoch() uint64 {
+	if x != nil {
+		return x.QueryCountEpoch
+	}
+	return 0
+}
+
+func (x *Fact) GetEpochBorn() uint64 {
+	if x != nil {
+		return x.EpochBorn
+	}
+	return 0
 }
 
 // Claim is an unverified submission awaiting or undergoing verification.
@@ -1852,7 +1893,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\x12%\n" +
 	"\x0etemporal_scope\x18\x05 \x01(\tR\rtemporalScope\x12\x1c\n" +
 	"\tnegatable\x18\x06 \x01(\bR\tnegatable\x12\x12\n" +
-	"\x04tags\x18\a \x03(\tR\x04tags\"\xdf\t\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\"\xa4\v\n" +
 	"\x04Fact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
@@ -1888,7 +1929,14 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x12incoming_relations\x18\x1a \x03(\v2!.zerone.knowledge.v1.FactRelationR\x11incomingRelations\x12A\n" +
 	"\tstructure\x18\x1b \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\x12%\n" +
 	"\x0ecanonical_form\x18\x1c \x01(\tR\rcanonicalForm\x12%\n" +
-	"\x0ecanonical_hash\x18\x1d \x01(\tR\rcanonicalHash\"\x9c\x06\n" +
+	"\x0ecanonical_hash\x18\x1d \x01(\tR\rcanonicalHash\x12#\n" +
+	"\rfitness_score\x18\x1e \x01(\x04R\ffitnessScore\x122\n" +
+	"\x15fitness_updated_block\x18\x1f \x01(\x04R\x13fitnessUpdatedBlock\x12\x1f\n" +
+	"\vquery_count\x18  \x01(\x04R\n" +
+	"queryCount\x12*\n" +
+	"\x11query_count_epoch\x18! \x01(\x04R\x0fqueryCountEpoch\x12\x1d\n" +
+	"\n" +
+	"epoch_born\x18\" \x01(\x04R\tepochBorn\"\x9c\x06\n" +
 	"\x05Claim\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\ffact_content\x18\x02 \x01(\tR\vfactContent\x12\x16\n" +

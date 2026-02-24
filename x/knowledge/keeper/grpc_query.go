@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,6 +37,12 @@ func (q *queryServer) Fact(ctx context.Context, req *types.QueryFactRequest) (*t
 	if !found {
 		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.Id)
 	}
+
+	// Track query — increment counter (agents set this)
+	if req.TrackQuery {
+		q.keeper.IncrementFactQueryCount(ctx, req.Id)
+	}
+
 	return &types.QueryFactResponse{Fact: fact}, nil
 }
 
@@ -311,6 +319,12 @@ func (q *queryServer) FactByCanonical(ctx context.Context, req *types.QueryFactB
 	return nil, status.Errorf(codes.NotFound, "no fact found for canonical hash %s", canonicalHash)
 }
 
+func (q *queryServer) FactsByFitness(ctx context.Context, req *types.QueryFactsByFitnessRequest) (*types.QueryFactsByFitnessResponse, error) {
+	ascending := req.Order == "asc"
+	facts := q.keeper.GetFactsByFitness(ctx, req.Domain, req.MinFitness, req.Limit, ascending)
+	return &types.QueryFactsByFitnessResponse{Facts: facts}, nil
+}
+
 // matchesFactFilters checks if a fact passes optional status, category, and claim type filters.
 func matchesFactFilters(fact *types.Fact, statusFilter, categoryFilter string, claimTypeFilter types.ClaimType) bool {
 	if statusFilter != "" {
@@ -329,4 +343,37 @@ func matchesFactFilters(fact *types.Fact, statusFilter, categoryFilter string, c
 		}
 	}
 	return true
+}
+
+func (q *queryServer) BootstrapFundStatus(ctx context.Context, _ *types.QueryBootstrapFundStatusRequest) (*types.QueryBootstrapFundStatusResponse, error) {
+	params, err := q.keeper.GetParams(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	balance := q.keeper.GetBootstrapFundBalance(ctx)
+
+	// Calculate total claims funded (sum of all per-address counts would be expensive,
+	// so we track via epoch counts across all epochs — approximate via current epoch)
+	epoch := q.keeper.CurrentEpoch(ctx)
+	var totalClaims uint64
+	for e := uint64(0); e <= epoch; e++ {
+		totalClaims += q.keeper.GetBootstrapEpochCount(ctx, e)
+	}
+
+	// Calculate remaining per epoch
+	maxPerEpoch, _ := strconv.ParseUint(params.BootstrapFundMaxPerEpoch, 10, 64)
+	currentEpochCount := q.keeper.GetBootstrapEpochCount(ctx, epoch)
+	remaining := uint64(0)
+	if maxPerEpoch > currentEpochCount {
+		remaining = maxPerEpoch - currentEpochCount
+	}
+
+	return &types.QueryBootstrapFundStatusResponse{
+		Balance:            balance.Amount.String(),
+		Enabled:            params.BootstrapFundEnabled,
+		TotalClaimsFunded:  fmt.Sprintf("%d", totalClaims),
+		TotalAmountSpent:   "0", // Not tracked separately — can be derived from genesis allocation minus balance
+		RemainingPerEpoch:  fmt.Sprintf("%d", remaining),
+	}, nil
 }

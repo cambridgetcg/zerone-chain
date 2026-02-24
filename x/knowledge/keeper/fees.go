@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -78,4 +79,51 @@ func (k Keeper) distributeReviewFee(ctx context.Context, feeAmount uint64) error
 // verifierPoolFromFee calculates the verifier reward pool (55%) for a given fee amount.
 func verifierPoolFromFee(feeAmount uint64) uint64 {
 	return safeMulDiv(feeAmount, reviewFeeContributorBps, 1_000_000)
+}
+
+// validateAndPayFromBootstrapFund validates sponsorship eligibility and pays the review fee
+// from the bootstrap fund module account instead of the submitter.
+func (k Keeper) validateAndPayFromBootstrapFund(ctx context.Context, submitter string, stakeAmt *big.Int, feeCoins sdk.Coins, params *types.Params) error {
+	// Check fund is enabled
+	if !params.BootstrapFundEnabled {
+		return fmt.Errorf("bootstrap fund sponsorship is disabled")
+	}
+
+	// Check fee cap
+	feeCap, _ := new(big.Int).SetString(params.BootstrapFundFeeCap, 10)
+	if feeCap != nil && stakeAmt.Cmp(feeCap) > 0 {
+		return fmt.Errorf("review fee %s exceeds bootstrap fund cap %s", stakeAmt.String(), params.BootstrapFundFeeCap)
+	}
+
+	// Check per-address lifetime limit
+	addressCount := k.GetBootstrapClaimCount(ctx, submitter)
+	maxPerAddr, _ := strconv.ParseUint(params.BootstrapFundMaxPerAddress, 10, 64)
+	if addressCount >= maxPerAddr {
+		return fmt.Errorf("address has used all %d bootstrap fund claims", maxPerAddr)
+	}
+
+	// Check per-epoch rate limit
+	epoch := k.CurrentEpoch(ctx)
+	epochCount := k.GetBootstrapEpochCount(ctx, epoch)
+	maxPerEpoch, _ := strconv.ParseUint(params.BootstrapFundMaxPerEpoch, 10, 64)
+	if epochCount >= maxPerEpoch {
+		return fmt.Errorf("bootstrap fund epoch limit reached (%d/%d)", epochCount, maxPerEpoch)
+	}
+
+	// Check fund has sufficient balance
+	fundBalance := k.GetBootstrapFundBalance(ctx)
+	if fundBalance.Amount.LT(sdkmath.NewIntFromBigInt(stakeAmt)) {
+		return fmt.Errorf("bootstrap fund insufficient: has %s, need %s", fundBalance.Amount, stakeAmt)
+	}
+
+	// Pay fee from bootstrap fund → knowledge module
+	if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.BootstrapFundModuleName, types.ModuleName, feeCoins); err != nil {
+		return fmt.Errorf("failed to draw from bootstrap fund: %w", err)
+	}
+
+	// Track usage
+	_ = k.IncrementBootstrapClaimCount(ctx, submitter)
+	_ = k.IncrementBootstrapEpochCount(ctx, epoch)
+
+	return nil
 }

@@ -86,8 +86,25 @@ type Params struct {
 	ResearchFundShareBps uint64 `protobuf:"varint,49,opt,name=research_fund_share_bps,json=researchFundShareBps,proto3" json:"research_fund_share_bps,omitempty"` // default: 130,000 (13%)
 	// ─── Malformed claim slashing ──────────────────────────────────────────
 	MalformedClaimSlashBps uint64 `protobuf:"varint,50,opt,name=malformed_claim_slash_bps,json=malformedClaimSlashBps,proto3" json:"malformed_claim_slash_bps,omitempty"` // default: 500,000 (50%) — harsher than invalid_claim (22%)
-	unknownFields          protoimpl.UnknownFields
-	sizeCache              protoimpl.SizeCache
+	// ─── Fitness scoring ─────────────────────────────────────────────────────
+	FitnessEpochBlocks       uint64 `protobuf:"varint,51,opt,name=fitness_epoch_blocks,json=fitnessEpochBlocks,proto3" json:"fitness_epoch_blocks,omitempty"`                     // Blocks per fitness epoch
+	FitnessWeightQueryBps    uint64 `protobuf:"varint,52,opt,name=fitness_weight_query_bps,json=fitnessWeightQueryBps,proto3" json:"fitness_weight_query_bps,omitempty"`          // Weight for query rate
+	FitnessWeightCitationBps uint64 `protobuf:"varint,53,opt,name=fitness_weight_citation_bps,json=fitnessWeightCitationBps,proto3" json:"fitness_weight_citation_bps,omitempty"` // Weight for citation rate
+	FitnessWeightBridgeBps   uint64 `protobuf:"varint,54,opt,name=fitness_weight_bridge_bps,json=fitnessWeightBridgeBps,proto3" json:"fitness_weight_bridge_bps,omitempty"`       // Weight for bridge score
+	FitnessWeightDepthBps    uint64 `protobuf:"varint,55,opt,name=fitness_weight_depth_bps,json=fitnessWeightDepthBps,proto3" json:"fitness_weight_depth_bps,omitempty"`          // Weight for dependency depth
+	FitnessWeightPatronBps   uint64 `protobuf:"varint,56,opt,name=fitness_weight_patron_bps,json=fitnessWeightPatronBps,proto3" json:"fitness_weight_patron_bps,omitempty"`       // Weight for active patronage
+	FitnessWeightUniqueBps   uint64 `protobuf:"varint,57,opt,name=fitness_weight_unique_bps,json=fitnessWeightUniqueBps,proto3" json:"fitness_weight_unique_bps,omitempty"`       // Weight for uniqueness
+	FitnessWeightAgeBps      uint64 `protobuf:"varint,58,opt,name=fitness_weight_age_bps,json=fitnessWeightAgeBps,proto3" json:"fitness_weight_age_bps,omitempty"`                // Weight for age penalty
+	FitnessInitialScore      uint64 `protobuf:"varint,59,opt,name=fitness_initial_score,json=fitnessInitialScore,proto3" json:"fitness_initial_score,omitempty"`                  // Score assigned at birth (grace period)
+	FitnessGraceEpochs       uint64 `protobuf:"varint,60,opt,name=fitness_grace_epochs,json=fitnessGraceEpochs,proto3" json:"fitness_grace_epochs,omitempty"`                     // Epochs before age penalty kicks in
+	// ─── Bootstrap fund (R19-7) ────────────────────────────────────────────
+	BootstrapFundEnabled       bool   `protobuf:"varint,61,opt,name=bootstrap_fund_enabled,json=bootstrapFundEnabled,proto3" json:"bootstrap_fund_enabled,omitempty"`                      // Whether sponsored claims are accepted
+	BootstrapFundMaxPerAddress string `protobuf:"bytes,62,opt,name=bootstrap_fund_max_per_address,json=bootstrapFundMaxPerAddress,proto3" json:"bootstrap_fund_max_per_address,omitempty"` // Max sponsored claims per address (lifetime)
+	BootstrapFundMaxPerEpoch   string `protobuf:"bytes,63,opt,name=bootstrap_fund_max_per_epoch,json=bootstrapFundMaxPerEpoch,proto3" json:"bootstrap_fund_max_per_epoch,omitempty"`       // Max sponsored claims per epoch (rate limit)
+	BootstrapFundEpochBlocks   uint64 `protobuf:"varint,64,opt,name=bootstrap_fund_epoch_blocks,json=bootstrapFundEpochBlocks,proto3" json:"bootstrap_fund_epoch_blocks,omitempty"`        // Epoch length in blocks for rate limiting
+	BootstrapFundFeeCap        string `protobuf:"bytes,65,opt,name=bootstrap_fund_fee_cap,json=bootstrapFundFeeCap,proto3" json:"bootstrap_fund_fee_cap,omitempty"`                        // Max fee the fund will cover per claim (uzrn)
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -470,16 +487,122 @@ func (x *Params) GetMalformedClaimSlashBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetFitnessEpochBlocks() uint64 {
+	if x != nil {
+		return x.FitnessEpochBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightQueryBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightQueryBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightCitationBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightCitationBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightBridgeBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightBridgeBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightDepthBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightDepthBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightPatronBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightPatronBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightUniqueBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightUniqueBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightAgeBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightAgeBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessInitialScore() uint64 {
+	if x != nil {
+		return x.FitnessInitialScore
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessGraceEpochs() uint64 {
+	if x != nil {
+		return x.FitnessGraceEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetBootstrapFundEnabled() bool {
+	if x != nil {
+		return x.BootstrapFundEnabled
+	}
+	return false
+}
+
+func (x *Params) GetBootstrapFundMaxPerAddress() string {
+	if x != nil {
+		return x.BootstrapFundMaxPerAddress
+	}
+	return ""
+}
+
+func (x *Params) GetBootstrapFundMaxPerEpoch() string {
+	if x != nil {
+		return x.BootstrapFundMaxPerEpoch
+	}
+	return ""
+}
+
+func (x *Params) GetBootstrapFundEpochBlocks() uint64 {
+	if x != nil {
+		return x.BootstrapFundEpochBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetBootstrapFundFeeCap() string {
+	if x != nil {
+		return x.BootstrapFundFeeCap
+	}
+	return ""
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Params        *Params                `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
-	Facts         []*Fact                `protobuf:"bytes,2,rep,name=facts,proto3" json:"facts,omitempty"`
-	PendingClaims []*Claim               `protobuf:"bytes,3,rep,name=pending_claims,json=pendingClaims,proto3" json:"pending_claims,omitempty"`
-	ActiveRounds  []*VerificationRound   `protobuf:"bytes,4,rep,name=active_rounds,json=activeRounds,proto3" json:"active_rounds,omitempty"`
-	Domains       []*Domain              `protobuf:"bytes,5,rep,name=domains,proto3" json:"domains,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	Params                  *Params                `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
+	Facts                   []*Fact                `protobuf:"bytes,2,rep,name=facts,proto3" json:"facts,omitempty"`
+	PendingClaims           []*Claim               `protobuf:"bytes,3,rep,name=pending_claims,json=pendingClaims,proto3" json:"pending_claims,omitempty"`
+	ActiveRounds            []*VerificationRound   `protobuf:"bytes,4,rep,name=active_rounds,json=activeRounds,proto3" json:"active_rounds,omitempty"`
+	Domains                 []*Domain              `protobuf:"bytes,5,rep,name=domains,proto3" json:"domains,omitempty"`
+	BootstrapFundAllocation string                 `protobuf:"bytes,6,opt,name=bootstrap_fund_allocation,json=bootstrapFundAllocation,proto3" json:"bootstrap_fund_allocation,omitempty"` // Initial fund allocation (uzrn) — one-time genesis mint
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *GenesisState) Reset() {
@@ -547,11 +670,18 @@ func (x *GenesisState) GetDomains() []*Domain {
 	return nil
 }
 
+func (x *GenesisState) GetBootstrapFundAllocation() string {
+	if x != nil {
+		return x.BootstrapFundAllocation
+	}
+	return ""
+}
+
 var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x86\x16\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xe3\x1c\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -603,13 +733,29 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x1amin_participation_rate_bps\x18/ \x01(\x04R\x17minParticipationRateBps\x12@\n" +
 	"\x1dchallenge_stake_ratio_min_bps\x180 \x01(\x04R\x19challengeStakeRatioMinBps\x125\n" +
 	"\x17research_fund_share_bps\x181 \x01(\x04R\x14researchFundShareBps\x129\n" +
-	"\x19malformed_claim_slash_bps\x182 \x01(\x04R\x16malformedClaimSlashBps\"\xbb\x02\n" +
+	"\x19malformed_claim_slash_bps\x182 \x01(\x04R\x16malformedClaimSlashBps\x120\n" +
+	"\x14fitness_epoch_blocks\x183 \x01(\x04R\x12fitnessEpochBlocks\x127\n" +
+	"\x18fitness_weight_query_bps\x184 \x01(\x04R\x15fitnessWeightQueryBps\x12=\n" +
+	"\x1bfitness_weight_citation_bps\x185 \x01(\x04R\x18fitnessWeightCitationBps\x129\n" +
+	"\x19fitness_weight_bridge_bps\x186 \x01(\x04R\x16fitnessWeightBridgeBps\x127\n" +
+	"\x18fitness_weight_depth_bps\x187 \x01(\x04R\x15fitnessWeightDepthBps\x129\n" +
+	"\x19fitness_weight_patron_bps\x188 \x01(\x04R\x16fitnessWeightPatronBps\x129\n" +
+	"\x19fitness_weight_unique_bps\x189 \x01(\x04R\x16fitnessWeightUniqueBps\x123\n" +
+	"\x16fitness_weight_age_bps\x18: \x01(\x04R\x13fitnessWeightAgeBps\x122\n" +
+	"\x15fitness_initial_score\x18; \x01(\x04R\x13fitnessInitialScore\x120\n" +
+	"\x14fitness_grace_epochs\x18< \x01(\x04R\x12fitnessGraceEpochs\x124\n" +
+	"\x16bootstrap_fund_enabled\x18= \x01(\bR\x14bootstrapFundEnabled\x12B\n" +
+	"\x1ebootstrap_fund_max_per_address\x18> \x01(\tR\x1abootstrapFundMaxPerAddress\x12>\n" +
+	"\x1cbootstrap_fund_max_per_epoch\x18? \x01(\tR\x18bootstrapFundMaxPerEpoch\x12=\n" +
+	"\x1bbootstrap_fund_epoch_blocks\x18@ \x01(\x04R\x18bootstrapFundEpochBlocks\x123\n" +
+	"\x16bootstrap_fund_fee_cap\x18A \x01(\tR\x13bootstrapFundFeeCap\"\xf7\x02\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +
 	"\x0epending_claims\x18\x03 \x03(\v2\x1a.zerone.knowledge.v1.ClaimR\rpendingClaims\x12K\n" +
 	"\ractive_rounds\x18\x04 \x03(\v2&.zerone.knowledge.v1.VerificationRoundR\factiveRounds\x125\n" +
-	"\adomains\x18\x05 \x03(\v2\x1b.zerone.knowledge.v1.DomainR\adomainsB2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
+	"\adomains\x18\x05 \x03(\v2\x1b.zerone.knowledge.v1.DomainR\adomains\x12:\n" +
+	"\x19bootstrap_fund_allocation\x18\x06 \x01(\tR\x17bootstrapFundAllocationB2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
 	file_zerone_knowledge_v1_genesis_proto_rawDescOnce sync.Once

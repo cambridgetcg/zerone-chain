@@ -19,22 +19,24 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Params_FullMethodName            = "/zerone.knowledge.v1.Query/Params"
-	Query_Fact_FullMethodName              = "/zerone.knowledge.v1.Query/Fact"
-	Query_Facts_FullMethodName             = "/zerone.knowledge.v1.Query/Facts"
-	Query_FactsByDomain_FullMethodName     = "/zerone.knowledge.v1.Query/FactsByDomain"
-	Query_FactsBySubmitter_FullMethodName  = "/zerone.knowledge.v1.Query/FactsBySubmitter"
-	Query_Claim_FullMethodName             = "/zerone.knowledge.v1.Query/Claim"
-	Query_PendingClaims_FullMethodName     = "/zerone.knowledge.v1.Query/PendingClaims"
-	Query_VerificationRound_FullMethodName = "/zerone.knowledge.v1.Query/VerificationRound"
-	Query_Domain_FullMethodName            = "/zerone.knowledge.v1.Query/Domain"
-	Query_Domains_FullMethodName           = "/zerone.knowledge.v1.Query/Domains"
-	Query_FactConfidence_FullMethodName    = "/zerone.knowledge.v1.Query/FactConfidence"
-	Query_FactCitationCount_FullMethodName = "/zerone.knowledge.v1.Query/FactCitationCount"
-	Query_FactRelations_FullMethodName     = "/zerone.knowledge.v1.Query/FactRelations"
-	Query_FactsBySubject_FullMethodName    = "/zerone.knowledge.v1.Query/FactsBySubject"
-	Query_FactsByTag_FullMethodName        = "/zerone.knowledge.v1.Query/FactsByTag"
-	Query_FactByCanonical_FullMethodName   = "/zerone.knowledge.v1.Query/FactByCanonical"
+	Query_Params_FullMethodName              = "/zerone.knowledge.v1.Query/Params"
+	Query_Fact_FullMethodName                = "/zerone.knowledge.v1.Query/Fact"
+	Query_Facts_FullMethodName               = "/zerone.knowledge.v1.Query/Facts"
+	Query_FactsByDomain_FullMethodName       = "/zerone.knowledge.v1.Query/FactsByDomain"
+	Query_FactsBySubmitter_FullMethodName    = "/zerone.knowledge.v1.Query/FactsBySubmitter"
+	Query_Claim_FullMethodName               = "/zerone.knowledge.v1.Query/Claim"
+	Query_PendingClaims_FullMethodName       = "/zerone.knowledge.v1.Query/PendingClaims"
+	Query_VerificationRound_FullMethodName   = "/zerone.knowledge.v1.Query/VerificationRound"
+	Query_Domain_FullMethodName              = "/zerone.knowledge.v1.Query/Domain"
+	Query_Domains_FullMethodName             = "/zerone.knowledge.v1.Query/Domains"
+	Query_FactConfidence_FullMethodName      = "/zerone.knowledge.v1.Query/FactConfidence"
+	Query_FactCitationCount_FullMethodName   = "/zerone.knowledge.v1.Query/FactCitationCount"
+	Query_FactRelations_FullMethodName       = "/zerone.knowledge.v1.Query/FactRelations"
+	Query_FactsBySubject_FullMethodName      = "/zerone.knowledge.v1.Query/FactsBySubject"
+	Query_FactsByTag_FullMethodName          = "/zerone.knowledge.v1.Query/FactsByTag"
+	Query_FactByCanonical_FullMethodName     = "/zerone.knowledge.v1.Query/FactByCanonical"
+	Query_FactsByFitness_FullMethodName      = "/zerone.knowledge.v1.Query/FactsByFitness"
+	Query_BootstrapFundStatus_FullMethodName = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
 )
 
 // QueryClient is the client API for Query service.
@@ -75,6 +77,10 @@ type QueryClient interface {
 	FactsByTag(ctx context.Context, in *QueryFactsByTagRequest, opts ...grpc.CallOption) (*QueryFactsByTagResponse, error)
 	// FactByCanonical queries a fact by its canonical form hash.
 	FactByCanonical(ctx context.Context, in *QueryFactByCanonicalRequest, opts ...grpc.CallOption) (*QueryFactByCanonicalResponse, error)
+	// FactsByFitness queries facts sorted by fitness score.
+	FactsByFitness(ctx context.Context, in *QueryFactsByFitnessRequest, opts ...grpc.CallOption) (*QueryFactsByFitnessResponse, error)
+	// BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
+	BootstrapFundStatus(ctx context.Context, in *QueryBootstrapFundStatusRequest, opts ...grpc.CallOption) (*QueryBootstrapFundStatusResponse, error)
 }
 
 type queryClient struct {
@@ -245,6 +251,26 @@ func (c *queryClient) FactByCanonical(ctx context.Context, in *QueryFactByCanoni
 	return out, nil
 }
 
+func (c *queryClient) FactsByFitness(ctx context.Context, in *QueryFactsByFitnessRequest, opts ...grpc.CallOption) (*QueryFactsByFitnessResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactsByFitnessResponse)
+	err := c.cc.Invoke(ctx, Query_FactsByFitness_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) BootstrapFundStatus(ctx context.Context, in *QueryBootstrapFundStatusRequest, opts ...grpc.CallOption) (*QueryBootstrapFundStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryBootstrapFundStatusResponse)
+	err := c.cc.Invoke(ctx, Query_BootstrapFundStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -283,6 +309,10 @@ type QueryServer interface {
 	FactsByTag(context.Context, *QueryFactsByTagRequest) (*QueryFactsByTagResponse, error)
 	// FactByCanonical queries a fact by its canonical form hash.
 	FactByCanonical(context.Context, *QueryFactByCanonicalRequest) (*QueryFactByCanonicalResponse, error)
+	// FactsByFitness queries facts sorted by fitness score.
+	FactsByFitness(context.Context, *QueryFactsByFitnessRequest) (*QueryFactsByFitnessResponse, error)
+	// BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
+	BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -340,6 +370,12 @@ func (UnimplementedQueryServer) FactsByTag(context.Context, *QueryFactsByTagRequ
 }
 func (UnimplementedQueryServer) FactByCanonical(context.Context, *QueryFactByCanonicalRequest) (*QueryFactByCanonicalResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FactByCanonical not implemented")
+}
+func (UnimplementedQueryServer) FactsByFitness(context.Context, *QueryFactsByFitnessRequest) (*QueryFactsByFitnessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactsByFitness not implemented")
+}
+func (UnimplementedQueryServer) BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BootstrapFundStatus not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -650,6 +686,42 @@ func _Query_FactByCanonical_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_FactsByFitness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactsByFitnessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactsByFitness(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactsByFitness_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactsByFitness(ctx, req.(*QueryFactsByFitnessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_BootstrapFundStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryBootstrapFundStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).BootstrapFundStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_BootstrapFundStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).BootstrapFundStatus(ctx, req.(*QueryBootstrapFundStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -720,6 +792,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FactByCanonical",
 			Handler:    _Query_FactByCanonical_Handler,
+		},
+		{
+			MethodName: "FactsByFitness",
+			Handler:    _Query_FactsByFitness_Handler,
+		},
+		{
+			MethodName: "BootstrapFundStatus",
+			Handler:    _Query_BootstrapFundStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

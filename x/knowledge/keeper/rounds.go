@@ -151,6 +151,13 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 
 	factID := GenerateFactID(claim.Id, height)
 
+	// Calculate fitness epoch from current height
+	params, _ := k.GetParams(ctx)
+	epochBorn := uint64(0)
+	if params.FitnessEpochBlocks > 0 {
+		epochBorn = height / params.FitnessEpochBlocks
+	}
+
 	fact := &types.Fact{
 		Id:                factID,
 		Content:           claim.FactContent,
@@ -168,6 +175,10 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		Structure:         claim.Structure,
 		CanonicalForm:     claim.CanonicalForm,
 		CanonicalHash:     claim.CanonicalHash,
+		// Fitness fields
+		FitnessScore:       params.FitnessInitialScore,
+		FitnessUpdatedBlock: height,
+		EpochBorn:          epochBorn,
 	}
 
 	// Apply stratum confidence ceiling if ontology keeper is available

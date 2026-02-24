@@ -150,6 +150,13 @@ message Fact {
   ClaimStructure structure = 27;  // Machine-readable decomposition (optional)
   string canonical_form      = 28;  // Machine-readable normalized form
   string canonical_hash      = 29;  // SHA-256 of canonical_form for dedup
+
+  // ─── Fitness scoring ──────────────────────────────────────────────────────
+  uint64 fitness_score           = 30;  // 0-1,000,000 composite fitness
+  uint64 fitness_updated_block   = 31;  // Last block fitness was recalculated
+  uint64 query_count             = 32;  // Lifetime query count
+  uint64 query_count_epoch       = 33;  // Queries in current epoch
+  uint64 epoch_born              = 34;  // Epoch when fact was created
 }
 
 // Claim is an unverified submission awaiting or undergoing verification.
