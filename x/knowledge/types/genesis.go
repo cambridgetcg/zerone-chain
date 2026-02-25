@@ -124,6 +124,15 @@ func DefaultParams() Params {
 		NoveltyPrecisionBonusBps:         100_000, // 10% bonus for more precise scope
 		NoveltyCrossDomainBonusBps:       100_000, // 10% bonus for cross-domain bridge facts
 		NoveltyMaxOverlapFacts:           5,       // Cap: after 5 duplicates, no more penalty
+
+		// ─── Demand signals ────────────────────────────────────────────────
+		DemandBountyThreshold:     100,          // 100 unfulfilled queries per epoch to trigger bounty
+		DemandBountyBaseReward:    "10000000",   // 10 ZRN base bounty reward
+		DemandBountyPerQueryBonus: "100000",     // 0.1 ZRN additional per unfulfilled query
+		DemandBountyExpiryEpochs:  50,           // 50 epochs before unclaimed bounty expires
+		DemandMultiplierCap:       10_000_000,   // 10x demand multiplier cap (BPS)
+		DemandTrackingEnabled:     true,         // Demand tracking enabled by default
+		AuthorizedDemandReporters: []string{},   // Empty — governance adds reporters
 	}
 }
 
@@ -378,6 +387,22 @@ func (p *Params) Validate() error {
 	}
 	if p.ReproductionMaxChildren == 0 {
 		return fmt.Errorf("reproduction_max_children must be > 0")
+	}
+
+	// ─── Demand params ──────────────────────────────────────────────
+	if p.DemandTrackingEnabled {
+		if p.DemandBountyThreshold == 0 {
+			return fmt.Errorf("demand_bounty_threshold must be > 0 when demand tracking is enabled")
+		}
+		if p.DemandBountyBaseReward == "" || p.DemandBountyBaseReward == "0" {
+			return fmt.Errorf("demand_bounty_base_reward must be > 0 when demand tracking is enabled")
+		}
+		if p.DemandBountyExpiryEpochs == 0 {
+			return fmt.Errorf("demand_bounty_expiry_epochs must be > 0 when demand tracking is enabled")
+		}
+		if p.DemandMultiplierCap == 0 {
+			return fmt.Errorf("demand_multiplier_cap must be > 0 when demand tracking is enabled")
+		}
 	}
 
 	// ─── Bootstrap fund params ──────────────────────────────────────────

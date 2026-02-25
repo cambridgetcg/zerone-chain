@@ -93,6 +93,11 @@ var (
 
 	// ─── Novelty detection ──────────────────────────────────────────────────
 	CommonKnowledgePrefix = []byte{0x38} // 0x38 | domain / subject_hash → CommonKnowledgeEntry
+
+	// ─── Agent demand tracking ─────────────────────────────────────────
+	DemandSignalPrefix          = []byte{0x39} // domain / subject_hash → DemandSignal
+	BountyPrefix                = []byte{0x3a} // bounty_id → KnowledgeBounty
+	BountyByDomainSubjectPrefix = []byte{0x3b} // domain / subject_hash → bounty_id (active index)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -204,4 +209,23 @@ func CommonKnowledgeKey(domain, subjectHash string) []byte {
 func CommonKnowledgeByDomainPrefix(domain string) []byte {
 	key := append(append([]byte{}, CommonKnowledgePrefix...), []byte(domain)...)
 	return append(key, '/')
+}
+
+// DemandSignalKey returns the store key for a demand signal.
+func DemandSignalKey(domain, subjectHash string) []byte {
+	key := append(append([]byte{}, DemandSignalPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(subjectHash)...)
+}
+
+// BountyKey returns the store key for a bounty.
+func BountyKey(id string) []byte {
+	return append(append([]byte{}, BountyPrefix...), []byte(id)...)
+}
+
+// BountyByDomainSubjectKey returns the index key for active bounties by domain/subject.
+func BountyByDomainSubjectKey(domain, subjectHash string) []byte {
+	key := append(append([]byte{}, BountyByDomainSubjectPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(subjectHash)...)
 }
