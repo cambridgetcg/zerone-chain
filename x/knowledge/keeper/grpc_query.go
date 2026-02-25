@@ -399,3 +399,130 @@ func (q *queryServer) FactsAtRisk(ctx context.Context, req *types.QueryFactsAtRi
 
 	return &types.QueryFactsAtRiskResponse{Facts: facts}, nil
 }
+
+// FactLineage traces a fact's ancestry up to the root.
+func (q *queryServer) FactLineage(ctx context.Context, req *types.QueryFactLineageRequest) (*types.QueryFactLineageResponse, error) {
+	if req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id is required")
+	}
+
+	fact, found := q.keeper.GetFact(ctx, req.FactId)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.FactId)
+	}
+
+	maxDepth := req.Depth
+	if maxDepth == 0 {
+		maxDepth = 100 // safe upper bound to reach root
+	}
+
+	var ancestors []*types.Fact
+	currentID := fact.ParentFactId
+	depth := uint64(0)
+
+	for currentID != "" && depth < maxDepth {
+		ancestor, found := q.keeper.GetFact(ctx, currentID)
+		if !found {
+			break
+		}
+		ancestors = append(ancestors, ancestor)
+		currentID = ancestor.ParentFactId
+		depth++
+	}
+
+	rootID := ""
+	if len(ancestors) > 0 {
+		rootID = ancestors[len(ancestors)-1].Id
+	} else if fact.LineageRootId != "" {
+		rootID = fact.LineageRootId
+	}
+
+	return &types.QueryFactLineageResponse{
+		Ancestors: ancestors,
+		RootId:    rootID,
+	}, nil
+}
+
+// FactProgeny returns a fact's descendant tree.
+func (q *queryServer) FactProgeny(ctx context.Context, req *types.QueryFactProgenyRequest) (*types.QueryFactProgenyResponse, error) {
+	if req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id is required")
+	}
+
+	root, found := q.keeper.GetFact(ctx, req.FactId)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.FactId)
+	}
+
+	maxDepth := req.Depth
+	if maxDepth == 0 {
+		maxDepth = 3
+	}
+
+	tree := q.buildProgenyTree(ctx, root, maxDepth, 0)
+
+	return &types.QueryFactProgenyResponse{
+		Root: root,
+		Tree: tree,
+	}, nil
+}
+
+// buildProgenyTree recursively builds the descendant tree for a fact.
+func (q *queryServer) buildProgenyTree(ctx context.Context, parent *types.Fact, maxDepth, currentDepth uint64) []*types.FactWithChildren {
+	if currentDepth >= maxDepth || len(parent.ChildFactIds) == 0 {
+		return nil
+	}
+
+	var result []*types.FactWithChildren
+	for _, childID := range parent.ChildFactIds {
+		child, found := q.keeper.GetFact(ctx, childID)
+		if !found {
+			continue
+		}
+		node := &types.FactWithChildren{
+			Fact:     child,
+			Children: q.buildProgenyTree(ctx, child, maxDepth, currentDepth+1),
+		}
+		result = append(result, node)
+	}
+	return result
+}
+
+// ─── Novelty detection queries ────────────────────────────────────────────────
+
+func (q queryServer) CommonKnowledge(ctx context.Context, req *types.QueryCommonKnowledgeRequest) (*types.QueryCommonKnowledgeResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+
+	var entries []*types.CommonKnowledgeEntry
+	if req.Domain != "" {
+		entries = q.keeper.GetCommonKnowledgeByDomain(ctx, req.Domain)
+	} else {
+		entries = q.keeper.GetAllCommonKnowledge(ctx)
+	}
+
+	return &types.QueryCommonKnowledgeResponse{Entries: entries}, nil
+}
+
+func (q queryServer) CheckNovelty(ctx context.Context, req *types.QueryCheckNoveltyRequest) (*types.QueryCheckNoveltyResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+	if req.Domain == "" {
+		return nil, status.Error(codes.InvalidArgument, "domain is required")
+	}
+	if req.Subject == "" {
+		return nil, status.Error(codes.InvalidArgument, "subject is required")
+	}
+
+	noveltyScore, commonKnowledgeMatch, matchedEntry, overlapCount :=
+		q.keeper.CheckNoveltyPreSubmission(ctx, req.Domain, req.Subject, req.Content)
+
+	return &types.QueryCheckNoveltyResponse{
+		NoveltyScore:         noveltyScore,
+		CommonKnowledgeMatch: commonKnowledgeMatch,
+		MatchedEntry:         matchedEntry,
+		SubjectOverlapCount:  overlapCount,
+	}, nil
+}

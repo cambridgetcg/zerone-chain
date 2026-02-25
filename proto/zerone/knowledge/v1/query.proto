@@ -104,6 +104,28 @@ service Query {
   rpc FactsAtRisk(QueryFactsAtRiskRequest) returns (QueryFactsAtRiskResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/facts_at_risk";
   }
+
+  // FactLineage traces a fact's ancestry up to the root.
+  rpc FactLineage(QueryFactLineageRequest) returns (QueryFactLineageResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/lineage";
+  }
+
+  // FactProgeny returns a fact's descendant tree.
+  rpc FactProgeny(QueryFactProgenyRequest) returns (QueryFactProgenyResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/progeny";
+  }
+
+  // ─── Novelty detection ─────────────────────────────────────────────────
+
+  // CommonKnowledge queries the common knowledge registry.
+  rpc CommonKnowledge(QueryCommonKnowledgeRequest) returns (QueryCommonKnowledgeResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/common_knowledge";
+  }
+
+  // CheckNovelty previews the novelty score a claim would receive before submission.
+  rpc CheckNovelty(QueryCheckNoveltyRequest) returns (QueryCheckNoveltyResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/check_novelty";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -278,4 +300,54 @@ message QueryFactsAtRiskRequest {
 
 message QueryFactsAtRiskResponse {
   repeated Fact facts = 1;
+}
+
+// ─── Lineage queries ────────────────────────────────────────────────────────
+
+message QueryFactLineageRequest {
+  string fact_id  = 1;
+  uint64 depth    = 2;  // How far up to trace (0 = to root)
+}
+
+message QueryFactLineageResponse {
+  repeated Fact ancestors = 1;  // Ordered: parent, grandparent, ...root
+  string root_id = 2;
+}
+
+message QueryFactProgenyRequest {
+  string fact_id  = 1;
+  uint64 depth    = 2;  // How deep to traverse (0 = default 3)
+}
+
+message QueryFactProgenyResponse {
+  Fact root = 1;
+  repeated FactWithChildren tree = 2;  // Recursive tree structure
+}
+
+message FactWithChildren {
+  Fact fact = 1;
+  repeated FactWithChildren children = 2;
+}
+
+// ─── Novelty detection queries ──────────────────────────────────────────────
+
+message QueryCommonKnowledgeRequest {
+  string domain = 1;  // Optional domain filter (empty = all)
+}
+
+message QueryCommonKnowledgeResponse {
+  repeated CommonKnowledgeEntry entries = 1;
+}
+
+message QueryCheckNoveltyRequest {
+  string domain  = 1;
+  string subject = 2;
+  string content = 3;
+}
+
+message QueryCheckNoveltyResponse {
+  uint64 novelty_score          = 1;
+  bool   common_knowledge_match = 2;
+  string matched_entry          = 3;  // ID of matched common knowledge entry (if any)
+  uint64 subject_overlap_count  = 4;
 }

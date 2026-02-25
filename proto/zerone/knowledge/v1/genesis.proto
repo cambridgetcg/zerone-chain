@@ -111,6 +111,21 @@ message Params {
   uint64 metabolism_initial_energy           = 74;  // Starting energy for new facts
   uint64 metabolism_at_risk_epochs           = 75;  // Epochs at 0 energy before expiry
   uint64 metabolism_expired_to_pruned_epochs = 76;  // Epochs after expiry before pruning
+
+  // ─── Reproduction ────────────────────────────────────────────────────
+  uint64 reproduction_royalty_bps                   = 77;  // Royalty to parent per child reward epoch
+  uint64 reproduction_royalty_decay_bps             = 78;  // Decay per generation (BPS of previous)
+  uint64 reproduction_max_royalty_depth             = 79;  // Max generations for royalty propagation
+  uint64 reproduction_parent_energy_bonus           = 80;  // Energy bonus to parent when child is created
+  uint64 reproduction_child_fitness_inheritance_bps = 81;  // % of parent fitness inherited by child
+  uint64 reproduction_max_children                  = 82;  // Max direct children per fact
+
+  // ─── Novelty detection ──────────────────────────────────────────────────
+  uint64 novelty_common_knowledge_penalty_bps = 83;  // Default penalty for common knowledge match
+  uint64 novelty_subject_overlap_penalty_bps  = 84;  // Penalty per existing fact with same subject
+  uint64 novelty_precision_bonus_bps          = 85;  // Bonus if more precise than existing
+  uint64 novelty_cross_domain_bonus_bps       = 86;  // Bonus if subject spans multiple domains
+  uint64 novelty_max_overlap_facts            = 87;  // Cap on overlap penalty (after N, no more penalty)
 }
 
 // GenesisState is the genesis state of the knowledge module.
@@ -120,5 +135,6 @@ message GenesisState {
   repeated Claim            pending_claims = 3;
   repeated VerificationRound active_rounds = 4;
   repeated Domain           domains       = 5;
-  string bootstrap_fund_allocation        = 6; // Initial fund allocation (uzrn) — one-time genesis mint
+  string bootstrap_fund_allocation                 = 6; // Initial fund allocation (uzrn) — one-time genesis mint
+  repeated CommonKnowledgeEntry common_knowledge   = 7; // Seeded common knowledge entries
 }

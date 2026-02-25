@@ -115,8 +115,21 @@ type Params struct {
 	MetabolismInitialEnergy           uint64 `protobuf:"varint,74,opt,name=metabolism_initial_energy,json=metabolismInitialEnergy,proto3" json:"metabolism_initial_energy,omitempty"`                                 // Starting energy for new facts
 	MetabolismAtRiskEpochs            uint64 `protobuf:"varint,75,opt,name=metabolism_at_risk_epochs,json=metabolismAtRiskEpochs,proto3" json:"metabolism_at_risk_epochs,omitempty"`                                  // Epochs at 0 energy before expiry
 	MetabolismExpiredToPrunedEpochs   uint64 `protobuf:"varint,76,opt,name=metabolism_expired_to_pruned_epochs,json=metabolismExpiredToPrunedEpochs,proto3" json:"metabolism_expired_to_pruned_epochs,omitempty"`     // Epochs after expiry before pruning
-	unknownFields                     protoimpl.UnknownFields
-	sizeCache                         protoimpl.SizeCache
+	// ─── Reproduction ────────────────────────────────────────────────────
+	ReproductionRoyaltyBps                 uint64 `protobuf:"varint,77,opt,name=reproduction_royalty_bps,json=reproductionRoyaltyBps,proto3" json:"reproduction_royalty_bps,omitempty"`                                                     // Royalty to parent per child reward epoch
+	ReproductionRoyaltyDecayBps            uint64 `protobuf:"varint,78,opt,name=reproduction_royalty_decay_bps,json=reproductionRoyaltyDecayBps,proto3" json:"reproduction_royalty_decay_bps,omitempty"`                                    // Decay per generation (BPS of previous)
+	ReproductionMaxRoyaltyDepth            uint64 `protobuf:"varint,79,opt,name=reproduction_max_royalty_depth,json=reproductionMaxRoyaltyDepth,proto3" json:"reproduction_max_royalty_depth,omitempty"`                                    // Max generations for royalty propagation
+	ReproductionParentEnergyBonus          uint64 `protobuf:"varint,80,opt,name=reproduction_parent_energy_bonus,json=reproductionParentEnergyBonus,proto3" json:"reproduction_parent_energy_bonus,omitempty"`                              // Energy bonus to parent when child is created
+	ReproductionChildFitnessInheritanceBps uint64 `protobuf:"varint,81,opt,name=reproduction_child_fitness_inheritance_bps,json=reproductionChildFitnessInheritanceBps,proto3" json:"reproduction_child_fitness_inheritance_bps,omitempty"` // % of parent fitness inherited by child
+	ReproductionMaxChildren                uint64 `protobuf:"varint,82,opt,name=reproduction_max_children,json=reproductionMaxChildren,proto3" json:"reproduction_max_children,omitempty"`                                                  // Max direct children per fact
+	// ─── Novelty detection ──────────────────────────────────────────────────
+	NoveltyCommonKnowledgePenaltyBps uint64 `protobuf:"varint,83,opt,name=novelty_common_knowledge_penalty_bps,json=noveltyCommonKnowledgePenaltyBps,proto3" json:"novelty_common_knowledge_penalty_bps,omitempty"` // Default penalty for common knowledge match
+	NoveltySubjectOverlapPenaltyBps  uint64 `protobuf:"varint,84,opt,name=novelty_subject_overlap_penalty_bps,json=noveltySubjectOverlapPenaltyBps,proto3" json:"novelty_subject_overlap_penalty_bps,omitempty"`    // Penalty per existing fact with same subject
+	NoveltyPrecisionBonusBps         uint64 `protobuf:"varint,85,opt,name=novelty_precision_bonus_bps,json=noveltyPrecisionBonusBps,proto3" json:"novelty_precision_bonus_bps,omitempty"`                           // Bonus if more precise than existing
+	NoveltyCrossDomainBonusBps       uint64 `protobuf:"varint,86,opt,name=novelty_cross_domain_bonus_bps,json=noveltyCrossDomainBonusBps,proto3" json:"novelty_cross_domain_bonus_bps,omitempty"`                   // Bonus if subject spans multiple domains
+	NoveltyMaxOverlapFacts           uint64 `protobuf:"varint,87,opt,name=novelty_max_overlap_facts,json=noveltyMaxOverlapFacts,proto3" json:"novelty_max_overlap_facts,omitempty"`                                 // Cap on overlap penalty (after N, no more penalty)
+	unknownFields                    protoimpl.UnknownFields
+	sizeCache                        protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -681,15 +694,93 @@ func (x *Params) GetMetabolismExpiredToPrunedEpochs() uint64 {
 	return 0
 }
 
+func (x *Params) GetReproductionRoyaltyBps() uint64 {
+	if x != nil {
+		return x.ReproductionRoyaltyBps
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionRoyaltyDecayBps() uint64 {
+	if x != nil {
+		return x.ReproductionRoyaltyDecayBps
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionMaxRoyaltyDepth() uint64 {
+	if x != nil {
+		return x.ReproductionMaxRoyaltyDepth
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionParentEnergyBonus() uint64 {
+	if x != nil {
+		return x.ReproductionParentEnergyBonus
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionChildFitnessInheritanceBps() uint64 {
+	if x != nil {
+		return x.ReproductionChildFitnessInheritanceBps
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionMaxChildren() uint64 {
+	if x != nil {
+		return x.ReproductionMaxChildren
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltyCommonKnowledgePenaltyBps() uint64 {
+	if x != nil {
+		return x.NoveltyCommonKnowledgePenaltyBps
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltySubjectOverlapPenaltyBps() uint64 {
+	if x != nil {
+		return x.NoveltySubjectOverlapPenaltyBps
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltyPrecisionBonusBps() uint64 {
+	if x != nil {
+		return x.NoveltyPrecisionBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltyCrossDomainBonusBps() uint64 {
+	if x != nil {
+		return x.NoveltyCrossDomainBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltyMaxOverlapFacts() uint64 {
+	if x != nil {
+		return x.NoveltyMaxOverlapFacts
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
-	state                   protoimpl.MessageState `protogen:"open.v1"`
-	Params                  *Params                `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
-	Facts                   []*Fact                `protobuf:"bytes,2,rep,name=facts,proto3" json:"facts,omitempty"`
-	PendingClaims           []*Claim               `protobuf:"bytes,3,rep,name=pending_claims,json=pendingClaims,proto3" json:"pending_claims,omitempty"`
-	ActiveRounds            []*VerificationRound   `protobuf:"bytes,4,rep,name=active_rounds,json=activeRounds,proto3" json:"active_rounds,omitempty"`
-	Domains                 []*Domain              `protobuf:"bytes,5,rep,name=domains,proto3" json:"domains,omitempty"`
-	BootstrapFundAllocation string                 `protobuf:"bytes,6,opt,name=bootstrap_fund_allocation,json=bootstrapFundAllocation,proto3" json:"bootstrap_fund_allocation,omitempty"` // Initial fund allocation (uzrn) — one-time genesis mint
+	state                   protoimpl.MessageState  `protogen:"open.v1"`
+	Params                  *Params                 `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
+	Facts                   []*Fact                 `protobuf:"bytes,2,rep,name=facts,proto3" json:"facts,omitempty"`
+	PendingClaims           []*Claim                `protobuf:"bytes,3,rep,name=pending_claims,json=pendingClaims,proto3" json:"pending_claims,omitempty"`
+	ActiveRounds            []*VerificationRound    `protobuf:"bytes,4,rep,name=active_rounds,json=activeRounds,proto3" json:"active_rounds,omitempty"`
+	Domains                 []*Domain               `protobuf:"bytes,5,rep,name=domains,proto3" json:"domains,omitempty"`
+	BootstrapFundAllocation string                  `protobuf:"bytes,6,opt,name=bootstrap_fund_allocation,json=bootstrapFundAllocation,proto3" json:"bootstrap_fund_allocation,omitempty"` // Initial fund allocation (uzrn) — one-time genesis mint
+	CommonKnowledge         []*CommonKnowledgeEntry `protobuf:"bytes,7,rep,name=common_knowledge,json=commonKnowledge,proto3" json:"common_knowledge,omitempty"`                           // Seeded common knowledge entries
 	unknownFields           protoimpl.UnknownFields
 	sizeCache               protoimpl.SizeCache
 }
@@ -766,11 +857,18 @@ func (x *GenesisState) GetBootstrapFundAllocation() string {
 	return ""
 }
 
+func (x *GenesisState) GetCommonKnowledge() []*CommonKnowledgeEntry {
+	if x != nil {
+		return x.CommonKnowledge
+	}
+	return nil
+}
+
 var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xb8\"\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xb9(\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -848,14 +946,26 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x15metabolism_energy_cap\x18I \x01(\x04R\x13metabolismEnergyCap\x12:\n" +
 	"\x19metabolism_initial_energy\x18J \x01(\x04R\x17metabolismInitialEnergy\x129\n" +
 	"\x19metabolism_at_risk_epochs\x18K \x01(\x04R\x16metabolismAtRiskEpochs\x12L\n" +
-	"#metabolism_expired_to_pruned_epochs\x18L \x01(\x04R\x1fmetabolismExpiredToPrunedEpochs\"\xf7\x02\n" +
+	"#metabolism_expired_to_pruned_epochs\x18L \x01(\x04R\x1fmetabolismExpiredToPrunedEpochs\x128\n" +
+	"\x18reproduction_royalty_bps\x18M \x01(\x04R\x16reproductionRoyaltyBps\x12C\n" +
+	"\x1ereproduction_royalty_decay_bps\x18N \x01(\x04R\x1breproductionRoyaltyDecayBps\x12C\n" +
+	"\x1ereproduction_max_royalty_depth\x18O \x01(\x04R\x1breproductionMaxRoyaltyDepth\x12G\n" +
+	" reproduction_parent_energy_bonus\x18P \x01(\x04R\x1dreproductionParentEnergyBonus\x12Z\n" +
+	"*reproduction_child_fitness_inheritance_bps\x18Q \x01(\x04R&reproductionChildFitnessInheritanceBps\x12:\n" +
+	"\x19reproduction_max_children\x18R \x01(\x04R\x17reproductionMaxChildren\x12N\n" +
+	"$novelty_common_knowledge_penalty_bps\x18S \x01(\x04R noveltyCommonKnowledgePenaltyBps\x12L\n" +
+	"#novelty_subject_overlap_penalty_bps\x18T \x01(\x04R\x1fnoveltySubjectOverlapPenaltyBps\x12=\n" +
+	"\x1bnovelty_precision_bonus_bps\x18U \x01(\x04R\x18noveltyPrecisionBonusBps\x12B\n" +
+	"\x1enovelty_cross_domain_bonus_bps\x18V \x01(\x04R\x1anoveltyCrossDomainBonusBps\x129\n" +
+	"\x19novelty_max_overlap_facts\x18W \x01(\x04R\x16noveltyMaxOverlapFacts\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +
 	"\x0epending_claims\x18\x03 \x03(\v2\x1a.zerone.knowledge.v1.ClaimR\rpendingClaims\x12K\n" +
 	"\ractive_rounds\x18\x04 \x03(\v2&.zerone.knowledge.v1.VerificationRoundR\factiveRounds\x125\n" +
 	"\adomains\x18\x05 \x03(\v2\x1b.zerone.knowledge.v1.DomainR\adomains\x12:\n" +
-	"\x19bootstrap_fund_allocation\x18\x06 \x01(\tR\x17bootstrapFundAllocationB2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
+	"\x19bootstrap_fund_allocation\x18\x06 \x01(\tR\x17bootstrapFundAllocation\x12T\n" +
+	"\x10common_knowledge\x18\a \x03(\v2).zerone.knowledge.v1.CommonKnowledgeEntryR\x0fcommonKnowledgeB2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
 	file_zerone_knowledge_v1_genesis_proto_rawDescOnce sync.Once
@@ -871,12 +981,13 @@ func file_zerone_knowledge_v1_genesis_proto_rawDescGZIP() []byte {
 
 var file_zerone_knowledge_v1_genesis_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_zerone_knowledge_v1_genesis_proto_goTypes = []any{
-	(*Params)(nil),            // 0: zerone.knowledge.v1.Params
-	(*GenesisState)(nil),      // 1: zerone.knowledge.v1.GenesisState
-	(*Fact)(nil),              // 2: zerone.knowledge.v1.Fact
-	(*Claim)(nil),             // 3: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil), // 4: zerone.knowledge.v1.VerificationRound
-	(*Domain)(nil),            // 5: zerone.knowledge.v1.Domain
+	(*Params)(nil),               // 0: zerone.knowledge.v1.Params
+	(*GenesisState)(nil),         // 1: zerone.knowledge.v1.GenesisState
+	(*Fact)(nil),                 // 2: zerone.knowledge.v1.Fact
+	(*Claim)(nil),                // 3: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),    // 4: zerone.knowledge.v1.VerificationRound
+	(*Domain)(nil),               // 5: zerone.knowledge.v1.Domain
+	(*CommonKnowledgeEntry)(nil), // 6: zerone.knowledge.v1.CommonKnowledgeEntry
 }
 var file_zerone_knowledge_v1_genesis_proto_depIdxs = []int32{
 	0, // 0: zerone.knowledge.v1.GenesisState.params:type_name -> zerone.knowledge.v1.Params
@@ -884,11 +995,12 @@ var file_zerone_knowledge_v1_genesis_proto_depIdxs = []int32{
 	3, // 2: zerone.knowledge.v1.GenesisState.pending_claims:type_name -> zerone.knowledge.v1.Claim
 	4, // 3: zerone.knowledge.v1.GenesisState.active_rounds:type_name -> zerone.knowledge.v1.VerificationRound
 	5, // 4: zerone.knowledge.v1.GenesisState.domains:type_name -> zerone.knowledge.v1.Domain
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	6, // 5: zerone.knowledge.v1.GenesisState.common_knowledge:type_name -> zerone.knowledge.v1.CommonKnowledgeEntry
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_genesis_proto_init() }

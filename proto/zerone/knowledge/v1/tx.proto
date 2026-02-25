@@ -75,6 +75,14 @@ service Msg {
 
   // ExecuteResearchProposal executes an approved research fund proposal.
   rpc ExecuteResearchProposal(MsgExecuteResearchProposal) returns (MsgExecuteResearchProposalResponse);
+
+  // ─── Common knowledge registry governance ──────────────────────────────
+
+  // AddCommonKnowledge adds an entry to the common knowledge registry (authority-only).
+  rpc AddCommonKnowledge(MsgAddCommonKnowledge) returns (MsgAddCommonKnowledgeResponse);
+
+  // RemoveCommonKnowledge removes an entry from the common knowledge registry (authority-only).
+  rpc RemoveCommonKnowledge(MsgRemoveCommonKnowledge) returns (MsgRemoveCommonKnowledgeResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -304,3 +312,28 @@ message MsgExecuteResearchProposal {
 }
 
 message MsgExecuteResearchProposalResponse {}
+
+// ─── Common knowledge registry governance messages ──────────────────────────
+
+message MsgAddCommonKnowledge {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority   = 1;
+  string domain      = 2;
+  string subject     = 3;
+  string description = 4;
+  uint64 penalty_bps = 5;
+}
+
+message MsgAddCommonKnowledgeResponse {
+  string id = 1;
+}
+
+message MsgRemoveCommonKnowledge {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1;
+  string id        = 2;  // Common knowledge entry ID
+}
+
+message MsgRemoveCommonKnowledgeResponse {}

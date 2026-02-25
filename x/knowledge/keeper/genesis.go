@@ -55,6 +55,21 @@ func (k Keeper) InitGenesis(ctx context.Context, gs *types.GenesisState) error {
 		}
 	}
 
+	// Seed common knowledge registry
+	ckEntries := gs.CommonKnowledge
+	if len(ckEntries) == 0 {
+		// Fresh genesis — seed from code defaults
+		ckEntries = DefaultCommonKnowledgeEntries()
+	}
+	for _, entry := range ckEntries {
+		if entry == nil {
+			continue
+		}
+		if err := k.SetCommonKnowledgeEntry(ctx, entry); err != nil {
+			return fmt.Errorf("failed to seed common knowledge entry: %w", err)
+		}
+	}
+
 	// Fund the bootstrap fund from genesis allocation (R19-7)
 	if gs.BootstrapFundAllocation != "" && gs.BootstrapFundAllocation != "0" {
 		alloc, ok := new(big.Int).SetString(gs.BootstrapFundAllocation, 10)
@@ -105,6 +120,9 @@ func (k Keeper) ExportGenesis(ctx context.Context) *types.GenesisState {
 	fundBalance := k.GetBootstrapFundBalance(ctx)
 	allocation := fundBalance.Amount.String()
 
+	// Export common knowledge entries
+	commonKnowledge := k.GetAllCommonKnowledge(ctx)
+
 	return &types.GenesisState{
 		Params:                  params,
 		Facts:                   facts,
@@ -112,5 +130,6 @@ func (k Keeper) ExportGenesis(ctx context.Context) *types.GenesisState {
 		Domains:                 domains,
 		ActiveRounds:            rounds,
 		BootstrapFundAllocation: allocation,
+		CommonKnowledge:         commonKnowledge,
 	}
 }

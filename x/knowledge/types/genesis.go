@@ -109,6 +109,21 @@ func DefaultParams() Params {
 		MetabolismInitialEnergy:           5_000,  // Born with 50 epochs of base maintenance
 		MetabolismAtRiskEpochs:            5,      // 5 epochs at zero before expiry
 		MetabolismExpiredToPrunedEpochs:   20,     // 20 epochs after expiry before archive
+
+		// ─── Reproduction ───────────────────────────────────────────────────
+		ReproductionRoyaltyBps:                 50_000,  // 5% of child rewards to parent
+		ReproductionRoyaltyDecayBps:            500_000, // 50% per generation
+		ReproductionMaxRoyaltyDepth:            5,       // Max 5 generations
+		ReproductionParentEnergyBonus:          300,     // 300 energy to parent on child creation
+		ReproductionChildFitnessInheritanceBps: 200_000, // Child starts with 20% of parent fitness
+		ReproductionMaxChildren:                20,      // Max 20 direct children per fact
+
+		// ─── Novelty detection ──────────────────────────────────────────────
+		NoveltyCommonKnowledgePenaltyBps: 700_000, // Default 70% penalty for common knowledge match
+		NoveltySubjectOverlapPenaltyBps:  100_000, // 10% penalty per duplicate subject fact
+		NoveltyPrecisionBonusBps:         100_000, // 10% bonus for more precise scope
+		NoveltyCrossDomainBonusBps:       100_000, // 10% bonus for cross-domain bridge facts
+		NoveltyMaxOverlapFacts:           5,       // Cap: after 5 duplicates, no more penalty
 	}
 }
 
@@ -346,6 +361,23 @@ func (p *Params) Validate() error {
 	}
 	if p.MetabolismExpiredToPrunedEpochs == 0 {
 		return fmt.Errorf("metabolism_expired_to_pruned_epochs must be > 0")
+	}
+
+	// ─── Reproduction params ──────────────────────────────────────────
+	if p.ReproductionRoyaltyBps > 1_000_000 {
+		return fmt.Errorf("reproduction_royalty_bps must be <= 1,000,000")
+	}
+	if p.ReproductionRoyaltyDecayBps > 1_000_000 {
+		return fmt.Errorf("reproduction_royalty_decay_bps must be <= 1,000,000")
+	}
+	if p.ReproductionMaxRoyaltyDepth == 0 {
+		return fmt.Errorf("reproduction_max_royalty_depth must be > 0")
+	}
+	if p.ReproductionChildFitnessInheritanceBps > 1_000_000 {
+		return fmt.Errorf("reproduction_child_fitness_inheritance_bps must be <= 1,000,000")
+	}
+	if p.ReproductionMaxChildren == 0 {
+		return fmt.Errorf("reproduction_max_children must be > 0")
 	}
 
 	// ─── Bootstrap fund params ──────────────────────────────────────────

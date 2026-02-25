@@ -38,6 +38,10 @@ const (
 	Query_FactsByFitness_FullMethodName      = "/zerone.knowledge.v1.Query/FactsByFitness"
 	Query_BootstrapFundStatus_FullMethodName = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
 	Query_FactsAtRisk_FullMethodName         = "/zerone.knowledge.v1.Query/FactsAtRisk"
+	Query_FactLineage_FullMethodName         = "/zerone.knowledge.v1.Query/FactLineage"
+	Query_FactProgeny_FullMethodName         = "/zerone.knowledge.v1.Query/FactProgeny"
+	Query_CommonKnowledge_FullMethodName     = "/zerone.knowledge.v1.Query/CommonKnowledge"
+	Query_CheckNovelty_FullMethodName        = "/zerone.knowledge.v1.Query/CheckNovelty"
 )
 
 // QueryClient is the client API for Query service.
@@ -84,6 +88,14 @@ type QueryClient interface {
 	BootstrapFundStatus(ctx context.Context, in *QueryBootstrapFundStatusRequest, opts ...grpc.CallOption) (*QueryBootstrapFundStatusResponse, error)
 	// FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
 	FactsAtRisk(ctx context.Context, in *QueryFactsAtRiskRequest, opts ...grpc.CallOption) (*QueryFactsAtRiskResponse, error)
+	// FactLineage traces a fact's ancestry up to the root.
+	FactLineage(ctx context.Context, in *QueryFactLineageRequest, opts ...grpc.CallOption) (*QueryFactLineageResponse, error)
+	// FactProgeny returns a fact's descendant tree.
+	FactProgeny(ctx context.Context, in *QueryFactProgenyRequest, opts ...grpc.CallOption) (*QueryFactProgenyResponse, error)
+	// CommonKnowledge queries the common knowledge registry.
+	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
+	// CheckNovelty previews the novelty score a claim would receive before submission.
+	CheckNovelty(ctx context.Context, in *QueryCheckNoveltyRequest, opts ...grpc.CallOption) (*QueryCheckNoveltyResponse, error)
 }
 
 type queryClient struct {
@@ -284,6 +296,46 @@ func (c *queryClient) FactsAtRisk(ctx context.Context, in *QueryFactsAtRiskReque
 	return out, nil
 }
 
+func (c *queryClient) FactLineage(ctx context.Context, in *QueryFactLineageRequest, opts ...grpc.CallOption) (*QueryFactLineageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactLineageResponse)
+	err := c.cc.Invoke(ctx, Query_FactLineage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactProgeny(ctx context.Context, in *QueryFactProgenyRequest, opts ...grpc.CallOption) (*QueryFactProgenyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactProgenyResponse)
+	err := c.cc.Invoke(ctx, Query_FactProgeny_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryCommonKnowledgeResponse)
+	err := c.cc.Invoke(ctx, Query_CommonKnowledge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) CheckNovelty(ctx context.Context, in *QueryCheckNoveltyRequest, opts ...grpc.CallOption) (*QueryCheckNoveltyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryCheckNoveltyResponse)
+	err := c.cc.Invoke(ctx, Query_CheckNovelty_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -328,6 +380,14 @@ type QueryServer interface {
 	BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error)
 	// FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
 	FactsAtRisk(context.Context, *QueryFactsAtRiskRequest) (*QueryFactsAtRiskResponse, error)
+	// FactLineage traces a fact's ancestry up to the root.
+	FactLineage(context.Context, *QueryFactLineageRequest) (*QueryFactLineageResponse, error)
+	// FactProgeny returns a fact's descendant tree.
+	FactProgeny(context.Context, *QueryFactProgenyRequest) (*QueryFactProgenyResponse, error)
+	// CommonKnowledge queries the common knowledge registry.
+	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
+	// CheckNovelty previews the novelty score a claim would receive before submission.
+	CheckNovelty(context.Context, *QueryCheckNoveltyRequest) (*QueryCheckNoveltyResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -394,6 +454,18 @@ func (UnimplementedQueryServer) BootstrapFundStatus(context.Context, *QueryBoots
 }
 func (UnimplementedQueryServer) FactsAtRisk(context.Context, *QueryFactsAtRiskRequest) (*QueryFactsAtRiskResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FactsAtRisk not implemented")
+}
+func (UnimplementedQueryServer) FactLineage(context.Context, *QueryFactLineageRequest) (*QueryFactLineageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactLineage not implemented")
+}
+func (UnimplementedQueryServer) FactProgeny(context.Context, *QueryFactProgenyRequest) (*QueryFactProgenyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactProgeny not implemented")
+}
+func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
+}
+func (UnimplementedQueryServer) CheckNovelty(context.Context, *QueryCheckNoveltyRequest) (*QueryCheckNoveltyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckNovelty not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -758,6 +830,78 @@ func _Query_FactsAtRisk_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_FactLineage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactLineageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactLineage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactLineage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactLineage(ctx, req.(*QueryFactLineageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactProgeny_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactProgenyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactProgeny(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactProgeny_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactProgeny(ctx, req.(*QueryFactProgenyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryCommonKnowledgeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).CommonKnowledge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_CommonKnowledge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).CommonKnowledge(ctx, req.(*QueryCommonKnowledgeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_CheckNovelty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryCheckNoveltyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).CheckNovelty(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_CheckNovelty_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).CheckNovelty(ctx, req.(*QueryCheckNoveltyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -840,6 +984,22 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FactsAtRisk",
 			Handler:    _Query_FactsAtRisk_Handler,
+		},
+		{
+			MethodName: "FactLineage",
+			Handler:    _Query_FactLineage_Handler,
+		},
+		{
+			MethodName: "FactProgeny",
+			Handler:    _Query_FactProgeny_Handler,
+		},
+		{
+			MethodName: "CommonKnowledge",
+			Handler:    _Query_CommonKnowledge_Handler,
+		},
+		{
+			MethodName: "CheckNovelty",
+			Handler:    _Query_CheckNovelty_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

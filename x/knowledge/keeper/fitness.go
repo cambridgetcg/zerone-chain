@@ -43,8 +43,8 @@ func (k Keeper) CalculateFitness(ctx context.Context, fact *types.Fact, epoch ui
 	}
 
 	// ─── Uniqueness component ──────────────────────────────
-	// Inverse of how many facts share the same subject in the same domain
-	uniqueScore := k.CalculateUniqueness(ctx, fact)
+	// Powered by the novelty calculator — common knowledge penalty, overlap, precision/bridge bonuses
+	uniqueScore := k.CalculateNovelty(ctx, fact)
 
 	// ─── Age penalty component ─────────────────────────────
 	agePenalty := uint64(0)

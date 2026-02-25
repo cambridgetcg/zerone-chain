@@ -163,6 +163,27 @@ message Fact {
   uint64 energy_cap              = 36;  // Maximum energy (governance-adjustable per domain)
   uint64 energy_last_updated     = 37;  // Block height of last energy update
   uint64 at_risk_since_epoch     = 38;  // Epoch when energy first hit 0 (0 = not at risk)
+
+  // ─── Reproduction (lineage tracking) ──────────────────────────────────
+  string parent_fact_id          = 44;  // Direct parent (empty if original)
+  repeated string child_fact_ids = 45;  // Direct children
+  uint64 lineage_depth           = 46;  // 0 = original, 1 = child, 2 = grandchild...
+  uint64 progeny_count           = 47;  // Total descendants (recursively)
+  string lineage_root_id         = 48;  // ID of the original ancestor
+
+  // ─── Novelty detection ──────────────────────────────────────────────────
+  bool   common_knowledge_match = 49;  // True if subject matches common knowledge registry
+}
+
+// CommonKnowledgeEntry represents a subject that LLMs already know.
+// Claims matching these subjects receive a novelty penalty.
+message CommonKnowledgeEntry {
+  string id           = 1;
+  string domain       = 2;
+  string subject      = 3;   // Normalized subject string
+  string description  = 4;   // Human-readable explanation
+  uint64 penalty_bps  = 5;   // Novelty penalty (0-1,000,000)
+  uint64 added_block  = 6;
 }
 
 // Claim is an unverified submission awaiting or undergoing verification.

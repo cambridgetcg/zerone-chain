@@ -90,6 +90,9 @@ var (
 
 	// ─── Metabolism tracking ────────────────────────────────────────────────
 	NewCitationsEpochPrefix = []byte{0x37} // 0x37 | fact_id → uint64 (new citations this epoch)
+
+	// ─── Novelty detection ──────────────────────────────────────────────────
+	CommonKnowledgePrefix = []byte{0x38} // 0x38 | domain / subject_hash → CommonKnowledgeEntry
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -188,4 +191,17 @@ func FactTagsByTagPrefix(tag string) []byte {
 // CanonicalHashKey returns the index key for a canonical form hash.
 func CanonicalHashKey(hash string) []byte {
 	return append(append([]byte{}, CanonicalHashPrefix...), []byte(hash)...)
+}
+
+// CommonKnowledgeKey returns the store key for a common knowledge entry by domain and subject hash.
+func CommonKnowledgeKey(domain, subjectHash string) []byte {
+	key := append(append([]byte{}, CommonKnowledgePrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(subjectHash)...)
+}
+
+// CommonKnowledgeByDomainPrefix returns the prefix for iterating all common knowledge entries in a domain.
+func CommonKnowledgeByDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, CommonKnowledgePrefix...), []byte(domain)...)
+	return append(key, '/')
 }

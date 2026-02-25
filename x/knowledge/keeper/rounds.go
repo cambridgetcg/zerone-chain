@@ -241,6 +241,61 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		))
 	}
 
+	// ─── Lineage registration (reproduction) ──────────────────────────────
+	// Check for reproductive relations (REFINES or GENERALIZES imply parent-child)
+	for _, rel := range claim.Relations {
+		if rel.Relation == types.RelationType_RELATION_TYPE_REFINES ||
+			rel.Relation == types.RelationType_RELATION_TYPE_GENERALIZES {
+			parentFact, found := k.GetFact(ctx, rel.TargetFactId)
+			if !found {
+				continue
+			}
+
+			// Check max children
+			if uint64(len(parentFact.ChildFactIds)) >= params.ReproductionMaxChildren {
+				k.Logger(ctx).Info("parent at max children", "parent", parentFact.Id)
+				continue
+			}
+
+			// Set lineage on child
+			fact.ParentFactId = parentFact.Id
+			fact.LineageDepth = parentFact.LineageDepth + 1
+			fact.LineageRootId = parentFact.LineageRootId
+			if fact.LineageRootId == "" {
+				fact.LineageRootId = parentFact.Id // parent is the root
+			}
+
+			// Inherit fitness from parent
+			inheritedFitness := safeMulDiv(parentFact.FitnessScore, params.ReproductionChildFitnessInheritanceBps, 1_000_000)
+			fact.FitnessScore = inheritedFitness
+
+			// Update parent: add child, bump progeny, energy bonus
+			parentFact.ChildFactIds = append(parentFact.ChildFactIds, fact.Id)
+			parentFact.ProgenyCount++
+			parentFact.Energy += params.ReproductionParentEnergyBonus
+			if parentFact.Energy > params.MetabolismEnergyCap {
+				parentFact.Energy = params.MetabolismEnergyCap
+			}
+			_ = k.SetFact(ctx, parentFact)
+
+			// Propagate progeny count up the lineage
+			k.PropagateProgenyCount(ctx, parentFact.ParentFactId)
+
+			// Save updated child fact with lineage fields
+			_ = k.SetFact(ctx, fact)
+
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"zerone.knowledge.lineage_created",
+				sdk.NewAttribute("child_fact_id", fact.Id),
+				sdk.NewAttribute("parent_fact_id", parentFact.Id),
+				sdk.NewAttribute("lineage_depth", fmt.Sprintf("%d", fact.LineageDepth)),
+				sdk.NewAttribute("inherited_fitness", fmt.Sprintf("%d", inheritedFitness)),
+			))
+
+			break // Only one parent relationship
+		}
+	}
+
 	// Create vesting schedule via vesting_rewards keeper
 	if k.vestingRewardsKeeper != nil {
 		_ = k.vestingRewardsKeeper.CreateVestingScheduleFromKnowledge(

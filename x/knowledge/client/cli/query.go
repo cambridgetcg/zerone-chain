@@ -64,6 +64,8 @@ func GetQueryCmd() *cobra.Command {
 		NewQueryFactByCanonicalCmd(),
 		NewQueryBootstrapFundStatusCmd(),
 		NewQueryFactsAtRiskCmd(),
+		NewQueryCheckNoveltyCmd(),
+		NewQueryCommonKnowledgeCmd(),
 	)
 
 	return queryCmd
@@ -543,4 +545,57 @@ func isHex(s string) bool {
 		}
 	}
 	return true
+}
+
+// NewQueryCheckNoveltyCmd creates a CLI command for checking novelty before submission.
+func NewQueryCheckNoveltyCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "check-novelty [domain] [subject] [content]",
+		Short: "Check novelty score for a claim before submission (free, no tx required)",
+		Long:  "Preview the novelty score a claim would receive. Checks against common knowledge registry and existing facts.",
+		Args:  cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryCheckNoveltyRequest{
+				Domain:  args[0],
+				Subject: args[1],
+				Content: args[2],
+			}
+			resp := &types.QueryCheckNoveltyResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/CheckNovelty", req, resp); err != nil {
+				return fmt.Errorf("failed to check novelty: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryCommonKnowledgeCmd creates a CLI command for querying the common knowledge registry.
+func NewQueryCommonKnowledgeCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "common-knowledge",
+		Short: "Query the common knowledge registry",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			domain, _ := cmd.Flags().GetString("domain")
+			req := &types.QueryCommonKnowledgeRequest{Domain: domain}
+			resp := &types.QueryCommonKnowledgeResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/CommonKnowledge", req, resp); err != nil {
+				return fmt.Errorf("failed to query common knowledge: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	cmd.Flags().String("domain", "", "Filter by domain")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
 }

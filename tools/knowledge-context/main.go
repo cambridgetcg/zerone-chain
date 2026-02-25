@@ -59,6 +59,12 @@ type Fact struct {
 	FitnessScore  string          `json:"fitness_score,omitempty"`
 	Energy        string          `json:"energy,omitempty"`
 	EnergyCap     string          `json:"energy_cap,omitempty"`
+	// Lineage fields
+	ParentFactId  string   `json:"parent_fact_id,omitempty"`
+	ChildFactIds  []string `json:"child_fact_ids,omitempty"`
+	LineageDepth  string   `json:"lineage_depth,omitempty"`
+	ProgenyCount  string   `json:"progeny_count,omitempty"`
+	LineageRootId string   `json:"lineage_root_id,omitempty"`
 }
 
 type FactRelation struct {
@@ -280,8 +286,24 @@ func formatXML(facts []Fact, query string, showCanonical bool) string {
 		if f.Energy != "" && f.Energy != "0" {
 			energyAttr = fmt.Sprintf(" energy=\"%s/%s\"", f.Energy, f.EnergyCap)
 		}
-		b.WriteString(fmt.Sprintf("  <fact id=\"%s\" domain=\"%s\" confidence=\"%.1f%%\" status=\"%s\" category=\"%s\" type=\"%s\" fitness=\"%.0f\" fitness_label=\"%s\"%s>\n",
-			f.ID, f.Domain, conf, status, f.Category, ct, fitness, fl, energyAttr))
+		lineageAttr := ""
+		if f.ParentFactId != "" {
+			lineageAttr += fmt.Sprintf(" parent=\"%s\"", f.ParentFactId)
+		}
+		if len(f.ChildFactIds) > 0 {
+			lineageAttr += fmt.Sprintf(" children=\"%d\"", len(f.ChildFactIds))
+		}
+		if f.ProgenyCount != "" && f.ProgenyCount != "0" {
+			lineageAttr += fmt.Sprintf(" progeny=\"%s\"", f.ProgenyCount)
+		}
+		if f.LineageDepth != "" && f.LineageDepth != "0" {
+			lineageAttr += fmt.Sprintf(" lineage_depth=\"%s\"", f.LineageDepth)
+		}
+		if f.LineageRootId != "" {
+			lineageAttr += fmt.Sprintf(" lineage_root=\"%s\"", f.LineageRootId)
+		}
+		b.WriteString(fmt.Sprintf("  <fact id=\"%s\" domain=\"%s\" confidence=\"%.1f%%\" status=\"%s\" category=\"%s\" type=\"%s\" fitness=\"%.0f\" fitness_label=\"%s\"%s%s>\n",
+			f.ID, f.Domain, conf, status, f.Category, ct, fitness, fl, energyAttr, lineageAttr))
 		b.WriteString(fmt.Sprintf("    <content>%s</content>\n", f.Content))
 		if f.Structure != nil {
 			b.WriteString("    <structure>\n")
@@ -369,6 +391,12 @@ func formatJSON(facts []Fact) string {
 		Energy        uint64        `json:"energy,omitempty"`
 		EnergyCap     uint64        `json:"energy_cap,omitempty"`
 		EnergyPct     float64       `json:"energy_pct,omitempty"`
+		// Lineage
+		ParentFactId  string   `json:"parent_fact_id,omitempty"`
+		ChildFactIds  []string `json:"child_fact_ids,omitempty"`
+		LineageDepth  uint64   `json:"lineage_depth,omitempty"`
+		ProgenyCount  uint64   `json:"progeny_count,omitempty"`
+		LineageRootId string   `json:"lineage_root_id,omitempty"`
 	}
 	type output struct {
 		Source    string    `json:"source"`
@@ -411,6 +439,16 @@ func formatJSON(facts []Fact) string {
 			Energy:        energy,
 			EnergyCap:     energyCap,
 			EnergyPct:     energyPct,
+			// Lineage
+			ParentFactId:  f.ParentFactId,
+			ChildFactIds:  f.ChildFactIds,
+			LineageRootId: f.LineageRootId,
+		}
+		if d, err := strconv.ParseUint(f.LineageDepth, 10, 64); err == nil {
+			fo.LineageDepth = d
+		}
+		if p, err := strconv.ParseUint(f.ProgenyCount, 10, 64); err == nil {
+			fo.ProgenyCount = p
 		}
 		if f.Structure != nil {
 			fo.Structure = &structureOut{

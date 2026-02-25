@@ -901,3 +901,77 @@ func (m *msgServer) ExecuteResearchProposal(ctx context.Context, msg *types.MsgE
 
 	return &types.MsgExecuteResearchProposalResponse{}, nil
 }
+
+// ─── Common knowledge registry governance ─────────────────────────────────────
+
+func (m msgServer) AddCommonKnowledge(ctx context.Context, msg *types.MsgAddCommonKnowledge) (*types.MsgAddCommonKnowledgeResponse, error) {
+	if msg.Authority != m.keeper.GetAuthority() {
+		return nil, fmt.Errorf("unauthorized: expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
+	}
+
+	if msg.Domain == "" {
+		return nil, fmt.Errorf("domain is required")
+	}
+	if msg.Subject == "" {
+		return nil, fmt.Errorf("subject is required")
+	}
+	if msg.PenaltyBps > 1_000_000 {
+		return nil, fmt.Errorf("penalty_bps must be <= 1,000,000")
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	id := commonKnowledgeID(msg.Domain, msg.Subject)
+
+	entry := &types.CommonKnowledgeEntry{
+		Id:          id,
+		Domain:      msg.Domain,
+		Subject:     msg.Subject,
+		Description: msg.Description,
+		PenaltyBps:  msg.PenaltyBps,
+		AddedBlock:  uint64(sdkCtx.BlockHeight()),
+	}
+
+	if err := m.keeper.SetCommonKnowledgeEntry(ctx, entry); err != nil {
+		return nil, fmt.Errorf("failed to set common knowledge entry: %w", err)
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.common_knowledge_added",
+		sdk.NewAttribute("id", id),
+		sdk.NewAttribute("domain", msg.Domain),
+		sdk.NewAttribute("subject", msg.Subject),
+		sdk.NewAttribute("penalty_bps", fmt.Sprintf("%d", msg.PenaltyBps)),
+	))
+
+	return &types.MsgAddCommonKnowledgeResponse{Id: id}, nil
+}
+
+func (m msgServer) RemoveCommonKnowledge(ctx context.Context, msg *types.MsgRemoveCommonKnowledge) (*types.MsgRemoveCommonKnowledgeResponse, error) {
+	if msg.Authority != m.keeper.GetAuthority() {
+		return nil, fmt.Errorf("unauthorized: expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
+	}
+
+	if msg.Id == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+
+	// Find entry by ID to get domain/subject for store key
+	entry, found := m.keeper.FindCommonKnowledgeByID(ctx, msg.Id)
+	if !found {
+		return nil, fmt.Errorf("common knowledge entry not found: %s", msg.Id)
+	}
+
+	if err := m.keeper.DeleteCommonKnowledgeEntry(ctx, entry.Domain, entry.Subject); err != nil {
+		return nil, fmt.Errorf("failed to delete common knowledge entry: %w", err)
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.common_knowledge_removed",
+		sdk.NewAttribute("id", msg.Id),
+		sdk.NewAttribute("domain", entry.Domain),
+		sdk.NewAttribute("subject", entry.Subject),
+	))
+
+	return &types.MsgRemoveCommonKnowledgeResponse{}, nil
+}
