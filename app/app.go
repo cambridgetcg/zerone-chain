@@ -318,6 +318,7 @@ var (
 		zeronescheduletypes.ModuleName:             nil,                                  // schedule: fee escrow
 		zeronecptypes.ModuleName:                   {authtypes.Burner, authtypes.Staking}, // compute_pool: stake escrow
 		zeronediscoverytypes.ModuleName:            nil,                                  // discovery: stake escrow
+		"protocol_treasury":                        nil,                                  // protocol_treasury: receive revenue split
 		zeronebvmtypes.ModuleName:                  {authtypes.Burner},                   // bvm: burn deploy fees
 		zeronedisputestypes.ModuleName:             {authtypes.Burner},                   // disputes: bond escrow + burn
 		zeronequalificationtypes.ModuleName:        nil,                                  // qualification: stake escrow

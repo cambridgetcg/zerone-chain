@@ -51,6 +51,7 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgExecuteResearchProposal{},
 		&MsgAddCommonKnowledge{},
 		&MsgRemoveCommonKnowledge{},
+		&MsgReportDemand{},
 	)
 }
 

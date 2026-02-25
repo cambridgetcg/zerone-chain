@@ -28,3 +28,4 @@ coverage.out
 # Vault binary
 vault/vault-*
 .worktrees/
+node.log
