@@ -32,6 +32,12 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		if err := k.UpdateAllFitnessScores(ctx); err != nil {
 			k.Logger(ctx).Error("fitness update failed", "error", err)
 		}
+		// Process agent demand bounties at epoch boundaries
+		if err := k.ProcessDemandBounties(ctx, epoch); err != nil {
+			k.Logger(ctx).Error("demand bounty processing failed", "epoch", epoch, "error", err)
+		}
+		// Clean up expired bounties
+		k.ProcessExpiredBounties(ctx)
 	}
 
 	return nil

@@ -975,3 +975,35 @@ func (m msgServer) RemoveCommonKnowledge(ctx context.Context, msg *types.MsgRemo
 
 	return &types.MsgRemoveCommonKnowledgeResponse{}, nil
 }
+
+// ─── Agent demand handlers ───────────────────────────────────────────────────
+
+func (m *msgServer) ReportDemand(ctx context.Context, msg *types.MsgReportDemand) (*types.MsgReportDemandResponse, error) {
+	if !m.keeper.IsAuthorizedDemandReporter(ctx, msg.Reporter) {
+		return nil, fmt.Errorf("unauthorized demand reporter: %s", msg.Reporter)
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+
+	for _, report := range msg.Reports {
+		signal, _ := m.keeper.GetOrCreateDemandSignal(ctx, report.Domain, report.Subject)
+		signal.QueryCount += report.Queries
+		signal.FulfilledCount += report.Fulfilled
+		signal.UnfulfilledCount += report.Unfulfilled
+		signal.EpochQueryCount += report.Queries
+		signal.EpochUnfulfilled += report.Unfulfilled
+		signal.LastQueryBlock = height
+		if err := m.keeper.SetDemandSignal(ctx, signal); err != nil {
+			return nil, fmt.Errorf("failed to store demand signal: %w", err)
+		}
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.demand_reported",
+		sdk.NewAttribute("reporter", msg.Reporter),
+		sdk.NewAttribute("report_count", fmt.Sprintf("%d", len(msg.Reports))),
+	))
+
+	return &types.MsgReportDemandResponse{}, nil
+}

@@ -303,6 +303,9 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		)
 	}
 
+	// Check if this fact fills an active knowledge bounty
+	k.ClaimBountyForFact(ctx, fact, claim)
+
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.fact_created",
 		sdk.NewAttribute("fact_id", factID),

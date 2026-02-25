@@ -118,8 +118,13 @@ func (k Keeper) calculateMaintenanceCost(fact *types.Fact, params *types.Params,
 func (k Keeper) calculateEnergyIncome(ctx context.Context, fact *types.Fact, params *types.Params) uint64 {
 	income := uint64(0)
 
-	// Query energy
-	income += fact.QueryCountEpoch * params.MetabolismEnergyPerQuery
+	// Demand-weighted query energy
+	subject := ""
+	if fact.Structure != nil {
+		subject = fact.Structure.Subject
+	}
+	demandMultiplier := k.GetDemandMultiplier(ctx, fact.Domain, subject)
+	income += fact.QueryCountEpoch * params.MetabolismEnergyPerQuery * demandMultiplier / 1_000_000
 
 	// Citation energy (new citations this epoch)
 	newCitations := k.GetNewCitationsThisEpoch(ctx, fact.Id)
