@@ -39,9 +39,12 @@ func (q *queryServer) Fact(ctx context.Context, req *types.QueryFactRequest) (*t
 		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.Id)
 	}
 
-	// Track query — increment counter (agents set this)
+	// Track query — increment counter and record receipt for satisfaction rating
 	if req.TrackQuery {
 		q.keeper.IncrementFactQueryCount(ctx, req.Id)
+		if req.Querier != "" {
+			_ = q.keeper.RecordQueryReceipt(ctx, req.Querier, req.Id)
+		}
 	}
 
 	return &types.QueryFactResponse{Fact: fact}, nil

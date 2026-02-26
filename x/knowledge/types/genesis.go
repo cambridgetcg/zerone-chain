@@ -80,7 +80,7 @@ func DefaultParams() Params {
 
 		// ─── Fitness scoring ─────────────────────────────────────────────────
 		FitnessEpochBlocks:       10_000,  // ~7 hours at 2.5s blocks
-		FitnessWeightQueryBps:    300_000, // 30% — agent usage is the primary signal
+		FitnessWeightQueryBps:    150_000, // 15% — agent usage (reduced from 30% to make room for satisfaction)
 		FitnessWeightCitationBps: 250_000, // 25% — facts cited by other facts are foundational
 		FitnessWeightBridgeBps:   100_000, // 10% — cross-domain facts are rare and valuable
 		FitnessWeightDepthBps:    100_000, // 10% — facts with deep dependency trees are load-bearing
@@ -139,6 +139,10 @@ func DefaultParams() Params {
 		CompetitionRedundancyThresholdBps: 200_000, // Below 20% of leader = redundant
 		CompetitionMaxNicheSize:           10,       // Max 10 facts per niche
 		CompetitionSymbiosisBonusBps:      50_000,  // +5% fitness per healthy SUPPORTS link
+
+		// ─── Query satisfaction ───────────────────────────────────────────
+		FitnessWeightSatisfactionBps: 150_000, // 15% — relevance quality signal
+		SatisfactionMinRatings:       3,       // Minimum ratings before satisfaction affects fitness
 	}
 }
 
@@ -352,6 +356,7 @@ func (p *Params) Validate() error {
 		{"fitness_weight_patron_bps", p.FitnessWeightPatronBps},
 		{"fitness_weight_unique_bps", p.FitnessWeightUniqueBps},
 		{"fitness_weight_age_bps", p.FitnessWeightAgeBps},
+		{"fitness_weight_satisfaction_bps", p.FitnessWeightSatisfactionBps},
 	} {
 		if w.val > 1_000_000 {
 			return fmt.Errorf("%s must be <= 1,000,000", w.name)

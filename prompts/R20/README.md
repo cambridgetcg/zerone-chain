@@ -40,6 +40,7 @@ Valuable facts are:
 | R20-4 | Reproduction: fact derivation + lineage tracking | R20-1 |
 | R20-5 | Novelty detection: redundancy scoring against common knowledge | R20-1 |
 | R20-6 | Agent demand signal: query tracking + demand-driven rewards | R20-1 |
+| R20-7 | Query satisfaction: relevance feedback loop for fitness quality signal | R20-1, R20-6 |
 
 ## Execution Order
 
@@ -47,7 +48,7 @@ Valuable facts are:
 R20-1 (fitness score) ──┬── R20-2 (metabolism) ─── R20-3 (natural selection)
                         ├── R20-4 (reproduction)
                         ├── R20-5 (novelty detection)
-                        └── R20-6 (agent demand signal)
+                        └── R20-6 (agent demand signal) ─── R20-7 (query satisfaction)
 ```
 
 R20-1 is the foundation. R20-2 → R20-3 is the death pipeline. R20-4/5/6 are independent extensions.

@@ -39,6 +39,7 @@ const (
 	Msg_AddCommonKnowledge_FullMethodName       = "/zerone.knowledge.v1.Msg/AddCommonKnowledge"
 	Msg_RemoveCommonKnowledge_FullMethodName    = "/zerone.knowledge.v1.Msg/RemoveCommonKnowledge"
 	Msg_ReportDemand_FullMethodName             = "/zerone.knowledge.v1.Msg/ReportDemand"
+	Msg_RateFact_FullMethodName                 = "/zerone.knowledge.v1.Msg/RateFact"
 )
 
 // MsgClient is the client API for Msg service.
@@ -87,6 +88,8 @@ type MsgClient interface {
 	RemoveCommonKnowledge(ctx context.Context, in *MsgRemoveCommonKnowledge, opts ...grpc.CallOption) (*MsgRemoveCommonKnowledgeResponse, error)
 	// ReportDemand reports agent query demand (authorized reporters only).
 	ReportDemand(ctx context.Context, in *MsgReportDemand, opts ...grpc.CallOption) (*MsgReportDemandResponse, error)
+	// RateFact allows a querier to provide relevance feedback on a fact.
+	RateFact(ctx context.Context, in *MsgRateFact, opts ...grpc.CallOption) (*MsgRateFactResponse, error)
 }
 
 type msgClient struct {
@@ -297,6 +300,16 @@ func (c *msgClient) ReportDemand(ctx context.Context, in *MsgReportDemand, opts 
 	return out, nil
 }
 
+func (c *msgClient) RateFact(ctx context.Context, in *MsgRateFact, opts ...grpc.CallOption) (*MsgRateFactResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgRateFactResponse)
+	err := c.cc.Invoke(ctx, Msg_RateFact_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -343,6 +356,8 @@ type MsgServer interface {
 	RemoveCommonKnowledge(context.Context, *MsgRemoveCommonKnowledge) (*MsgRemoveCommonKnowledgeResponse, error)
 	// ReportDemand reports agent query demand (authorized reporters only).
 	ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error)
+	// RateFact allows a querier to provide relevance feedback on a fact.
+	RateFact(context.Context, *MsgRateFact) (*MsgRateFactResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -412,6 +427,9 @@ func (UnimplementedMsgServer) RemoveCommonKnowledge(context.Context, *MsgRemoveC
 }
 func (UnimplementedMsgServer) ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportDemand not implemented")
+}
+func (UnimplementedMsgServer) RateFact(context.Context, *MsgRateFact) (*MsgRateFactResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RateFact not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -794,6 +812,24 @@ func _Msg_ReportDemand_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_RateFact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRateFact)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RateFact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_RateFact_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RateFact(ctx, req.(*MsgRateFact))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -880,6 +916,10 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReportDemand",
 			Handler:    _Msg_ReportDemand_Handler,
+		},
+		{
+			MethodName: "RateFact",
+			Handler:    _Msg_RateFact_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -107,6 +107,7 @@ type QueryFactRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	TrackQuery    bool                   `protobuf:"varint,2,opt,name=track_query,json=trackQuery,proto3" json:"track_query,omitempty"` // Increment query counter (agents set this)
+	Querier       string                 `protobuf:"bytes,3,opt,name=querier,proto3" json:"querier,omitempty"`                          // Address of the querier (required if track_query=true, for receipt)
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -153,6 +154,13 @@ func (x *QueryFactRequest) GetTrackQuery() bool {
 		return x.TrackQuery
 	}
 	return false
+}
+
+func (x *QueryFactRequest) GetQuerier() string {
+	if x != nil {
+		return x.Querier
+	}
+	return ""
 }
 
 type QueryFactResponse struct {
@@ -2842,11 +2850,12 @@ const file_zerone_knowledge_v1_query_proto_rawDesc = "" +
 	"\x1fzerone/knowledge/v1/query.proto\x12\x13zerone.knowledge.v1\x1a*cosmos/base/query/v1beta1/pagination.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fzerone/knowledge/v1/types.proto\x1a!zerone/knowledge/v1/genesis.proto\"\x14\n" +
 	"\x12QueryParamsRequest\"J\n" +
 	"\x13QueryParamsResponse\x123\n" +
-	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\"C\n" +
+	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\"]\n" +
 	"\x10QueryFactRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vtrack_query\x18\x02 \x01(\bR\n" +
-	"trackQuery\"B\n" +
+	"trackQuery\x12\x18\n" +
+	"\aquerier\x18\x03 \x01(\tR\aquerier\"B\n" +
 	"\x11QueryFactResponse\x12-\n" +
 	"\x04fact\x18\x01 \x01(\v2\x19.zerone.knowledge.v1.FactR\x04fact\"\xe6\x01\n" +
 	"\x11QueryFactsRequest\x12\x16\n" +

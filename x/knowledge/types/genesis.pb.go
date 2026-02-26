@@ -141,8 +141,11 @@ type Params struct {
 	CompetitionRedundancyThresholdBps uint64 `protobuf:"varint,96,opt,name=competition_redundancy_threshold_bps,json=competitionRedundancyThresholdBps,proto3" json:"competition_redundancy_threshold_bps,omitempty"`   // Below this ratio of leader fitness = redundant (BPS)
 	CompetitionMaxNicheSize           uint64 `protobuf:"varint,97,opt,name=competition_max_niche_size,json=competitionMaxNicheSize,proto3" json:"competition_max_niche_size,omitempty"`                                 // Max facts per niche before forced pruning
 	CompetitionSymbiosisBonusBps      uint64 `protobuf:"varint,98,opt,name=competition_symbiosis_bonus_bps,json=competitionSymbiosisBonusBps,proto3" json:"competition_symbiosis_bonus_bps,omitempty"`                  // Fitness bonus per SUPPORTS link to healthy fact (BPS)
-	unknownFields                     protoimpl.UnknownFields
-	sizeCache                         protoimpl.SizeCache
+	// ─── Query satisfaction ──────────────────────────────────────────────
+	FitnessWeightSatisfactionBps uint64 `protobuf:"varint,99,opt,name=fitness_weight_satisfaction_bps,json=fitnessWeightSatisfactionBps,proto3" json:"fitness_weight_satisfaction_bps,omitempty"` // Weight of satisfaction in fitness (default: 150,000 = 15%)
+	SatisfactionMinRatings       uint64 `protobuf:"varint,100,opt,name=satisfaction_min_ratings,json=satisfactionMinRatings,proto3" json:"satisfaction_min_ratings,omitempty"`                    // Minimum ratings before satisfaction affects fitness (default: 3)
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -861,6 +864,20 @@ func (x *Params) GetCompetitionSymbiosisBonusBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetFitnessWeightSatisfactionBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightSatisfactionBps
+	}
+	return 0
+}
+
+func (x *Params) GetSatisfactionMinRatings() uint64 {
+	if x != nil {
+		return x.SatisfactionMinRatings
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
@@ -958,7 +975,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x80.\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x81/\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1058,7 +1075,9 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"%competition_niche_dominance_bonus_bps\x18_ \x01(\x04R!competitionNicheDominanceBonusBps\x12O\n" +
 	"$competition_redundancy_threshold_bps\x18` \x01(\x04R!competitionRedundancyThresholdBps\x12;\n" +
 	"\x1acompetition_max_niche_size\x18a \x01(\x04R\x17competitionMaxNicheSize\x12E\n" +
-	"\x1fcompetition_symbiosis_bonus_bps\x18b \x01(\x04R\x1ccompetitionSymbiosisBonusBps\"\xcd\x03\n" +
+	"\x1fcompetition_symbiosis_bonus_bps\x18b \x01(\x04R\x1ccompetitionSymbiosisBonusBps\x12E\n" +
+	"\x1ffitness_weight_satisfaction_bps\x18c \x01(\x04R\x1cfitnessWeightSatisfactionBps\x128\n" +
+	"\x18satisfaction_min_ratings\x18d \x01(\x04R\x16satisfactionMinRatings\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

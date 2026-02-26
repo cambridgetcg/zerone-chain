@@ -102,6 +102,9 @@ var (
 	// ─── Niche competition ──────────────────────────────────────────────
 	NicheIndexPrefix   = []byte{0x3c} // 0x3c | niche_key | fact_id → []byte{1}
 	NicheMembersPrefix = []byte{0x3d} // 0x3d | niche_key → []byte{1} (niche existence)
+
+	// ─── Query satisfaction ─────────────────────────────────────────────
+	QueryReceiptPrefix = []byte{0x3e} // 0x3e | rater / fact_id → block height (query receipt)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -250,4 +253,11 @@ func NicheIndexByNichePrefix(nicheKey string) []byte {
 // NicheMembersKey returns the key for registering a niche's existence.
 func NicheMembersKey(nicheKey string) []byte {
 	return append(append([]byte{}, NicheMembersPrefix...), []byte(nicheKey)...)
+}
+
+// QueryReceiptKey returns the key for a query receipt: 0x3e | rater / factID.
+func QueryReceiptKey(rater, factID string) []byte {
+	key := append(append([]byte{}, QueryReceiptPrefix...), []byte(rater)...)
+	key = append(key, '/')
+	return append(key, []byte(factID)...)
 }

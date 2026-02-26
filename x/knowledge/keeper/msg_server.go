@@ -1007,3 +1007,51 @@ func (m *msgServer) ReportDemand(ctx context.Context, msg *types.MsgReportDemand
 
 	return &types.MsgReportDemandResponse{}, nil
 }
+
+// ─── Query satisfaction handlers ────────────────────────────────────────────
+
+func (m *msgServer) RateFact(ctx context.Context, msg *types.MsgRateFact) (*types.MsgRateFactResponse, error) {
+	// Validate memo length
+	if len(msg.Memo) > 256 {
+		return nil, fmt.Errorf("memo exceeds 256 characters")
+	}
+
+	// Verify fact exists
+	fact, found := m.keeper.GetFact(ctx, msg.FactId)
+	if !found {
+		return nil, fmt.Errorf("fact not found: %s", msg.FactId)
+	}
+
+	// Verify query receipt (proof-of-query)
+	if !m.keeper.HasQueryReceipt(ctx, msg.Rater, msg.FactId) {
+		return nil, fmt.Errorf("no query receipt: you must query a fact before rating it")
+	}
+
+	// Prevent double-rating: consume the receipt
+	if err := m.keeper.ConsumeQueryReceipt(ctx, msg.Rater, msg.FactId); err != nil {
+		return nil, fmt.Errorf("failed to consume receipt: %w", err)
+	}
+
+	// Apply rating
+	if msg.Useful {
+		fact.SatisfactionUp++
+		fact.SatisfactionUpEpoch++
+	} else {
+		fact.SatisfactionDown++
+		fact.SatisfactionDownEpoch++
+	}
+
+	if err := m.keeper.SetFact(ctx, fact); err != nil {
+		return nil, fmt.Errorf("failed to update fact: %w", err)
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.fact_rated",
+		sdk.NewAttribute("fact_id", msg.FactId),
+		sdk.NewAttribute("rater", msg.Rater),
+		sdk.NewAttribute("useful", fmt.Sprintf("%t", msg.Useful)),
+	))
+
+	return &types.MsgRateFactResponse{}, nil
+}

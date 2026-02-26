@@ -88,6 +88,11 @@ service Msg {
 
   // ReportDemand reports agent query demand (authorized reporters only).
   rpc ReportDemand(MsgReportDemand) returns (MsgReportDemandResponse);
+
+  // ─── Query satisfaction ──────────────────────────────────────────────
+
+  // RateFact allows a querier to provide relevance feedback on a fact.
+  rpc RateFact(MsgRateFact) returns (MsgRateFactResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -361,3 +366,18 @@ message DemandReport {
 }
 
 message MsgReportDemandResponse {}
+
+// ─── Query satisfaction messages ────────────────────────────────────────────
+
+// MsgRateFact allows a querier to provide relevance feedback on a fact.
+// The querier must have previously queried this fact (enforced by query receipt).
+message MsgRateFact {
+    option (cosmos.msg.v1.signer) = "rater";
+
+    string rater   = 1;  // Address of the rating agent
+    string fact_id = 2;  // Fact being rated
+    bool   useful  = 3;  // true = satisfied, false = dissatisfied
+    string memo    = 4;  // Optional: brief reason (max 256 chars)
+}
+
+message MsgRateFactResponse {}

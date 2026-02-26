@@ -180,6 +180,12 @@ message Fact {
 
   // ─── Novelty detection ──────────────────────────────────────────────────
   bool   common_knowledge_match = 49;  // True if subject matches common knowledge registry
+
+  // ─── Satisfaction feedback ──────────────────────────────────────────────
+  uint64 satisfaction_up         = 60;  // Lifetime positive ratings
+  uint64 satisfaction_down       = 61;  // Lifetime negative ratings
+  uint64 satisfaction_up_epoch   = 62;  // Positive ratings this epoch (resets)
+  uint64 satisfaction_down_epoch = 63;  // Negative ratings this epoch (resets)
 }
 
 // CommonKnowledgeEntry represents a subject that LLMs already know.

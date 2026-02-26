@@ -760,8 +760,13 @@ type Fact struct {
 	LineageRootId string   `protobuf:"bytes,48,opt,name=lineage_root_id,json=lineageRootId,proto3" json:"lineage_root_id,omitempty"` // ID of the original ancestor
 	// ─── Novelty detection ──────────────────────────────────────────────────
 	CommonKnowledgeMatch bool `protobuf:"varint,49,opt,name=common_knowledge_match,json=commonKnowledgeMatch,proto3" json:"common_knowledge_match,omitempty"` // True if subject matches common knowledge registry
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// ─── Satisfaction feedback ──────────────────────────────────────────────
+	SatisfactionUp        uint64 `protobuf:"varint,60,opt,name=satisfaction_up,json=satisfactionUp,proto3" json:"satisfaction_up,omitempty"`                        // Lifetime positive ratings
+	SatisfactionDown      uint64 `protobuf:"varint,61,opt,name=satisfaction_down,json=satisfactionDown,proto3" json:"satisfaction_down,omitempty"`                  // Lifetime negative ratings
+	SatisfactionUpEpoch   uint64 `protobuf:"varint,62,opt,name=satisfaction_up_epoch,json=satisfactionUpEpoch,proto3" json:"satisfaction_up_epoch,omitempty"`       // Positive ratings this epoch (resets)
+	SatisfactionDownEpoch uint64 `protobuf:"varint,63,opt,name=satisfaction_down_epoch,json=satisfactionDownEpoch,proto3" json:"satisfaction_down_epoch,omitempty"` // Negative ratings this epoch (resets)
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Fact) Reset() {
@@ -1135,6 +1140,34 @@ func (x *Fact) GetCommonKnowledgeMatch() bool {
 		return x.CommonKnowledgeMatch
 	}
 	return false
+}
+
+func (x *Fact) GetSatisfactionUp() uint64 {
+	if x != nil {
+		return x.SatisfactionUp
+	}
+	return 0
+}
+
+func (x *Fact) GetSatisfactionDown() uint64 {
+	if x != nil {
+		return x.SatisfactionDown
+	}
+	return 0
+}
+
+func (x *Fact) GetSatisfactionUpEpoch() uint64 {
+	if x != nil {
+		return x.SatisfactionUpEpoch
+	}
+	return 0
+}
+
+func (x *Fact) GetSatisfactionDownEpoch() uint64 {
+	if x != nil {
+		return x.SatisfactionDownEpoch
+	}
+	return 0
 }
 
 // CommonKnowledgeEntry represents a subject that LLMs already know.
@@ -2313,7 +2346,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\x12%\n" +
 	"\x0etemporal_scope\x18\x05 \x01(\tR\rtemporalScope\x12\x1c\n" +
 	"\tnegatable\x18\x06 \x01(\bR\tnegatable\x12\x12\n" +
-	"\x04tags\x18\a \x03(\tR\x04tags\"\xd5\x0f\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\"\x97\x11\n" +
 	"\x04Fact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
@@ -2374,7 +2407,11 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\rlineage_depth\x18. \x01(\x04R\flineageDepth\x12#\n" +
 	"\rprogeny_count\x18/ \x01(\x04R\fprogenyCount\x12&\n" +
 	"\x0flineage_root_id\x180 \x01(\tR\rlineageRootId\x124\n" +
-	"\x16common_knowledge_match\x181 \x01(\bR\x14commonKnowledgeMatch\"\xbc\x01\n" +
+	"\x16common_knowledge_match\x181 \x01(\bR\x14commonKnowledgeMatch\x12'\n" +
+	"\x0fsatisfaction_up\x18< \x01(\x04R\x0esatisfactionUp\x12+\n" +
+	"\x11satisfaction_down\x18= \x01(\x04R\x10satisfactionDown\x122\n" +
+	"\x15satisfaction_up_epoch\x18> \x01(\x04R\x13satisfactionUpEpoch\x126\n" +
+	"\x17satisfaction_down_epoch\x18? \x01(\x04R\x15satisfactionDownEpoch\"\xbc\x01\n" +
 	"\x14CommonKnowledgeEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x18\n" +

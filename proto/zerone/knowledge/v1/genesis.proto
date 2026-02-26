@@ -141,6 +141,10 @@ message Params {
   uint64 competition_redundancy_threshold_bps  = 96;  // Below this ratio of leader fitness = redundant (BPS)
   uint64 competition_max_niche_size            = 97;  // Max facts per niche before forced pruning
   uint64 competition_symbiosis_bonus_bps       = 98;  // Fitness bonus per SUPPORTS link to healthy fact (BPS)
+
+  // ─── Query satisfaction ──────────────────────────────────────────────
+  uint64 fitness_weight_satisfaction_bps = 99;  // Weight of satisfaction in fitness (default: 150,000 = 15%)
+  uint64 satisfaction_min_ratings        = 100; // Minimum ratings before satisfaction affects fitness (default: 3)
 }
 
 // GenesisState is the genesis state of the knowledge module.

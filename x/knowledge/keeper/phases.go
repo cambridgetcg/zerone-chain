@@ -47,6 +47,8 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		}
 		// 6. Clean up expired bounties
 		k.ProcessExpiredBounties(ctx)
+		// 7. Clear query receipts (bound receipt storage to one epoch)
+		k.ClearQueryReceipts(ctx)
 	}
 
 	return nil

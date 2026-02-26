@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 
@@ -114,11 +113,7 @@ func main() {
 	kvStore.Set(types.ParamsKey, bz)
 	
 	// Commit
-	_, err = cms.Commit()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to commit: %v\n", err)
-		os.Exit(1)
-	}
+	cms.Commit()
 	
 	fmt.Println("✅ R20 params set successfully")
 	fmt.Printf("  fitness_epoch_blocks: %d\n", params.FitnessEpochBlocks)

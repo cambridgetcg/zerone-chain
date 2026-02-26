@@ -46,6 +46,15 @@ func (k Keeper) CalculateFitness(ctx context.Context, fact *types.Fact, epoch ui
 	// Powered by the novelty calculator — common knowledge penalty, overlap, precision/bridge bonuses
 	uniqueScore := k.CalculateNovelty(ctx, fact)
 
+	// ─── Satisfaction component ─────────────────────────────
+	// Satisfaction ratio: up / (up + down), scaled to 0-1M BPS
+	// Default to neutral (500k) if no ratings yet — don't penalize unrated facts
+	satisfactionScore := uint64(500_000) // neutral default
+	totalRatings := fact.SatisfactionUpEpoch + fact.SatisfactionDownEpoch
+	if totalRatings >= params.SatisfactionMinRatings {
+		satisfactionScore = safeMulDiv(fact.SatisfactionUpEpoch, 1_000_000, totalRatings)
+	}
+
 	// ─── Age penalty component ─────────────────────────────
 	agePenalty := uint64(0)
 	if epoch > fact.EpochBorn {
@@ -70,6 +79,7 @@ func (k Keeper) CalculateFitness(ctx context.Context, fact *types.Fact, epoch ui
 	fitness += safeMulDiv(depthScore, params.FitnessWeightDepthBps, 1_000_000)
 	fitness += safeMulDiv(patronScore, params.FitnessWeightPatronBps, 1_000_000)
 	fitness += safeMulDiv(uniqueScore, params.FitnessWeightUniqueBps, 1_000_000)
+	fitness += safeMulDiv(satisfactionScore, params.FitnessWeightSatisfactionBps, 1_000_000)
 
 	// Subtract age penalty
 	ageDeduction := safeMulDiv(agePenalty, params.FitnessWeightAgeBps, 1_000_000)
@@ -121,7 +131,9 @@ func (k Keeper) UpdateAllFitnessScores(ctx context.Context) error {
 
 		fact.FitnessScore = newFitness
 		fact.FitnessUpdatedBlock = height
-		fact.QueryCountEpoch = 0 // Reset epoch query counter
+		fact.QueryCountEpoch = 0         // Reset epoch query counter
+		fact.SatisfactionUpEpoch = 0     // Reset epoch satisfaction counters
+		fact.SatisfactionDownEpoch = 0
 
 		if err := k.SetFact(ctx, fact); err != nil {
 			k.Logger(ctx).Error("failed to update fitness", "fact_id", fact.Id, "error", err)

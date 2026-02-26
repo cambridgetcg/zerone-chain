@@ -168,6 +168,7 @@ message QueryParamsResponse {
 message QueryFactRequest {
   string id         = 1;
   bool track_query  = 2;  // Increment query counter (agents set this)
+  string querier    = 3;  // Address of the querier (required if track_query=true, for receipt)
 }
 
 message QueryFactResponse {
