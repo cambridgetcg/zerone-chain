@@ -555,20 +555,95 @@ cmd_clean() {
   fi
 }
 
+# ── cmd_resume ──────────────────────────────────────────────────────────
+
+cmd_resume() {
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "  Zerone — Local Testnet: RESUME (from existing state)"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+
+  check_deps
+
+  # Verify state exists
+  if [ ! -d "${BASE_DIR}/val0" ]; then
+    die "No existing localnet state found at ${BASE_DIR}. Use 'start' first."
+  fi
+
+  # Build fresh binary
+  info "Building zeroned binary..."
+  mkdir -p "${PROJECT_ROOT}/build"
+  (cd "${PROJECT_ROOT}" && go build -ldflags "-X github.com/cosmos/cosmos-sdk/version.Name=zerone -X github.com/cosmos/cosmos-sdk/version.AppName=zeroned" -o build/zeroned ./cmd/zeroned) || die "Build failed"
+  ok "Binary built: ${BINARY}"
+
+  # Stop any running validators first
+  cmd_stop 2>/dev/null || true
+
+  # Start all validators from existing state
+  info "Starting ${NUM_VALIDATORS} validators from existing state..."
+
+  for i in $(seq 0 $((NUM_VALIDATORS - 1))); do
+    local_name="${VALIDATOR_NAMES[$i]}"
+    local_home="${BASE_DIR}/${local_name}"
+    local_log="${BASE_DIR}/${local_name}.log"
+
+    if [ ! -d "${local_home}" ]; then
+      warn "Validator home ${local_home} not found, skipping"
+      continue
+    fi
+
+    ${BINARY} start \
+      --home "${local_home}" \
+      --minimum-gas-prices "1${DENOM}" \
+      >> "${local_log}" 2>&1 &
+
+    local_pid=$!
+    echo "${local_pid}" > "${BASE_DIR}/${local_name}.pid"
+    info "  ${local_name} started (PID=${local_pid})"
+  done
+
+  # Wait for chain to resume producing blocks
+  info "Waiting for chain to resume..."
+  local rpc_url="http://127.0.0.1:$(rpc_port 0)"
+  local max_wait=90
+  local elapsed=0
+
+  while [ $elapsed -lt $max_wait ]; do
+    local height
+    height=$(curl -s "${rpc_url}/status" 2>/dev/null | jq -r '.result.sync_info.latest_block_height' 2>/dev/null || echo "0")
+    if [ "${height}" -ge 1 ] 2>/dev/null; then
+      ok "Chain resumed at block ${height}"
+      break
+    fi
+    sleep 2
+    elapsed=$((elapsed + 2))
+    if [ $((elapsed % 10)) -eq 0 ]; then
+      info "  still waiting... (${elapsed}s)"
+    fi
+  done
+
+  if [ $elapsed -ge $max_wait ]; then
+    warn "Timed out waiting for chain to resume after ${max_wait}s"
+    warn "Check logs: scripts/localnet.sh logs"
+  fi
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────
 
 case "${1:-help}" in
   start)   cmd_start ;;
   stop)    cmd_stop ;;
+  resume)  cmd_resume ;;
   status)  cmd_status ;;
   logs)    cmd_logs "${2:-}" ;;
   clean)   cmd_clean ;;
   help|--help|-h)
-    echo "Usage: $0 {start|stop|status|logs [N]|clean}"
+    echo "Usage: $0 {start|stop|resume|status|logs [N]|clean}"
     echo ""
     echo "Commands:"
     echo "  start       Build, init, and start 4-validator local testnet"
     echo "  stop        Stop all validators"
+    echo "  resume      Rebuild and restart validators from existing state"
     echo "  status      Query each validator's block height and voting power"
     echo "  logs [N]    Tail logs (all validators, or validator N = 0-3)"
     echo "  clean       Stop and remove all localnet state"

@@ -15,7 +15,8 @@ func NewMigrator(keeper Keeper) Migrator {
 }
 
 // Migrate1to2 migrates from version 1 to version 2.
-// Stub — implement when v2 state changes are needed.
-func (m Migrator) Migrate1to2(_ sdk.Context) error {
-	return nil
+// Writes a verifiable marker to confirm the migration ran successfully.
+func (m Migrator) Migrate1to2(ctx sdk.Context) error {
+	store := m.keeper.storeService.OpenKVStore(ctx)
+	return store.Set([]byte("migration_v2_complete"), []byte("true"))
 }
