@@ -410,7 +410,7 @@ func (k msgServer) RevokeKey(goCtx context.Context, msg *types.MsgRevokeKey) (*t
 		return false
 	})
 
-	// Create alert.
+	// Create alert (silently skip if limit reached — revocation must not be blocked).
 	alertID := fmt.Sprintf("key-revoked-%s-%d", msg.KeyHash[:min(8, len(msg.KeyHash))], height)
 	alert := &types.Alert{
 		AlertId:   alertID,
@@ -420,7 +420,7 @@ func (k msgServer) RevokeKey(goCtx context.Context, msg *types.MsgRevokeKey) (*t
 		Message:   fmt.Sprintf("Key %s has been revoked", msg.KeyHash),
 		CreatedAt: height,
 	}
-	k.SetAlert(ctx, alert)
+	k.SetAlertWithLimit(ctx, alert)
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.home.key_revoked",

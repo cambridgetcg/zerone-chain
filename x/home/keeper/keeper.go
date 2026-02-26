@@ -359,6 +359,17 @@ func (k Keeper) SetAlert(ctx context.Context, alert *types.Alert) {
 	_ = kvStore.Set(types.AlertKey(alert.HomeId, alert.AlertId), bz)
 }
 
+// SetAlertWithLimit stores an alert only if the pending alert count is below MaxAlertsPerHome.
+// Returns true if the alert was stored, false if the limit was reached.
+func (k Keeper) SetAlertWithLimit(ctx context.Context, alert *types.Alert) bool {
+	params := k.GetParams(ctx)
+	if k.CountPendingAlerts(ctx, alert.HomeId) >= params.MaxAlertsPerHome {
+		return false
+	}
+	k.SetAlert(ctx, alert)
+	return true
+}
+
 // GetAlert returns an alert.
 func (k Keeper) GetAlert(ctx context.Context, homeID, alertID string) (*types.Alert, bool) {
 	kvStore := k.storeService.OpenKVStore(ctx)
