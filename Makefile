@@ -1,4 +1,4 @@
-.PHONY: build install test lint proto-gen proto-swagger-gen clean pr-check cosmovisor-init boot-test
+.PHONY: build install test lint proto-gen proto-swagger-gen clean pr-check cosmovisor-init boot-test genesis-check
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -44,3 +44,6 @@ cosmovisor-init: build
 
 boot-test: build
 	@./scripts/boot-test.sh build/zeroned
+
+genesis-check:
+	@go run tools/genesis-check/main.go --genesis $(GENESIS)

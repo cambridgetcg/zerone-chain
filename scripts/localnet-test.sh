@@ -3,7 +3,7 @@
 # Zerone — Local Testnet Integration Tests
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# Runs 8 test scenarios against a running 4-validator local testnet.
+# Runs 9 test scenarios against a running 4-validator local testnet.
 # Requires: scripts/localnet.sh start (must be running)
 #
 # Usage:
@@ -11,6 +11,7 @@
 #   scripts/localnet-test.sh [name]    # Run specific test
 #
 # Tests:
+#   genesis_invariants — Validate cross-module genesis invariants
 #   block_production  — Verify all 4 validators produce blocks
 #   validator_set     — Verify 4 active validators in CometBFT set
 #   delegation        — Delegate from test account, verify stake increase
@@ -39,7 +40,7 @@ NODE_FLAG="--node ${RPC_URL}"
 HOME_FLAG="--home ${COORDINATOR_HOME}"
 KEYRING_FLAG="--keyring-backend ${KEYRING}"
 COMMON_FLAGS="${NODE_FLAG} ${HOME_FLAG} ${KEYRING_FLAG} --chain-id ${CHAIN_ID} --output json"
-TX_FLAGS="${COMMON_FLAGS} --gas auto --gas-adjustment 1.5 --gas-prices 0.025${DENOM} --yes --broadcast-mode sync"
+TX_FLAGS="${COMMON_FLAGS} --gas auto --gas-adjustment 1.5 --gas-prices 1${DENOM} --yes --broadcast-mode sync"
 
 # Test results
 PASSED=0
@@ -113,7 +114,7 @@ wait_tx() {
 # Submit tx and return hash
 submit_tx() {
   local result
-  result=$(eval "$@" 2>&1) || { echo "TX_FAILED"; return 1; }
+  result=$(eval "$@" 2>/dev/null) || { echo "TX_FAILED"; return 1; }
   local tx_hash
   tx_hash=$(echo "$result" | jq -r '.txhash // empty' 2>/dev/null || echo "")
   if [ -z "$tx_hash" ]; then
@@ -133,6 +134,27 @@ preflight() {
   height=$(curl -s "${RPC_URL}/status" | jq -r '.result.sync_info.latest_block_height')
   [ "${height}" -ge 1 ] 2>/dev/null || die "Chain not producing blocks (height=${height})"
   info "Localnet reachable (height=${height})"
+}
+
+# ── Test 0: Genesis Invariants ────────────────────────────────────────────
+
+test_genesis_invariants() {
+  info "Checking genesis invariants..."
+
+  local genesis="${COORDINATOR_HOME}/config/genesis.json"
+  if [ ! -f "${genesis}" ]; then
+    fail "genesis_invariants" "genesis.json not found at ${genesis}"
+    return
+  fi
+
+  local output
+  if output=$(go run "${PROJECT_ROOT}/tools/genesis-check/main.go" \
+      --genesis "${genesis}" --profile testnet 2>&1); then
+    pass "genesis_invariants"
+  else
+    echo "$output"
+    fail "genesis_invariants" "genesis invariant check failed"
+  fi
 }
 
 # ── Test 1: Block Production ─────────────────────────────────────────────
@@ -285,10 +307,10 @@ test_pot_round() {
 
   # Step 1: Submit a knowledge claim from faucet
   local claim_text="Test knowledge claim for multi-validator localnet verification cycle"
-  local stake_amount="1000000${DENOM}"
+  local review_fee="1000000"  # raw integer, NOT coin denomination
 
   local tx_hash
-  tx_hash=$(submit_tx "${BINARY} tx knowledge submit-claim '${claim_text}' protocol computational ${stake_amount} --from faucet ${TX_FLAGS}")
+  tx_hash=$(submit_tx "${BINARY} tx knowledge submit-claim '${claim_text}' general computational ${review_fee} --from faucet ${TX_FLAGS}")
 
   if [ "$tx_hash" = "TX_FAILED" ]; then
     fail "pot_round" "Claim submission failed"
@@ -301,18 +323,18 @@ test_pot_round() {
   fi
   info "  Claim submitted (tx: ${tx_hash})"
 
-  # Step 2: Query pending claims to get the round ID
-  wait_blocks 2
-
-  local claims_result
-  claims_result=$(${BINARY} query knowledge pending-claims ${NODE_FLAG} --output json 2>/dev/null || echo "{}")
+  # Step 2: Extract round ID from tx events
+  if ! wait_tx "$tx_hash" 30; then
+    fail "pot_round" "Claim tx not confirmed (hash: ${tx_hash})"
+    return
+  fi
 
   local round_id
-  round_id=$(echo "$claims_result" | jq -r '.claims[0].round_id // .claims[0].id // empty' 2>/dev/null || echo "")
+  round_id=$(${BINARY} query tx "${tx_hash}" ${NODE_FLAG} --output json 2>/dev/null | \
+    jq -r '[.events[] | select(.type == "zerone.knowledge.verification_round_created") | .attributes[] | select(.key == "round_id") | .value][0] // empty' 2>/dev/null || echo "")
 
   if [ -z "$round_id" ]; then
-    # Try querying directly — round may have been auto-created
-    skip "pot_round" "Could not find round_id from pending claims (chain may need more blocks)"
+    skip "pot_round" "Could not find round_id from tx events"
     return
   fi
   info "  Round ID: ${round_id}"
@@ -320,9 +342,10 @@ test_pot_round() {
   # Step 3: Generate commitment data
   local salt_hex
   salt_hex=$(openssl rand -hex 16)
-  # Commit hash = SHA256(vote || salt)
+  # Commit hash = SHA256(vote_bytes || salt_bytes)
+  # The reveal handler verifies: SHA256([]byte(vote) || salt_raw_bytes)
   local commit_hash
-  commit_hash=$(echo -n "accept${salt_hex}" | shasum -a 256 | awk '{print $1}')
+  commit_hash=$( (printf "accept"; printf '%s' "${salt_hex}" | xxd -r -p) | shasum -a 256 | awk '{print $1}')
 
   # Step 4: Submit commitments from val0 and val1
   for val in val0 val1; do
@@ -364,15 +387,18 @@ test_pot_round() {
   local round_result
   round_result=$(${BINARY} query knowledge verification-round "${round_id}" ${NODE_FLAG} --output json 2>/dev/null || echo "{}")
 
-  local round_status
-  round_status=$(echo "$round_result" | jq -r '.round.status // .status // "unknown"' 2>/dev/null || echo "unknown")
+  # phase: 4 = completed, verdict: 1 = accept, 2 = reject, 3 = malformed
+  local round_phase
+  round_phase=$(echo "$round_result" | jq -r '.round.phase // 0' 2>/dev/null || echo "0")
+  local round_verdict
+  round_verdict=$(echo "$round_result" | jq -r '.round.verdict // 0' 2>/dev/null || echo "0")
 
-  if [ "$round_status" = "completed" ] || [ "$round_status" = "ROUND_STATUS_COMPLETED" ]; then
-    pass "pot_round (round ${round_id} completed)"
+  if [ "$round_phase" -ge 3 ] 2>/dev/null && [ "$round_verdict" -ge 1 ] 2>/dev/null; then
+    pass "pot_round (round ${round_id} phase=${round_phase} verdict=${round_verdict})"
+  elif [ "$round_phase" -ge 2 ] 2>/dev/null; then
+    pass "pot_round (round ${round_id} progressed to phase=${round_phase})"
   else
-    # Even partial completion counts — the mechanism works
-    info "  Round status: ${round_status}"
-    pass "pot_round (round ${round_id} progressed to: ${round_status})"
+    fail "pot_round" "Round ${round_id} did not progress (phase=${round_phase}, verdict=${round_verdict})"
   fi
 }
 
@@ -507,9 +533,9 @@ test_recovery() {
 test_governance() {
   info "Testing LIP governance lifecycle..."
 
-  # Step 1: Submit LIP from faucet
+  # Step 1: Submit LIP from faucet (initial-stake is raw integer uzrn, NOT coin denomination)
   local tx_hash
-  tx_hash=$(submit_tx "${BINARY} tx zerone_gov submit-lip 'Test Parameter Update' 'Update slashing window for localnet testing' parameter 1000000${DENOM} --from faucet ${TX_FLAGS}")
+  tx_hash=$(submit_tx "${BINARY} tx zerone_gov submit-lip 'Test Parameter Update' 'Update slashing window for localnet testing' parameter 1000000 --from faucet ${TX_FLAGS}")
 
   if [ "$tx_hash" = "TX_FAILED" ]; then
     fail "governance" "LIP submission failed"
@@ -537,9 +563,9 @@ test_governance() {
   fi
   info "  LIP ID: ${lip_id}"
 
-  # Step 3: Stake on the LIP to meet threshold
+  # Step 3: Stake on the LIP to meet threshold (raw integer uzrn)
   local stake_tx
-  stake_tx=$(submit_tx "${BINARY} tx zerone_gov stake-lip ${lip_id} 5000000${DENOM} --from faucet ${TX_FLAGS}")
+  stake_tx=$(submit_tx "${BINARY} tx zerone_gov stake-lip ${lip_id} 5000000 --from faucet ${TX_FLAGS}")
 
   if [ "$stake_tx" != "TX_FAILED" ]; then
     wait_tx "$stake_tx" 30 || true
@@ -597,6 +623,8 @@ run_all() {
   preflight
   echo ""
 
+  test_genesis_invariants
+  echo ""
   test_block_production
   echo ""
   test_validator_set
@@ -637,6 +665,7 @@ run_single() {
   echo ""
 
   case "$test_name" in
+    genesis_invariants) test_genesis_invariants ;;
     block_production) test_block_production ;;
     validator_set)    test_validator_set ;;
     delegation)       test_delegation ;;
