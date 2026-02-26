@@ -21,4 +21,5 @@ var (
 	ErrInsufficientFunds     = errors.Register(ModuleName, 17, "insufficient funds for home creation")
 	ErrPermissionDenied      = errors.Register(ModuleName, 18, "permission denied")
 	ErrMaxAlertsReached      = errors.Register(ModuleName, 19, "maximum alerts per home reached")
+	ErrInvalidInput          = errors.Register(ModuleName, 20, "invalid input")
 )
