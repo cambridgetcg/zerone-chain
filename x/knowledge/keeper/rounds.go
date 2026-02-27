@@ -68,10 +68,13 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 	round.VerdictBlock = height
 	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_COMPLETE
 
+	var factId string
 	switch result.Verdict {
 	case types.Verdict_VERDICT_ACCEPT:
 		// Create fact from accepted claim
-		if err := k.createFactFromClaim(ctx, claim, round, result.Confidence); err != nil {
+		var err error
+		factId, err = k.createFactFromClaim(ctx, claim, round, result.Confidence)
+		if err != nil {
 			return err
 		}
 		// Review fee already distributed at submission time — no refund.
@@ -101,10 +104,45 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 
 	// Distribute verifier rewards from the 55% fee pool
 	k.distributeVerifierRewardsFromPool(ctx, claim, result)
+
+	// Slash loop: route vindication-eligible slashes to escrow when enabled
+	params, _ := k.GetParams(ctx)
+	var vindicationEntries []types.VindicationEntry
+
 	for _, slash := range result.Slashes {
-		if k.stakingKeeper != nil {
+		if k.stakingKeeper == nil {
+			continue
+		}
+		if slash.VindicationEligible && params.VindicationRefundEnabled {
+			slashedAmt, err := k.stakingKeeper.SlashValidatorToModule(ctx, slash.Verifier, slash.SlashBps, types.VindicationEscrowModuleName)
+			if err == nil && slashedAmt.IsPositive() {
+				vote := ""
+				for _, reveal := range round.Reveals {
+					if reveal.Verifier == slash.Verifier {
+						vote = reveal.Vote
+						break
+					}
+				}
+				vindicationEntries = append(vindicationEntries, types.VindicationEntry{
+					Verifier:    slash.Verifier,
+					Vote:        vote,
+					SlashAmount: slashedAmt.String(),
+					SlashBps:    slash.SlashBps,
+					RoundId:     round.Id,
+					Height:      height,
+				})
+			}
+		} else {
 			_ = k.stakingKeeper.SlashValidator(ctx, slash.Verifier, slash.SlashBps)
 		}
+	}
+
+	// Store vindication entries if any, associated with the created fact
+	if len(vindicationEntries) > 0 && factId != "" {
+		for i := range vindicationEntries {
+			vindicationEntries[i].FactId = factId
+		}
+		_ = k.SetVindicationPending(ctx, factId, vindicationEntries)
 	}
 
 	// Record verification outcomes for domain qualification tracking (R26-3).
@@ -178,7 +216,8 @@ func (k Keeper) distributeVerifierRewardsFromPool(ctx context.Context, claim *ty
 }
 
 // createFactFromClaim creates a new Fact from an accepted claim.
-func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, round *types.VerificationRound, confidence uint64) error {
+// Returns the generated factID and any error.
+func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, round *types.VerificationRound, confidence uint64) (string, error) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	height := uint64(sdkCtx.BlockHeight())
 
@@ -231,13 +270,13 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 	}
 
 	if err := k.SetFact(ctx, fact); err != nil {
-		return err
+		return "", err
 	}
 
 	// Index fact by structured subject and tags
 	if fact.Structure != nil {
 		if err := k.IndexFactBySubject(ctx, fact); err != nil {
-			return fmt.Errorf("failed to index fact by subject: %w", err)
+			return "", fmt.Errorf("failed to index fact by subject: %w", err)
 		}
 	}
 
@@ -260,17 +299,17 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		fact.NicheSize = uint64(len(k.GetNicheMembers(ctx, nicheKey))) + 1
 	}
 	if err := k.UpdateNicheIndex(ctx, fact); err != nil {
-		return fmt.Errorf("failed to update niche index: %w", err)
+		return "", fmt.Errorf("failed to update niche index: %w", err)
 	}
 	// Re-save fact with niche fields set
 	if err := k.SetFact(ctx, fact); err != nil {
-		return fmt.Errorf("failed to save fact with niche fields: %w", err)
+		return "", fmt.Errorf("failed to save fact with niche fields: %w", err)
 	}
 
 	// Index fact by canonical hash
 	if fact.CanonicalHash != "" {
 		if err := k.SetCanonicalHash(ctx, fact.CanonicalHash, fact.Id); err != nil {
-			return fmt.Errorf("failed to index fact by canonical hash: %w", err)
+			return "", fmt.Errorf("failed to index fact by canonical hash: %w", err)
 		}
 	}
 
@@ -284,7 +323,7 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 			Creator:        claim.Submitter,
 		}
 		if err := k.SetFactRelation(ctx, factRel); err != nil {
-			return fmt.Errorf("failed to store fact relation: %w", err)
+			return "", fmt.Errorf("failed to store fact relation: %w", err)
 		}
 
 		// Track new citation for metabolism energy income
@@ -388,7 +427,7 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		sdk.NewAttribute("confidence", fmt.Sprintf("%d", fact.Confidence)),
 	))
 
-	return nil
+	return factID, nil
 }
 
 // handleChallengeSurvival restores a challenged fact and grants survival energy
