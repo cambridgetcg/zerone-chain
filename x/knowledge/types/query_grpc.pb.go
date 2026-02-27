@@ -19,34 +19,38 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Params_FullMethodName              = "/zerone.knowledge.v1.Query/Params"
-	Query_Fact_FullMethodName                = "/zerone.knowledge.v1.Query/Fact"
-	Query_Facts_FullMethodName               = "/zerone.knowledge.v1.Query/Facts"
-	Query_FactsByDomain_FullMethodName       = "/zerone.knowledge.v1.Query/FactsByDomain"
-	Query_FactsBySubmitter_FullMethodName    = "/zerone.knowledge.v1.Query/FactsBySubmitter"
-	Query_Claim_FullMethodName               = "/zerone.knowledge.v1.Query/Claim"
-	Query_PendingClaims_FullMethodName       = "/zerone.knowledge.v1.Query/PendingClaims"
-	Query_VerificationRound_FullMethodName   = "/zerone.knowledge.v1.Query/VerificationRound"
-	Query_Domain_FullMethodName              = "/zerone.knowledge.v1.Query/Domain"
-	Query_Domains_FullMethodName             = "/zerone.knowledge.v1.Query/Domains"
-	Query_FactConfidence_FullMethodName      = "/zerone.knowledge.v1.Query/FactConfidence"
-	Query_FactCitationCount_FullMethodName   = "/zerone.knowledge.v1.Query/FactCitationCount"
-	Query_FactRelations_FullMethodName       = "/zerone.knowledge.v1.Query/FactRelations"
-	Query_FactsBySubject_FullMethodName      = "/zerone.knowledge.v1.Query/FactsBySubject"
-	Query_FactsByTag_FullMethodName          = "/zerone.knowledge.v1.Query/FactsByTag"
-	Query_FactByCanonical_FullMethodName     = "/zerone.knowledge.v1.Query/FactByCanonical"
-	Query_FactsByFitness_FullMethodName      = "/zerone.knowledge.v1.Query/FactsByFitness"
-	Query_BootstrapFundStatus_FullMethodName = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
-	Query_FactsAtRisk_FullMethodName         = "/zerone.knowledge.v1.Query/FactsAtRisk"
-	Query_FactLineage_FullMethodName         = "/zerone.knowledge.v1.Query/FactLineage"
-	Query_FactProgeny_FullMethodName         = "/zerone.knowledge.v1.Query/FactProgeny"
-	Query_CommonKnowledge_FullMethodName     = "/zerone.knowledge.v1.Query/CommonKnowledge"
-	Query_CheckNovelty_FullMethodName        = "/zerone.knowledge.v1.Query/CheckNovelty"
-	Query_ActiveBounties_FullMethodName      = "/zerone.knowledge.v1.Query/ActiveBounties"
-	Query_DemandSignals_FullMethodName       = "/zerone.knowledge.v1.Query/DemandSignals"
-	Query_TopDemandGaps_FullMethodName       = "/zerone.knowledge.v1.Query/TopDemandGaps"
-	Query_NicheInfo_FullMethodName           = "/zerone.knowledge.v1.Query/NicheInfo"
-	Query_NichesByDomain_FullMethodName      = "/zerone.knowledge.v1.Query/NichesByDomain"
+	Query_Params_FullMethodName                 = "/zerone.knowledge.v1.Query/Params"
+	Query_Fact_FullMethodName                   = "/zerone.knowledge.v1.Query/Fact"
+	Query_Facts_FullMethodName                  = "/zerone.knowledge.v1.Query/Facts"
+	Query_FactsByDomain_FullMethodName          = "/zerone.knowledge.v1.Query/FactsByDomain"
+	Query_FactsBySubmitter_FullMethodName       = "/zerone.knowledge.v1.Query/FactsBySubmitter"
+	Query_Claim_FullMethodName                  = "/zerone.knowledge.v1.Query/Claim"
+	Query_PendingClaims_FullMethodName          = "/zerone.knowledge.v1.Query/PendingClaims"
+	Query_VerificationRound_FullMethodName      = "/zerone.knowledge.v1.Query/VerificationRound"
+	Query_Domain_FullMethodName                 = "/zerone.knowledge.v1.Query/Domain"
+	Query_Domains_FullMethodName                = "/zerone.knowledge.v1.Query/Domains"
+	Query_FactConfidence_FullMethodName         = "/zerone.knowledge.v1.Query/FactConfidence"
+	Query_FactCitationCount_FullMethodName      = "/zerone.knowledge.v1.Query/FactCitationCount"
+	Query_FactRelations_FullMethodName          = "/zerone.knowledge.v1.Query/FactRelations"
+	Query_FactsBySubject_FullMethodName         = "/zerone.knowledge.v1.Query/FactsBySubject"
+	Query_FactsByTag_FullMethodName             = "/zerone.knowledge.v1.Query/FactsByTag"
+	Query_FactByCanonical_FullMethodName        = "/zerone.knowledge.v1.Query/FactByCanonical"
+	Query_FactsByFitness_FullMethodName         = "/zerone.knowledge.v1.Query/FactsByFitness"
+	Query_BootstrapFundStatus_FullMethodName    = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
+	Query_FactsAtRisk_FullMethodName            = "/zerone.knowledge.v1.Query/FactsAtRisk"
+	Query_FactLineage_FullMethodName            = "/zerone.knowledge.v1.Query/FactLineage"
+	Query_FactProgeny_FullMethodName            = "/zerone.knowledge.v1.Query/FactProgeny"
+	Query_CommonKnowledge_FullMethodName        = "/zerone.knowledge.v1.Query/CommonKnowledge"
+	Query_CheckNovelty_FullMethodName           = "/zerone.knowledge.v1.Query/CheckNovelty"
+	Query_ActiveBounties_FullMethodName         = "/zerone.knowledge.v1.Query/ActiveBounties"
+	Query_DemandSignals_FullMethodName          = "/zerone.knowledge.v1.Query/DemandSignals"
+	Query_TopDemandGaps_FullMethodName          = "/zerone.knowledge.v1.Query/TopDemandGaps"
+	Query_NicheInfo_FullMethodName              = "/zerone.knowledge.v1.Query/NicheInfo"
+	Query_NichesByDomain_FullMethodName         = "/zerone.knowledge.v1.Query/NichesByDomain"
+	Query_DomainDiversity_FullMethodName        = "/zerone.knowledge.v1.Query/DomainDiversity"
+	Query_DomainDiversityHistory_FullMethodName = "/zerone.knowledge.v1.Query/DomainDiversityHistory"
+	Query_ValidatorIndependence_FullMethodName  = "/zerone.knowledge.v1.Query/ValidatorIndependence"
+	Query_ConformityAlerts_FullMethodName       = "/zerone.knowledge.v1.Query/ConformityAlerts"
 )
 
 // QueryClient is the client API for Query service.
@@ -111,6 +115,14 @@ type QueryClient interface {
 	NicheInfo(ctx context.Context, in *QueryNicheInfoRequest, opts ...grpc.CallOption) (*QueryNicheInfoResponse, error)
 	// NichesByDomain queries all niches within a domain.
 	NichesByDomain(ctx context.Context, in *QueryNichesByDomainRequest, opts ...grpc.CallOption) (*QueryNichesByDomainResponse, error)
+	// DomainDiversity queries consensus diversity for a domain (current epoch).
+	DomainDiversity(ctx context.Context, in *QueryDomainDiversityRequest, opts ...grpc.CallOption) (*QueryDomainDiversityResponse, error)
+	// DomainDiversityHistory queries historical diversity for a domain.
+	DomainDiversityHistory(ctx context.Context, in *QueryDomainDiversityHistoryRequest, opts ...grpc.CallOption) (*QueryDomainDiversityHistoryResponse, error)
+	// ValidatorIndependence queries a validator's independence score.
+	ValidatorIndependence(ctx context.Context, in *QueryValidatorIndependenceRequest, opts ...grpc.CallOption) (*QueryValidatorIndependenceResponse, error)
+	// ConformityAlerts queries domains with active conformity alerts.
+	ConformityAlerts(ctx context.Context, in *QueryConformityAlertsRequest, opts ...grpc.CallOption) (*QueryConformityAlertsResponse, error)
 }
 
 type queryClient struct {
@@ -401,6 +413,46 @@ func (c *queryClient) NichesByDomain(ctx context.Context, in *QueryNichesByDomai
 	return out, nil
 }
 
+func (c *queryClient) DomainDiversity(ctx context.Context, in *QueryDomainDiversityRequest, opts ...grpc.CallOption) (*QueryDomainDiversityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDomainDiversityResponse)
+	err := c.cc.Invoke(ctx, Query_DomainDiversity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) DomainDiversityHistory(ctx context.Context, in *QueryDomainDiversityHistoryRequest, opts ...grpc.CallOption) (*QueryDomainDiversityHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDomainDiversityHistoryResponse)
+	err := c.cc.Invoke(ctx, Query_DomainDiversityHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ValidatorIndependence(ctx context.Context, in *QueryValidatorIndependenceRequest, opts ...grpc.CallOption) (*QueryValidatorIndependenceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryValidatorIndependenceResponse)
+	err := c.cc.Invoke(ctx, Query_ValidatorIndependence_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ConformityAlerts(ctx context.Context, in *QueryConformityAlertsRequest, opts ...grpc.CallOption) (*QueryConformityAlertsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryConformityAlertsResponse)
+	err := c.cc.Invoke(ctx, Query_ConformityAlerts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -463,6 +515,14 @@ type QueryServer interface {
 	NicheInfo(context.Context, *QueryNicheInfoRequest) (*QueryNicheInfoResponse, error)
 	// NichesByDomain queries all niches within a domain.
 	NichesByDomain(context.Context, *QueryNichesByDomainRequest) (*QueryNichesByDomainResponse, error)
+	// DomainDiversity queries consensus diversity for a domain (current epoch).
+	DomainDiversity(context.Context, *QueryDomainDiversityRequest) (*QueryDomainDiversityResponse, error)
+	// DomainDiversityHistory queries historical diversity for a domain.
+	DomainDiversityHistory(context.Context, *QueryDomainDiversityHistoryRequest) (*QueryDomainDiversityHistoryResponse, error)
+	// ValidatorIndependence queries a validator's independence score.
+	ValidatorIndependence(context.Context, *QueryValidatorIndependenceRequest) (*QueryValidatorIndependenceResponse, error)
+	// ConformityAlerts queries domains with active conformity alerts.
+	ConformityAlerts(context.Context, *QueryConformityAlertsRequest) (*QueryConformityAlertsResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -556,6 +616,18 @@ func (UnimplementedQueryServer) NicheInfo(context.Context, *QueryNicheInfoReques
 }
 func (UnimplementedQueryServer) NichesByDomain(context.Context, *QueryNichesByDomainRequest) (*QueryNichesByDomainResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method NichesByDomain not implemented")
+}
+func (UnimplementedQueryServer) DomainDiversity(context.Context, *QueryDomainDiversityRequest) (*QueryDomainDiversityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DomainDiversity not implemented")
+}
+func (UnimplementedQueryServer) DomainDiversityHistory(context.Context, *QueryDomainDiversityHistoryRequest) (*QueryDomainDiversityHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DomainDiversityHistory not implemented")
+}
+func (UnimplementedQueryServer) ValidatorIndependence(context.Context, *QueryValidatorIndependenceRequest) (*QueryValidatorIndependenceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidatorIndependence not implemented")
+}
+func (UnimplementedQueryServer) ConformityAlerts(context.Context, *QueryConformityAlertsRequest) (*QueryConformityAlertsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConformityAlerts not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -1082,6 +1154,78 @@ func _Query_NichesByDomain_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_DomainDiversity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDomainDiversityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DomainDiversity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DomainDiversity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DomainDiversity(ctx, req.(*QueryDomainDiversityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_DomainDiversityHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDomainDiversityHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DomainDiversityHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DomainDiversityHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DomainDiversityHistory(ctx, req.(*QueryDomainDiversityHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ValidatorIndependence_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryValidatorIndependenceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ValidatorIndependence(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ValidatorIndependence_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ValidatorIndependence(ctx, req.(*QueryValidatorIndependenceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ConformityAlerts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryConformityAlertsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ConformityAlerts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ConformityAlerts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ConformityAlerts(ctx, req.(*QueryConformityAlertsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1200,6 +1344,22 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NichesByDomain",
 			Handler:    _Query_NichesByDomain_Handler,
+		},
+		{
+			MethodName: "DomainDiversity",
+			Handler:    _Query_DomainDiversity_Handler,
+		},
+		{
+			MethodName: "DomainDiversityHistory",
+			Handler:    _Query_DomainDiversityHistory_Handler,
+		},
+		{
+			MethodName: "ValidatorIndependence",
+			Handler:    _Query_ValidatorIndependence_Handler,
+		},
+		{
+			MethodName: "ConformityAlerts",
+			Handler:    _Query_ConformityAlerts_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

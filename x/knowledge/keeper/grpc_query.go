@@ -644,3 +644,134 @@ func (q *queryServer) NichesByDomain(ctx context.Context, req *types.QueryNiches
 
 	return &types.QueryNichesByDomainResponse{Niches: result}, nil
 }
+
+// ─── Consensus diversity queries ──────────────────────────────────────────────
+
+func (q *queryServer) DomainDiversity(ctx context.Context, req *types.QueryDomainDiversityRequest) (*types.QueryDomainDiversityResponse, error) {
+	if req.Domain == "" {
+		return nil, status.Error(codes.InvalidArgument, "domain is required")
+	}
+
+	epoch := q.keeper.CurrentEpoch(ctx)
+	rec, found, err := q.keeper.GetDomainDiversity(ctx, req.Domain, epoch)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !found {
+		// Try previous epoch
+		if epoch > 0 {
+			rec, found, err = q.keeper.GetDomainDiversity(ctx, req.Domain, epoch-1)
+			if err != nil {
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+			if found {
+				epoch = epoch - 1
+			}
+		}
+	}
+	if !found {
+		return &types.QueryDomainDiversityResponse{
+			Domain: req.Domain,
+			Epoch:  epoch,
+		}, nil
+	}
+
+	return &types.QueryDomainDiversityResponse{
+		Domain:         req.Domain,
+		Epoch:          epoch,
+		MeanEntropyBps: rec.AvgEntropy,
+		RoundCount:     rec.RoundCount,
+	}, nil
+}
+
+func (q *queryServer) DomainDiversityHistory(ctx context.Context, req *types.QueryDomainDiversityHistoryRequest) (*types.QueryDomainDiversityHistoryResponse, error) {
+	if req.Domain == "" {
+		return nil, status.Error(codes.InvalidArgument, "domain is required")
+	}
+
+	epochs := req.Epochs
+	if epochs == 0 {
+		epochs = 10
+	}
+
+	currentEpoch := q.keeper.CurrentEpoch(ctx)
+	var history []*types.DomainDiversityEpoch
+
+	for i := uint64(0); i < epochs && i <= currentEpoch; i++ {
+		ep := currentEpoch - i
+		rec, found, err := q.keeper.GetDomainDiversity(ctx, req.Domain, ep)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if found {
+			history = append(history, &types.DomainDiversityEpoch{
+				Epoch:          ep,
+				MeanEntropyBps: rec.AvgEntropy,
+				RoundCount:     rec.RoundCount,
+			})
+		}
+	}
+
+	return &types.QueryDomainDiversityHistoryResponse{
+		Domain:  req.Domain,
+		History: history,
+	}, nil
+}
+
+func (q *queryServer) ValidatorIndependence(ctx context.Context, req *types.QueryValidatorIndependenceRequest) (*types.QueryValidatorIndependenceResponse, error) {
+	if req.Validator == "" {
+		return nil, status.Error(codes.InvalidArgument, "validator is required")
+	}
+
+	rec, found, err := q.keeper.GetValidatorIndependence(ctx, req.Validator)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	if !found {
+		return &types.QueryValidatorIndependenceResponse{
+			Validator: req.Validator,
+		}, nil
+	}
+
+	independenceBPS := uint64(0)
+	if rec.TotalVotes > 0 {
+		independenceBPS = rec.MinorityVotes * 1_000_000 / rec.TotalVotes
+	}
+
+	return &types.QueryValidatorIndependenceResponse{
+		Validator:       req.Validator,
+		TotalVotes:      rec.TotalVotes,
+		DissentingVotes: rec.MinorityVotes,
+		IndependenceBps: independenceBPS,
+	}, nil
+}
+
+func (q *queryServer) ConformityAlerts(ctx context.Context, _ *types.QueryConformityAlertsRequest) (*types.QueryConformityAlertsResponse, error) {
+	params, err := q.keeper.GetParams(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	thresholdEpochs := params.DiversityConformityAlertEpochs
+	thresholdBPS := params.DiversityConformityAlertThreshold
+
+	var alerts []*types.ConformityAlert
+
+	// Iterate all domains and check their conformity streaks
+	q.keeper.IterateDomains(ctx, func(domain *types.Domain) bool {
+		streak, found, sErr := q.keeper.GetConformityStreak(ctx, domain.Name)
+		if sErr != nil || !found {
+			return false
+		}
+		if streak.ConsecutiveEpochs >= thresholdEpochs {
+			alerts = append(alerts, &types.ConformityAlert{
+				Domain:            domain.Name,
+				ConsecutiveEpochs: streak.ConsecutiveEpochs,
+				ThresholdBps:      thresholdBPS,
+			})
+		}
+		return false
+	})
+
+	return &types.QueryConformityAlertsResponse{Alerts: alerts}, nil
+}

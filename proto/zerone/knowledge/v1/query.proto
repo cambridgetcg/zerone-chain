@@ -155,6 +155,28 @@ service Query {
   rpc NichesByDomain(QueryNichesByDomainRequest) returns (QueryNichesByDomainResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/niches/{domain}";
   }
+
+  // ─── Consensus diversity queries ─────────────────────────────────────
+
+  // DomainDiversity queries consensus diversity for a domain (current epoch).
+  rpc DomainDiversity(QueryDomainDiversityRequest) returns (QueryDomainDiversityResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/diversity/domain/{domain}";
+  }
+
+  // DomainDiversityHistory queries historical diversity for a domain.
+  rpc DomainDiversityHistory(QueryDomainDiversityHistoryRequest) returns (QueryDomainDiversityHistoryResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/diversity/domain/{domain}/history";
+  }
+
+  // ValidatorIndependence queries a validator's independence score.
+  rpc ValidatorIndependence(QueryValidatorIndependenceRequest) returns (QueryValidatorIndependenceResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/diversity/validator/{validator}";
+  }
+
+  // ConformityAlerts queries domains with active conformity alerts.
+  rpc ConformityAlerts(QueryConformityAlertsRequest) returns (QueryConformityAlertsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/diversity/conformity_alerts";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -430,4 +452,56 @@ message QueryNichesByDomainRequest {
 
 message QueryNichesByDomainResponse {
   repeated QueryNicheInfoResponse niches = 1;
+}
+
+// ─── Consensus diversity query messages ──────────────────────────────────────
+
+message QueryDomainDiversityRequest {
+  string domain = 1;
+}
+
+message QueryDomainDiversityResponse {
+  string  domain             = 1;
+  uint64  epoch              = 2;
+  uint64  mean_entropy_bps   = 3;
+  uint64  round_count        = 4;
+}
+
+message QueryDomainDiversityHistoryRequest {
+  string domain = 1;
+  uint64 epochs = 2;  // How many epochs to look back (default 10)
+}
+
+message QueryDomainDiversityHistoryResponse {
+  string domain = 1;
+  repeated DomainDiversityEpoch history = 2;
+}
+
+message DomainDiversityEpoch {
+  uint64 epoch            = 1;
+  uint64 mean_entropy_bps = 2;
+  uint64 round_count      = 3;
+}
+
+message QueryValidatorIndependenceRequest {
+  string validator = 1;
+}
+
+message QueryValidatorIndependenceResponse {
+  string validator            = 1;
+  uint64 total_votes          = 2;
+  uint64 dissenting_votes     = 3;
+  uint64 independence_bps     = 4;  // dissenting / total * 1_000_000
+}
+
+message QueryConformityAlertsRequest {}
+
+message QueryConformityAlertsResponse {
+  repeated ConformityAlert alerts = 1;
+}
+
+message ConformityAlert {
+  string domain             = 1;
+  uint64 consecutive_epochs = 2;
+  uint64 threshold_bps      = 3;
 }

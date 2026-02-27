@@ -69,6 +69,14 @@ func GetQueryCmd() *cobra.Command {
 		NewQueryBountiesCmd(),
 		NewQueryDemandSignalsCmd(),
 		NewQueryDemandGapsCmd(),
+		NewQueryFactLineageCmd(),
+		NewQueryFactProgenyCmd(),
+		NewQueryNicheInfoCmd(),
+		NewQueryNichesByDomainCmd(),
+		NewQueryDomainDiversityCmd(),
+		NewQueryDomainDiversityHistoryCmd(),
+		NewQueryValidatorIndependenceCmd(),
+		NewQueryConformityAlertsCmd(),
 	)
 
 	return queryCmd
@@ -679,6 +687,192 @@ func NewQueryDemandGapsCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().Uint64("limit", 20, "Max results")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryFactLineageCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "fact-lineage [fact-id]",
+		Short: "Query the lineage (ancestors) of a fact",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			depth, _ := cmd.Flags().GetUint64("depth")
+			req := &types.QueryFactLineageRequest{FactId: args[0], Depth: depth}
+			resp := &types.QueryFactLineageResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/FactLineage", req, resp); err != nil {
+				return fmt.Errorf("failed to query fact lineage: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	cmd.Flags().Uint64("depth", 0, "How far up to trace (0 = to root)")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryFactProgenyCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "fact-progeny [fact-id]",
+		Short: "Query the progeny (descendants) of a fact",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			depth, _ := cmd.Flags().GetUint64("depth")
+			req := &types.QueryFactProgenyRequest{FactId: args[0], Depth: depth}
+			resp := &types.QueryFactProgenyResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/FactProgeny", req, resp); err != nil {
+				return fmt.Errorf("failed to query fact progeny: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	cmd.Flags().Uint64("depth", 0, "How deep to traverse (0 = default 3)")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryNicheInfoCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "niche-info [niche-key]",
+		Short: "Query information about a knowledge niche",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryNicheInfoRequest{NicheKey: args[0]}
+			resp := &types.QueryNicheInfoResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/NicheInfo", req, resp); err != nil {
+				return fmt.Errorf("failed to query niche info: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryNichesByDomainCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "niches-by-domain [domain]",
+		Short: "Query all niches within a domain",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryNichesByDomainRequest{Domain: args[0]}
+			resp := &types.QueryNichesByDomainResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/NichesByDomain", req, resp); err != nil {
+				return fmt.Errorf("failed to query niches by domain: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryDomainDiversityCmd queries the current epoch diversity for a domain.
+func NewQueryDomainDiversityCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "domain-diversity [domain]",
+		Short: "Query consensus diversity for a domain (current epoch)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryDomainDiversityRequest{Domain: args[0]}
+			resp := &types.QueryDomainDiversityResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/DomainDiversity", req, resp); err != nil {
+				return fmt.Errorf("failed to query domain diversity: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryDomainDiversityHistoryCmd queries historical diversity for a domain.
+func NewQueryDomainDiversityHistoryCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "domain-diversity-history [domain]",
+		Short: "Query historical diversity for a domain",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			epochs, _ := cmd.Flags().GetUint64("epochs")
+			req := &types.QueryDomainDiversityHistoryRequest{Domain: args[0], Epochs: epochs}
+			resp := &types.QueryDomainDiversityHistoryResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/DomainDiversityHistory", req, resp); err != nil {
+				return fmt.Errorf("failed to query domain diversity history: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	cmd.Flags().Uint64("epochs", 10, "Number of epochs to look back")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryValidatorIndependenceCmd queries a validator's independence score.
+func NewQueryValidatorIndependenceCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "validator-independence [validator-addr]",
+		Short: "Query a validator's independence score (how often they dissent)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryValidatorIndependenceRequest{Validator: args[0]}
+			resp := &types.QueryValidatorIndependenceResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/ValidatorIndependence", req, resp); err != nil {
+				return fmt.Errorf("failed to query validator independence: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryConformityAlertsCmd queries active conformity alerts across domains.
+func NewQueryConformityAlertsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "conformity-alerts",
+		Short: "Query domains with active conformity alerts (sustained low diversity)",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryConformityAlertsRequest{}
+			resp := &types.QueryConformityAlertsResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/ConformityAlerts", req, resp); err != nil {
+				return fmt.Errorf("failed to query conformity alerts: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }

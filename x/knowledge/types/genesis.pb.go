@@ -147,13 +147,13 @@ type Params struct {
 	// ─── Consensus diversity (R28-2) ──────────────────────────────────
 	DiversityConformityAlertThreshold uint64 `protobuf:"varint,101,opt,name=diversity_conformity_alert_threshold,json=diversityConformityAlertThreshold,proto3" json:"diversity_conformity_alert_threshold,omitempty"` // BPS entropy below which a domain is "conforming" (default: 50,000 = 5%)
 	DiversityConformityAlertEpochs    uint64 `protobuf:"varint,102,opt,name=diversity_conformity_alert_epochs,json=diversityConformityAlertEpochs,proto3" json:"diversity_conformity_alert_epochs,omitempty"`          // Consecutive low-diversity epochs before alert (default: 3)
-	// ─── Retroactive vindication (R28-1) ──────────────────────────────────
-	VindicationRefundEnabled bool   `protobuf:"varint,103,opt,name=vindication_refund_enabled,json=vindicationRefundEnabled,proto3" json:"vindication_refund_enabled,omitempty"`
-	VindicationBonusBps      uint64 `protobuf:"varint,104,opt,name=vindication_bonus_bps,json=vindicationBonusBps,proto3" json:"vindication_bonus_bps,omitempty"`
-	VindicationSlashBps      uint64 `protobuf:"varint,105,opt,name=vindication_slash_bps,json=vindicationSlashBps,proto3" json:"vindication_slash_bps,omitempty"`
-	VindicationWindowBlocks  uint64 `protobuf:"varint,106,opt,name=vindication_window_blocks,json=vindicationWindowBlocks,proto3" json:"vindication_window_blocks,omitempty"`
-	unknownFields                     protoimpl.UnknownFields
-	sizeCache                         protoimpl.SizeCache
+	// ─── Retroactive vindication (R28-1) ──────────────────────────────
+	VindicationRefundEnabled bool   `protobuf:"varint,103,opt,name=vindication_refund_enabled,json=vindicationRefundEnabled,proto3" json:"vindication_refund_enabled,omitempty"` // Master switch for vindication escrow (default: true)
+	VindicationBonusBps      uint64 `protobuf:"varint,104,opt,name=vindication_bonus_bps,json=vindicationBonusBps,proto3" json:"vindication_bonus_bps,omitempty"`                // % of majority slash pool as bonus to vindicated minority (default: 2000 = 20%)
+	VindicationSlashBps      uint64 `protobuf:"varint,105,opt,name=vindication_slash_bps,json=vindicationSlashBps,proto3" json:"vindication_slash_bps,omitempty"`                // Slash rate for majority on disproven fact (default: 500 = 5%)
+	VindicationWindowBlocks  uint64 `protobuf:"varint,106,opt,name=vindication_window_blocks,json=vindicationWindowBlocks,proto3" json:"vindication_window_blocks,omitempty"`    // How long escrowed entries are eligible (default: 100000)
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1025,7 +1025,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x9d0\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xff1\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1129,7 +1129,11 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x1ffitness_weight_satisfaction_bps\x18c \x01(\x04R\x1cfitnessWeightSatisfactionBps\x128\n" +
 	"\x18satisfaction_min_ratings\x18d \x01(\x04R\x16satisfactionMinRatings\x12O\n" +
 	"$diversity_conformity_alert_threshold\x18e \x01(\x04R!diversityConformityAlertThreshold\x12I\n" +
-	"!diversity_conformity_alert_epochs\x18f \x01(\x04R\x1ediversityConformityAlertEpochs\"\xcd\x03\n" +
+	"!diversity_conformity_alert_epochs\x18f \x01(\x04R\x1ediversityConformityAlertEpochs\x12<\n" +
+	"\x1avindication_refund_enabled\x18g \x01(\bR\x18vindicationRefundEnabled\x122\n" +
+	"\x15vindication_bonus_bps\x18h \x01(\x04R\x13vindicationBonusBps\x122\n" +
+	"\x15vindication_slash_bps\x18i \x01(\x04R\x13vindicationSlashBps\x12:\n" +
+	"\x19vindication_window_blocks\x18j \x01(\x04R\x17vindicationWindowBlocks\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +
