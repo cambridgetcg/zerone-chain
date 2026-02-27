@@ -144,8 +144,11 @@ type Params struct {
 	// ─── Query satisfaction ──────────────────────────────────────────────
 	FitnessWeightSatisfactionBps uint64 `protobuf:"varint,99,opt,name=fitness_weight_satisfaction_bps,json=fitnessWeightSatisfactionBps,proto3" json:"fitness_weight_satisfaction_bps,omitempty"` // Weight of satisfaction in fitness (default: 150,000 = 15%)
 	SatisfactionMinRatings       uint64 `protobuf:"varint,100,opt,name=satisfaction_min_ratings,json=satisfactionMinRatings,proto3" json:"satisfaction_min_ratings,omitempty"`                    // Minimum ratings before satisfaction affects fitness (default: 3)
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	// ─── Consensus diversity (R28-2) ──────────────────────────────────
+	DiversityConformityAlertThreshold uint64 `protobuf:"varint,101,opt,name=diversity_conformity_alert_threshold,json=diversityConformityAlertThreshold,proto3" json:"diversity_conformity_alert_threshold,omitempty"` // BPS entropy below which a domain is "conforming" (default: 50,000 = 5%)
+	DiversityConformityAlertEpochs    uint64 `protobuf:"varint,102,opt,name=diversity_conformity_alert_epochs,json=diversityConformityAlertEpochs,proto3" json:"diversity_conformity_alert_epochs,omitempty"`          // Consecutive low-diversity epochs before alert (default: 3)
+	unknownFields                     protoimpl.UnknownFields
+	sizeCache                         protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -878,6 +881,20 @@ func (x *Params) GetSatisfactionMinRatings() uint64 {
 	return 0
 }
 
+func (x *Params) GetDiversityConformityAlertThreshold() uint64 {
+	if x != nil {
+		return x.DiversityConformityAlertThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetDiversityConformityAlertEpochs() uint64 {
+	if x != nil {
+		return x.DiversityConformityAlertEpochs
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
@@ -975,7 +992,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x81/\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x9d0\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1077,7 +1094,9 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x1acompetition_max_niche_size\x18a \x01(\x04R\x17competitionMaxNicheSize\x12E\n" +
 	"\x1fcompetition_symbiosis_bonus_bps\x18b \x01(\x04R\x1ccompetitionSymbiosisBonusBps\x12E\n" +
 	"\x1ffitness_weight_satisfaction_bps\x18c \x01(\x04R\x1cfitnessWeightSatisfactionBps\x128\n" +
-	"\x18satisfaction_min_ratings\x18d \x01(\x04R\x16satisfactionMinRatings\"\xcd\x03\n" +
+	"\x18satisfaction_min_ratings\x18d \x01(\x04R\x16satisfactionMinRatings\x12O\n" +
+	"$diversity_conformity_alert_threshold\x18e \x01(\x04R!diversityConformityAlertThreshold\x12I\n" +
+	"!diversity_conformity_alert_epochs\x18f \x01(\x04R\x1ediversityConformityAlertEpochs\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

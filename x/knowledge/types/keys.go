@@ -1,5 +1,7 @@
 package types
 
+import "encoding/binary"
+
 const (
 	// ModuleName is the name of the knowledge module.
 	ModuleName = "knowledge"
@@ -105,6 +107,13 @@ var (
 
 	// ─── Query satisfaction ─────────────────────────────────────────────
 	QueryReceiptPrefix = []byte{0x3e} // 0x3e | rater / fact_id → block height (query receipt)
+
+	// ─── Consensus diversity (R28-2) ────────────────────────────────────
+	RoundDiversityPrefix         = []byte{0x40} // 0x40 | roundID → RoundDiversity (JSON)
+	DomainDiversityPrefix        = []byte{0x41} // 0x41 | domain / epoch_bytes → DomainDiversityScore (JSON)
+	ValidatorIndependencePrefix  = []byte{0x42} // 0x42 | validatorAddr → ValidatorIndependence (JSON)
+	ConformityStreakPrefix       = []byte{0x43} // 0x43 | domain → ConformityStreak (JSON)
+	DomainEpochRoundIndexPrefix = []byte{0x44} // 0x44 | domain / epoch_bytes / roundID → 0x01
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -260,4 +269,55 @@ func QueryReceiptKey(rater, factID string) []byte {
 	key := append(append([]byte{}, QueryReceiptPrefix...), []byte(rater)...)
 	key = append(key, '/')
 	return append(key, []byte(factID)...)
+}
+
+// RoundDiversityKey returns the store key for a round's diversity data.
+func RoundDiversityKey(roundID string) []byte {
+	return append(append([]byte{}, RoundDiversityPrefix...), []byte(roundID)...)
+}
+
+// DomainDiversityKey returns the store key for a domain's epoch diversity score.
+func DomainDiversityKey(domain string, epoch uint64) []byte {
+	key := append(append([]byte{}, DomainDiversityPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	epochBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(epochBz, epoch)
+	return append(key, epochBz...)
+}
+
+// DomainDiversityByDomainPrefix returns the prefix for iterating all epochs for a domain.
+func DomainDiversityByDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, DomainDiversityPrefix...), []byte(domain)...)
+	return append(key, '/')
+}
+
+// ValidatorIndependenceKey returns the store key for a validator's independence score.
+func ValidatorIndependenceKey(validator string) []byte {
+	return append(append([]byte{}, ValidatorIndependencePrefix...), []byte(validator)...)
+}
+
+// ConformityStreakKey returns the store key for a domain's conformity streak.
+func ConformityStreakKey(domain string) []byte {
+	return append(append([]byte{}, ConformityStreakPrefix...), []byte(domain)...)
+}
+
+// DomainEpochRoundKey returns the index key for a round in a domain's epoch.
+func DomainEpochRoundKey(domain string, epoch uint64, roundID string) []byte {
+	key := append(append([]byte{}, DomainEpochRoundIndexPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	epochBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(epochBz, epoch)
+	key = append(key, epochBz...)
+	key = append(key, '/')
+	return append(key, []byte(roundID)...)
+}
+
+// DomainEpochRoundPrefix returns the prefix for iterating all rounds in a domain's epoch.
+func DomainEpochRoundPrefix(domain string, epoch uint64) []byte {
+	key := append(append([]byte{}, DomainEpochRoundIndexPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	epochBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(epochBz, epoch)
+	key = append(key, epochBz...)
+	return append(key, '/')
 }

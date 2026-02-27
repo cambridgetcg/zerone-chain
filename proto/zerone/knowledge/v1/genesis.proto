@@ -145,6 +145,10 @@ message Params {
   // ─── Query satisfaction ──────────────────────────────────────────────
   uint64 fitness_weight_satisfaction_bps = 99;  // Weight of satisfaction in fitness (default: 150,000 = 15%)
   uint64 satisfaction_min_ratings        = 100; // Minimum ratings before satisfaction affects fitness (default: 3)
+
+  // ─── Consensus diversity (R28-2) ──────────────────────────────────
+  uint64 diversity_conformity_alert_threshold = 101; // BPS entropy below which a domain is "conforming" (default: 50,000 = 5%)
+  uint64 diversity_conformity_alert_epochs    = 102; // Consecutive low-diversity epochs before alert (default: 3)
 }
 
 // GenesisState is the genesis state of the knowledge module.

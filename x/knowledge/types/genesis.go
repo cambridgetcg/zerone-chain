@@ -143,6 +143,10 @@ func DefaultParams() Params {
 		// ─── Query satisfaction ───────────────────────────────────────────
 		FitnessWeightSatisfactionBps: 150_000, // 15% — relevance quality signal
 		SatisfactionMinRatings:       3,       // Minimum ratings before satisfaction affects fitness
+
+		// ─── Consensus diversity (R28-2) ─────────────────────────────────
+		DiversityConformityAlertThreshold: 50_000, // 5% entropy — catches pure unanimity on small validator sets
+		DiversityConformityAlertEpochs:    3,      // 3 consecutive low-diversity epochs before alert
 	}
 }
 
@@ -444,6 +448,14 @@ func (p *Params) Validate() error {
 		if p.BootstrapFundFeeCap == "" || p.BootstrapFundFeeCap == "0" {
 			return fmt.Errorf("bootstrap_fund_fee_cap must be > 0 when fund is enabled")
 		}
+	}
+
+	// ─── Diversity params ──────────────────────────────────────────────
+	if p.DiversityConformityAlertThreshold > 1_000_000 {
+		return fmt.Errorf("diversity_conformity_alert_threshold must be <= 1,000,000")
+	}
+	if p.DiversityConformityAlertEpochs == 0 {
+		return fmt.Errorf("diversity_conformity_alert_epochs must be > 0")
 	}
 
 	return nil
