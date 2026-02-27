@@ -26,8 +26,9 @@ import (
 // --- Mock Keepers ---
 
 type mockKnowledgeKeeper struct {
-	verificationRate uint64
-	totalFacts       uint64
+	verificationRate    uint64
+	totalFacts          uint64
+	consensusDiversity  uint64
 }
 
 func (m *mockKnowledgeKeeper) GetVerificationRate(_ context.Context) uint64 {
@@ -36,6 +37,10 @@ func (m *mockKnowledgeKeeper) GetVerificationRate(_ context.Context) uint64 {
 
 func (m *mockKnowledgeKeeper) GetTotalFacts(_ context.Context) uint64 {
 	return m.totalFacts
+}
+
+func (m *mockKnowledgeKeeper) GetConsensusDiversity(_ context.Context) uint64 {
+	return m.consensusDiversity
 }
 
 type mockStakingKeeper struct {
@@ -131,8 +136,9 @@ func setupKeeper(t *testing.T) (keeper.Keeper, testKeepers, sdk.Context) {
 
 	mocks := testKeepers{
 		knowledge: &mockKnowledgeKeeper{
-			verificationRate: 700_000, // 70%
-			totalFacts:       1000,
+			verificationRate:   700_000, // 70%
+			totalFacts:         1000,
+			consensusDiversity: 500_000, // 50% — neutral default
 		},
 		staking: &mockStakingKeeper{
 			totalStaked:      big.NewInt(600_000_000_000), // 600k ZRN
@@ -179,9 +185,9 @@ func TestSensorReadings(t *testing.T) {
 
 	obs := k.ObserveAll(ctx)
 
-	// Knowledge: 700k (from mock)
-	if obs.KnowledgeQuality != 700_000 {
-		t.Fatalf("expected knowledge=700000, got %d", obs.KnowledgeQuality)
+	// Knowledge: (700k*6 + 500k*4) / 10 = 620k (60% verification rate + 40% diversity)
+	if obs.KnowledgeQuality != 620_000 {
+		t.Fatalf("expected knowledge=620000, got %d", obs.KnowledgeQuality)
 	}
 	// Economic: staked/supply = 600k/1M = 60% = 600,000 BPS
 	if obs.EconomicStability != 600_000 {
@@ -434,7 +440,7 @@ func TestDifferentWeightsChangeComposite(t *testing.T) {
 	scores2 := k.ComputeScores(ctx, obs)
 	composite2 := scores2.Composite
 
-	// Knowledge is 700k (highest), so weighting it more should increase composite.
+	// Knowledge is 620k (above average), so weighting it more should increase composite.
 	if composite2 <= composite1 {
 		t.Fatalf("expected higher composite with knowledge-heavy weights: got %d (was %d)", composite2, composite1)
 	}

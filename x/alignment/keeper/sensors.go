@@ -25,17 +25,24 @@ func (k Keeper) ObserveAll(ctx context.Context) *types.AlignmentObservation {
 	}
 }
 
-// senseKnowledgeQuality reads the verification rate from x/knowledge.
-// Returns BPS direct. Nil-safe: returns NeutralBPS if keeper is nil.
+// senseKnowledgeQuality reads verification rate and consensus diversity from x/knowledge.
+// Weighted: 60% verification rate, 40% diversity.
+// A system that verifies everything unanimously scores LOWER on knowledge quality.
+// Returns BPS. Nil-safe: returns NeutralBPS if keeper is nil.
 func (k Keeper) senseKnowledgeQuality(ctx context.Context) uint64 {
 	if k.knowledgeKeeper == nil {
 		return types.NeutralBPS
 	}
 	rate := k.knowledgeKeeper.GetVerificationRate(ctx)
 	if rate > types.BPS {
-		return types.BPS
+		rate = types.BPS
 	}
-	return rate
+	diversity := k.knowledgeKeeper.GetConsensusDiversity(ctx)
+	if diversity > types.BPS {
+		diversity = types.BPS
+	}
+	// Weighted: 60% verification rate, 40% diversity
+	return (rate*6 + diversity*4) / 10
 }
 
 // senseEconomicStability computes staked/supply ratio as BPS.

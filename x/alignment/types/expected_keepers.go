@@ -11,6 +11,8 @@ type KnowledgeKeeper interface {
 	GetVerificationRate(ctx context.Context) uint64
 	// GetTotalFacts returns the total number of facts.
 	GetTotalFacts(ctx context.Context) uint64
+	// GetConsensusDiversity returns the global consensus diversity score in BPS.
+	GetConsensusDiversity(ctx context.Context) uint64
 }
 
 // StakingKeeper defines the expected staking module interface.

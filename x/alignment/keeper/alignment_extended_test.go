@@ -35,6 +35,7 @@ func TestSensorMaxValues(t *testing.T) {
 	k, mocks, ctx := setupKeeper(t)
 
 	mocks.knowledge.verificationRate = types.BPS
+	mocks.knowledge.consensusDiversity = types.BPS // both inputs at max → weighted output at max
 	mocks.staking.totalStaked = big.NewInt(2_000_000_000_000) // > supply
 	mocks.staking.activeValidators = 200                       // > target
 	mocks.staking.targetValidators = 111
@@ -86,7 +87,8 @@ func TestSensorZeroSupply(t *testing.T) {
 
 func TestSensorKnowledgeAboveBPS(t *testing.T) {
 	k, mocks, ctx := setupKeeper(t)
-	mocks.knowledge.verificationRate = types.BPS + 100_000 // above max
+	mocks.knowledge.verificationRate = types.BPS + 100_000   // above max
+	mocks.knowledge.consensusDiversity = types.BPS + 100_000 // above max
 
 	obs := k.ObserveAll(ctx)
 
@@ -121,6 +123,7 @@ func TestComputeScoresAllDimensionsEqual(t *testing.T) {
 
 	// Set all dimensions to same value.
 	mocks.knowledge.verificationRate = 600_000
+	mocks.knowledge.consensusDiversity = 600_000 // match rate so weighted formula yields 600k
 	mocks.staking.totalStaked = big.NewInt(600_000_000_000)
 	mocks.staking.activeValidators = 111 // 111/111 = BPS, but we need 600k...
 	mocks.staking.targetValidators = 111
@@ -207,6 +210,7 @@ func TestCorrectionsCriticalDoublesMagnitude(t *testing.T) {
 
 	// Set knowledge to critical (below 200k).
 	mocks.knowledge.verificationRate = 100_000
+	mocks.knowledge.consensusDiversity = 100_000 // match rate so weighted formula yields 100k
 
 	obs := k.ObserveAll(ctx)
 	scores := k.ComputeScores(ctx, obs)

@@ -31,3 +31,8 @@ func (a *AlignmentKnowledgeAdapter) GetVerificationRate(_ context.Context) uint6
 func (a *AlignmentKnowledgeAdapter) GetTotalFacts(_ context.Context) uint64 {
 	return 0
 }
+
+// GetConsensusDiversity returns the global consensus diversity score in BPS.
+func (a *AlignmentKnowledgeAdapter) GetConsensusDiversity(ctx context.Context) uint64 {
+	return a.k.GetGlobalConsensusDiversity(ctx)
+}
