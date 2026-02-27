@@ -502,42 +502,40 @@ func (k Keeper) ProcessDiversity(ctx context.Context, epoch uint64) error {
 
 // GetGlobalConsensusDiversity computes the average diversity across all domains
 // for the most recent epoch that has data. Returns NeutralBPS (500,000) if no data.
+// Uses O(domains) direct epoch lookup instead of scanning all historical epochs.
 func (k Keeper) GetGlobalConsensusDiversity(ctx context.Context) uint64 {
-	var totalEntropy uint64
-	var domainCount uint64
-
-	k.IterateDomains(ctx, func(domain *types.Domain) bool {
-		// Scan all epochs for this domain to find the latest
-		store := k.storeService.OpenKVStore(ctx)
-		pfx := types.DomainDiversityByDomainPrefix(domain.Name)
-		iter, err := store.Iterator(pfx, prefixEndBytes(pfx))
-		if err != nil {
-			return false
-		}
-		defer iter.Close()
-
-		// Find the last entry (highest epoch) since epochs are big-endian sorted
-		var lastVal []byte
-		for ; iter.Valid(); iter.Next() {
-			lastVal = iter.Value()
-		}
-
-		if lastVal != nil {
-			var rec DomainDiversityRecord
-			if err := json.Unmarshal(lastVal, &rec); err == nil {
-				totalEntropy += rec.AvgEntropy
-				domainCount++
-			}
-		}
-
-		return false
-	})
-
-	if domainCount == 0 {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+	params, err := k.GetParams(ctx)
+	if err != nil || params.FitnessEpochBlocks == 0 || height == 0 {
 		return NeutralBPS
 	}
 
-	return totalEntropy / domainCount
+	epoch := height / params.FitnessEpochBlocks
+
+	// Try current epoch, then previous epoch (data may not exist yet for current)
+	for try := uint64(0); try < 2; try++ {
+		if epoch < try {
+			break
+		}
+		checkEpoch := epoch - try
+
+		var totalEntropy, domainCount uint64
+		k.IterateDomains(ctx, func(domain *types.Domain) bool {
+			rec, found, getErr := k.GetDomainDiversity(ctx, domain.Name, checkEpoch)
+			if getErr == nil && found && rec.RoundCount > 0 {
+				totalEntropy += rec.AvgEntropy
+				domainCount++
+			}
+			return false
+		})
+
+		if domainCount > 0 {
+			return totalEntropy / domainCount
+		}
+	}
+
+	return NeutralBPS
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
