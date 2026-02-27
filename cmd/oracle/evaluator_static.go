@@ -231,32 +231,21 @@ func keywordOverlap(a, b []string) float64 {
 }
 
 // negationWords are terms that signal a claim is negating an axiom.
-var negationWords = []string{
-	"not", "never", "false", "incorrect", "wrong",
-	"isn't", "doesn't", "cannot", "no longer",
-}
+// negationRe matches negation words at word boundaries, avoiding false
+// positives on substrings (e.g., "notation" should not match "not").
+var negationRe = regexp.MustCompile(`\b(not|never|false|incorrect|wrong|isn't|doesn't|cannot|no longer)\b`)
 
 // hasNegation returns true when the claim contains a negation word AND
 // the stripped-claim keywords overlap with axiom keywords by > 0.2.
 func hasNegation(claim, axiom string) bool {
 	lowerClaim := strings.ToLower(claim)
 
-	found := false
-	for _, neg := range negationWords {
-		if strings.Contains(lowerClaim, neg) {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if !negationRe.MatchString(lowerClaim) {
 		return false
 	}
 
 	// Strip negation words from claim, then tokenize the remainder.
-	stripped := lowerClaim
-	for _, neg := range negationWords {
-		stripped = strings.ReplaceAll(stripped, neg, " ")
-	}
+	stripped := negationRe.ReplaceAllString(lowerClaim, " ")
 	strippedKW := tokenize(stripped)
 	axiomKW := tokenize(axiom)
 

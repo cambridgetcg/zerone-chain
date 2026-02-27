@@ -22,6 +22,7 @@ func newOracleServer(eval *CombinedEvaluator, tier string) http.Handler {
 	})
 
 	mux.HandleFunc("POST /evaluate", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 		var req EvaluateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadRequest)
@@ -43,6 +44,7 @@ func newOracleServer(eval *CombinedEvaluator, tier string) http.Handler {
 	})
 
 	mux.HandleFunc("POST /prefetch", func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20) // 1 MB limit
 		var req EvaluateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, fmt.Sprintf(`{"error":%q}`, err.Error()), http.StatusBadRequest)

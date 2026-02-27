@@ -189,15 +189,15 @@ func (l *LLMEvaluator) Evaluate(req EvaluateRequest) (*EvaluateResponse, error) 
 		Reasoning:  verdict.Reasoning,
 	}
 
-	// 8. Cache result with simple eviction.
+	// 8. Cache result with simple eviction (random, not LRU).
 	l.mu.Lock()
 	if len(l.cache) > 1000 {
-		// Evict roughly half the cache.
+		target := len(l.cache) / 2
 		count := 0
 		for k := range l.cache {
 			delete(l.cache, k)
 			count++
-			if count >= len(l.cache)/2+1 {
+			if count >= target {
 				break
 			}
 		}

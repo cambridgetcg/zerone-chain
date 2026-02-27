@@ -487,6 +487,16 @@ type ZeroneApp struct {
 	configurator module.Configurator
 }
 
+// SetVoteExtConfig configures the validator's vote extension settings.
+// If an oracle client was initialized from app.toml, it is automatically
+// attached to the config so the vote extension handler can query it.
+func (app *ZeroneApp) SetVoteExtConfig(config *VoteExtensionConfig) {
+	if app.oracleClient != nil && config != nil {
+		config.OracleClient = app.oracleClient
+	}
+	app.VoteExtConfig = config
+}
+
 // NewZeroneApp creates and initializes a new ZeroneApp instance.
 func NewZeroneApp(
 	logger log.Logger,
