@@ -10,7 +10,7 @@
 //	FAUCET_AMOUNT     tokens per request in uzrn (default 100000000)
 //	FAUCET_COOLDOWN   cooldown hours per address (default 24)
 //	FAUCET_PORT       listen port (default 8080)
-//	FAUCET_KEYRING    keyring backend (default test)
+//	FAUCET_KEYRING_BACKEND keyring backend (default test)
 //	FAUCET_FROM       signing key name (default faucet)
 //	FAUCET_NODE       CometBFT RPC endpoint (default tcp://localhost:26657)
 //	FAUCET_STATE_FILE state persistence path (default faucet-state.json)
@@ -88,7 +88,7 @@ func loadConfig() Config {
 	if v := os.Getenv("FAUCET_PORT"); v != "" {
 		cfg.Port = v
 	}
-	if v := os.Getenv("FAUCET_KEYRING"); v != "" {
+	if v := os.Getenv("FAUCET_KEYRING_BACKEND"); v != "" {
 		cfg.KeyringBackend = v
 	}
 	if v := os.Getenv("FAUCET_FROM"); v != "" {
@@ -195,19 +195,9 @@ func (f *Faucet) sendTokens(toAddr string, amount int64) (string, error) {
 	}
 
 	// Check for non-zero code (SDK-level error).
-	if code, ok := result["code"]; ok {
-		var codeNum float64
-		switch v := code.(type) {
-		case float64:
-			codeNum = v
-		case json.Number:
-			n, _ := v.Int64()
-			codeNum = float64(n)
-		}
-		if codeNum != 0 {
-			rawLog, _ := result["raw_log"].(string)
-			return "", fmt.Errorf("tx error code %v: %s", code, rawLog)
-		}
+	if code, ok := result["code"].(float64); ok && code != 0 {
+		rawLog, _ := result["raw_log"].(string)
+		return "", fmt.Errorf("tx error code %d: %s", int(code), rawLog)
 	}
 
 	txHash, _ := result["txhash"].(string)
@@ -249,10 +239,11 @@ type FaucetRequest struct {
 
 // FaucetResponse is the JSON body returned by POST /faucet.
 type FaucetResponse struct {
-	Status string `json:"status"`
-	TxHash string `json:"tx_hash,omitempty"`
-	Amount string `json:"amount,omitempty"`
-	Error  string `json:"error,omitempty"`
+	Status     string `json:"status"`
+	TxHash     string `json:"tx_hash,omitempty"`
+	Amount     string `json:"amount,omitempty"`
+	Error      string `json:"error,omitempty"`
+	RetryAfter string `json:"retry_after,omitempty"`
 }
 
 // ---------------------------------------------------------------------------
@@ -319,7 +310,8 @@ func (f *Faucet) handleFaucet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Parse JSON body.
+	// 2. Parse JSON body (limit to 4KB to prevent abuse).
+	r.Body = http.MaxBytesReader(w, r.Body, 4096)
 	var req FaucetRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -330,7 +322,8 @@ func (f *Faucet) handleFaucet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Validate address.
+	// 3. Trim and validate address.
+	req.Address = strings.TrimSpace(req.Address)
 	if !isValidAddress(req.Address) {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(FaucetResponse{
@@ -340,7 +333,11 @@ func (f *Faucet) handleFaucet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Soft cap check (read without mutex — conservative).
+	// 4. Acquire mutex — cap check, rate limit, send, and persist are all atomic.
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	// 5. Cap check (inside mutex — no data race).
 	if f.state.TotalDistributed >= f.cfg.MaxTotal {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		_ = json.NewEncoder(w).Encode(FaucetResponse{
@@ -350,11 +347,7 @@ func (f *Faucet) handleFaucet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5. Acquire mutex.
-	f.mu.Lock()
-	defer f.mu.Unlock()
-
-	// 6. Rate-limit check INSIDE mutex (TOCTOU prevention).
+	// 6. Rate-limit check (inside mutex — TOCTOU prevention).
 	if lastStr, ok := f.state.Requests[req.Address]; ok {
 		lastTime, err := time.Parse(time.RFC3339, lastStr)
 		if err == nil {
@@ -362,10 +355,10 @@ func (f *Faucet) handleFaucet(w http.ResponseWriter, r *http.Request) {
 			retryAfter := lastTime.Add(cooldown)
 			if time.Now().Before(retryAfter) {
 				w.WriteHeader(http.StatusTooManyRequests)
-				_ = json.NewEncoder(w).Encode(map[string]interface{}{
-					"status":      "error",
-					"error":       "rate limited",
-					"retry_after": retryAfter.UTC().Format(time.RFC3339),
+				_ = json.NewEncoder(w).Encode(FaucetResponse{
+					Status:     "error",
+					Error:      "rate limited",
+					RetryAfter: retryAfter.UTC().Format(time.RFC3339),
 				})
 				return
 			}
@@ -393,8 +386,9 @@ func (f *Faucet) handleFaucet(w http.ResponseWriter, r *http.Request) {
 		log.Printf("WARNING: failed to persist state: %v", err)
 	}
 
-	// 10 & 11. Return success (mutex released by defer).
+	// 10 & 11. Log and return success (mutex released by defer).
 	amountStr := fmt.Sprintf("%duzrn", f.cfg.Amount)
+	log.Printf("Sent %s to %s (tx=%s, total=%d uzrn)", amountStr, req.Address, txHash, f.state.TotalDistributed)
 	_ = json.NewEncoder(w).Encode(FaucetResponse{
 		Status: "ok",
 		TxHash: txHash,
