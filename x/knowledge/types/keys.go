@@ -114,6 +114,10 @@ var (
 	ValidatorIndependencePrefix  = []byte{0x42} // 0x42 | validatorAddr → ValidatorIndependence (JSON)
 	ConformityStreakPrefix       = []byte{0x43} // 0x43 | domain → ConformityStreak (JSON)
 	DomainEpochRoundIndexPrefix = []byte{0x44} // 0x44 | domain / epoch_bytes / roundID → 0x01
+
+	// ─── Retroactive vindication (R28-1) ────────────────────────────────
+	VindicationPendingPrefix = []byte{0x50} // 0x50 | factID → []VindicationEntry (JSON)
+	VindicationRecordPrefix  = []byte{0x51} // 0x51 | factID / verifier → VindicationRecord (JSON)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -320,4 +324,26 @@ func DomainEpochRoundPrefix(domain string, epoch uint64) []byte {
 	binary.BigEndian.PutUint64(epochBz, epoch)
 	key = append(key, epochBz...)
 	return append(key, '/')
+}
+
+// VindicationPendingKey returns the store key for pending vindications for a fact.
+func VindicationPendingKey(factId string) []byte {
+	return append(append([]byte{}, VindicationPendingPrefix...), []byte(factId)...)
+}
+
+// VindicationRecordKey returns the store key for a vindication record.
+func VindicationRecordKey(factId, verifier string) []byte {
+	key := append([]byte{}, VindicationRecordPrefix...)
+	key = append(key, []byte(factId)...)
+	key = append(key, '/')
+	key = append(key, []byte(verifier)...)
+	return key
+}
+
+// VindicationRecordPrefixForFact returns the prefix for iterating all records for a fact.
+func VindicationRecordPrefixForFact(factId string) []byte {
+	key := append([]byte{}, VindicationRecordPrefix...)
+	key = append(key, []byte(factId)...)
+	key = append(key, '/')
+	return key
 }
