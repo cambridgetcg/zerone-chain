@@ -338,8 +338,25 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		}
 	}
 
-	// Create vesting schedule via vesting_rewards keeper
-	if k.vestingRewardsKeeper != nil {
+	// Route submitter reward: through partnership split or direct vesting (R26-4)
+	if claim.PartnershipId != "" && k.partnershipKeeper != nil {
+		stakeAmt, ok := new(big.Int).SetString(claim.Stake, 10)
+		if ok && stakeAmt.Sign() > 0 {
+			rewardCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(stakeAmt)))
+			err := k.partnershipKeeper.DistributeReward(ctx, claim.PartnershipId, rewardCoins, "knowledge_verification")
+			if err != nil {
+				// Fallback to direct vesting on partnership error
+				k.Logger(ctx).Error("partnership reward routing failed, falling back to vesting",
+					"partnership_id", claim.PartnershipId, "err", err)
+				if k.vestingRewardsKeeper != nil {
+					_ = k.vestingRewardsKeeper.CreateVestingScheduleFromKnowledge(
+						ctx, claim.Id, factID, claim.Submitter, claim.Stake, claim.Category,
+					)
+				}
+			}
+		}
+	} else if k.vestingRewardsKeeper != nil {
+		// Direct vesting (no partnership — existing behavior)
 		_ = k.vestingRewardsKeeper.CreateVestingScheduleFromKnowledge(
 			ctx, claim.Id, factID, claim.Submitter, claim.Stake, claim.Category,
 		)

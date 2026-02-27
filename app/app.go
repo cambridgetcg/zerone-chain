@@ -1060,6 +1060,11 @@ func NewZeroneApp(
 	// Break home↔partnerships circular dependency via setter.
 	app.PartnershipsKeeper.SetHomeKeeper(app.HomeKeeper)
 
+	// Wire partnership reward routing into knowledge verification flow (R26-4).
+	app.KnowledgeKeeper.SetPartnershipKeeper(
+		zeronepartnershipskeeper.NewKnowledgePartnershipAdapter(app.PartnershipsKeeper),
+	)
+
 	// ---- Toolbox keeper (R8-1) ----
 	toolboxRFDAdapter := vestingrewardskeeper.NewResearchFundDepositorAdapter(app.VestingRewardsKeeper)
 	app.ToolboxKeeper = zeronetoolboxkeeper.NewKeeper(

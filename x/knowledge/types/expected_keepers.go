@@ -82,3 +82,15 @@ type AutopoiesisKeeper interface {
 	// GetMultiplier returns the autopoiesis reward multiplier for a path (BPS, 1,000,000 = 1.0x).
 	GetMultiplier(ctx context.Context, path string) (uint64, error)
 }
+
+// PartnershipKeeper defines the expected partnership keeper interface.
+type PartnershipKeeper interface {
+	// IsActive checks if a partnership exists and is active (not frozen, dissolved, etc).
+	IsActive(ctx context.Context, partnershipId string) (bool, error)
+	// IsParticipant checks if an address is a participant in a partnership.
+	IsParticipant(ctx context.Context, partnershipId string, address string) (bool, error)
+	// IsSuspended checks if a partnership is suspended (coercion freeze).
+	IsSuspended(ctx context.Context, partnershipId string) (bool, error)
+	// DistributeReward distributes a reward through the partnership split.
+	DistributeReward(ctx context.Context, partnershipId string, amount sdk.Coins, source string) error
+}

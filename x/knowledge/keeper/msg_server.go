@@ -49,6 +49,31 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		}
 	}
 
+	// Validate partnership_id if provided (R26-4)
+	if msg.PartnershipId != "" {
+		if m.keeper.partnershipKeeper == nil {
+			return nil, types.ErrInvalidPartnership.Wrap("partnership module not available")
+		}
+		// Check partnership exists and is active
+		active, err := m.keeper.partnershipKeeper.IsActive(ctx, msg.PartnershipId)
+		if err != nil || !active {
+			return nil, types.ErrInvalidPartnership.Wrapf(
+				"partnership %s is not active", msg.PartnershipId)
+		}
+		// Check submitter is a participant
+		isParticipant, err := m.keeper.partnershipKeeper.IsParticipant(ctx, msg.PartnershipId, msg.Submitter)
+		if err != nil || !isParticipant {
+			return nil, types.ErrInvalidPartnership.Wrapf(
+				"%s is not a participant in partnership %s", msg.Submitter, msg.PartnershipId)
+		}
+		// Reject claims through frozen/suspended partnerships
+		suspended, err := m.keeper.partnershipKeeper.IsSuspended(ctx, msg.PartnershipId)
+		if err == nil && suspended {
+			return nil, types.ErrPartnershipFrozen.Wrapf(
+				"partnership %s is frozen due to coercion signal", msg.PartnershipId)
+		}
+	}
+
 	// Validate review fee
 	stakeAmt, ok := new(big.Int).SetString(msg.Stake, 10)
 	if !ok || stakeAmt.Sign() <= 0 {

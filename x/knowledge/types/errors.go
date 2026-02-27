@@ -76,4 +76,8 @@ var (
 
 	// ─── Domain qualification (70) ────────────────────────────────────────
 	ErrUnqualifiedVerifier = errors.Register(ModuleName, 70, "verifier not qualified for domain")
+
+	// ─── Partnership validation (80–81) ──────────────────────────────────
+	ErrInvalidPartnership  = errors.Register(ModuleName, 80, "invalid partnership")
+	ErrPartnershipFrozen   = errors.Register(ModuleName, 81, "partnership is frozen")
 )

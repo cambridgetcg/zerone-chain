@@ -26,6 +26,7 @@ type Keeper struct {
 	vestingRewardsKeeper      types.VestingRewardsKeeper
 	domainQualificationKeeper types.DomainQualificationKeeper // nil until R6-5
 	autopoiesisKeeper         types.AutopoiesisKeeper         // nil until R7-1
+	partnershipKeeper         types.PartnershipKeeper         // nil until R26-4
 }
 
 // NewKeeper creates a new knowledge Keeper.
@@ -73,6 +74,11 @@ func (k *Keeper) SetDomainQualificationKeeper(dk types.DomainQualificationKeeper
 // SetAutopoiesisKeeper sets the autopoiesis keeper (post-init, R7-1).
 func (k *Keeper) SetAutopoiesisKeeper(ak types.AutopoiesisKeeper) {
 	k.autopoiesisKeeper = ak
+}
+
+// SetPartnershipKeeper sets the partnership keeper (post-init, R26-4).
+func (k *Keeper) SetPartnershipKeeper(pk types.PartnershipKeeper) {
+	k.partnershipKeeper = pk
 }
 
 // Logger returns a module-scoped logger.
