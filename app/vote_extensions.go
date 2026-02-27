@@ -24,6 +24,10 @@ type VoteExtensionConfig struct {
 
 	// LocalStore holds commitment salts between commit and reveal phases.
 	LocalStore *LocalCommitmentStore
+
+	// OracleClient is an optional client for querying the oracle sidecar.
+	// If nil, the default accept verdict is used.
+	OracleClient OracleClient
 }
 
 // ExtendVoteHandler creates the ABCI++ ExtendVote handler that attaches
@@ -166,10 +170,22 @@ func (app *ZeroneApp) handleCommitPhase(
 		}, nil
 	}
 
-	// Stub evaluation: accept with 600K confidence.
-	// Full deterministic evaluation engine (evaluation.EvaluateClaim) will be wired later.
-	verdict := "accept"
-	confidence := uint64(600_000)
+	// Evaluate claim via oracle sidecar (if configured).
+	// Falls back to accept@600K if oracle is nil, unreachable, or returns error.
+	var verdict string
+	var confidence uint64
+	claim, found := app.KnowledgeKeeper.GetClaim(ctx, round.ClaimId)
+	if !found || claim == nil {
+		verdict = "accept"
+		confidence = 600_000
+	} else {
+		verdict, confidence = EvaluateWithOracle(
+			config.OracleClient,
+			claim.FactContent,
+			claim.Domain,
+			claim.ClaimType.String(),
+		)
+	}
 
 	// Generate random salt
 	saltBytes := make([]byte, 16)
