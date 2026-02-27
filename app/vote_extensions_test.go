@@ -2,6 +2,7 @@ package app_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -488,4 +489,58 @@ func TestLocalCommitmentStore_ThreadSafety(t *testing.T) {
 
 	wg.Wait()
 	require.GreaterOrEqual(t, store.Count(), 0)
+}
+
+// ---------- Oracle integration tests ----------
+
+// mockOracleClient implements OracleClient for testing.
+type mockOracleClient struct {
+	verdict    string
+	confidence float64
+	err        error
+}
+
+func (m *mockOracleClient) Evaluate(claim, domain, claimType string) (*zeroneapp.OracleEvaluation, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+	return &zeroneapp.OracleEvaluation{
+		Verdict:    m.verdict,
+		Confidence: m.confidence,
+		Reasoning:  "mock",
+	}, nil
+}
+
+func TestEvaluateWithOracle_Accept(t *testing.T) {
+	client := &mockOracleClient{verdict: "accept", confidence: 0.9}
+	verdict, confidence := zeroneapp.EvaluateWithOracle(client, "claim", "domain", "type")
+	require.Equal(t, "accept", verdict)
+	require.Equal(t, uint64(900_000), confidence)
+}
+
+func TestEvaluateWithOracle_Reject(t *testing.T) {
+	client := &mockOracleClient{verdict: "reject", confidence: 0.85}
+	verdict, confidence := zeroneapp.EvaluateWithOracle(client, "claim", "domain", "type")
+	require.Equal(t, "reject", verdict)
+	require.Equal(t, uint64(850_000), confidence)
+}
+
+func TestEvaluateWithOracle_Uncertain(t *testing.T) {
+	client := &mockOracleClient{verdict: "uncertain", confidence: 0.5}
+	verdict, confidence := zeroneapp.EvaluateWithOracle(client, "claim", "domain", "type")
+	require.Equal(t, "accept", verdict, "uncertain should default to accept")
+	require.Equal(t, uint64(500_000), confidence)
+}
+
+func TestEvaluateWithOracle_Error(t *testing.T) {
+	client := &mockOracleClient{err: fmt.Errorf("connection refused")}
+	verdict, confidence := zeroneapp.EvaluateWithOracle(client, "claim", "domain", "type")
+	require.Equal(t, "accept", verdict, "error should default to accept")
+	require.Equal(t, uint64(600_000), confidence, "error should use default confidence")
+}
+
+func TestEvaluateWithOracle_NilClientDefault(t *testing.T) {
+	verdict, confidence := zeroneapp.EvaluateWithOracle(nil, "claim", "domain", "type")
+	require.Equal(t, "accept", verdict)
+	require.Equal(t, uint64(600_000), confidence)
 }
