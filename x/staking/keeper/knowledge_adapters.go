@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
+	sdkmath "cosmossdk.io/math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	knowledgetypes "github.com/zerone-chain/zerone/x/knowledge/types"
@@ -96,6 +98,31 @@ func (a *StakingKeeperAdapter) SlashValidator(ctx context.Context, addr string, 
 
 	a.k.SlashValidator(sdkCtx, addr, amount, "knowledge_verification")
 	return nil
+}
+
+// SlashValidatorToModule slashes a validator and routes slashed tokens to a specified module account.
+// Returns the actual slashed amount (after escalation and SSI adjustments).
+func (a *StakingKeeperAdapter) SlashValidatorToModule(ctx context.Context, addr string, slashBps uint64, destModule string) (sdkmath.Int, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	val, found := a.k.GetValidator(sdkCtx, addr)
+	if !found {
+		return sdkmath.ZeroInt(), fmt.Errorf("validator %s not found", addr)
+	}
+
+	totalStake, _ := new(big.Int).SetString(val.TotalStake, 10)
+	if totalStake == nil || totalStake.Sign() <= 0 {
+		return sdkmath.ZeroInt(), nil
+	}
+
+	amount := new(big.Int).Mul(totalStake, new(big.Int).SetUint64(slashBps))
+	amount.Div(amount, new(big.Int).SetUint64(1_000_000))
+
+	if amount.Sign() <= 0 {
+		return sdkmath.ZeroInt(), nil
+	}
+
+	slashed := a.k.SlashValidatorToModule(sdkCtx, addr, amount, destModule, "knowledge_verification")
+	return sdkmath.NewIntFromBigInt(slashed), nil
 }
 
 // validatorToInfo converts a staking Validator to a knowledge ValidatorInfo.

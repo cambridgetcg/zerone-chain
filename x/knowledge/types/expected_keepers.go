@@ -3,6 +3,8 @@ package types
 import (
 	"context"
 
+	sdkmath "cosmossdk.io/math"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
@@ -33,6 +35,9 @@ type StakingKeeper interface {
 	GetTotalStake(ctx context.Context) (uint64, error)
 	// SlashValidator slashes a validator by the given BPS amount.
 	SlashValidator(ctx context.Context, addr string, slashBps uint64) error
+	// SlashValidatorToModule slashes a validator and routes tokens to a specific module account.
+	// Returns the actual slashed amount.
+	SlashValidatorToModule(ctx context.Context, addr string, slashBps uint64, destModule string) (sdkmath.Int, error)
 }
 
 // OntologyKeeper defines the expected ontology keeper interface.

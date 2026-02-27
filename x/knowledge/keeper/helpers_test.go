@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"cosmossdk.io/log"
+	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store"
 	storemetrics "cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
@@ -150,6 +151,16 @@ func (sk *trackingStakingKeeper) GetTotalStake(_ context.Context) (uint64, error
 func (sk *trackingStakingKeeper) SlashValidator(_ context.Context, addr string, slashBps uint64) error {
 	sk.slashes = append(sk.slashes, slashRecord{Validator: addr, SlashBps: slashBps})
 	return nil
+}
+
+func (sk *trackingStakingKeeper) SlashValidatorToModule(_ context.Context, addr string, slashBps uint64, _ string) (sdkmath.Int, error) {
+	sk.slashes = append(sk.slashes, slashRecord{Validator: addr, SlashBps: slashBps})
+	stake := uint64(100_000)
+	if v, ok := sk.validators[addr]; ok {
+		stake = v.Stake
+	}
+	slashAmt := stake * slashBps / 1_000_000
+	return sdkmath.NewIntFromUint64(slashAmt), nil
 }
 
 func (sk *trackingStakingKeeper) addValidator(addr string, stake uint64, tier string) {
