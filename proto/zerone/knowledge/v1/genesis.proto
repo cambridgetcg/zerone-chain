@@ -149,6 +149,12 @@ message Params {
   // ─── Consensus diversity (R28-2) ──────────────────────────────────
   uint64 diversity_conformity_alert_threshold = 101; // BPS entropy below which a domain is "conforming" (default: 50,000 = 5%)
   uint64 diversity_conformity_alert_epochs    = 102; // Consecutive low-diversity epochs before alert (default: 3)
+
+  // ─── Retroactive vindication (R28-1) ──────────────────────────────
+  bool   vindication_refund_enabled  = 103; // Master switch for vindication escrow (default: true)
+  uint64 vindication_bonus_bps       = 104; // % of majority slash pool as bonus to vindicated minority (default: 2000 = 20%)
+  uint64 vindication_slash_bps       = 105; // Slash rate for majority on disproven fact (default: 500 = 5%)
+  uint64 vindication_window_blocks   = 106; // How long escrowed entries are eligible (default: 100000)
 }
 
 // GenesisState is the genesis state of the knowledge module.

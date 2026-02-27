@@ -147,6 +147,12 @@ func DefaultParams() Params {
 		// ─── Consensus diversity (R28-2) ─────────────────────────────────
 		DiversityConformityAlertThreshold: 50_000, // 5% entropy — catches pure unanimity on small validator sets
 		DiversityConformityAlertEpochs:    3,      // 3 consecutive low-diversity epochs before alert
+
+		// ─── Retroactive vindication (R28-1) ─────────────────────────────
+		VindicationRefundEnabled: true,
+		VindicationBonusBps:      2_000,    // 20% of majority slash pool as bonus
+		VindicationSlashBps:      500,      // 5% slash rate for majority on disproven fact
+		VindicationWindowBlocks:  100_000,  // ~3 days at 2.5s blocks
 	}
 }
 
@@ -456,6 +462,17 @@ func (p *Params) Validate() error {
 	}
 	if p.DiversityConformityAlertEpochs == 0 {
 		return fmt.Errorf("diversity_conformity_alert_epochs must be > 0")
+	}
+
+	// ─── Vindication params ──────────────────────────────────────────
+	if p.VindicationBonusBps > 10_000 {
+		return fmt.Errorf("vindication_bonus_bps must be <= 10,000 (100%%)")
+	}
+	if p.VindicationSlashBps > 1_000_000 {
+		return fmt.Errorf("vindication_slash_bps must be <= 1,000,000")
+	}
+	if p.VindicationRefundEnabled && p.VindicationWindowBlocks == 0 {
+		return fmt.Errorf("vindication_window_blocks must be > 0 when vindication is enabled")
 	}
 
 	return nil

@@ -147,6 +147,11 @@ type Params struct {
 	// ─── Consensus diversity (R28-2) ──────────────────────────────────
 	DiversityConformityAlertThreshold uint64 `protobuf:"varint,101,opt,name=diversity_conformity_alert_threshold,json=diversityConformityAlertThreshold,proto3" json:"diversity_conformity_alert_threshold,omitempty"` // BPS entropy below which a domain is "conforming" (default: 50,000 = 5%)
 	DiversityConformityAlertEpochs    uint64 `protobuf:"varint,102,opt,name=diversity_conformity_alert_epochs,json=diversityConformityAlertEpochs,proto3" json:"diversity_conformity_alert_epochs,omitempty"`          // Consecutive low-diversity epochs before alert (default: 3)
+	// ─── Retroactive vindication (R28-1) ──────────────────────────────────
+	VindicationRefundEnabled bool   `protobuf:"varint,103,opt,name=vindication_refund_enabled,json=vindicationRefundEnabled,proto3" json:"vindication_refund_enabled,omitempty"`
+	VindicationBonusBps      uint64 `protobuf:"varint,104,opt,name=vindication_bonus_bps,json=vindicationBonusBps,proto3" json:"vindication_bonus_bps,omitempty"`
+	VindicationSlashBps      uint64 `protobuf:"varint,105,opt,name=vindication_slash_bps,json=vindicationSlashBps,proto3" json:"vindication_slash_bps,omitempty"`
+	VindicationWindowBlocks  uint64 `protobuf:"varint,106,opt,name=vindication_window_blocks,json=vindicationWindowBlocks,proto3" json:"vindication_window_blocks,omitempty"`
 	unknownFields                     protoimpl.UnknownFields
 	sizeCache                         protoimpl.SizeCache
 }
@@ -891,6 +896,34 @@ func (x *Params) GetDiversityConformityAlertThreshold() uint64 {
 func (x *Params) GetDiversityConformityAlertEpochs() uint64 {
 	if x != nil {
 		return x.DiversityConformityAlertEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetVindicationRefundEnabled() bool {
+	if x != nil {
+		return x.VindicationRefundEnabled
+	}
+	return false
+}
+
+func (x *Params) GetVindicationBonusBps() uint64 {
+	if x != nil {
+		return x.VindicationBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetVindicationSlashBps() uint64 {
+	if x != nil {
+		return x.VindicationSlashBps
+	}
+	return 0
+}
+
+func (x *Params) GetVindicationWindowBlocks() uint64 {
+	if x != nil {
+		return x.VindicationWindowBlocks
 	}
 	return 0
 }
