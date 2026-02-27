@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
@@ -108,4 +110,50 @@ func (k Keeper) GetVindicationRecordsForFact(ctx context.Context, factId string)
 		records = append(records, record)
 	}
 	return records
+}
+
+// ─── Challenge Disproven Transition ──────────────────────────────────────────
+
+// handleChallengeDisproven transitions the challenged fact to DISPROVEN
+// when a challenge claim is accepted. Triggers vindication for the original
+// fact's minority voters who were slashed during its verification round.
+func (k Keeper) handleChallengeDisproven(ctx context.Context, challengeClaim *types.Claim, newFactId string) {
+	if challengeClaim.ProvisionalFactId == "" {
+		return
+	}
+
+	originalFact, found := k.GetFact(ctx, challengeClaim.ProvisionalFactId)
+	if !found {
+		return
+	}
+
+	// Contradiction check: same domain + explicit challenge link
+	if originalFact.Domain != challengeClaim.Domain {
+		return
+	}
+
+	// Transition to DISPROVEN
+	originalFact.Status = types.FactStatus_FACT_STATUS_DISPROVEN
+	_ = k.SetFact(ctx, originalFact)
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.fact_disproven",
+		sdk.NewAttribute("fact_id", originalFact.Id),
+		sdk.NewAttribute("disproven_by", newFactId),
+		sdk.NewAttribute("challenge_claim_id", challengeClaim.Id),
+	))
+
+	// Trigger vindication for the ORIGINAL fact's minority voters
+	k.ExecuteVindication(ctx, originalFact.Id, newFactId)
+}
+
+// ─── Execute Vindication ─────────────────────────────────────────────────────
+
+// ExecuteVindication refunds minority voters from escrow, slashes the majority,
+// distributes a bonus from the majority slash pool, and records immutable
+// vindication records. Called when a fact is disproven via challenge.
+// Stub: full implementation in next commit (Task 10).
+func (k Keeper) ExecuteVindication(ctx context.Context, factId, disprovenBy string) {
+	// TODO(R28-1): implement full vindication execution logic
 }

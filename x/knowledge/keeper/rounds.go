@@ -145,6 +145,12 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 		_ = k.SetVindicationPending(ctx, factId, vindicationEntries)
 	}
 
+	// If this was a challenge claim that was ACCEPTED, the original fact is disproven.
+	// This triggers vindication for the original fact's minority voters.
+	if result.Verdict == types.Verdict_VERDICT_ACCEPT && claim.ProvisionalFactId != "" {
+		k.handleChallengeDisproven(ctx, claim, factId)
+	}
+
 	// Record verification outcomes for domain qualification tracking (R26-3).
 	// Rewarded verifiers voted correctly; slashed verifiers voted incorrectly.
 	if k.domainQualificationKeeper != nil && claim.Domain != "" &&
