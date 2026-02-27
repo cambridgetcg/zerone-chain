@@ -122,7 +122,16 @@ func (am AppModule) BeginBlock(goCtx context.Context) error {
 	return nil
 }
 
-// EndBlock — no-op.
-func (am AppModule) EndBlock(_ context.Context) error {
+// EndBlock auto-resolves research and auto-fulfills bounties.
+func (am AppModule) EndBlock(goCtx context.Context) error {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := am.keeper.AutoResolveResearch(ctx); err != nil {
+		ctx.Logger().Error("research auto-resolve failed", "error", err)
+	}
+	if err := am.keeper.AutoFulfillBounties(ctx); err != nil {
+		ctx.Logger().Error("bounty auto-fulfill failed", "error", err)
+	}
+
 	return nil
 }
