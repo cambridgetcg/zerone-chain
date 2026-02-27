@@ -96,7 +96,16 @@ func (k Keeper) AutoResolveResearch(ctx sdk.Context) error {
 
 	researches := k.GetResearchesByStatus(ctx, types.ResearchStatusUnderReview)
 	for _, research := range researches {
-		if currentBlock-research.UpdatedAt < params.ReviewPeriodBlocks {
+		// Use earliest review time (when review period started), not UpdatedAt
+		// which resets on every review submission
+		reviews := k.GetReviewsForResearch(ctx, research.Id)
+		var firstReviewAt uint64
+		for _, r := range reviews {
+			if firstReviewAt == 0 || r.ReviewedAt < firstReviewAt {
+				firstReviewAt = r.ReviewedAt
+			}
+		}
+		if firstReviewAt == 0 || currentBlock-firstReviewAt < params.ReviewPeriodBlocks {
 			continue
 		}
 		if research.ReviewCount < params.MinReviewerCount {
