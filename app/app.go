@@ -308,7 +308,8 @@ var (
 		vestingrewardstypes.DevelopmentFundModuleName: nil,                           // development_fund: receive-only
 		zeroneontologytypes.ModuleName:             nil,                              // ontology: receive proposal stake
 		zeroneknowledgetypes.ModuleName:            {authtypes.Burner},               // knowledge: burn slashed claim stakes
-		zeroneknowledgetypes.BootstrapFundModuleName: {authtypes.Minter},              // knowledge_bootstrap_fund: genesis mint
+		zeroneknowledgetypes.BootstrapFundModuleName:    {authtypes.Minter},              // knowledge_bootstrap_fund: genesis mint
+		zeroneknowledgetypes.VindicationEscrowModuleName: nil,                           // vindication_escrow: holds minority slashes until vindication or expiry
 		zeronetokenstypes.ModuleName:               {authtypes.Minter, authtypes.Burner}, // tokens: mint/burn for wrap/unwrap + emissions
 		zeronebillingtypes.ModuleName:              {authtypes.Burner},                        // billing: revenue split
 		zeronelptypes.ModuleName:                   {authtypes.Minter, authtypes.Burner}, // liquiditypool: mint/burn LP tokens
