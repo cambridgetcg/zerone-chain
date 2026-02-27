@@ -27,8 +27,9 @@ type VerifierReward struct {
 
 // VerifierSlash records a slash for an incorrect or absent verifier.
 type VerifierSlash struct {
-	Verifier string
-	SlashBps uint64
+	Verifier            string
+	SlashBps            uint64
+	VindicationEligible bool // true for wrong-vote slashes, false for missed-reveal/equivocation
 }
 
 // AggregateVerificationResult performs stake-weighted vote aggregation.
@@ -200,10 +201,11 @@ func (k Keeper) calculateRewardsAndSlashes(ctx context.Context, round *types.Ver
 				}
 			}
 		} else {
-			// Incorrect vote — slash
+			// Incorrect vote — slash (vindication-eligible: may be refunded if fact later disproven)
 			result.Slashes = append(result.Slashes, VerifierSlash{
-				Verifier: commit.Verifier,
-				SlashBps: params.WrongVerificationSlashBps,
+				Verifier:            commit.Verifier,
+				SlashBps:            params.WrongVerificationSlashBps,
+				VindicationEligible: true,
 			})
 		}
 	}
