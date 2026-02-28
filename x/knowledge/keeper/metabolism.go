@@ -202,6 +202,57 @@ func (k Keeper) ResetEpochCitationCounters(ctx context.Context) {
 	}
 }
 
+// ApplyPatronageEnergyBoost gives an immediate energy boost when patronage is set.
+// Boost is proportional to patronage duration: MetabolismEnergyPerPatronage * epochs / 10.
+func (k Keeper) ApplyPatronageEnergyBoost(ctx context.Context, fact *types.Fact, durationBlocks uint64) {
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return
+	}
+
+	durationEpochs := uint64(1)
+	if params.FitnessEpochBlocks > 0 {
+		durationEpochs = durationBlocks / params.FitnessEpochBlocks
+		if durationEpochs == 0 {
+			durationEpochs = 1
+		}
+	}
+
+	boost := params.MetabolismEnergyPerPatronage * durationEpochs / 10
+	if boost == 0 {
+		boost = params.MetabolismEnergyPerPatronage // minimum one epoch worth
+	}
+
+	oldStatus := fact.Status
+	fact.Energy += boost
+	if fact.Energy > params.MetabolismEnergyCap {
+		fact.Energy = params.MetabolismEnergyCap
+	}
+
+	// Recover from AT_RISK if energy is above active threshold
+	if (fact.Status == types.FactStatus_FACT_STATUS_AT_RISK || fact.Status == types.FactStatus_FACT_STATUS_EXPIRED) &&
+		fact.Energy >= params.MetabolismActiveThreshold {
+		fact.AtRiskSinceEpoch = 0
+		fact.Status = types.FactStatus_FACT_STATUS_ACTIVE
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	fact.EnergyLastUpdated = uint64(sdkCtx.BlockHeight())
+	_ = k.SetFact(ctx, fact)
+
+	if oldStatus != fact.Status {
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.fact_status_changed",
+			sdk.NewAttribute("fact_id", fact.Id),
+			sdk.NewAttribute("old_status", oldStatus.String()),
+			sdk.NewAttribute("new_status", fact.Status.String()),
+			sdk.NewAttribute("energy", fmt.Sprintf("%d", fact.Energy)),
+			sdk.NewAttribute("reason", "patronage_recovery"),
+			sdk.NewAttribute("epoch", "0"),
+		))
+	}
+}
+
 // emitMetabolismStatusEvent emits a unified fact_status_changed event.
 func (k Keeper) emitMetabolismStatusEvent(ctx context.Context, fact *types.Fact, oldStatus types.FactStatus, epoch uint64) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)

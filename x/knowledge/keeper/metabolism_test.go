@@ -409,6 +409,74 @@ func TestMetabolism_UnifiedStatusEvent(t *testing.T) {
 	require.True(t, found, "should emit fact_status_changed event")
 }
 
+func TestPatronage_ImmediateEnergyBoost(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ctx = ctx.WithBlockHeader(cmtproto.Header{Height: 500})
+
+	params, _ := k.GetParams(ctx)
+
+	// Fact with low energy — no patronage yet
+	fact := makeEnergyFact("fact-ipe", "Patronage immediate test!!", "physics", 200_000, types.FactStatus_FACT_STATUS_VERIFIED)
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	// Duration: 10,000 blocks. FitnessEpochBlocks from params. ~10 epochs.
+	// Boost = MetabolismEnergyPerPatronage * durationEpochs / 10
+	durationBlocks := uint64(10_000)
+	durationEpochs := durationBlocks / params.FitnessEpochBlocks
+	if durationEpochs == 0 {
+		durationEpochs = 1
+	}
+	expectedBoost := params.MetabolismEnergyPerPatronage * durationEpochs / 10
+	if expectedBoost == 0 {
+		expectedBoost = params.MetabolismEnergyPerPatronage
+	}
+
+	// Apply patronage boost
+	fact2, _ := k.GetFact(ctx, "fact-ipe")
+	k.ApplyPatronageEnergyBoost(ctx, fact2, durationBlocks)
+
+	updated, found := k.GetFact(ctx, "fact-ipe")
+	require.True(t, found)
+	require.Equal(t, 200_000+expectedBoost, updated.Energy)
+}
+
+func TestPatronage_AtRiskRecovery(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ctx = ctx.WithBlockHeader(cmtproto.Header{Height: 500})
+
+	// AT_RISK fact — patronage should push above threshold and recover
+	fact := makeEnergyFact("fact-prec", "Patronage recovery test!!!", "physics", 250_000, types.FactStatus_FACT_STATUS_AT_RISK)
+	fact.AtRiskSinceEpoch = 1
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	// Long patronage to ensure recovery above 300K threshold
+	// Need boost >= 50K. boost = 20,000 * epochs / 10. epochs = 500,000 / 10,000 = 50. boost = 20,000 * 50 / 10 = 100,000.
+	fact2, _ := k.GetFact(ctx, "fact-prec")
+	k.ApplyPatronageEnergyBoost(ctx, fact2, 500_000)
+
+	updated, found := k.GetFact(ctx, "fact-prec")
+	require.True(t, found)
+	require.Equal(t, types.FactStatus_FACT_STATUS_ACTIVE, updated.Status)
+	require.Equal(t, uint64(0), updated.AtRiskSinceEpoch)
+	require.Greater(t, updated.Energy, uint64(300_000))
+}
+
+func TestPatronage_EnergyCapped(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ctx = ctx.WithBlockHeader(cmtproto.Header{Height: 500})
+
+	// Fact near energy cap — boost should not exceed cap
+	fact := makeEnergyFact("fact-pcap", "Patronage cap test fact!!", "physics", 990_000, types.FactStatus_FACT_STATUS_VERIFIED)
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	fact2, _ := k.GetFact(ctx, "fact-pcap")
+	k.ApplyPatronageEnergyBoost(ctx, fact2, 100_000)
+
+	updated, found := k.GetFact(ctx, "fact-pcap")
+	require.True(t, found)
+	require.Equal(t, uint64(1_000_000), updated.Energy, "energy should be capped at 1M")
+}
+
 func TestMetabolism_RecoveryEvent(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 

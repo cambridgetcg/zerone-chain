@@ -871,7 +871,9 @@ func (m *msgServer) PatronizeFact(ctx context.Context, msg *types.MsgPatronizeFa
 	height := uint64(sdkCtx.BlockHeight())
 	fact.PatronageAmount = msg.Amount
 	fact.PatronageExpiryBlock = height + msg.DurationBlocks
-	_ = m.keeper.SetFact(ctx, fact)
+
+	// Apply immediate energy boost (saves fact internally)
+	m.keeper.ApplyPatronageEnergyBoost(ctx, fact, msg.DurationBlocks)
 
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.knowledge.patronize_fact",
