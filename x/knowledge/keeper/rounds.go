@@ -263,6 +263,16 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		EnergyLastUpdated: height,
 	}
 
+
+	// Apply role bonus — claim type × account type (R28-5)
+	accountType := k.getAccountType(ctx, claim.Submitter)
+	fact.Confidence = ApplyRoleBonusToConfidence(fact.Confidence, claim.ClaimType, accountType, params)
+
+	// Apply dual validation bonus for partnership claims (R28-5)
+	if claim.PartnershipId != "" {
+		fact.Confidence = ApplyDualValidationBonus(fact.Confidence, params)
+	}
+
 	// Apply confidence ceiling (stratum + global MaxConfidence hard cap)
 	fact.Confidence = k.ClampConfidence(ctx, fact.Confidence, claim.Domain)
 	if k.ontologyKeeper != nil && claim.Domain != "" {

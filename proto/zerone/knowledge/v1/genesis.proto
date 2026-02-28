@@ -160,6 +160,13 @@ message Params {
   uint64 metabolism_active_threshold     = 107; // Energy below which fact → AT_RISK (default: 300,000 = 30%)
   uint64 metabolism_extinction_threshold = 108; // Energy below which (for N epochs) → EXTINCT (default: 10,000 = 1%)
   uint64 max_confidence                  = 109; // Hard cap on confidence (default: 880,000 = 88%)
+
+  // ─── Role bonuses (R28-5) ──────────────────────────────────────────────
+  uint64 human_empirical_bonus_bps     = 110; // +15% confidence for human OBSERVATION claims (BPS)
+  uint64 agent_computational_bonus_bps = 111; // +15% confidence for agent COMPUTATIONAL claims (BPS)
+  uint64 agent_verification_bonus_bps  = 112; // +20% vote weight for agent verifiers (BPS)
+  uint64 human_patronage_bonus_bps     = 113; // +10% energy boost for human patrons (BPS)
+  uint64 dual_validation_bonus_bps     = 114; // +25% confidence for partnership claims (BPS)
 }
 
 // GenesisState is the genesis state of the knowledge module.

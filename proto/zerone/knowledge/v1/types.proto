@@ -66,6 +66,7 @@ enum ClaimType {
   CLAIM_TYPE_CONSTRAINT  = 4;  // "X must/cannot Y" — rule or boundary
   CLAIM_TYPE_NEGATION    = 5;  // "X is NOT true" — explicit falsity marker
   CLAIM_TYPE_OBSERVATION = 6;  // "X was observed at time/place" — empirical data point
+  CLAIM_TYPE_COMPUTATIONAL = 7;  // Derived from computation/inference — agent specialty
 }
 
 // RelationType defines how one fact relates to another.
