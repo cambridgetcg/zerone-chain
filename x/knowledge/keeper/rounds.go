@@ -167,6 +167,28 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 		}
 	}
 
+	// Feed verification history to capture defense (R28-8).
+	if k.captureDefenseKeeper != nil {
+		verdictVote := verdictToVoteString(result.Verdict)
+		roundValidators := make([]string, 0, len(round.Reveals))
+		roundVerdicts := make([]bool, 0, len(round.Reveals))
+		for _, reveal := range round.Reveals {
+			roundValidators = append(roundValidators, reveal.Verifier)
+			roundVerdicts = append(roundVerdicts, reveal.Vote == verdictVote)
+		}
+		k.captureDefenseKeeper.RecordVerificationHistory(ctx, claim.Domain, round.Id, roundValidators, roundVerdicts, nil)
+
+		// Update reputations — get stratum for domain context.
+		stratum := ""
+		if k.ontologyKeeper != nil {
+			stratum, _ = k.ontologyKeeper.GetStratumForDomain(ctx, claim.Domain)
+		}
+		for _, reveal := range round.Reveals {
+			wasCorrect := reveal.Vote == verdictVote
+			k.captureDefenseKeeper.UpdateReputation(ctx, reveal.Verifier, claim.Domain, stratum, wasCorrect)
+		}
+	}
+
 	// Record round diversity metrics (R28-2)
 	if err := k.RecordRoundDiversity(ctx, round.Id, claim.Domain, result.AcceptCount, result.RejectCount); err != nil {
 		k.Logger(ctx).Error("failed to record round diversity", "round_id", round.Id, "error", err)
