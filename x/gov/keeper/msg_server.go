@@ -137,7 +137,7 @@ func (ms *msgServer) StakeLIP(goCtx context.Context, msg *types.MsgStakeLIP) (*t
 	if lip.Stage == types.StatusDraft {
 		params := ms.GetParams(ctx)
 		catCfg := types.GetCategoryConfig(params, lip.Category)
-		if catCfg != nil && types.CmpBigIntStrings(lip.StakedAmount, catCfg.RequiredStakeBps) >= 0 {
+		if catCfg != nil && types.CmpBigIntStrings(lip.StakedAmount, catCfg.RequiredStakeUzrn) >= 0 {
 			lip.Stage = types.StatusReview
 			lip.ReviewStartedBlock = uint64(ctx.BlockHeight())
 		}

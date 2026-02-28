@@ -2,6 +2,8 @@ package keeper
 
 import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
+
+	v3 "github.com/zerone-chain/zerone/x/knowledge/migrations/v3"
 )
 
 // Migrator handles in-place store migrations.
@@ -19,4 +21,10 @@ func NewMigrator(keeper Keeper) Migrator {
 func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 	store := m.keeper.storeService.OpenKVStore(ctx)
 	return store.Set([]byte("migration_v2_complete"), []byte("true"))
+}
+
+// Migrate2to3 migrates from version 2 to version 3.
+// Backfills R29 param defaults for zero-valued fields after upgrade.
+func (m Migrator) Migrate2to3(ctx sdk.Context) error {
+	return v3.Migrate(ctx, m.keeper)
 }

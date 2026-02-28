@@ -140,12 +140,12 @@ func (x *Params) GetResearchVotingBlocks() uint64 {
 
 // CategoryConfig defines per-category stake and review requirements.
 type CategoryConfig struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Category         string                 `protobuf:"bytes,1,opt,name=category,proto3" json:"category,omitempty"`                                           // "parameter", "upgrade", "text", "research_spend"
-	RequiredStakeBps string                 `protobuf:"bytes,2,opt,name=required_stake_bps,json=requiredStakeBps,proto3" json:"required_stake_bps,omitempty"` // uzrn required to advance from draft to review
-	ReviewBlocks     uint64                 `protobuf:"varint,3,opt,name=review_blocks,json=reviewBlocks,proto3" json:"review_blocks,omitempty"`              // blocks required in review stage before last_call
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Category          string                 `protobuf:"bytes,1,opt,name=category,proto3" json:"category,omitempty"`                                              // "parameter", "upgrade", "text", "research_spend"
+	RequiredStakeUzrn string                 `protobuf:"bytes,2,opt,name=required_stake_uzrn,json=requiredStakeUzrn,proto3" json:"required_stake_uzrn,omitempty"` // uzrn required to advance from draft to review
+	ReviewBlocks      uint64                 `protobuf:"varint,3,opt,name=review_blocks,json=reviewBlocks,proto3" json:"review_blocks,omitempty"`                 // blocks required in review stage before last_call
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CategoryConfig) Reset() {
@@ -185,9 +185,9 @@ func (x *CategoryConfig) GetCategory() string {
 	return ""
 }
 
-func (x *CategoryConfig) GetRequiredStakeBps() string {
+func (x *CategoryConfig) GetRequiredStakeUzrn() string {
 	if x != nil {
-		return x.RequiredStakeBps
+		return x.RequiredStakeUzrn
 	}
 	return ""
 }
@@ -377,10 +377,10 @@ const file_zerone_gov_v1_genesis_proto_rawDesc = "" +
 	"\x14research_fund_voters\x18\b \x01(\v2!.zerone.gov.v1.ResearchFundVotersR\x12researchFundVoters\x12<\n" +
 	"\x1aresearch_discussion_blocks\x18\t \x01(\x04R\x18researchDiscussionBlocks\x124\n" +
 	"\x16research_voting_blocks\x18\n" +
-	" \x01(\x04R\x14researchVotingBlocks\"\x7f\n" +
+	" \x01(\x04R\x14researchVotingBlocks\"\x81\x01\n" +
 	"\x0eCategoryConfig\x12\x1a\n" +
-	"\bcategory\x18\x01 \x01(\tR\bcategory\x12,\n" +
-	"\x12required_stake_bps\x18\x02 \x01(\tR\x10requiredStakeBps\x12#\n" +
+	"\bcategory\x18\x01 \x01(\tR\bcategory\x12.\n" +
+	"\x13required_stake_uzrn\x18\x02 \x01(\tR\x11requiredStakeUzrn\x12#\n" +
 	"\rreview_blocks\x18\x03 \x01(\x04R\freviewBlocks\"[\n" +
 	"\x12GenesisUpgradePlan\x12\x15\n" +
 	"\x06lip_id\x18\x01 \x01(\tR\x05lipId\x12.\n" +

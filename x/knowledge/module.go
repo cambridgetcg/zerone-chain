@@ -104,6 +104,9 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	if err := cfg.RegisterMigration(types.ModuleName, 1, migrator.Migrate1to2); err != nil {
 		panic(fmt.Sprintf("failed to register %s migration: %v", types.ModuleName, err))
 	}
+	if err := cfg.RegisterMigration(types.ModuleName, 2, migrator.Migrate2to3); err != nil {
+		panic(fmt.Sprintf("failed to register %s migration v2→v3: %v", types.ModuleName, err))
+	}
 }
 
 // RegisterInvariants is a no-op for now; invariants are added in R2-2.
@@ -130,4 +133,4 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 }
 
 // ConsensusVersion returns the module's consensus version.
-func (AppModule) ConsensusVersion() uint64 { return 2 }
+func (AppModule) ConsensusVersion() uint64 { return 3 }

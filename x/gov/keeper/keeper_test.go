@@ -1126,19 +1126,19 @@ func TestLIPCounter(t *testing.T) {
 func TestGetCategoryStake_PerCategory(t *testing.T) {
 	params := types.DefaultParams()
 	paramCfg := types.GetCategoryConfig(params, types.CategoryParameter)
-	if paramCfg == nil || paramCfg.RequiredStakeBps != "1000000000" {
+	if paramCfg == nil || paramCfg.RequiredStakeUzrn != "1000000000" {
 		t.Error("wrong parameter stake")
 	}
 	upgradeCfg := types.GetCategoryConfig(params, types.CategoryUpgrade)
-	if upgradeCfg == nil || upgradeCfg.RequiredStakeBps != "800000000" {
+	if upgradeCfg == nil || upgradeCfg.RequiredStakeUzrn != "800000000" {
 		t.Error("wrong upgrade stake")
 	}
 	textCfg := types.GetCategoryConfig(params, types.CategoryText)
-	if textCfg == nil || textCfg.RequiredStakeBps != "400000000" {
+	if textCfg == nil || textCfg.RequiredStakeUzrn != "400000000" {
 		t.Error("wrong text stake")
 	}
 	researchCfg := types.GetCategoryConfig(params, types.CategoryResearchSpend)
-	if researchCfg == nil || researchCfg.RequiredStakeBps != "200000000" {
+	if researchCfg == nil || researchCfg.RequiredStakeUzrn != "200000000" {
 		t.Error("wrong research_spend stake")
 	}
 }

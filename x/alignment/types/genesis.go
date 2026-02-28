@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 // BPS is the basis-point denominator (1,000,000 = 100%).
 const BPS = uint64(1_000_000)
 
@@ -75,6 +77,11 @@ func (p *Params) Validate() error {
 
 	if p.CorrectionBoundsMinMultiplierBps > p.CorrectionBoundsMaxMultiplierBps {
 		return ErrInvalidConfidenceBounds
+	}
+
+	// Cross-parameter safety (R30-2): max correction bounds × max magnitude must not exceed 100%.
+	if p.CorrectionBoundsMaxMultiplierBps*p.MaxAutoApplyMagnitudeBps/BPS > BPS {
+		return fmt.Errorf("max correction bounds multiplier * max_magnitude would exceed 100%%")
 	}
 
 	return nil

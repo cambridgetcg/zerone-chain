@@ -582,5 +582,28 @@ func (p *Params) Validate() error {
 		return fmt.Errorf("role_elasticity_decay_epochs must be > 0")
 	}
 
+	// ─── Cross-parameter safety (R30-2) ──────────────────────────────────
+	// Carrying capacity: decay multiplier must not cause instant death.
+	// At 2× capacity, one cycle drains: baseCost × multiplier / BPS.
+	// That must not exceed 50% of initial energy.
+	if p.OvercrowdingDecayMultiplierBps > 0 && p.MetabolismBaseCost > 0 {
+		maxDecayPerCycle := p.MetabolismBaseCost * p.OvercrowdingDecayMultiplierBps / 1_000_000
+		if maxDecayPerCycle > p.MetabolismInitialEnergy/2 {
+			return fmt.Errorf("overcrowding_decay_multiplier too aggressive: would drain %d of %d initial energy per cycle",
+				maxDecayPerCycle, p.MetabolismInitialEnergy)
+		}
+	}
+
+	// Epistemic temperature: cold cap must be < max survival confidence.
+	if p.EpistemicColdConfidenceCapBps >= p.MaxSurvivalConfidence {
+		return fmt.Errorf("epistemic_cold_confidence_cap (%d) must be < max_survival_confidence (%d)",
+			p.EpistemicColdConfidenceCapBps, p.MaxSurvivalConfidence)
+	}
+
+	// Role elasticity × agent bonus must not exceed 100% vote weight.
+	if p.RoleElasticityMaxMultiplierBps*p.AgentVerificationBonusBps/1_000_000 > 1_000_000 {
+		return fmt.Errorf("role_elasticity_max_multiplier * agent_verification_bonus would exceed 100%% vote weight")
+	}
+
 	return nil
 }
