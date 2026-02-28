@@ -323,6 +323,9 @@ func (k Keeper) ExecuteVindication(ctx context.Context, factId, disprovenBy stri
 	// Clean up pending entries — vindication is complete
 	k.DeleteVindicationPending(ctx, factId)
 
+	// Record role impact — the majority was wrong (R29-3)
+	k.RecordVindicationRoleImpact(ctx, round, k.getDomainForFact(ctx, factId))
+
 	// Emit summary event
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.vindication_executed",
