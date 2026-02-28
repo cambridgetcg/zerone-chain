@@ -152,12 +152,12 @@ type Params struct {
 	VindicationBonusBps      uint64 `protobuf:"varint,104,opt,name=vindication_bonus_bps,json=vindicationBonusBps,proto3" json:"vindication_bonus_bps,omitempty"`                // % of majority slash pool as bonus to vindicated minority (default: 2000 = 20%)
 	VindicationSlashBps      uint64 `protobuf:"varint,105,opt,name=vindication_slash_bps,json=vindicationSlashBps,proto3" json:"vindication_slash_bps,omitempty"`                // Slash rate for majority on disproven fact (default: 500 = 5%)
 	VindicationWindowBlocks  uint64 `protobuf:"varint,106,opt,name=vindication_window_blocks,json=vindicationWindowBlocks,proto3" json:"vindication_window_blocks,omitempty"`    // How long escrowed entries are eligible (default: 100000)
-	// ─── Metabolism thresholds (R28-4) ────────────────────────────────
-	MetabolismActiveThreshold     uint64 `protobuf:"varint,107,opt,name=metabolism_active_threshold,json=metabolismActiveThreshold,proto3" json:"metabolism_active_threshold,omitempty"`         // Energy below which fact → AT_RISK (default: 300,000 = 30%)
+	// ─── Multi-level energy thresholds (R28-4) ──────────────────────────
+	MetabolismActiveThreshold     uint64 `protobuf:"varint,107,opt,name=metabolism_active_threshold,json=metabolismActiveThreshold,proto3" json:"metabolism_active_threshold,omitempty"`             // Energy below which fact → AT_RISK (default: 300,000 = 30%)
 	MetabolismExtinctionThreshold uint64 `protobuf:"varint,108,opt,name=metabolism_extinction_threshold,json=metabolismExtinctionThreshold,proto3" json:"metabolism_extinction_threshold,omitempty"` // Energy below which (for N epochs) → EXTINCT (default: 10,000 = 1%)
-	MaxConfidence                 uint64 `protobuf:"varint,109,opt,name=max_confidence,json=maxConfidence,proto3" json:"max_confidence,omitempty"`                                              // Hard cap on confidence (default: 880,000 = 88%)
+	MaxConfidence                 uint64 `protobuf:"varint,109,opt,name=max_confidence,json=maxConfidence,proto3" json:"max_confidence,omitempty"`                                                   // Hard cap on confidence (default: 880,000 = 88%)
 	unknownFields                 protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -722,27 +722,6 @@ func (x *Params) GetMetabolismExpiredToPrunedEpochs() uint64 {
 	return 0
 }
 
-func (x *Params) GetMetabolismActiveThreshold() uint64 {
-	if x != nil {
-		return x.MetabolismActiveThreshold
-	}
-	return 0
-}
-
-func (x *Params) GetMetabolismExtinctionThreshold() uint64 {
-	if x != nil {
-		return x.MetabolismExtinctionThreshold
-	}
-	return 0
-}
-
-func (x *Params) GetMaxConfidence() uint64 {
-	if x != nil {
-		return x.MaxConfidence
-	}
-	return 0
-}
-
 func (x *Params) GetReproductionRoyaltyBps() uint64 {
 	if x != nil {
 		return x.ReproductionRoyaltyBps
@@ -953,6 +932,27 @@ func (x *Params) GetVindicationWindowBlocks() uint64 {
 	return 0
 }
 
+func (x *Params) GetMetabolismActiveThreshold() uint64 {
+	if x != nil {
+		return x.MetabolismActiveThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismExtinctionThreshold() uint64 {
+	if x != nil {
+		return x.MetabolismExtinctionThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetMaxConfidence() uint64 {
+	if x != nil {
+		return x.MaxConfidence
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
@@ -1050,7 +1050,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xff1\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xae3\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1158,7 +1158,10 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x1avindication_refund_enabled\x18g \x01(\bR\x18vindicationRefundEnabled\x122\n" +
 	"\x15vindication_bonus_bps\x18h \x01(\x04R\x13vindicationBonusBps\x122\n" +
 	"\x15vindication_slash_bps\x18i \x01(\x04R\x13vindicationSlashBps\x12:\n" +
-	"\x19vindication_window_blocks\x18j \x01(\x04R\x17vindicationWindowBlocks\"\xcd\x03\n" +
+	"\x19vindication_window_blocks\x18j \x01(\x04R\x17vindicationWindowBlocks\x12>\n" +
+	"\x1bmetabolism_active_threshold\x18k \x01(\x04R\x19metabolismActiveThreshold\x12F\n" +
+	"\x1fmetabolism_extinction_threshold\x18l \x01(\x04R\x1dmetabolismExtinctionThreshold\x12%\n" +
+	"\x0emax_confidence\x18m \x01(\x04R\rmaxConfidence\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

@@ -18,7 +18,7 @@ func makeEnergyFact(id, content, domain string, energy uint64, status types.Fact
 		Domain:    domain,
 		Status:    status,
 		Energy:    energy,
-		EnergyCap: 10_000,
+		EnergyCap: 1_000_000,
 		Submitter: "zrn1test",
 	}
 }
@@ -26,7 +26,7 @@ func makeEnergyFact(id, content, domain string, energy uint64, status types.Fact
 func TestMetabolism_BaseDrain(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
-	fact := makeEnergyFact("fact-bd", "Base drain test fact", "physics", 5000, types.FactStatus_FACT_STATUS_VERIFIED)
+	fact := makeEnergyFact("fact-bd", "Base drain test fact", "physics", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, fact))
 
 	// Run one epoch of metabolism
@@ -35,16 +35,16 @@ func TestMetabolism_BaseDrain(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-bd")
 	require.True(t, found)
 
-	// Base cost = 100. Content = 20 chars → 0 groups of 100 → no content factor.
+	// Base cost = 10,000. Content = 20 chars → 0 groups of 100 → no content factor.
 	// Domain: 1 fact → 0 groups of 100 → no competition factor.
-	// No income sources → energy should decrease by base cost (100).
-	require.Equal(t, uint64(4900), updated.Energy)
+	// No income sources → energy should decrease by base cost (10,000).
+	require.Equal(t, uint64(490_000), updated.Energy)
 }
 
 func TestMetabolism_QueryIncome(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
-	fact := makeEnergyFact("fact-qi", "Query income test", "physics", 1000, types.FactStatus_FACT_STATUS_VERIFIED)
+	fact := makeEnergyFact("fact-qi", "Query income test", "physics", 100_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	fact.QueryCountEpoch = 50 // 50 queries this epoch
 	require.NoError(t, k.SetFact(ctx, fact))
 
@@ -53,16 +53,16 @@ func TestMetabolism_QueryIncome(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-qi")
 	require.True(t, found)
 
-	// Income = 50 * 10 = 500 energy from queries
-	// Cost = 100 (base)
-	// New energy = 1000 + 500 - 100 = 1400
-	require.Equal(t, uint64(1400), updated.Energy)
+	// Income = 50 * 1,000 = 50,000 energy from queries
+	// Cost = 10,000 (base)
+	// New energy = 100,000 + 50,000 - 10,000 = 140,000
+	require.Equal(t, uint64(140_000), updated.Energy)
 }
 
 func TestMetabolism_CitationIncome(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
-	fact := makeEnergyFact("fact-ci", "Citation income test", "physics", 1000, types.FactStatus_FACT_STATUS_VERIFIED)
+	fact := makeEnergyFact("fact-ci", "Citation income test", "physics", 100_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, fact))
 
 	// Simulate 3 new citations this epoch
@@ -75,10 +75,10 @@ func TestMetabolism_CitationIncome(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-ci")
 	require.True(t, found)
 
-	// Income = 3 * 50 = 150 energy from citations
-	// Cost = 100 (base)
-	// New energy = 1000 + 150 - 100 = 1050
-	require.Equal(t, uint64(1050), updated.Energy)
+	// Income = 3 * 5,000 = 15,000 energy from citations
+	// Cost = 10,000 (base)
+	// New energy = 100,000 + 15,000 - 10,000 = 105,000
+	require.Equal(t, uint64(105_000), updated.Energy)
 
 	// Verify citation counters were reset
 	require.Equal(t, uint64(0), k.GetNewCitationsThisEpoch(ctx, "fact-ci"))
@@ -88,7 +88,7 @@ func TestMetabolism_PatronageIncome(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 	ctx = ctx.WithBlockHeader(cmtproto.Header{Height: 500})
 
-	fact := makeEnergyFact("fact-pi", "Patronage income test", "physics", 1000, types.FactStatus_FACT_STATUS_VERIFIED)
+	fact := makeEnergyFact("fact-pi", "Patronage income test", "physics", 100_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	fact.PatronageAmount = "1000000" // 1 ZRN
 	fact.PatronageExpiryBlock = 10000
 	require.NoError(t, k.SetFact(ctx, fact))
@@ -98,17 +98,17 @@ func TestMetabolism_PatronageIncome(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-pi")
 	require.True(t, found)
 
-	// Income = 200 energy from patronage
-	// Cost = 100 (base)
-	// New energy = 1000 + 200 - 100 = 1100
-	require.Equal(t, uint64(1100), updated.Energy)
+	// Income = 20,000 energy from patronage
+	// Cost = 10,000 (base)
+	// New energy = 100,000 + 20,000 - 10,000 = 110,000
+	require.Equal(t, uint64(110_000), updated.Energy)
 }
 
 func TestMetabolism_ContentLengthCost(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
 	// Short fact (20 chars) — no extra cost
-	shortFact := makeEnergyFact("fact-short", "Short fact content!!", "physics", 5000, types.FactStatus_FACT_STATUS_VERIFIED)
+	shortFact := makeEnergyFact("fact-short", "Short fact content!!", "physics", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, shortFact))
 
 	// Long fact (500 chars) — higher cost
@@ -116,7 +116,7 @@ func TestMetabolism_ContentLengthCost(t *testing.T) {
 	for i := range longContent {
 		longContent[i] = 'a'
 	}
-	longFact := makeEnergyFact("fact-long", string(longContent), "physics", 5000, types.FactStatus_FACT_STATUS_VERIFIED)
+	longFact := makeEnergyFact("fact-long", string(longContent), "physics", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, longFact))
 
 	require.NoError(t, k.ProcessMetabolism(ctx, 1))
@@ -133,7 +133,7 @@ func TestMetabolism_DomainCompetition(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
 	// Create a lonely fact in an empty domain
-	lonelyFact := makeEnergyFact("fact-lonely", "Lonely fact in quiet domain", "theology", 5000, types.FactStatus_FACT_STATUS_VERIFIED)
+	lonelyFact := makeEnergyFact("fact-lonely", "Lonely fact in quiet domain", "theology", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, lonelyFact))
 
 	// Create 200 facts in physics to make it a crowded domain
@@ -142,14 +142,14 @@ func TestMetabolism_DomainCompetition(t *testing.T) {
 			"crowd-"+string(rune('a'+i/26))+string(rune('a'+i%26)),
 			"Filler fact for domain competition",
 			"physics",
-			5000,
+			500_000,
 			types.FactStatus_FACT_STATUS_VERIFIED,
 		)
 		require.NoError(t, k.SetFact(ctx, f))
 	}
 
 	// Add a target fact in physics
-	crowdedFact := makeEnergyFact("fact-crowded", "Fact in crowded domain", "physics", 5000, types.FactStatus_FACT_STATUS_VERIFIED)
+	crowdedFact := makeEnergyFact("fact-crowded", "Fact in crowded domain", "physics", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, crowdedFact))
 
 	require.NoError(t, k.ProcessMetabolism(ctx, 1))
@@ -166,7 +166,7 @@ func TestMetabolism_AtRiskTransition(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
 	// Fact with just enough energy to drain to 0
-	fact := makeEnergyFact("fact-ar", "At risk test fact!!!!!", "physics", 100, types.FactStatus_FACT_STATUS_VERIFIED)
+	fact := makeEnergyFact("fact-ar", "At risk test fact!!!!!", "physics", 10_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, fact))
 
 	require.NoError(t, k.ProcessMetabolism(ctx, 1))
@@ -174,7 +174,7 @@ func TestMetabolism_AtRiskTransition(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-ar")
 	require.True(t, found)
 
-	// Energy = 100 - 100 (base cost) = 0 → should be AT_RISK
+	// Energy = 10,000 - 10,000 (base cost) = 0 → below 300K threshold → AT_RISK
 	require.Equal(t, uint64(0), updated.Energy)
 	require.Equal(t, types.FactStatus_FACT_STATUS_AT_RISK, updated.Status)
 	require.Equal(t, uint64(1), updated.AtRiskSinceEpoch)
@@ -217,10 +217,10 @@ func TestMetabolism_PrunedTransition(t *testing.T) {
 func TestMetabolism_Recovery(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
-	// Fact at risk with 0 energy
+	// Fact at risk with 0 energy — needs enough income to cross 300K threshold
 	fact := makeEnergyFact("fact-rec", "Recovery test fact!!!", "physics", 0, types.FactStatus_FACT_STATUS_AT_RISK)
 	fact.AtRiskSinceEpoch = 1
-	fact.QueryCountEpoch = 20 // 20 queries → 200 energy income
+	fact.QueryCountEpoch = 400 // 400 queries * 1,000 = 400,000 energy income
 	require.NoError(t, k.SetFact(ctx, fact))
 
 	require.NoError(t, k.ProcessMetabolism(ctx, 2))
@@ -228,8 +228,8 @@ func TestMetabolism_Recovery(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-rec")
 	require.True(t, found)
 
-	// Income = 20 * 10 = 200, Cost = 100 → net = 100 energy
-	require.Greater(t, updated.Energy, uint64(0))
+	// Income = 400 * 1,000 = 400,000, Cost = 10,000 → net = 390,000 energy (above 300K threshold)
+	require.Equal(t, uint64(390_000), updated.Energy)
 	require.Equal(t, types.FactStatus_FACT_STATUS_ACTIVE, updated.Status)
 	require.Equal(t, uint64(0), updated.AtRiskSinceEpoch, "should clear at-risk epoch on recovery")
 }
@@ -238,7 +238,7 @@ func TestMetabolism_ChallengeSurvivalBoost(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
 	// Create a fact and a rejected challenge claim
-	fact := makeEnergyFact("fact-cs", "Challenge survival test", "physics", 2000, types.FactStatus_FACT_STATUS_CHALLENGED)
+	fact := makeEnergyFact("fact-cs", "Challenge survival test", "physics", 200_000, types.FactStatus_FACT_STATUS_CHALLENGED)
 	require.NoError(t, k.SetFact(ctx, fact))
 
 	// Simulate challenge claim with the original fact ID
@@ -266,8 +266,8 @@ func TestMetabolism_ChallengeSurvivalBoost(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-cs")
 	require.True(t, found)
 
-	// 2000 + 500 = 2500
-	require.Equal(t, uint64(2500), updated.Energy)
+	// 200,000 + 100,000 = 300,000
+	require.Equal(t, uint64(300_000), updated.Energy)
 	require.Equal(t, types.FactStatus_FACT_STATUS_ACTIVE, updated.Status)
 }
 
@@ -275,8 +275,8 @@ func TestMetabolism_EnergyCap(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
 	// Fact near cap with lots of income
-	fact := makeEnergyFact("fact-cap", "Energy cap test fact!!", "physics", 9900, types.FactStatus_FACT_STATUS_VERIFIED)
-	fact.QueryCountEpoch = 100 // 100 * 10 = 1000 income
+	fact := makeEnergyFact("fact-cap", "Energy cap test fact!!", "physics", 990_000, types.FactStatus_FACT_STATUS_VERIFIED)
+	fact.QueryCountEpoch = 100 // 100 * 1,000 = 100,000 income
 	require.NoError(t, k.SetFact(ctx, fact))
 
 	require.NoError(t, k.ProcessMetabolism(ctx, 1))
@@ -284,8 +284,8 @@ func TestMetabolism_EnergyCap(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-cap")
 	require.True(t, found)
 
-	// 9900 + 1000 - 100 = 10800, but capped at 10000
-	require.Equal(t, uint64(10_000), updated.Energy, "energy should not exceed cap")
+	// 990,000 + 100,000 - 10,000 = 1,080,000, but capped at 1,000,000
+	require.Equal(t, uint64(1_000_000), updated.Energy, "energy should not exceed cap")
 }
 
 func TestMetabolism_InitialEnergy(t *testing.T) {
@@ -309,8 +309,39 @@ func TestMetabolism_InitialEnergy(t *testing.T) {
 	updated, found := k.GetFact(ctx, "fact-init")
 	require.True(t, found)
 
-	require.Equal(t, uint64(5000), updated.Energy, "new facts should start with initial energy")
-	require.Equal(t, uint64(10_000), updated.EnergyCap, "energy cap should match params")
+	require.Equal(t, uint64(500_000), updated.Energy, "new facts should start with initial energy")
+	require.Equal(t, uint64(1_000_000), updated.EnergyCap, "energy cap should match params")
+}
+
+func TestMetabolism_MultiLevelThresholds_ActiveToAtRisk(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// Energy just above active threshold. After drain, falls below → AT_RISK
+	// ActiveThreshold = 300,000. BaseCost = 10,000. Start at 305,000 → 295,000 → AT_RISK
+	fact := makeEnergyFact("fact-ml1", "Multi-level threshold test!!!", "physics", 305_000, types.FactStatus_FACT_STATUS_VERIFIED)
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	require.NoError(t, k.ProcessMetabolism(ctx, 1))
+
+	updated, found := k.GetFact(ctx, "fact-ml1")
+	require.True(t, found)
+	require.Equal(t, uint64(295_000), updated.Energy)
+	require.Equal(t, types.FactStatus_FACT_STATUS_AT_RISK, updated.Status)
+}
+
+func TestMetabolism_MultiLevelThresholds_StaysHealthy(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// Energy well above threshold — should stay healthy, no status change
+	fact := makeEnergyFact("fact-ml4", "Stays healthy test fact!!!", "physics", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	require.NoError(t, k.ProcessMetabolism(ctx, 1))
+
+	updated, found := k.GetFact(ctx, "fact-ml4")
+	require.True(t, found)
+	require.Equal(t, uint64(490_000), updated.Energy)
+	require.Equal(t, types.FactStatus_FACT_STATUS_VERIFIED, updated.Status)
 }
 
 func TestFactsAtRisk_Query(t *testing.T) {

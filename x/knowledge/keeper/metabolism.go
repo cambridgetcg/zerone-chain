@@ -54,25 +54,30 @@ func (k Keeper) ProcessMetabolism(ctx context.Context, epoch uint64) error {
 			newEnergy = params.MetabolismEnergyCap
 		}
 
-		// ─── State transitions ────────────────────────────
+		// ─── State transitions (multi-level thresholds) ──────────
 		oldStatus := fact.Status
 
-		if newEnergy == 0 && fact.AtRiskSinceEpoch == 0 {
-			// Just hit zero — enter at-risk
-			fact.AtRiskSinceEpoch = epoch
-			fact.Status = types.FactStatus_FACT_STATUS_AT_RISK
-		} else if newEnergy == 0 && fact.AtRiskSinceEpoch > 0 {
-			// Still at zero — check if expired or pruned
-			atRiskDuration := epoch - fact.AtRiskSinceEpoch
-			if atRiskDuration >= params.MetabolismAtRiskEpochs+params.MetabolismExpiredToPrunedEpochs {
-				fact.Status = types.FactStatus_FACT_STATUS_PRUNED
-			} else if atRiskDuration >= params.MetabolismAtRiskEpochs {
-				fact.Status = types.FactStatus_FACT_STATUS_EXPIRED
+		if newEnergy >= params.MetabolismActiveThreshold {
+			// Healthy — clear any at-risk state
+			if fact.AtRiskSinceEpoch > 0 {
+				fact.AtRiskSinceEpoch = 0
+				fact.Status = types.FactStatus_FACT_STATUS_ACTIVE
 			}
-		} else if newEnergy > 0 && fact.AtRiskSinceEpoch > 0 {
-			// Recovered! Someone queried or patronized
-			fact.AtRiskSinceEpoch = 0
-			fact.Status = types.FactStatus_FACT_STATUS_ACTIVE
+		} else if newEnergy < params.MetabolismActiveThreshold {
+			// Below active threshold
+			if fact.AtRiskSinceEpoch == 0 {
+				// Just entered at-risk zone
+				fact.AtRiskSinceEpoch = epoch
+				fact.Status = types.FactStatus_FACT_STATUS_AT_RISK
+			} else {
+				// Already at risk — check for expiry/pruning
+				atRiskDuration := epoch - fact.AtRiskSinceEpoch
+				if atRiskDuration >= params.MetabolismAtRiskEpochs+params.MetabolismExpiredToPrunedEpochs {
+					fact.Status = types.FactStatus_FACT_STATUS_PRUNED
+				} else if atRiskDuration >= params.MetabolismAtRiskEpochs {
+					fact.Status = types.FactStatus_FACT_STATUS_EXPIRED
+				}
+			}
 		}
 
 		fact.Energy = newEnergy
