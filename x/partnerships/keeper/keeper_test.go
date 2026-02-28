@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -3437,5 +3438,134 @@ func TestMentorship_AcceptByWrongMenteeFails(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for wrong mentee accepting")
+	}
+}
+
+// ==================== FORMATION MATCHING TESTS ====================
+
+func TestFormation_MatchSetAndGet(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	fm := &types.FormationMatch{
+		Id: "match-1", Addr1: humanAddr, Addr2: agentAddr,
+		Score: 7500, ProposedAt: 100, ExpiresAt: 300, Status: "proposed",
+	}
+	k.SetFormationMatch(ctx, fm)
+
+	got, found := k.GetFormationMatch(ctx, "match-1")
+	if !found {
+		t.Fatal("match not found")
+	}
+	if got.Score != 7500 {
+		t.Errorf("expected score 7500, got %d", got.Score)
+	}
+}
+
+func TestFormation_MatchingRunsAtInterval(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: humanAddr, Domains: []string{"physics"}, PreferredRole: "human",
+		RegisteredAt: 50, ExpiresAt: 12000, Status: "active",
+	})
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: agentAddr, Domains: []string{"physics"}, PreferredRole: "agent",
+		RegisteredAt: 60, ExpiresAt: 12000, Status: "active",
+	})
+
+	ctx99 := ctxAtHeight(ctx, 99)
+	k.RunFormationMatching(ctx99)
+	matches := k.GetAllFormationMatches(ctx99)
+	if len(matches) != 0 {
+		t.Errorf("expected no matches at non-interval block, got %d", len(matches))
+	}
+
+	ctx100 := ctxAtHeight(ctx, 100)
+	k.RunFormationMatching(ctx100)
+	matches = k.GetAllFormationMatches(ctx100)
+	if len(matches) != 1 {
+		t.Fatalf("expected 1 match at interval block, got %d", len(matches))
+	}
+}
+
+func TestFormation_CompatiblePairsMatched(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: humanAddr, Domains: []string{"physics", "math"}, PreferredRole: "human",
+		RegisteredAt: 50, ExpiresAt: 12000, Status: "active",
+	})
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: agentAddr, Domains: []string{"physics"}, PreferredRole: "agent",
+		RegisteredAt: 60, ExpiresAt: 12000, Status: "active",
+	})
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: agent2Addr, Domains: []string{"biology"}, PreferredRole: "agent",
+		RegisteredAt: 70, ExpiresAt: 12000, Status: "active",
+	})
+
+	ctx100 := ctxAtHeight(ctx, 100)
+	k.RunFormationMatching(ctx100)
+	matches := k.GetAllFormationMatches(ctx100)
+
+	if len(matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(matches))
+	}
+	m := matches[0]
+	hasHuman := m.Addr1 == humanAddr || m.Addr2 == humanAddr
+	hasAgent := m.Addr1 == agentAddr || m.Addr2 == agentAddr
+	if !hasHuman || !hasAgent {
+		t.Errorf("expected human-agent match, got %s and %s", m.Addr1, m.Addr2)
+	}
+	if m.Score == 0 {
+		t.Error("expected non-zero score")
+	}
+}
+
+func TestFormation_CappedAt200(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	for i := 0; i < 210; i++ {
+		addr := testAddr(fmt.Sprintf("pool-%d", i))
+		k.SetPoolEntry(ctx, &types.PoolEntry{
+			Address: addr, Domains: []string{"physics"}, PreferredRole: "any",
+			RegisteredAt: 50, ExpiresAt: 12000, Status: "active",
+		})
+	}
+
+	ctx100 := ctxAtHeight(ctx, 100)
+	k.RunFormationMatching(ctx100) // Should not panic
+}
+
+func TestFormation_ExpireMatches(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetFormationMatch(ctx, &types.FormationMatch{
+		Id: "match-1", Addr1: humanAddr, Addr2: agentAddr,
+		ProposedAt: 100, ExpiresAt: 300, Status: "proposed",
+	})
+	// Add pool entries so expiry can return them to unmatched state
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: humanAddr, Status: "active", MatchedWith: "match-1",
+	})
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: agentAddr, Status: "active", MatchedWith: "match-1",
+	})
+
+	k.ExpireFormationMatches(ctxAtHeight(ctx, 299))
+	m, _ := k.GetFormationMatch(ctxAtHeight(ctx, 299), "match-1")
+	if m.Status != "proposed" {
+		t.Errorf("expected still proposed, got %s", m.Status)
+	}
+
+	k.ExpireFormationMatches(ctxAtHeight(ctx, 300))
+	m, _ = k.GetFormationMatch(ctxAtHeight(ctx, 300), "match-1")
+	if m.Status != "expired" {
+		t.Errorf("expected expired, got %s", m.Status)
+	}
+
+	pe1, _ := k.GetPoolEntry(ctxAtHeight(ctx, 300), humanAddr)
+	if pe1.MatchedWith != "" {
+		t.Error("expected unmatched after expiry")
 	}
 }
