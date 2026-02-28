@@ -58,3 +58,10 @@ func (k Keeper) GetStratumForDomain(goCtx context.Context, domainName string) (s
 	}
 	return stratum.Name, nil
 }
+
+// GetDepthForDomain returns the tree depth of a domain.
+// Satisfies cross-module OntologyKeeper interfaces.
+func (k Keeper) GetDepthForDomain(goCtx context.Context, domainName string) (uint32, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return k.GetDomainDepth(ctx, domainName)
+}

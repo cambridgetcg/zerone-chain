@@ -185,6 +185,38 @@ func (k Keeper) MergeDomains(ctx sdk.Context, proposal *types.DomainProposal) er
 	return nil
 }
 
+// MaxDomainDepth is the maximum allowed nesting depth for domains.
+const MaxDomainDepth = 5
+
+// ComputeDepth computes the depth of a domain from its parent chain.
+// Root domains (no parent) have depth 1.
+func (k Keeper) ComputeDepth(ctx sdk.Context, parentDomain string) (uint32, error) {
+	if parentDomain == "" {
+		return 1, nil
+	}
+	parent, found := k.GetDomain(ctx, parentDomain)
+	if !found {
+		return 0, fmt.Errorf("%w: parent %s", types.ErrDomainNotFound, parentDomain)
+	}
+	depth := parent.Depth + 1
+	if depth > MaxDomainDepth {
+		return 0, fmt.Errorf("%w: depth %d exceeds max %d", types.ErrInvalidHierarchy, depth, MaxDomainDepth)
+	}
+	return depth, nil
+}
+
+// GetDomainDepth returns the depth of a domain. Returns 1 if the domain has no depth set (legacy).
+func (k Keeper) GetDomainDepth(ctx sdk.Context, domainName string) (uint32, error) {
+	domain, found := k.GetDomain(ctx, domainName)
+	if !found {
+		return 0, fmt.Errorf("%w: %s", types.ErrDomainNotFound, domainName)
+	}
+	if domain.Depth == 0 {
+		return 1, nil // legacy domains default to depth 1
+	}
+	return domain.Depth, nil
+}
+
 // ActivateDomain transitions a proposed domain to active status.
 func (k Keeper) ActivateDomain(ctx sdk.Context, domainName string) error {
 	domain, found := k.GetDomain(ctx, domainName)

@@ -167,6 +167,7 @@ func (k Keeper) QualifyByTrackRecord(ctx context.Context, validator string, doma
 }
 
 // QualifyByCrossReference creates a qualification via cross-reference from another domain.
+// Discount scales with depth difference: discount = CrossRefWeightDiscountBps * depthDiff.
 func (k Keeper) QualifyByCrossReference(ctx context.Context, validator string, targetDomain string, sourceDomain string) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	params := k.GetParams(ctx)
@@ -185,8 +186,14 @@ func (k Keeper) QualifyByCrossReference(ctx context.Context, validator string, t
 		return fmt.Errorf("%w: need %d, got %d", types.ErrCrossRefWeightTooLow, params.CrossRefMinWeight, sourceQ.Weight)
 	}
 
-	// Apply discount to weight.
-	discountedWeight := uint64(sourceQ.Weight) * (1000000 - params.CrossRefWeightDiscountBps) / 1000000
+	// Compute depth-scaled discount.
+	depthDiff := k.getDepthDiff(ctx, targetDomain, sourceDomain)
+	scaledDiscount := params.CrossRefWeightDiscountBps * uint64(depthDiff)
+	if scaledDiscount > 1000000 {
+		scaledDiscount = 1000000 // cap at 100%
+	}
+
+	discountedWeight := uint64(sourceQ.Weight) * (1000000 - scaledDiscount) / 1000000
 	if discountedWeight < 1 {
 		discountedWeight = 1
 	}
@@ -220,7 +227,12 @@ func (k Keeper) QualifyByCrossReference(ctx context.Context, validator string, t
 	return nil
 }
 
+// MaxInheritanceDepthDiff is the maximum depth difference allowed for inheritance.
+const MaxInheritanceDepthDiff = 3
+
 // QualifyByInheritance creates a qualification via stratum inheritance.
+// Discount scales with depth difference: discount = InheritanceWeightDiscountBps * depthDiff.
+// Blocked if depth difference exceeds MaxInheritanceDepthDiff.
 func (k Keeper) QualifyByInheritance(ctx context.Context, validator string, targetDomain string, parentDomain string) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	params := k.GetParams(ctx)
@@ -235,16 +247,18 @@ func (k Keeper) QualifyByInheritance(ctx context.Context, validator string, targ
 		return fmt.Errorf("%w: %s/%s", types.ErrInheritanceNotQualified, validator, parentDomain)
 	}
 
-	// Stratum check: parent must have lower stratum (more foundational).
-	// For inheritance, we need the target stratum to be higher than parent.
-	// Default stratum is 0 if not set.
-	if parentQ.Stratum >= getTargetStratum(targetDomain) && parentQ.Stratum != 0 {
-		// Allow inheritance only from lower→higher stratum.
-		return fmt.Errorf("%w: parent stratum %d must be lower than target", types.ErrInheritanceInvalidStrata, parentQ.Stratum)
+	// Compute depth-scaled discount with max distance enforcement.
+	depthDiff := k.getDepthDiff(ctx, targetDomain, parentDomain)
+	if depthDiff > MaxInheritanceDepthDiff {
+		return fmt.Errorf("%w: depth distance %d exceeds max %d", types.ErrDepthDistanceTooLarge, depthDiff, MaxInheritanceDepthDiff)
 	}
 
-	// Apply inheritance weight discount.
-	discountedWeight := uint64(parentQ.Weight) * (1000000 - params.InheritanceWeightDiscountBps) / 1000000
+	scaledDiscount := params.InheritanceWeightDiscountBps * uint64(depthDiff)
+	if scaledDiscount > 1000000 {
+		scaledDiscount = 1000000 // cap at 100%
+	}
+
+	discountedWeight := uint64(parentQ.Weight) * (1000000 - scaledDiscount) / 1000000
 	if discountedWeight < 1 {
 		discountedWeight = 1
 	}
@@ -258,7 +272,6 @@ func (k Keeper) QualifyByInheritance(ctx context.Context, validator string, targ
 		Pathway:      types.QualificationPathway_QUALIFICATION_PATHWAY_INHERITANCE,
 		Status:       types.QualificationStatus_QUALIFICATION_STATUS_ACTIVE,
 		Weight:       uint32(discountedWeight),
-		Stratum:      getTargetStratum(targetDomain),
 		GrantedAt:    uint64(sdkCtx.BlockHeight()),
 		ExpiresAt:    uint64(sdkCtx.BlockHeight()) + params.QualificationPeriod,
 		ParentDomain: parentDomain,
@@ -279,9 +292,19 @@ func (k Keeper) QualifyByInheritance(ctx context.Context, validator string, targ
 	return nil
 }
 
-// getTargetStratum returns a default stratum for a domain.
-// In a full implementation, this would come from the ontology module.
-// For now, return 1 as default (higher stratum).
-func getTargetStratum(_ string) uint32 {
-	return 1
+// getDepthDiff returns the absolute depth difference between two domains.
+// Falls back to 1 if ontology keeper is unavailable or domain not found.
+func (k Keeper) getDepthDiff(ctx context.Context, domainA, domainB string) uint32 {
+	if k.ontologyKeeper == nil {
+		return 1 // default to 1 if ontology keeper not wired
+	}
+	depthA, errA := k.ontologyKeeper.GetDepthForDomain(ctx, domainA)
+	depthB, errB := k.ontologyKeeper.GetDepthForDomain(ctx, domainB)
+	if errA != nil || errB != nil {
+		return 1
+	}
+	if depthA >= depthB {
+		return depthA - depthB
+	}
+	return depthB - depthA
 }

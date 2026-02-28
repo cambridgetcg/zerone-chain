@@ -23,6 +23,7 @@ type Keeper struct {
 	bankKeeper           types.BankKeeper
 	stakingKeeper        types.StakingKeeper
 	captureDefenseKeeper types.CaptureDefenseKeeper // nil-safe, set post-init
+	ontologyKeeper       types.OntologyKeeper       // nil-safe, set post-init
 }
 
 // NewKeeper creates a new qualification module Keeper.
@@ -56,6 +57,11 @@ func (k Keeper) GetAuthority() string {
 // SetCaptureDefenseKeeper sets the capture defense keeper post-initialization.
 func (k *Keeper) SetCaptureDefenseKeeper(cdk types.CaptureDefenseKeeper) {
 	k.captureDefenseKeeper = cdk
+}
+
+// SetOntologyKeeper sets the ontology keeper post-initialization.
+func (k *Keeper) SetOntologyKeeper(ok types.OntologyKeeper) {
+	k.ontologyKeeper = ok
 }
 
 // ---------- Params ----------

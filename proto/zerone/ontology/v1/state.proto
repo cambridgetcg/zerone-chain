@@ -28,6 +28,8 @@ message Domain {
   uint64 claim_count  = 8;
   uint64 fact_count   = 9;
   string proposed_by  = 10; // bech32 address
+  string parent_domain = 11; // empty = root domain
+  uint32 depth        = 12;  // tree depth: root=1, child=parent.depth+1, max=5
 }
 
 // DomainProposal represents a proposal for adding or modifying domains.

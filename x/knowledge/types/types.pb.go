@@ -1788,6 +1788,8 @@ type Domain struct {
 	Proposer       string                 `protobuf:"bytes,6,opt,name=proposer,proto3" json:"proposer,omitempty"`
 	Endorsers      []string               `protobuf:"bytes,7,rep,name=endorsers,proto3" json:"endorsers,omitempty"`
 	Stratum        string                 `protobuf:"bytes,8,opt,name=stratum,proto3" json:"stratum,omitempty"`
+	ParentDomain   string                 `protobuf:"bytes,9,opt,name=parent_domain,json=parentDomain,proto3" json:"parent_domain,omitempty"` // empty = root domain
+	Depth          uint32                 `protobuf:"varint,10,opt,name=depth,proto3" json:"depth,omitempty"`                                 // tree depth: root=1, child=parent.depth+1, max=5
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1876,6 +1878,20 @@ func (x *Domain) GetStratum() string {
 		return x.Stratum
 	}
 	return ""
+}
+
+func (x *Domain) GetParentDomain() string {
+	if x != nil {
+		return x.ParentDomain
+	}
+	return ""
+}
+
+func (x *Domain) GetDepth() uint32 {
+	if x != nil {
+		return x.Depth
+	}
+	return 0
 }
 
 // ValidatorInfo caches a validator's tier and verification stats for round selection.
@@ -2473,7 +2489,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x05proof\x18\x01 \x01(\fR\x05proof\x12\x16\n" +
 	"\x06output\x18\x02 \x01(\fR\x06output\x12\x1a\n" +
 	"\bproposer\x18\x03 \x01(\tR\bproposer\x12!\n" +
-	"\fblock_height\x18\x04 \x01(\x04R\vblockHeight\"\x96\x02\n" +
+	"\fblock_height\x18\x04 \x01(\x04R\vblockHeight\"\xd1\x02\n" +
 	"\x06Domain\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x129\n" +
@@ -2483,7 +2499,10 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"fact_count\x18\x05 \x01(\x04R\tfactCount\x12\x1a\n" +
 	"\bproposer\x18\x06 \x01(\tR\bproposer\x12\x1c\n" +
 	"\tendorsers\x18\a \x03(\tR\tendorsers\x12\x18\n" +
-	"\astratum\x18\b \x01(\tR\astratum\"\xa5\x01\n" +
+	"\astratum\x18\b \x01(\tR\astratum\x12#\n" +
+	"\rparent_domain\x18\t \x01(\tR\fparentDomain\x12\x14\n" +
+	"\x05depth\x18\n" +
+	" \x01(\rR\x05depth\"\xa5\x01\n" +
 	"\rValidatorInfo\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12\x14\n" +
 	"\x05stake\x18\x02 \x01(\x04R\x05stake\x12\x12\n" +

@@ -142,7 +142,9 @@ type Domain struct {
 	UpdatedAt     uint64                 `protobuf:"varint,7,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"` // block height
 	ClaimCount    uint64                 `protobuf:"varint,8,opt,name=claim_count,json=claimCount,proto3" json:"claim_count,omitempty"`
 	FactCount     uint64                 `protobuf:"varint,9,opt,name=fact_count,json=factCount,proto3" json:"fact_count,omitempty"`
-	ProposedBy    string                 `protobuf:"bytes,10,opt,name=proposed_by,json=proposedBy,proto3" json:"proposed_by,omitempty"` // bech32 address
+	ProposedBy    string                 `protobuf:"bytes,10,opt,name=proposed_by,json=proposedBy,proto3" json:"proposed_by,omitempty"`       // bech32 address
+	ParentDomain  string                 `protobuf:"bytes,11,opt,name=parent_domain,json=parentDomain,proto3" json:"parent_domain,omitempty"` // empty = root domain
+	Depth         uint32                 `protobuf:"varint,12,opt,name=depth,proto3" json:"depth,omitempty"`                                  // tree depth: root=1, child=parent.depth+1, max=5
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -245,6 +247,20 @@ func (x *Domain) GetProposedBy() string {
 		return x.ProposedBy
 	}
 	return ""
+}
+
+func (x *Domain) GetParentDomain() string {
+	if x != nil {
+		return x.ParentDomain
+	}
+	return ""
+}
+
+func (x *Domain) GetDepth() uint32 {
+	if x != nil {
+		return x.Depth
+	}
+	return 0
 }
 
 // DomainProposal represents a proposal for adding or modifying domains.
@@ -541,7 +557,7 @@ const file_zerone_ontology_v1_state_proto_rawDesc = "" +
 	"\x11consistency_proof\x18\a \x01(\tR\x10consistencyProof\x12%\n" +
 	"\x0emax_confidence\x18\b \x01(\x04R\rmaxConfidence\x12\x1d\n" +
 	"\n" +
-	"decay_rate\x18\t \x01(\x04R\tdecayRate\"\xb2\x02\n" +
+	"decay_rate\x18\t \x01(\x04R\tdecayRate\"\xed\x02\n" +
 	"\x06Domain\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12!\n" +
 	"\fdisplay_name\x18\x02 \x01(\tR\vdisplayName\x12 \n" +
@@ -558,7 +574,9 @@ const file_zerone_ontology_v1_state_proto_rawDesc = "" +
 	"fact_count\x18\t \x01(\x04R\tfactCount\x12\x1f\n" +
 	"\vproposed_by\x18\n" +
 	" \x01(\tR\n" +
-	"proposedBy\"\xdb\x02\n" +
+	"proposedBy\x12#\n" +
+	"\rparent_domain\x18\v \x01(\tR\fparentDomain\x12\x14\n" +
+	"\x05depth\x18\f \x01(\rR\x05depth\"\xdb\x02\n" +
 	"\x0eDomainProposal\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x122\n" +
 	"\x06domain\x18\x02 \x01(\v2\x1a.zerone.ontology.v1.DomainR\x06domain\x12\x1a\n" +

@@ -271,6 +271,8 @@ message Domain {
   string proposer         = 6;
   repeated string endorsers = 7;
   string stratum          = 8;
+  string parent_domain    = 9;  // empty = root domain
+  uint32 depth            = 10; // tree depth: root=1, child=parent.depth+1, max=5
 }
 
 // ValidatorInfo caches a validator's tier and verification stats for round selection.

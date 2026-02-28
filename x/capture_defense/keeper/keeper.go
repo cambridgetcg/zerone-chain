@@ -19,6 +19,7 @@ type Keeper struct {
 	authority       string
 	knowledgeKeeper types.KnowledgeKeeper
 	stakingKeeper   types.StakingKeeper
+	ontologyKeeper  types.OntologyKeeper // nil-safe, set post-init
 }
 
 // NewKeeper creates a new capture_defense module Keeper.
@@ -48,6 +49,9 @@ func (k *Keeper) SetKnowledgeKeeper(kk types.KnowledgeKeeper) { k.knowledgeKeepe
 
 // SetStakingKeeper sets the staking keeper post-initialization.
 func (k *Keeper) SetStakingKeeper(sk types.StakingKeeper) { k.stakingKeeper = sk }
+
+// SetOntologyKeeper sets the ontology keeper post-initialization.
+func (k *Keeper) SetOntologyKeeper(ok types.OntologyKeeper) { k.ontologyKeeper = ok }
 
 // InitGenesis sets initial state from genesis.
 func (k Keeper) InitGenesis(ctx sdk.Context, gs *types.GenesisState) {

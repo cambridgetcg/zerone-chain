@@ -197,6 +197,7 @@ func DefaultDomains() []*Domain {
 		domains = append(domains, &Domain{
 			Name:   name,
 			Status: DomainStatus_DOMAIN_STATUS_ACTIVE,
+			Depth:  1, // root domains
 		})
 	}
 	return domains

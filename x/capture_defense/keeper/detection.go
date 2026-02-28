@@ -49,7 +49,16 @@ func (k Keeper) AnalyzeCaptureRisk(ctx sdk.Context, domain string, params *types
 	// 6. Composite risk score: weighted average
 	riskScore := (hhi*40 + timing*20 + verdict*20 + top3*20) / 100
 
-	flagged := hhi > params.HhiThreshold
+	// Adjust HHI threshold by domain depth: deeper (more specific) domains
+	// get a more lenient threshold. +50,000 BPS per depth level above 1.
+	adjustedThreshold := params.HhiThreshold
+	if k.ontologyKeeper != nil {
+		if depth, err := k.ontologyKeeper.GetDepthForDomain(ctx, domain); err == nil && depth > 1 {
+			adjustedThreshold += uint64(depth-1) * 50000
+		}
+	}
+
+	flagged := hhi > adjustedThreshold
 
 	metrics := &types.CaptureMetrics{
 		Domain:              domain,

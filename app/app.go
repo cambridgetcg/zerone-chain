@@ -938,6 +938,7 @@ func NewZeroneApp(
 	)
 	// TODO: wire CaptureDefenseKeeper when x/capture_defense is available:
 	// app.QualificationKeeper.SetCaptureDefenseKeeper(captureDefenseAdapter)
+	app.QualificationKeeper.SetOntologyKeeper(&app.ZeroneOntologyKeeper)
 
 	// Wire domain qualification into knowledge verification flow (R26-3).
 	app.KnowledgeKeeper.SetDomainQualificationKeeper(
@@ -960,6 +961,7 @@ func NewZeroneApp(
 		appCodec,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
+	app.CaptureDefenseKeeper.SetOntologyKeeper(&app.ZeroneOntologyKeeper)
 
 	app.CaptureChallengeKeeper = zeronecckeeper.NewKeeper(
 		sdkruntime.NewKVStoreService(keys[zeronecctypes.StoreKey]),
