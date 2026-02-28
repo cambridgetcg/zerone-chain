@@ -71,3 +71,40 @@ func TestEpistemicState_GetOrInit(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(800_000), state.Temperature)
 }
+
+func TestCountVindicationsInWindow(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// Create facts in different domains using the existing makeTestFact helper
+	makeTestFact(t, k, ctx, "f1", "fact one", "physics", "general", "zrn1submitter1", 700_000)
+	makeTestFact(t, k, ctx, "f2", "fact two", "physics", "general", "zrn1submitter1", 700_000)
+	makeTestFact(t, k, ctx, "f3", "fact three", "mathematics", "general", "zrn1submitter1", 700_000)
+
+	// Add vindication records for physics domain facts
+	require.NoError(t, k.SetVindicationRecord(ctx, "f1", types.VindicationRecord{
+		Verifier: "v1", FactId: "f1", VindicatedAt: 5000,
+	}))
+	require.NoError(t, k.SetVindicationRecord(ctx, "f1", types.VindicationRecord{
+		Verifier: "v2", FactId: "f1", VindicatedAt: 5000,
+	}))
+	require.NoError(t, k.SetVindicationRecord(ctx, "f2", types.VindicationRecord{
+		Verifier: "v3", FactId: "f2", VindicatedAt: 9000,
+	}))
+
+	// Record for mathematics domain (should not count for physics)
+	require.NoError(t, k.SetVindicationRecord(ctx, "f3", types.VindicationRecord{
+		Verifier: "v4", FactId: "f3", VindicatedAt: 8000,
+	}))
+
+	// Count vindications for physics within window [0, 10000]
+	count := k.CountVindicationsInWindow(ctx, "physics", 10000, 10000)
+	require.Equal(t, uint64(2), count) // f1 and f2 are two distinct facts (events)
+
+	// Narrower window that excludes f1's vindication
+	count = k.CountVindicationsInWindow(ctx, "physics", 10000, 2000)
+	require.Equal(t, uint64(1), count) // Only f2 at height 9000 within [8000, 10000]
+
+	// Empty domain
+	count = k.CountVindicationsInWindow(ctx, "logic", 10000, 10000)
+	require.Equal(t, uint64(0), count)
+}

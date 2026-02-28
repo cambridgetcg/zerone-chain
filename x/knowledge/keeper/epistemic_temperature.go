@@ -49,3 +49,26 @@ func (k Keeper) GetOrInitDomainEpistemicState(ctx context.Context, domain string
 	}
 	return state, nil
 }
+
+// CountVindicationsInWindow counts distinct vindication events (disproven facts)
+// in the given domain within [currentHeight-windowBlocks, currentHeight].
+// A vindication event is a fact that was disproven (has vindication records in the window).
+func (k Keeper) CountVindicationsInWindow(ctx context.Context, domain string, currentHeight, windowBlocks uint64) uint64 {
+	startHeight := uint64(0)
+	if currentHeight > windowBlocks {
+		startHeight = currentHeight - windowBlocks
+	}
+
+	count := uint64(0)
+	k.IterateFactsByDomain(ctx, domain, func(factID string) bool {
+		records := k.GetVindicationRecordsForFact(ctx, factID)
+		for _, rec := range records {
+			if rec.VindicatedAt >= startHeight && rec.VindicatedAt <= currentHeight {
+				count++ // Count this fact as one vindication event
+				break   // Don't double-count multiple verifiers on same fact
+			}
+		}
+		return false
+	})
+	return count
+}
