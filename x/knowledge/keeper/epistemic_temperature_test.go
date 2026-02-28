@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zerone-chain/zerone/x/knowledge/keeper"
@@ -332,4 +333,117 @@ func TestAdvanceConfidence_SkipsNonActiveFacts(t *testing.T) {
 	// Should not have changed
 	updated, _ := k.GetFact(ctx, "f1")
 	require.Equal(t, uint64(500_000), updated.Confidence)
+}
+
+func TestEpistemicTemperature_FullCycle(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	domain := "physics"
+
+	// 1. New domain starts at neutral (500,000)
+	state, err := k.GetOrInitDomainEpistemicState(ctx, domain)
+	require.NoError(t, err)
+	require.Equal(t, uint64(500_000), state.Temperature)
+
+	// 2. Simulate conformity cooling over 10 epochs.
+	//    Each epoch: decay toward neutral + conformity cooling (streak-scaled).
+	//    After 10 epochs with low diversity the temperature should drop well below 300,000.
+	params, err := k.GetParams(ctx)
+	require.NoError(t, err)
+	epochBlocks := int64(params.FitnessEpochBlocks) // 10,000
+
+	// Advance from starting height 100 to the first epoch boundary (height 10,000).
+	ctx = advanceBlocks(ctx, epochBlocks-100)
+
+	for i := uint64(1); i <= 10; i++ {
+		if i > 1 {
+			ctx = advanceBlocks(ctx, epochBlocks)
+		}
+
+		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		epoch := uint64(sdkCtx.BlockHeight()) / params.FitnessEpochBlocks
+
+		// Record low-diversity epoch data (very low entropy triggers conformity cooling)
+		require.NoError(t, k.SetDomainDiversity(ctx, domain, epoch, keeper.DomainDiversityRecord{
+			Domain:     domain,
+			Epoch:      epoch,
+			AvgEntropy: 10_000, // Well below 50,000 conformity threshold
+			RoundCount: 3,
+		}))
+
+		require.NoError(t, k.UpdateEpistemicTemperature(ctx, domain))
+	}
+
+	state, _, err = k.GetDomainEpistemicState(ctx, domain)
+	require.NoError(t, err)
+	require.Less(t, state.Temperature, uint64(300_000), "Should be cold after 10 conformity epochs")
+	t.Logf("After 10 conformity epochs: temperature=%d, category=%s",
+		state.Temperature, keeper.TemperatureCategory(state.Temperature))
+
+	// 3. Cold domain: confidence capped at 600,000 (EpistemicColdConfidenceCapBps)
+	capped := k.ClampConfidence(ctx, 750_000, domain)
+	require.Equal(t, uint64(600_000), capped)
+
+	// 4. Simulate a vindication event — disproven fact heats the domain.
+	makeTestFact(t, k, ctx, "f-vind", "disproven fact", domain, "general", "zrn1submitter1", 700_000)
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	vindHeight := uint64(sdkCtx.BlockHeight())
+	require.NoError(t, k.SetVindicationRecord(ctx, "f-vind", types.VindicationRecord{
+		Verifier:     "v1",
+		FactId:       "f-vind",
+		VindicatedAt: vindHeight,
+		DisprovenBy:  "f-new",
+	}))
+
+	// Record the temperature before vindication update for comparison
+	tempBeforeVindication := state.Temperature
+
+	// Advance to next epoch boundary and update with healthy diversity
+	ctx = advanceBlocks(ctx, epochBlocks)
+	sdkCtx = sdk.UnwrapSDKContext(ctx)
+	nextEpoch := uint64(sdkCtx.BlockHeight()) / params.FitnessEpochBlocks
+
+	// Healthy diversity data prevents further conformity cooling
+	require.NoError(t, k.SetDomainDiversity(ctx, domain, nextEpoch, keeper.DomainDiversityRecord{
+		Domain:     domain,
+		Epoch:      nextEpoch,
+		AvgEntropy: 500_000, // Healthy diversity
+		RoundCount: 3,
+	}))
+	require.NoError(t, k.UpdateEpistemicTemperature(ctx, domain))
+
+	state, _, err = k.GetDomainEpistemicState(ctx, domain)
+	require.NoError(t, err)
+	t.Logf("After vindication: temperature=%d (was %d), category=%s",
+		state.Temperature, tempBeforeVindication, keeper.TemperatureCategory(state.Temperature))
+	// Temperature should have risen due to vindication heating (+100,000 per new vindication)
+	// combined with decay toward neutral (which also pushes up from cold).
+	require.Greater(t, state.Temperature, tempBeforeVindication,
+		"Vindication should heat a cold domain")
+
+	// 5. After many quiet epochs with healthy diversity, temperature drifts back to neutral (500,000).
+	//    Decay rate is 0.5% per epoch (995,000/1,000,000), so deviation halves roughly every
+	//    139 epochs. 500 epochs should reduce any deviation to negligible levels.
+	for i := 0; i < 500; i++ {
+		ctx = advanceBlocks(ctx, epochBlocks)
+		sdkCtx2 := sdk.UnwrapSDKContext(ctx)
+		ep := uint64(sdkCtx2.BlockHeight()) / params.FitnessEpochBlocks
+		require.NoError(t, k.SetDomainDiversity(ctx, domain, ep, keeper.DomainDiversityRecord{
+			Domain:     domain,
+			Epoch:      ep,
+			AvgEntropy: 500_000, // Healthy
+			RoundCount: 3,
+		}))
+		require.NoError(t, k.UpdateEpistemicTemperature(ctx, domain))
+	}
+
+	state, _, err = k.GetDomainEpistemicState(ctx, domain)
+	require.NoError(t, err)
+	t.Logf("After 500 quiet epochs: temperature=%d", state.Temperature)
+	diff := int64(state.Temperature) - 500_000
+	if diff < 0 {
+		diff = -diff
+	}
+	require.Less(t, diff, int64(15_000),
+		"Temperature should be near neutral after many quiet epochs")
 }
