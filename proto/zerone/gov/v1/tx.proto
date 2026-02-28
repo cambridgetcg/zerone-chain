@@ -22,6 +22,7 @@ service Msg {
   rpc NominateSeatElection(MsgNominateSeatElection) returns (MsgNominateSeatElectionResponse);
   rpc AcceptSeatNomination(MsgAcceptSeatNomination) returns (MsgAcceptSeatNominationResponse);
   rpc VoteSeatElection(MsgVoteSeatElection) returns (MsgVoteSeatElectionResponse);
+  rpc DomainFormationFreeze(MsgDomainFormationFreeze) returns (MsgDomainFormationFreezeResponse);
 }
 
 // MsgSubmitLIP creates a new LIP proposal.
@@ -171,3 +172,15 @@ message MsgVoteSeatElection {
 message MsgVoteSeatElectionResponse {
   string effective_weight = 1;
 }
+
+// MsgDomainFormationFreeze imposes a formation cooldown on a domain.
+// Only executable via governance (authority-gated).
+message MsgDomainFormationFreeze {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority       = 1;
+  string domain          = 2;
+  uint64 duration_blocks = 3;
+  string reason          = 4;
+}
+
+message MsgDomainFormationFreezeResponse {}

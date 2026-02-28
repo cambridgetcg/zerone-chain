@@ -132,3 +132,9 @@ message FormationMatch {
   bool   addr1_accepted = 8;
   bool   addr2_accepted = 9;
 }
+
+message DomainFormationFreeze {
+  string domain        = 1;
+  uint64 expiry_height = 2;
+  string reason        = 3;
+}

@@ -28,6 +28,7 @@ type MsgProposePartnership struct {
 	Partner        string                 `protobuf:"bytes,2,opt,name=partner,proto3" json:"partner,omitempty"`
 	InitialDeposit string                 `protobuf:"bytes,3,opt,name=initial_deposit,json=initialDeposit,proto3" json:"initial_deposit,omitempty"`
 	ProposedTier   uint32                 `protobuf:"varint,4,opt,name=proposed_tier,json=proposedTier,proto3" json:"proposed_tier,omitempty"`
+	Domain         string                 `protobuf:"bytes,5,opt,name=domain,proto3" json:"domain,omitempty"` // optional: domain context for formation freeze checks
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -88,6 +89,13 @@ func (x *MsgProposePartnership) GetProposedTier() uint32 {
 		return x.ProposedTier
 	}
 	return 0
+}
+
+func (x *MsgProposePartnership) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
 }
 
 type MsgProposePartnershipResponse struct {
@@ -1698,12 +1706,13 @@ var File_zerone_partnerships_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\x1fzerone/partnerships/v1/tx.proto\x12\x16zerone.partnerships.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\"zerone/partnerships/v1/types.proto\x1a$zerone/partnerships/v1/genesis.proto\"\xaa\x01\n" +
+	"\x1fzerone/partnerships/v1/tx.proto\x12\x16zerone.partnerships.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\"zerone/partnerships/v1/types.proto\x1a$zerone/partnerships/v1/genesis.proto\"\xc2\x01\n" +
 	"\x15MsgProposePartnership\x12\x1a\n" +
 	"\bproposer\x18\x01 \x01(\tR\bproposer\x12\x18\n" +
 	"\apartner\x18\x02 \x01(\tR\apartner\x12'\n" +
 	"\x0finitial_deposit\x18\x03 \x01(\tR\x0einitialDeposit\x12#\n" +
-	"\rproposed_tier\x18\x04 \x01(\rR\fproposedTier:\r\x82\xe7\xb0*\bproposer\"F\n" +
+	"\rproposed_tier\x18\x04 \x01(\rR\fproposedTier\x12\x16\n" +
+	"\x06domain\x18\x05 \x01(\tR\x06domain:\r\x82\xe7\xb0*\bproposer\"F\n" +
 	"\x1dMsgProposePartnershipResponse\x12%\n" +
 	"\x0epartnership_id\x18\x01 \x01(\tR\rpartnershipId\"\x82\x01\n" +
 	"\x14MsgAcceptPartnership\x12\x1a\n" +

@@ -34,6 +34,7 @@ message MsgProposePartnership {
   string partner = 2;
   string initial_deposit = 3;
   uint32 proposed_tier = 4;
+  string domain = 5;  // optional: domain context for formation freeze checks
 }
 message MsgProposePartnershipResponse { string partnership_id = 1; }
 

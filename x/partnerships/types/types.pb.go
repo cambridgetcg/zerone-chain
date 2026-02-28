@@ -1213,6 +1213,66 @@ func (x *FormationMatch) GetAddr2Accepted() bool {
 	return false
 }
 
+type DomainFormationFreeze struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Domain        string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	ExpiryHeight  uint64                 `protobuf:"varint,2,opt,name=expiry_height,json=expiryHeight,proto3" json:"expiry_height,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DomainFormationFreeze) Reset() {
+	*x = DomainFormationFreeze{}
+	mi := &file_zerone_partnerships_v1_types_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DomainFormationFreeze) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DomainFormationFreeze) ProtoMessage() {}
+
+func (x *DomainFormationFreeze) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_types_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DomainFormationFreeze.ProtoReflect.Descriptor instead.
+func (*DomainFormationFreeze) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_types_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *DomainFormationFreeze) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *DomainFormationFreeze) GetExpiryHeight() uint64 {
+	if x != nil {
+		return x.ExpiryHeight
+	}
+	return 0
+}
+
+func (x *DomainFormationFreeze) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 var File_zerone_partnerships_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_types_proto_rawDesc = "" +
@@ -1350,7 +1410,11 @@ const file_zerone_partnerships_v1_types_proto_rawDesc = "" +
 	"expires_at\x18\x06 \x01(\x04R\texpiresAt\x12\x16\n" +
 	"\x06status\x18\a \x01(\tR\x06status\x12%\n" +
 	"\x0eaddr1_accepted\x18\b \x01(\bR\raddr1Accepted\x12%\n" +
-	"\x0eaddr2_accepted\x18\t \x01(\bR\raddr2AcceptedB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
+	"\x0eaddr2_accepted\x18\t \x01(\bR\raddr2Accepted\"l\n" +
+	"\x15DomainFormationFreeze\x12\x16\n" +
+	"\x06domain\x18\x01 \x01(\tR\x06domain\x12#\n" +
+	"\rexpiry_height\x18\x02 \x01(\x04R\fexpiryHeight\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reasonB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
 
 var (
 	file_zerone_partnerships_v1_types_proto_rawDescOnce sync.Once
@@ -1364,20 +1428,21 @@ func file_zerone_partnerships_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_partnerships_v1_types_proto_rawDescData
 }
 
-var file_zerone_partnerships_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_zerone_partnerships_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_zerone_partnerships_v1_types_proto_goTypes = []any{
-	(*ExitState)(nil),          // 0: zerone.partnerships.v1.ExitState
-	(*Partnership)(nil),        // 1: zerone.partnerships.v1.Partnership
-	(*DeliberationState)(nil),  // 2: zerone.partnerships.v1.DeliberationState
-	(*ConsensusOperation)(nil), // 3: zerone.partnerships.v1.ConsensusOperation
-	(*SafetyFreeze)(nil),       // 4: zerone.partnerships.v1.SafetyFreeze
-	(*CoercionSignal)(nil),     // 5: zerone.partnerships.v1.CoercionSignal
-	(*RejectionCooldown)(nil),  // 6: zerone.partnerships.v1.RejectionCooldown
-	(*SeedPartnership)(nil),    // 7: zerone.partnerships.v1.SeedPartnership
-	(*PoolEntry)(nil),          // 8: zerone.partnerships.v1.PoolEntry
-	(*MentorshipConfig)(nil),   // 9: zerone.partnerships.v1.MentorshipConfig
-	(*Mentorship)(nil),         // 10: zerone.partnerships.v1.Mentorship
-	(*FormationMatch)(nil),     // 11: zerone.partnerships.v1.FormationMatch
+	(*ExitState)(nil),             // 0: zerone.partnerships.v1.ExitState
+	(*Partnership)(nil),           // 1: zerone.partnerships.v1.Partnership
+	(*DeliberationState)(nil),     // 2: zerone.partnerships.v1.DeliberationState
+	(*ConsensusOperation)(nil),    // 3: zerone.partnerships.v1.ConsensusOperation
+	(*SafetyFreeze)(nil),          // 4: zerone.partnerships.v1.SafetyFreeze
+	(*CoercionSignal)(nil),        // 5: zerone.partnerships.v1.CoercionSignal
+	(*RejectionCooldown)(nil),     // 6: zerone.partnerships.v1.RejectionCooldown
+	(*SeedPartnership)(nil),       // 7: zerone.partnerships.v1.SeedPartnership
+	(*PoolEntry)(nil),             // 8: zerone.partnerships.v1.PoolEntry
+	(*MentorshipConfig)(nil),      // 9: zerone.partnerships.v1.MentorshipConfig
+	(*Mentorship)(nil),            // 10: zerone.partnerships.v1.Mentorship
+	(*FormationMatch)(nil),        // 11: zerone.partnerships.v1.FormationMatch
+	(*DomainFormationFreeze)(nil), // 12: zerone.partnerships.v1.DomainFormationFreeze
 }
 var file_zerone_partnerships_v1_types_proto_depIdxs = []int32{
 	0, // 0: zerone.partnerships.v1.Partnership.exit_state:type_name -> zerone.partnerships.v1.ExitState
@@ -1400,7 +1465,7 @@ func file_zerone_partnerships_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_partnerships_v1_types_proto_rawDesc), len(file_zerone_partnerships_v1_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

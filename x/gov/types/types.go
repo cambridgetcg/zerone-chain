@@ -522,6 +522,28 @@ func (m *MsgUpdateParams) GetSigners() []sdk.AccAddress {
 	return []sdk.AccAddress{addr}
 }
 
+// --- Domain Formation Freeze Messages ---
+
+// ValidateBasic performs stateless validation on MsgDomainFormationFreeze.
+func (m *MsgDomainFormationFreeze) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Authority); err != nil {
+		return ErrInvalidAddress
+	}
+	if m.Domain == "" {
+		return ErrInvalidParams
+	}
+	if m.DurationBlocks == 0 {
+		return ErrInvalidParams
+	}
+	return nil
+}
+
+// GetSigners returns the expected signers for MsgDomainFormationFreeze.
+func (m *MsgDomainFormationFreeze) GetSigners() []sdk.AccAddress {
+	addr, _ := sdk.AccAddressFromBech32(m.Authority)
+	return []sdk.AccAddress{addr}
+}
+
 // --- Phase Transition Helpers ---
 
 // PhaseTransitionMeta encodes the target phase for a phase transition LIP's Description.

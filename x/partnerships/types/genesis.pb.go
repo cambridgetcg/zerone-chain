@@ -151,6 +151,7 @@ type Params struct {
 	FormationMatchIntervalBlocks       uint64                 `protobuf:"varint,18,opt,name=formation_match_interval_blocks,json=formationMatchIntervalBlocks,proto3" json:"formation_match_interval_blocks,omitempty"`
 	MatchAcceptanceBlocks              uint64                 `protobuf:"varint,19,opt,name=match_acceptance_blocks,json=matchAcceptanceBlocks,proto3" json:"match_acceptance_blocks,omitempty"`
 	AutoProposePartnershipOnGraduation bool                   `protobuf:"varint,20,opt,name=auto_propose_partnership_on_graduation,json=autoProposePartnershipOnGraduation,proto3" json:"auto_propose_partnership_on_graduation,omitempty"`
+	SocialSaturationThreshold          uint64                 `protobuf:"varint,21,opt,name=social_saturation_threshold,json=socialSaturationThreshold,proto3" json:"social_saturation_threshold,omitempty"` // Min unique participants for social benefit (R31-5, default: 4)
 	unknownFields                      protoimpl.UnknownFields
 	sizeCache                          protoimpl.SizeCache
 }
@@ -325,6 +326,13 @@ func (x *Params) GetAutoProposePartnershipOnGraduation() bool {
 	return false
 }
 
+func (x *Params) GetSocialSaturationThreshold() uint64 {
+	if x != nil {
+		return x.SocialSaturationThreshold
+	}
+	return 0
+}
+
 var File_zerone_partnerships_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_genesis_proto_rawDesc = "" +
@@ -339,7 +347,7 @@ const file_zerone_partnerships_v1_genesis_proto_rawDesc = "" +
 	"\x11seed_partnerships\x18\x06 \x03(\v2'.zerone.partnerships.v1.SeedPartnershipR\x10seedPartnerships\x12D\n" +
 	"\fpool_entries\x18\a \x03(\v2!.zerone.partnerships.v1.PoolEntryR\vpoolEntries\x12D\n" +
 	"\vmentorships\x18\b \x03(\v2\".zerone.partnerships.v1.MentorshipR\vmentorships\x12S\n" +
-	"\x11formation_matches\x18\t \x03(\v2&.zerone.partnerships.v1.FormationMatchR\x10formationMatches\"\x95\t\n" +
+	"\x11formation_matches\x18\t \x03(\v2&.zerone.partnerships.v1.FormationMatchR\x10formationMatches\"\xd5\t\n" +
 	"\x06Params\x126\n" +
 	"\x17formation_window_blocks\x18\x01 \x01(\x04R\x15formationWindowBlocks\x122\n" +
 	"\x15cooling_period_blocks\x18\x02 \x01(\x04R\x13coolingPeriodBlocks\x12/\n" +
@@ -361,7 +369,8 @@ const file_zerone_partnerships_v1_genesis_proto_rawDesc = "" +
 	"\x1amax_mentorships_per_mentor\x18\x11 \x01(\x04R\x17maxMentorshipsPerMentor\x12E\n" +
 	"\x1fformation_match_interval_blocks\x18\x12 \x01(\x04R\x1cformationMatchIntervalBlocks\x126\n" +
 	"\x17match_acceptance_blocks\x18\x13 \x01(\x04R\x15matchAcceptanceBlocks\x12R\n" +
-	"&auto_propose_partnership_on_graduation\x18\x14 \x01(\bR\"autoProposePartnershipOnGraduationB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
+	"&auto_propose_partnership_on_graduation\x18\x14 \x01(\bR\"autoProposePartnershipOnGraduation\x12>\n" +
+	"\x1bsocial_saturation_threshold\x18\x15 \x01(\x04R\x19socialSaturationThresholdB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
 
 var (
 	file_zerone_partnerships_v1_genesis_proto_rawDescOnce sync.Once

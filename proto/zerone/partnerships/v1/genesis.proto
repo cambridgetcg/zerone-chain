@@ -37,4 +37,5 @@ message Params {
   uint64 formation_match_interval_blocks = 18;
   uint64 match_acceptance_blocks = 19;
   bool   auto_propose_partnership_on_graduation = 20;
+  uint64 social_saturation_threshold = 21; // Min unique participants for social benefit (R31-5, default: 4)
 }

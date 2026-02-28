@@ -19,19 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Msg_SubmitLIP_FullMethodName            = "/zerone.gov.v1.Msg/SubmitLIP"
-	Msg_StakeLIP_FullMethodName             = "/zerone.gov.v1.Msg/StakeLIP"
-	Msg_AdvanceLIPStage_FullMethodName      = "/zerone.gov.v1.Msg/AdvanceLIPStage"
-	Msg_CastVote_FullMethodName             = "/zerone.gov.v1.Msg/CastVote"
-	Msg_WithdrawLIP_FullMethodName          = "/zerone.gov.v1.Msg/WithdrawLIP"
-	Msg_UpdateParams_FullMethodName         = "/zerone.gov.v1.Msg/UpdateParams"
-	Msg_SubmitResearchSpend_FullMethodName  = "/zerone.gov.v1.Msg/SubmitResearchSpend"
-	Msg_VoteResearchSpend_FullMethodName    = "/zerone.gov.v1.Msg/VoteResearchSpend"
-	Msg_SetResearchVoters_FullMethodName    = "/zerone.gov.v1.Msg/SetResearchVoters"
-	Msg_AttachUpgradePlan_FullMethodName    = "/zerone.gov.v1.Msg/AttachUpgradePlan"
-	Msg_NominateSeatElection_FullMethodName = "/zerone.gov.v1.Msg/NominateSeatElection"
-	Msg_AcceptSeatNomination_FullMethodName = "/zerone.gov.v1.Msg/AcceptSeatNomination"
-	Msg_VoteSeatElection_FullMethodName     = "/zerone.gov.v1.Msg/VoteSeatElection"
+	Msg_SubmitLIP_FullMethodName             = "/zerone.gov.v1.Msg/SubmitLIP"
+	Msg_StakeLIP_FullMethodName              = "/zerone.gov.v1.Msg/StakeLIP"
+	Msg_AdvanceLIPStage_FullMethodName       = "/zerone.gov.v1.Msg/AdvanceLIPStage"
+	Msg_CastVote_FullMethodName              = "/zerone.gov.v1.Msg/CastVote"
+	Msg_WithdrawLIP_FullMethodName           = "/zerone.gov.v1.Msg/WithdrawLIP"
+	Msg_UpdateParams_FullMethodName          = "/zerone.gov.v1.Msg/UpdateParams"
+	Msg_SubmitResearchSpend_FullMethodName   = "/zerone.gov.v1.Msg/SubmitResearchSpend"
+	Msg_VoteResearchSpend_FullMethodName     = "/zerone.gov.v1.Msg/VoteResearchSpend"
+	Msg_SetResearchVoters_FullMethodName     = "/zerone.gov.v1.Msg/SetResearchVoters"
+	Msg_AttachUpgradePlan_FullMethodName     = "/zerone.gov.v1.Msg/AttachUpgradePlan"
+	Msg_NominateSeatElection_FullMethodName  = "/zerone.gov.v1.Msg/NominateSeatElection"
+	Msg_AcceptSeatNomination_FullMethodName  = "/zerone.gov.v1.Msg/AcceptSeatNomination"
+	Msg_VoteSeatElection_FullMethodName      = "/zerone.gov.v1.Msg/VoteSeatElection"
+	Msg_DomainFormationFreeze_FullMethodName = "/zerone.gov.v1.Msg/DomainFormationFreeze"
 )
 
 // MsgClient is the client API for Msg service.
@@ -53,6 +54,7 @@ type MsgClient interface {
 	NominateSeatElection(ctx context.Context, in *MsgNominateSeatElection, opts ...grpc.CallOption) (*MsgNominateSeatElectionResponse, error)
 	AcceptSeatNomination(ctx context.Context, in *MsgAcceptSeatNomination, opts ...grpc.CallOption) (*MsgAcceptSeatNominationResponse, error)
 	VoteSeatElection(ctx context.Context, in *MsgVoteSeatElection, opts ...grpc.CallOption) (*MsgVoteSeatElectionResponse, error)
+	DomainFormationFreeze(ctx context.Context, in *MsgDomainFormationFreeze, opts ...grpc.CallOption) (*MsgDomainFormationFreezeResponse, error)
 }
 
 type msgClient struct {
@@ -193,6 +195,16 @@ func (c *msgClient) VoteSeatElection(ctx context.Context, in *MsgVoteSeatElectio
 	return out, nil
 }
 
+func (c *msgClient) DomainFormationFreeze(ctx context.Context, in *MsgDomainFormationFreeze, opts ...grpc.CallOption) (*MsgDomainFormationFreezeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgDomainFormationFreezeResponse)
+	err := c.cc.Invoke(ctx, Msg_DomainFormationFreeze_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -212,6 +224,7 @@ type MsgServer interface {
 	NominateSeatElection(context.Context, *MsgNominateSeatElection) (*MsgNominateSeatElectionResponse, error)
 	AcceptSeatNomination(context.Context, *MsgAcceptSeatNomination) (*MsgAcceptSeatNominationResponse, error)
 	VoteSeatElection(context.Context, *MsgVoteSeatElection) (*MsgVoteSeatElectionResponse, error)
+	DomainFormationFreeze(context.Context, *MsgDomainFormationFreeze) (*MsgDomainFormationFreezeResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -260,6 +273,9 @@ func (UnimplementedMsgServer) AcceptSeatNomination(context.Context, *MsgAcceptSe
 }
 func (UnimplementedMsgServer) VoteSeatElection(context.Context, *MsgVoteSeatElection) (*MsgVoteSeatElectionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method VoteSeatElection not implemented")
+}
+func (UnimplementedMsgServer) DomainFormationFreeze(context.Context, *MsgDomainFormationFreeze) (*MsgDomainFormationFreezeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DomainFormationFreeze not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -516,6 +532,24 @@ func _Msg_VoteSeatElection_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_DomainFormationFreeze_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgDomainFormationFreeze)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).DomainFormationFreeze(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_DomainFormationFreeze_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).DomainFormationFreeze(ctx, req.(*MsgDomainFormationFreeze))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -574,6 +608,10 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "VoteSeatElection",
 			Handler:    _Msg_VoteSeatElection_Handler,
+		},
+		{
+			MethodName: "DomainFormationFreeze",
+			Handler:    _Msg_DomainFormationFreeze_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
