@@ -7,6 +7,8 @@
 package types
 
 import (
+	fmt "fmt"
+
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -698,3 +700,21 @@ func file_zerone_alignment_v1_query_proto_init() {
 	file_zerone_alignment_v1_query_proto_goTypes = nil
 	file_zerone_alignment_v1_query_proto_depIdxs = nil
 }
+
+// QueryHealthHistoryRequest is the request for health history.
+type QueryHealthHistoryRequest struct {
+	Limit uint32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+}
+
+func (x *QueryHealthHistoryRequest) Reset()         {}
+func (x *QueryHealthHistoryRequest) String() string { return fmt.Sprintf("limit=%d", x.Limit) }
+func (x *QueryHealthHistoryRequest) ProtoMessage()  {}
+
+// QueryHealthHistoryResponse is the response for health history.
+type QueryHealthHistoryResponse struct {
+	Entries []*AlignmentHealthIndex `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+}
+
+func (x *QueryHealthHistoryResponse) Reset()         {}
+func (x *QueryHealthHistoryResponse) String() string { return "QueryHealthHistoryResponse" }
+func (x *QueryHealthHistoryResponse) ProtoMessage()  {}

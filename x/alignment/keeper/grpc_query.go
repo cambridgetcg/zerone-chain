@@ -52,3 +52,8 @@ func (q queryServer) CorrectionHistory(ctx context.Context, req *types.QueryCorr
 		Total:       total,
 	}, nil
 }
+
+func (q queryServer) HealthHistory(ctx context.Context, req *types.QueryHealthHistoryRequest) (*types.QueryHealthHistoryResponse, error) {
+	entries := q.Keeper.GetRecentHealthIndices(ctx, req.Limit)
+	return &types.QueryHealthHistoryResponse{Entries: entries}, nil
+}

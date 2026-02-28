@@ -142,6 +142,34 @@ func (k Keeper) GetHealthIndex(ctx context.Context, height uint64) (*types.Align
 	return &hi, true
 }
 
+// GetRecentHealthIndices returns the most recent health indices in reverse order.
+// Max iteration capped at 10,000 entries.
+func (k Keeper) GetRecentHealthIndices(ctx context.Context, limit uint32) []*types.AlignmentHealthIndex {
+	if limit == 0 || limit > 100 {
+		limit = 20
+	}
+
+	st := k.storeService.OpenKVStore(ctx)
+	iter, err := st.ReverseIterator(types.HealthIndexKeyPrefix, prefixEndBytes(types.HealthIndexKeyPrefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+
+	var results []*types.AlignmentHealthIndex
+	maxIter := 10_000
+	count := 0
+	for ; iter.Valid() && uint32(len(results)) < limit && count < maxIter; iter.Next() {
+		count++
+		var hi types.AlignmentHealthIndex
+		if err := json.Unmarshal(iter.Value(), &hi); err != nil {
+			continue
+		}
+		results = append(results, &hi)
+	}
+	return results
+}
+
 // --- Corrections ---
 
 func (k Keeper) AddCorrection(ctx context.Context, correction *types.CorrectionRecord) {

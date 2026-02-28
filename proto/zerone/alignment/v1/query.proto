@@ -27,6 +27,9 @@ service Query {
   rpc CorrectionHistory(QueryCorrectionHistoryRequest) returns (QueryCorrectionHistoryResponse) {
     option (google.api.http).get = "/zerone/alignment/v1/corrections";
   }
+  rpc HealthHistory(QueryHealthHistoryRequest) returns (QueryHealthHistoryResponse) {
+    option (google.api.http).get = "/zerone/alignment/v1/health-history";
+  }
 }
 
 message QueryParamsRequest {}
@@ -70,4 +73,11 @@ message QueryCorrectionHistoryRequest {
 message QueryCorrectionHistoryResponse {
   repeated CorrectionRecord corrections = 1;
   uint64 total = 2;
+}
+
+message QueryHealthHistoryRequest {
+  uint32 limit = 1;
+}
+message QueryHealthHistoryResponse {
+  repeated AlignmentHealthIndex entries = 1;
 }

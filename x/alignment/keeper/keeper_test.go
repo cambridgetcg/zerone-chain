@@ -725,3 +725,37 @@ func TestParamValidation(t *testing.T) {
 		t.Fatalf("default params should be valid: %v", err)
 	}
 }
+
+// --- Test: Query HealthHistory returns entries in reverse order ---
+
+func TestQueryHealthHistory(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	for i := uint64(100); i <= 500; i += 100 {
+		k.SetHealthIndex(ctx, &types.AlignmentHealthIndex{
+			Height:         i,
+			CompositeScore: 700_000 + i,
+			Category:       types.CategoryHealthy,
+		})
+	}
+
+	resp, err := qs.HealthHistory(ctx, &types.QueryHealthHistoryRequest{Limit: 3})
+	if err != nil {
+		t.Fatalf("query HealthHistory failed: %v", err)
+	}
+	if len(resp.Entries) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(resp.Entries))
+	}
+	if resp.Entries[0].Height != 500 {
+		t.Errorf("expected first entry height=500 (most recent), got %d", resp.Entries[0].Height)
+	}
+}
+
+func TestGetRecentHealthIndicesEmpty(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+	results := k.GetRecentHealthIndices(ctx, 0)
+	if len(results) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(results))
+	}
+}

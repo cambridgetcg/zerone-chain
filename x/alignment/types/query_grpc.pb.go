@@ -25,6 +25,7 @@ const (
 	Query_Scores_FullMethodName            = "/zerone.alignment.v1.Query/Scores"
 	Query_HealthIndex_FullMethodName       = "/zerone.alignment.v1.Query/HealthIndex"
 	Query_CorrectionHistory_FullMethodName = "/zerone.alignment.v1.Query/CorrectionHistory"
+	Query_HealthHistory_FullMethodName     = "/zerone.alignment.v1.Query/HealthHistory"
 )
 
 // QueryClient is the client API for Query service.
@@ -39,6 +40,7 @@ type QueryClient interface {
 	Scores(ctx context.Context, in *QueryScoresRequest, opts ...grpc.CallOption) (*QueryScoresResponse, error)
 	HealthIndex(ctx context.Context, in *QueryHealthIndexRequest, opts ...grpc.CallOption) (*QueryHealthIndexResponse, error)
 	CorrectionHistory(ctx context.Context, in *QueryCorrectionHistoryRequest, opts ...grpc.CallOption) (*QueryCorrectionHistoryResponse, error)
+	HealthHistory(ctx context.Context, in *QueryHealthHistoryRequest, opts ...grpc.CallOption) (*QueryHealthHistoryResponse, error)
 }
 
 type queryClient struct {
@@ -109,6 +111,16 @@ func (c *queryClient) CorrectionHistory(ctx context.Context, in *QueryCorrection
 	return out, nil
 }
 
+func (c *queryClient) HealthHistory(ctx context.Context, in *QueryHealthHistoryRequest, opts ...grpc.CallOption) (*QueryHealthHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryHealthHistoryResponse)
+	err := c.cc.Invoke(ctx, Query_HealthHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -121,6 +133,7 @@ type QueryServer interface {
 	Scores(context.Context, *QueryScoresRequest) (*QueryScoresResponse, error)
 	HealthIndex(context.Context, *QueryHealthIndexRequest) (*QueryHealthIndexResponse, error)
 	CorrectionHistory(context.Context, *QueryCorrectionHistoryRequest) (*QueryCorrectionHistoryResponse, error)
+	HealthHistory(context.Context, *QueryHealthHistoryRequest) (*QueryHealthHistoryResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -148,6 +161,9 @@ func (UnimplementedQueryServer) HealthIndex(context.Context, *QueryHealthIndexRe
 }
 func (UnimplementedQueryServer) CorrectionHistory(context.Context, *QueryCorrectionHistoryRequest) (*QueryCorrectionHistoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CorrectionHistory not implemented")
+}
+func (UnimplementedQueryServer) HealthHistory(context.Context, *QueryHealthHistoryRequest) (*QueryHealthHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method HealthHistory not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -278,6 +294,24 @@ func _Query_CorrectionHistory_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_HealthHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryHealthHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).HealthHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_HealthHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).HealthHistory(ctx, req.(*QueryHealthHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -308,6 +342,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CorrectionHistory",
 			Handler:    _Query_CorrectionHistory_Handler,
+		},
+		{
+			MethodName: "HealthHistory",
+			Handler:    _Query_HealthHistory_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
