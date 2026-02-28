@@ -26,11 +26,13 @@ type AlignmentState struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	Enabled               bool                   `protobuf:"varint,1,opt,name=enabled,proto3" json:"enabled,omitempty"`
 	LastObservationHeight uint64                 `protobuf:"varint,2,opt,name=last_observation_height,json=lastObservationHeight,proto3" json:"last_observation_height,omitempty"`
-	ObservationCount        uint64                 `protobuf:"varint,3,opt,name=observation_count,json=observationCount,proto3" json:"observation_count,omitempty"`
-	DegradedFrequencyActive bool                   `protobuf:"varint,4,opt,name=degraded_frequency_active,json=degradedFrequencyActive,proto3" json:"degraded_frequency_active,omitempty"`
-	PreviousCategory        string                 `protobuf:"bytes,5,opt,name=previous_category,json=previousCategory,proto3" json:"previous_category,omitempty"`
-	unknownFields           protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	ObservationCount      uint64                 `protobuf:"varint,3,opt,name=observation_count,json=observationCount,proto3" json:"observation_count,omitempty"`
+	// Whether degraded-frequency mode is active (2x observation rate).
+	DegradedFrequencyActive bool `protobuf:"varint,4,opt,name=degraded_frequency_active,json=degradedFrequencyActive,proto3" json:"degraded_frequency_active,omitempty"`
+	// Previous health category for transition detection.
+	PreviousCategory string `protobuf:"bytes,5,opt,name=previous_category,json=previousCategory,proto3" json:"previous_category,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *AlignmentState) Reset() {
@@ -461,11 +463,13 @@ var File_zerone_alignment_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_alignment_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x1fzerone/alignment/v1/types.proto\x12\x13zerone.alignment.v1\"\x8f\x01\n" +
+	"\x1fzerone/alignment/v1/types.proto\x12\x13zerone.alignment.v1\"\xf8\x01\n" +
 	"\x0eAlignmentState\x12\x18\n" +
 	"\aenabled\x18\x01 \x01(\bR\aenabled\x126\n" +
 	"\x17last_observation_height\x18\x02 \x01(\x04R\x15lastObservationHeight\x12+\n" +
-	"\x11observation_count\x18\x03 \x01(\x04R\x10observationCount\"\xb3\x02\n" +
+	"\x11observation_count\x18\x03 \x01(\x04R\x10observationCount\x12:\n" +
+	"\x19degraded_frequency_active\x18\x04 \x01(\bR\x17degradedFrequencyActive\x12+\n" +
+	"\x11previous_category\x18\x05 \x01(\tR\x10previousCategory\"\xb3\x02\n" +
 	"\x14AlignmentObservation\x12\x16\n" +
 	"\x06height\x18\x01 \x01(\x04R\x06height\x12\x1c\n" +
 	"\ttimestamp\x18\x02 \x01(\x03R\ttimestamp\x12+\n" +

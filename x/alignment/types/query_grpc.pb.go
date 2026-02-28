@@ -19,15 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Params_FullMethodName            = "/zerone.alignment.v1.Query/Params"
-	Query_State_FullMethodName             = "/zerone.alignment.v1.Query/State"
-	Query_Observation_FullMethodName       = "/zerone.alignment.v1.Query/Observation"
-	Query_Scores_FullMethodName            = "/zerone.alignment.v1.Query/Scores"
-	Query_HealthIndex_FullMethodName       = "/zerone.alignment.v1.Query/HealthIndex"
-	Query_CorrectionHistory_FullMethodName = "/zerone.alignment.v1.Query/CorrectionHistory"
-	Query_HealthHistory_FullMethodName          = "/zerone.alignment.v1.Query/HealthHistory"
-	Query_CorrectionConfidence_FullMethodName   = "/zerone.alignment.v1.Query/CorrectionConfidence"
-	Query_GlobalPacing_FullMethodName           = "/zerone.alignment.v1.Query/GlobalPacing"
+	Query_Params_FullMethodName               = "/zerone.alignment.v1.Query/Params"
+	Query_State_FullMethodName                = "/zerone.alignment.v1.Query/State"
+	Query_Observation_FullMethodName          = "/zerone.alignment.v1.Query/Observation"
+	Query_Scores_FullMethodName               = "/zerone.alignment.v1.Query/Scores"
+	Query_HealthIndex_FullMethodName          = "/zerone.alignment.v1.Query/HealthIndex"
+	Query_CorrectionHistory_FullMethodName    = "/zerone.alignment.v1.Query/CorrectionHistory"
+	Query_HealthHistory_FullMethodName        = "/zerone.alignment.v1.Query/HealthHistory"
+	Query_CorrectionConfidence_FullMethodName = "/zerone.alignment.v1.Query/CorrectionConfidence"
+	Query_GlobalPacing_FullMethodName         = "/zerone.alignment.v1.Query/GlobalPacing"
 )
 
 // QueryClient is the client API for Query service.

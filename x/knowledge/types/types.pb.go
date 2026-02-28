@@ -301,13 +301,13 @@ func (Verdict) EnumDescriptor() ([]byte, []int) {
 type ClaimType int32
 
 const (
-	ClaimType_CLAIM_TYPE_UNSPECIFIED ClaimType = 0 // Legacy/untyped — treated as assertion
-	ClaimType_CLAIM_TYPE_ASSERTION   ClaimType = 1 // "X is true" — direct factual statement
-	ClaimType_CLAIM_TYPE_RELATION    ClaimType = 2 // "X relates to Y via Z" — graph edge
-	ClaimType_CLAIM_TYPE_DEFINITION  ClaimType = 3 // "X means Y" — term/concept definition
-	ClaimType_CLAIM_TYPE_CONSTRAINT  ClaimType = 4 // "X must/cannot Y" — rule or boundary
-	ClaimType_CLAIM_TYPE_NEGATION    ClaimType = 5 // "X is NOT true" — explicit falsity marker
-	ClaimType_CLAIM_TYPE_OBSERVATION    ClaimType = 6 // "X was observed at time/place" — empirical data point
+	ClaimType_CLAIM_TYPE_UNSPECIFIED   ClaimType = 0 // Legacy/untyped — treated as assertion
+	ClaimType_CLAIM_TYPE_ASSERTION     ClaimType = 1 // "X is true" — direct factual statement
+	ClaimType_CLAIM_TYPE_RELATION      ClaimType = 2 // "X relates to Y via Z" — graph edge
+	ClaimType_CLAIM_TYPE_DEFINITION    ClaimType = 3 // "X means Y" — term/concept definition
+	ClaimType_CLAIM_TYPE_CONSTRAINT    ClaimType = 4 // "X must/cannot Y" — rule or boundary
+	ClaimType_CLAIM_TYPE_NEGATION      ClaimType = 5 // "X is NOT true" — explicit falsity marker
+	ClaimType_CLAIM_TYPE_OBSERVATION   ClaimType = 6 // "X was observed at time/place" — empirical data point
 	ClaimType_CLAIM_TYPE_COMPUTATIONAL ClaimType = 7 // Derived from computation/inference — agent specialty
 )
 
@@ -324,13 +324,13 @@ var (
 		7: "CLAIM_TYPE_COMPUTATIONAL",
 	}
 	ClaimType_value = map[string]int32{
-		"CLAIM_TYPE_UNSPECIFIED": 0,
-		"CLAIM_TYPE_ASSERTION":   1,
-		"CLAIM_TYPE_RELATION":    2,
-		"CLAIM_TYPE_DEFINITION":  3,
-		"CLAIM_TYPE_CONSTRAINT":  4,
-		"CLAIM_TYPE_NEGATION":    5,
-		"CLAIM_TYPE_OBSERVATION":    6,
+		"CLAIM_TYPE_UNSPECIFIED":   0,
+		"CLAIM_TYPE_ASSERTION":     1,
+		"CLAIM_TYPE_RELATION":      2,
+		"CLAIM_TYPE_DEFINITION":    3,
+		"CLAIM_TYPE_CONSTRAINT":    4,
+		"CLAIM_TYPE_NEGATION":      5,
+		"CLAIM_TYPE_OBSERVATION":   6,
 		"CLAIM_TYPE_COMPUTATIONAL": 7,
 	}
 )
@@ -2595,7 +2595,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x0eVERDICT_ACCEPT\x10\x01\x12\x12\n" +
 	"\x0eVERDICT_REJECT\x10\x02\x12\x18\n" +
 	"\x14VERDICT_INCONCLUSIVE\x10\x03\x12\x15\n" +
-	"\x11VERDICT_MALFORMED\x10\x04*\xc5\x01\n" +
+	"\x11VERDICT_MALFORMED\x10\x04*\xe3\x01\n" +
 	"\tClaimType\x12\x1a\n" +
 	"\x16CLAIM_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14CLAIM_TYPE_ASSERTION\x10\x01\x12\x17\n" +
@@ -2603,7 +2603,8 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x15CLAIM_TYPE_DEFINITION\x10\x03\x12\x19\n" +
 	"\x15CLAIM_TYPE_CONSTRAINT\x10\x04\x12\x17\n" +
 	"\x13CLAIM_TYPE_NEGATION\x10\x05\x12\x1a\n" +
-	"\x16CLAIM_TYPE_OBSERVATION\x10\x06*\xdc\x01\n" +
+	"\x16CLAIM_TYPE_OBSERVATION\x10\x06\x12\x1c\n" +
+	"\x18CLAIM_TYPE_COMPUTATIONAL\x10\a*\xdc\x01\n" +
 	"\fRelationType\x12\x1d\n" +
 	"\x19RELATION_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16RELATION_TYPE_SUPPORTS\x10\x01\x12\x1d\n" +
