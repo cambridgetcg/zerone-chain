@@ -3569,3 +3569,124 @@ func TestFormation_ExpireMatches(t *testing.T) {
 		t.Error("expected unmatched after expiry")
 	}
 }
+
+// ==================== FORMATION MATCH HANDLER TESTS ====================
+
+func TestFormation_BothAcceptFormsPartnership(t *testing.T) {
+	ms, k, ctx, _ := setupMsgServer(t)
+
+	k.SetFormationMatch(ctx, &types.FormationMatch{
+		Id: "match-1", Addr1: humanAddr, Addr2: agentAddr,
+		Score: 8000, ProposedAt: 100, ExpiresAt: 300, Status: "proposed",
+	})
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: humanAddr, Domains: []string{"physics"}, Status: "active", MatchedWith: "match-1",
+	})
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: agentAddr, Domains: []string{"physics"}, Status: "active", MatchedWith: "match-1",
+	})
+
+	_, err := ms.AcceptFormationMatch(ctx, &types.MsgAcceptFormationMatch{
+		Accepter: humanAddr, MatchId: "match-1",
+	})
+	if err != nil {
+		t.Fatalf("AcceptFormationMatch (addr1) failed: %v", err)
+	}
+
+	fm, _ := k.GetFormationMatch(ctx, "match-1")
+	if !fm.Addr1Accepted {
+		t.Error("expected addr1_accepted to be true")
+	}
+	if fm.Status != "proposed" {
+		t.Error("expected status still proposed after one accept")
+	}
+
+	_, err = ms.AcceptFormationMatch(ctx, &types.MsgAcceptFormationMatch{
+		Accepter: agentAddr, MatchId: "match-1",
+	})
+	if err != nil {
+		t.Fatalf("AcceptFormationMatch (addr2) failed: %v", err)
+	}
+
+	fm, _ = k.GetFormationMatch(ctx, "match-1")
+	if fm.Status != "accepted" {
+		t.Errorf("expected accepted status, got %s", fm.Status)
+	}
+
+	partnerships := k.GetAllPartnerships(ctx)
+	found := false
+	for _, p := range partnerships {
+		if (p.HumanAddr == humanAddr && p.AgentAddr == agentAddr) ||
+			(p.HumanAddr == agentAddr && p.AgentAddr == humanAddr) {
+			found = true
+			if p.Status != types.StatusPending {
+				t.Errorf("expected pending partnership, got %s", p.Status)
+			}
+		}
+	}
+	if !found {
+		t.Error("expected partnership to be created after both accept")
+	}
+
+	_, inPool := k.GetPoolEntry(ctx, humanAddr)
+	if inPool {
+		t.Error("expected human to be removed from pool")
+	}
+	_, inPool = k.GetPoolEntry(ctx, agentAddr)
+	if inPool {
+		t.Error("expected agent to be removed from pool")
+	}
+}
+
+func TestFormation_DeclineReturnsToPool(t *testing.T) {
+	ms, k, ctx, _ := setupMsgServer(t)
+
+	k.SetFormationMatch(ctx, &types.FormationMatch{
+		Id: "match-1", Addr1: humanAddr, Addr2: agentAddr,
+		Score: 8000, ProposedAt: 100, ExpiresAt: 300, Status: "proposed",
+	})
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: humanAddr, Domains: []string{"physics"}, Status: "active", MatchedWith: "match-1",
+	})
+	k.SetPoolEntry(ctx, &types.PoolEntry{
+		Address: agentAddr, Domains: []string{"physics"}, Status: "active", MatchedWith: "match-1",
+	})
+
+	_, err := ms.DeclineFormationMatch(ctx, &types.MsgDeclineFormationMatch{
+		Decliner: humanAddr, MatchId: "match-1",
+	})
+	if err != nil {
+		t.Fatalf("DeclineFormationMatch failed: %v", err)
+	}
+
+	fm, _ := k.GetFormationMatch(ctx, "match-1")
+	if fm.Status != "declined" {
+		t.Errorf("expected declined, got %s", fm.Status)
+	}
+
+	pe1, _ := k.GetPoolEntry(ctx, humanAddr)
+	if pe1.MatchedWith != "" {
+		t.Error("expected human unmatched after decline")
+	}
+	pe2, _ := k.GetPoolEntry(ctx, agentAddr)
+	if pe2.MatchedWith != "" {
+		t.Error("expected agent unmatched after decline")
+	}
+}
+
+func TestFormation_AcceptByOutsiderFails(t *testing.T) {
+	ms, k, ctx, _ := setupMsgServer(t)
+
+	k.SetFormationMatch(ctx, &types.FormationMatch{
+		Id: "match-1", Addr1: humanAddr, Addr2: agentAddr,
+		Score: 8000, ProposedAt: 100, ExpiresAt: 300, Status: "proposed",
+	})
+
+	_, err := ms.AcceptFormationMatch(ctx, &types.MsgAcceptFormationMatch{
+		Accepter: outsiderAddr, MatchId: "match-1",
+	})
+	if err == nil {
+		t.Fatal("expected error for outsider accepting match")
+	}
+	_ = k // suppress unused
+}

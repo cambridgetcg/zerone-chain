@@ -777,3 +777,117 @@ func (k msgServer) EndMentorship(goCtx context.Context, msg *types.MsgEndMentors
 
 	return &types.MsgEndMentorshipResponse{}, nil
 }
+
+// AcceptFormationMatch accepts a proposed formation match.
+func (k msgServer) AcceptFormationMatch(goCtx context.Context, msg *types.MsgAcceptFormationMatch) (*types.MsgAcceptFormationMatchResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	params := k.GetParams(ctx)
+
+	fm, found := k.GetFormationMatch(ctx, msg.MatchId)
+	if !found {
+		return nil, types.ErrMatchNotFound
+	}
+	if fm.Status != "proposed" {
+		return nil, types.ErrMatchNotProposed
+	}
+	if msg.Accepter != fm.Addr1 && msg.Accepter != fm.Addr2 {
+		return nil, types.ErrNotMatchParticipant
+	}
+
+	if msg.Accepter == fm.Addr1 {
+		fm.Addr1Accepted = true
+	} else {
+		fm.Addr2Accepted = true
+	}
+
+	if fm.Addr1Accepted && fm.Addr2Accepted {
+		fm.Status = "accepted"
+		k.SetFormationMatch(ctx, fm)
+
+		k.DeletePoolEntry(ctx, fm.Addr1)
+		k.DeletePoolEntry(ctx, fm.Addr2)
+
+		currentBlock := uint64(ctx.BlockHeight())
+		seq := k.NextSequence(ctx)
+		partnershipId := fmt.Sprintf("partnership-%d", seq)
+
+		partnership := &types.Partnership{
+			Id:               partnershipId,
+			HumanAddr:        fm.Addr1,
+			AgentAddr:        fm.Addr2,
+			Status:           types.StatusPending,
+			Tier:             0,
+			LockTier:         0,
+			LockExpiresAt:    currentBlock + types.LockTiers[0].MinBlocks,
+			SplitHumanBps:    params.DefaultHumanSplitBps,
+			SplitAgentBps:    params.DefaultAgentSplitBps,
+			CommonPotBalance: "0",
+			TotalEarned:      "0",
+			CooperationScore: 500000,
+			FormedAtBlock:    currentBlock,
+		}
+		k.SetPartnership(ctx, partnership)
+
+		kvStore := k.storeService.OpenKVStore(ctx)
+		formationExpiry := currentBlock + params.FormationWindowBlocks
+		_ = kvStore.Set(
+			append(types.FormationKeyPrefix, []byte(partnershipId)...),
+			[]byte(fmt.Sprintf("%d", formationExpiry)),
+		)
+
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent("zerone.partnerships.formation_match_accepted",
+				sdk.NewAttribute("match_id", fm.Id),
+				sdk.NewAttribute("partnership_id", partnershipId),
+			),
+		)
+	} else {
+		k.SetFormationMatch(ctx, fm)
+
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent("zerone.partnerships.formation_match_partial_accept",
+				sdk.NewAttribute("match_id", fm.Id),
+				sdk.NewAttribute("accepter", msg.Accepter),
+			),
+		)
+	}
+
+	return &types.MsgAcceptFormationMatchResponse{}, nil
+}
+
+// DeclineFormationMatch declines a proposed formation match.
+func (k msgServer) DeclineFormationMatch(goCtx context.Context, msg *types.MsgDeclineFormationMatch) (*types.MsgDeclineFormationMatchResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	fm, found := k.GetFormationMatch(ctx, msg.MatchId)
+	if !found {
+		return nil, types.ErrMatchNotFound
+	}
+	if fm.Status != "proposed" {
+		return nil, types.ErrMatchNotProposed
+	}
+	if msg.Decliner != fm.Addr1 && msg.Decliner != fm.Addr2 {
+		return nil, types.ErrNotMatchParticipant
+	}
+
+	fm.Status = "declined"
+	k.SetFormationMatch(ctx, fm)
+
+	if pe, found := k.GetPoolEntry(ctx, fm.Addr1); found {
+		pe.MatchedWith = ""
+		k.SetPoolEntry(ctx, pe)
+	}
+	if pe, found := k.GetPoolEntry(ctx, fm.Addr2); found {
+		pe.MatchedWith = ""
+		k.SetPoolEntry(ctx, pe)
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.partnerships.formation_match_declined",
+			sdk.NewAttribute("match_id", fm.Id),
+			sdk.NewAttribute("declined_by", msg.Decliner),
+		),
+	)
+
+	return &types.MsgDeclineFormationMatchResponse{}, nil
+}
