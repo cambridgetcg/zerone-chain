@@ -24,6 +24,7 @@ type Keeper struct {
 	homeKeeper           types.HomeKeeper
 	zeroneAuthKeeper     types.ZeroneAuthKeeper     // nil until R28-5
 	captureDefenseKeeper types.CaptureDefenseKeeper // nil until R29-5
+	pacingKeeper         types.PacingKeeper         // nil-safe, R29-6
 
 	authority string
 }
@@ -77,6 +78,11 @@ func (k *Keeper) SetZeroneAuthKeeper(ak types.ZeroneAuthKeeper) {
 // SetCaptureDefenseKeeper sets the capture defense keeper (post-init, R29-5).
 func (k *Keeper) SetCaptureDefenseKeeper(ck types.CaptureDefenseKeeper) {
 	k.captureDefenseKeeper = ck
+}
+
+// SetPacingKeeper sets the pacing keeper for adaptive formation timing (post-init, R29-6).
+func (k *Keeper) SetPacingKeeper(pk types.PacingKeeper) {
+	k.pacingKeeper = pk
 }
 
 // GetAuthority returns the module authority address.

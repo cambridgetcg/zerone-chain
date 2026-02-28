@@ -68,7 +68,15 @@ func (k Keeper) RunFormationMatching(ctx sdk.Context) {
 	params := k.GetParams(ctx)
 	currentBlock := uint64(ctx.BlockHeight())
 
-	if params.FormationMatchIntervalBlocks == 0 || currentBlock%params.FormationMatchIntervalBlocks != 0 {
+	// R29-6: Adaptive formation interval — degraded health slows formation.
+	effectiveInterval := params.FormationMatchIntervalBlocks
+	if k.pacingKeeper != nil {
+		creationPacing, _ := k.pacingKeeper.GetGlobalPacingMultiplier(ctx)
+		if creationPacing > 0 && creationPacing != 1_000_000 {
+			effectiveInterval = params.FormationMatchIntervalBlocks * 1_000_000 / creationPacing
+		}
+	}
+	if effectiveInterval == 0 || currentBlock%effectiveInterval != 0 {
 		return
 	}
 

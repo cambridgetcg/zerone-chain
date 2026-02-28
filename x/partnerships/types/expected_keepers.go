@@ -29,3 +29,8 @@ type ZeroneAuthKeeper interface {
 type CaptureDefenseKeeper interface {
 	IsDomainFlagged(ctx context.Context, domain string) bool
 }
+
+// PacingKeeper provides global pacing signals for adaptive formation timing (R29-6).
+type PacingKeeper interface {
+	GetGlobalPacingMultiplier(ctx context.Context) (creationBps, analysisBps uint64)
+}
