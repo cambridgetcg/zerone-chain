@@ -3161,3 +3161,120 @@ func TestCoercionSignal_NoAuthKeeperFallback(t *testing.T) {
 			expectedExpiry, cs.ExpiresAt)
 	}
 }
+
+// ---------- Mentorship CRUD Tests ----------
+
+func TestMentorship_SetAndGet(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	m := &types.Mentorship{
+		Id:                  "mentorship-1",
+		MentorAddr:          humanAddr,
+		MenteeAddr:          agentAddr,
+		Domain:              "physics",
+		Status:              "proposed",
+		StartBlock:          0,
+		DurationBlocks:      1000,
+		GraduationThreshold: 20,
+		GraduationClaimsReq: 5,
+	}
+	k.SetMentorship(ctx, m)
+
+	got, found := k.GetMentorship(ctx, "mentorship-1")
+	if !found {
+		t.Fatal("mentorship not found")
+	}
+	if got.MentorAddr != humanAddr {
+		t.Errorf("expected mentor %s, got %s", humanAddr, got.MentorAddr)
+	}
+	if got.Domain != "physics" {
+		t.Errorf("expected domain physics, got %s", got.Domain)
+	}
+}
+
+func TestMentorship_GetByMentor(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetMentorship(ctx, &types.Mentorship{
+		Id: "m-1", MentorAddr: humanAddr, MenteeAddr: agentAddr, Status: "active",
+	})
+	k.SetMentorship(ctx, &types.Mentorship{
+		Id: "m-2", MentorAddr: humanAddr, MenteeAddr: agent2Addr, Status: "active",
+	})
+	k.SetMentorship(ctx, &types.Mentorship{
+		Id: "m-3", MentorAddr: agentAddr, MenteeAddr: agent2Addr, Status: "active",
+	})
+
+	mentorships := k.GetMentorshipsByMentor(ctx, humanAddr)
+	if len(mentorships) != 2 {
+		t.Errorf("expected 2 mentorships for mentor, got %d", len(mentorships))
+	}
+}
+
+func TestMentorship_GetByMentee(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetMentorship(ctx, &types.Mentorship{
+		Id: "m-1", MentorAddr: humanAddr, MenteeAddr: agentAddr, Status: "active",
+	})
+
+	mentorships := k.GetMentorshipsByMentee(ctx, agentAddr)
+	if len(mentorships) != 1 {
+		t.Errorf("expected 1 mentorship for mentee, got %d", len(mentorships))
+	}
+}
+
+func TestMentorship_CountActive(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetMentorship(ctx, &types.Mentorship{
+		Id: "m-1", MentorAddr: humanAddr, MenteeAddr: agentAddr, Status: "active",
+	})
+	k.SetMentorship(ctx, &types.Mentorship{
+		Id: "m-2", MentorAddr: humanAddr, MenteeAddr: agent2Addr, Status: "graduated",
+	})
+	k.SetMentorship(ctx, &types.Mentorship{
+		Id: "m-3", MentorAddr: humanAddr, MenteeAddr: agent3Addr, Status: "active",
+	})
+
+	count := k.CountActiveMentorshipsForMentor(ctx, humanAddr)
+	if count != 2 {
+		t.Errorf("expected 2 active mentorships, got %d", count)
+	}
+}
+
+func TestMentorship_ActiveForMentee(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	k.SetMentorship(ctx, &types.Mentorship{
+		Id: "m-1", MentorAddr: humanAddr, MenteeAddr: agentAddr, Status: "active",
+	})
+
+	m, found := k.GetActiveMentorshipForMentee(ctx, agentAddr)
+	if !found {
+		t.Fatal("expected active mentorship for mentee")
+	}
+	if m.Id != "m-1" {
+		t.Errorf("expected m-1, got %s", m.Id)
+	}
+
+	_, found = k.GetActiveMentorshipForMentee(ctx, agent2Addr)
+	if found {
+		t.Error("expected no active mentorship for agent2")
+	}
+}
+
+func TestMentorship_Delete(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	m := &types.Mentorship{
+		Id: "m-1", MentorAddr: humanAddr, MenteeAddr: agentAddr, Status: "active",
+	}
+	k.SetMentorship(ctx, m)
+	k.DeleteMentorship(ctx, m)
+
+	_, found := k.GetMentorship(ctx, "m-1")
+	if found {
+		t.Error("expected mentorship to be deleted")
+	}
+}
