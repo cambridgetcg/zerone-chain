@@ -1,33 +1,28 @@
-# R30 — Hygiene: Proto-Go Consistency
+# R30 — 掃除 (Sōji): Sweep the Temple Clean
 
-**Goal:** Eliminate the class of bugs where proto definitions and generated Go code drift apart, causing silent field drops in JSON serialization.
+**Goal:** Infrastructure hygiene before the next architectural batch. Fix systemic issues, add safety nets, harden what exists.
 
-## Background
+Sōji (掃除) is the Japanese practice of cleaning as meditation — monks sweep the temple not because it's dirty, but because sweeping is practice. R28 activated organs, R29 taught them balance, R30 ensures the foundation is sound before R31 adds circulation.
 
-R28 and R29 introduced ~30 new params and several new query RPCs across 8 modules. Multiple sessions hit the same bug pattern:
-- New field added to `.proto` but `make proto-gen` not run → stale rawDesc → `protojson` drops the field
-- New field added to Go struct but not to `.proto` → field lost on next proto regen
-- New query RPC hand-rolled as `query_ext.go` → app panics on init (`cannot find method descriptor`)
-
-This is a systemic issue. One prompt to fix it and prevent recurrence.
-
-## Sessions (1)
+## Sessions (4)
 
 | # | File | Scope |
 |---|------|-------|
-| R30-1 | R30-1-proto-consistency.md | Full audit, CI enforcement, documentation |
+| R30-1 | R30-1-proto-consistency.md | Proto-Go audit, CI enforcement, genesis round-trip tests |
+| R30-2 | R30-2-param-governance-safety.md | Parameter validation hardening, governance bounds, migration safety |
+| R30-3 | R30-3-event-observability.md | Structured event taxonomy, event documentation, event consistency |
+| R30-4 | R30-4-cross-stack-coverage.md | Cross-module integration test coverage for R28/R29 features |
 
 ## Run Order
 
-Single session. Run after R29 is complete.
+All four can run in parallel — they touch different concerns with no dependencies.
 
-## Known Issues Already Fixed
+## Known Issues Already Fixed (Pre-R30)
 
-These were caught during R28/R29 review and fixed manually:
-- `capture_defense/types/query_ext.go` — FlaggedDomains (R28-8)
-- `capture_challenge/types/query_ext.go` — ActiveChallenges (R28-8)
+- `capture_defense/types/query_ext.go` — FlaggedDomains hand-rolled gRPC (R28-8)
+- `capture_challenge/types/query_ext.go` — ActiveChallenges hand-rolled gRPC (R28-8)
 - `knowledge` MetabolismStatus query — never in proto (R28-4)
 - `alignment` correction confidence params — never in proto (R29-4)
 - All module rawDesc stale after R29 param additions
-
-R30-1 verifies no more remain and adds automation to prevent recurrence.
+- Cross-stack test: bounded correction magnitude (R28-7)
+- Event audit: graduateMentorship delegation pattern (R28-6)
