@@ -120,7 +120,7 @@ func NewQueryActiveChallengesCmd() *cobra.Command {
 
 			req := &types.QueryActiveChallengesRequest{}
 			resp := &types.QueryActiveChallengesResponse{}
-			if err := clientCtx.Invoke(cmd.Context(), "/zerone.capture_challenge.v1.QueryExt/ActiveChallenges", req, resp); err != nil {
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.capture_challenge.v1.Query/ActiveChallenges", req, resp); err != nil {
 				return fmt.Errorf("failed to query active challenges: %w", err)
 			}
 

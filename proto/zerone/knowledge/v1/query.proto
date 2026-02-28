@@ -177,6 +177,9 @@ service Query {
   rpc ConformityAlerts(QueryConformityAlertsRequest) returns (QueryConformityAlertsResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/diversity/conformity_alerts";
   }
+  rpc MetabolismStatus(QueryMetabolismStatusRequest) returns (QueryMetabolismStatusResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/metabolism/status";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -504,4 +507,16 @@ message ConformityAlert {
   string domain             = 1;
   uint64 consecutive_epochs = 2;
   uint64 threshold_bps      = 3;
+}
+
+message QueryMetabolismStatusRequest {}
+message QueryMetabolismStatusResponse {
+  uint64 total_facts      = 1;
+  uint64 active_count     = 2;
+  uint64 at_risk_count    = 3;
+  uint64 expired_count    = 4;
+  uint64 pruned_count     = 5;
+  uint64 avg_energy       = 6;
+  uint64 current_epoch    = 7;
+  uint64 next_epoch_block = 8;
 }

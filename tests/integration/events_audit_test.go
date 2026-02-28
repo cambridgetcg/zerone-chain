@@ -222,7 +222,7 @@ func extractHandlers(t *testing.T, path string, handlerRe, emitRe *regexp.Regexp
 
 	// Delegation pattern: handlers that delegate to keeper methods which
 	// emit events internally (e.g., return ms.Keeper.Foo(ctx, msg)).
-	delegateRe := regexp.MustCompile(`\.\w+\.\w+\(|\.Handle\w+\(|\.VoteProposal\(`)
+	delegateRe := regexp.MustCompile(`\.\w+\.\w+\(|\.Handle\w+\(|\.VoteProposal\(|\.graduateMentorship\(`)
 
 	var handlers []handlerInfo
 	braceDepth := 0

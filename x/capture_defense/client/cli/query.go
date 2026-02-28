@@ -96,7 +96,7 @@ func NewQueryFlaggedDomainsCmd() *cobra.Command {
 
 			req := &types.QueryFlaggedDomainsRequest{}
 			resp := &types.QueryFlaggedDomainsResponse{}
-			if err := clientCtx.Invoke(cmd.Context(), "/zerone.capture_defense.v1.QueryExt/FlaggedDomains", req, resp); err != nil {
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.capture_defense.v1.Query/FlaggedDomains", req, resp); err != nil {
 				return fmt.Errorf("failed to query flagged domains: %w", err)
 			}
 

@@ -390,6 +390,86 @@ func (x *QueryCrossStratumRequirementsResponse) GetRequirements() []*CrossStratu
 	return nil
 }
 
+type QueryFlaggedDomainsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryFlaggedDomainsRequest) Reset() {
+	*x = QueryFlaggedDomainsRequest{}
+	mi := &file_zerone_capture_defense_v1_query_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryFlaggedDomainsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryFlaggedDomainsRequest) ProtoMessage() {}
+
+func (x *QueryFlaggedDomainsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_capture_defense_v1_query_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryFlaggedDomainsRequest.ProtoReflect.Descriptor instead.
+func (*QueryFlaggedDomainsRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_capture_defense_v1_query_proto_rawDescGZIP(), []int{8}
+}
+
+type QueryFlaggedDomainsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Metrics       []*CaptureMetrics      `protobuf:"bytes,1,rep,name=metrics,proto3" json:"metrics,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryFlaggedDomainsResponse) Reset() {
+	*x = QueryFlaggedDomainsResponse{}
+	mi := &file_zerone_capture_defense_v1_query_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryFlaggedDomainsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryFlaggedDomainsResponse) ProtoMessage() {}
+
+func (x *QueryFlaggedDomainsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_capture_defense_v1_query_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryFlaggedDomainsResponse.ProtoReflect.Descriptor instead.
+func (*QueryFlaggedDomainsResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_capture_defense_v1_query_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *QueryFlaggedDomainsResponse) GetMetrics() []*CaptureMetrics {
+	if x != nil {
+		return x.Metrics
+	}
+	return nil
+}
+
 var File_zerone_capture_defense_v1_query_proto protoreflect.FileDescriptor
 
 const file_zerone_capture_defense_v1_query_proto_rawDesc = "" +
@@ -412,13 +492,17 @@ const file_zerone_capture_defense_v1_query_proto_rawDesc = "" +
 	"\ametrics\x18\x01 \x01(\v2).zerone.capture_defense.v1.CaptureMetricsR\ametrics\"&\n" +
 	"$QueryCrossStratumRequirementsRequest\"\x7f\n" +
 	"%QueryCrossStratumRequirementsResponse\x12V\n" +
-	"\frequirements\x18\x01 \x03(\v22.zerone.capture_defense.v1.CrossStratumRequirementR\frequirements2\xd6\x05\n" +
+	"\frequirements\x18\x01 \x03(\v22.zerone.capture_defense.v1.CrossStratumRequirementR\frequirements\"\x1c\n" +
+	"\x1aQueryFlaggedDomainsRequest\"b\n" +
+	"\x1bQueryFlaggedDomainsResponse\x12C\n" +
+	"\ametrics\x18\x01 \x03(\v2).zerone.capture_defense.v1.CaptureMetricsR\ametrics2\x8c\a\n" +
 	"\x05Query\x12\x92\x01\n" +
 	"\x06Params\x12-.zerone.capture_defense.v1.QueryParamsRequest\x1a..zerone.capture_defense.v1.QueryParamsResponse\")\x82\xd3\xe4\x93\x02#\x12!/zerone/capture_defense/v1/params\x12\xae\x01\n" +
 	"\n" +
 	"Reputation\x121.zerone.capture_defense.v1.QueryReputationRequest\x1a2.zerone.capture_defense.v1.QueryReputationResponse\"9\x82\xd3\xe4\x93\x023\x121/zerone/capture_defense/v1/reputation/{validator}\x12\xb4\x01\n" +
 	"\x0eCaptureMetrics\x125.zerone.capture_defense.v1.QueryCaptureMetricsRequest\x1a6.zerone.capture_defense.v1.QueryCaptureMetricsResponse\"3\x82\xd3\xe4\x93\x02-\x12+/zerone/capture_defense/v1/metrics/{domain}\x12\xcf\x01\n" +
-	"\x18CrossStratumRequirements\x12?.zerone.capture_defense.v1.QueryCrossStratumRequirementsRequest\x1a@.zerone.capture_defense.v1.QueryCrossStratumRequirementsResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/capture_defense/v1/cross_stratumB8Z6github.com/zerone-chain/zerone/x/capture_defense/typesb\x06proto3"
+	"\x18CrossStratumRequirements\x12?.zerone.capture_defense.v1.QueryCrossStratumRequirementsRequest\x1a@.zerone.capture_defense.v1.QueryCrossStratumRequirementsResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/capture_defense/v1/cross_stratum\x12\xb3\x01\n" +
+	"\x0eFlaggedDomains\x125.zerone.capture_defense.v1.QueryFlaggedDomainsRequest\x1a6.zerone.capture_defense.v1.QueryFlaggedDomainsResponse\"2\x82\xd3\xe4\x93\x02,\x12*/zerone/capture_defense/v1/flagged_domainsB8Z6github.com/zerone-chain/zerone/x/capture_defense/typesb\x06proto3"
 
 var (
 	file_zerone_capture_defense_v1_query_proto_rawDescOnce sync.Once
@@ -432,7 +516,7 @@ func file_zerone_capture_defense_v1_query_proto_rawDescGZIP() []byte {
 	return file_zerone_capture_defense_v1_query_proto_rawDescData
 }
 
-var file_zerone_capture_defense_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_zerone_capture_defense_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_zerone_capture_defense_v1_query_proto_goTypes = []any{
 	(*QueryParamsRequest)(nil),                    // 0: zerone.capture_defense.v1.QueryParamsRequest
 	(*QueryParamsResponse)(nil),                   // 1: zerone.capture_defense.v1.QueryParamsResponse
@@ -442,33 +526,38 @@ var file_zerone_capture_defense_v1_query_proto_goTypes = []any{
 	(*QueryCaptureMetricsResponse)(nil),           // 5: zerone.capture_defense.v1.QueryCaptureMetricsResponse
 	(*QueryCrossStratumRequirementsRequest)(nil),  // 6: zerone.capture_defense.v1.QueryCrossStratumRequirementsRequest
 	(*QueryCrossStratumRequirementsResponse)(nil), // 7: zerone.capture_defense.v1.QueryCrossStratumRequirementsResponse
-	(*Params)(nil),                                // 8: zerone.capture_defense.v1.Params
-	(*GlobalReputation)(nil),                      // 9: zerone.capture_defense.v1.GlobalReputation
-	(*StratumReputation)(nil),                     // 10: zerone.capture_defense.v1.StratumReputation
-	(*DomainReputation)(nil),                      // 11: zerone.capture_defense.v1.DomainReputation
-	(*CaptureMetrics)(nil),                        // 12: zerone.capture_defense.v1.CaptureMetrics
-	(*CrossStratumRequirement)(nil),               // 13: zerone.capture_defense.v1.CrossStratumRequirement
+	(*QueryFlaggedDomainsRequest)(nil),            // 8: zerone.capture_defense.v1.QueryFlaggedDomainsRequest
+	(*QueryFlaggedDomainsResponse)(nil),           // 9: zerone.capture_defense.v1.QueryFlaggedDomainsResponse
+	(*Params)(nil),                                // 10: zerone.capture_defense.v1.Params
+	(*GlobalReputation)(nil),                      // 11: zerone.capture_defense.v1.GlobalReputation
+	(*StratumReputation)(nil),                     // 12: zerone.capture_defense.v1.StratumReputation
+	(*DomainReputation)(nil),                      // 13: zerone.capture_defense.v1.DomainReputation
+	(*CaptureMetrics)(nil),                        // 14: zerone.capture_defense.v1.CaptureMetrics
+	(*CrossStratumRequirement)(nil),               // 15: zerone.capture_defense.v1.CrossStratumRequirement
 }
 var file_zerone_capture_defense_v1_query_proto_depIdxs = []int32{
-	8,  // 0: zerone.capture_defense.v1.QueryParamsResponse.params:type_name -> zerone.capture_defense.v1.Params
-	9,  // 1: zerone.capture_defense.v1.QueryReputationResponse.global:type_name -> zerone.capture_defense.v1.GlobalReputation
-	10, // 2: zerone.capture_defense.v1.QueryReputationResponse.stratum:type_name -> zerone.capture_defense.v1.StratumReputation
-	11, // 3: zerone.capture_defense.v1.QueryReputationResponse.domain:type_name -> zerone.capture_defense.v1.DomainReputation
-	12, // 4: zerone.capture_defense.v1.QueryCaptureMetricsResponse.metrics:type_name -> zerone.capture_defense.v1.CaptureMetrics
-	13, // 5: zerone.capture_defense.v1.QueryCrossStratumRequirementsResponse.requirements:type_name -> zerone.capture_defense.v1.CrossStratumRequirement
-	0,  // 6: zerone.capture_defense.v1.Query.Params:input_type -> zerone.capture_defense.v1.QueryParamsRequest
-	2,  // 7: zerone.capture_defense.v1.Query.Reputation:input_type -> zerone.capture_defense.v1.QueryReputationRequest
-	4,  // 8: zerone.capture_defense.v1.Query.CaptureMetrics:input_type -> zerone.capture_defense.v1.QueryCaptureMetricsRequest
-	6,  // 9: zerone.capture_defense.v1.Query.CrossStratumRequirements:input_type -> zerone.capture_defense.v1.QueryCrossStratumRequirementsRequest
-	1,  // 10: zerone.capture_defense.v1.Query.Params:output_type -> zerone.capture_defense.v1.QueryParamsResponse
-	3,  // 11: zerone.capture_defense.v1.Query.Reputation:output_type -> zerone.capture_defense.v1.QueryReputationResponse
-	5,  // 12: zerone.capture_defense.v1.Query.CaptureMetrics:output_type -> zerone.capture_defense.v1.QueryCaptureMetricsResponse
-	7,  // 13: zerone.capture_defense.v1.Query.CrossStratumRequirements:output_type -> zerone.capture_defense.v1.QueryCrossStratumRequirementsResponse
-	10, // [10:14] is the sub-list for method output_type
-	6,  // [6:10] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	10, // 0: zerone.capture_defense.v1.QueryParamsResponse.params:type_name -> zerone.capture_defense.v1.Params
+	11, // 1: zerone.capture_defense.v1.QueryReputationResponse.global:type_name -> zerone.capture_defense.v1.GlobalReputation
+	12, // 2: zerone.capture_defense.v1.QueryReputationResponse.stratum:type_name -> zerone.capture_defense.v1.StratumReputation
+	13, // 3: zerone.capture_defense.v1.QueryReputationResponse.domain:type_name -> zerone.capture_defense.v1.DomainReputation
+	14, // 4: zerone.capture_defense.v1.QueryCaptureMetricsResponse.metrics:type_name -> zerone.capture_defense.v1.CaptureMetrics
+	15, // 5: zerone.capture_defense.v1.QueryCrossStratumRequirementsResponse.requirements:type_name -> zerone.capture_defense.v1.CrossStratumRequirement
+	14, // 6: zerone.capture_defense.v1.QueryFlaggedDomainsResponse.metrics:type_name -> zerone.capture_defense.v1.CaptureMetrics
+	0,  // 7: zerone.capture_defense.v1.Query.Params:input_type -> zerone.capture_defense.v1.QueryParamsRequest
+	2,  // 8: zerone.capture_defense.v1.Query.Reputation:input_type -> zerone.capture_defense.v1.QueryReputationRequest
+	4,  // 9: zerone.capture_defense.v1.Query.CaptureMetrics:input_type -> zerone.capture_defense.v1.QueryCaptureMetricsRequest
+	6,  // 10: zerone.capture_defense.v1.Query.CrossStratumRequirements:input_type -> zerone.capture_defense.v1.QueryCrossStratumRequirementsRequest
+	8,  // 11: zerone.capture_defense.v1.Query.FlaggedDomains:input_type -> zerone.capture_defense.v1.QueryFlaggedDomainsRequest
+	1,  // 12: zerone.capture_defense.v1.Query.Params:output_type -> zerone.capture_defense.v1.QueryParamsResponse
+	3,  // 13: zerone.capture_defense.v1.Query.Reputation:output_type -> zerone.capture_defense.v1.QueryReputationResponse
+	5,  // 14: zerone.capture_defense.v1.Query.CaptureMetrics:output_type -> zerone.capture_defense.v1.QueryCaptureMetricsResponse
+	7,  // 15: zerone.capture_defense.v1.Query.CrossStratumRequirements:output_type -> zerone.capture_defense.v1.QueryCrossStratumRequirementsResponse
+	9,  // 16: zerone.capture_defense.v1.Query.FlaggedDomains:output_type -> zerone.capture_defense.v1.QueryFlaggedDomainsResponse
+	12, // [12:17] is the sub-list for method output_type
+	7,  // [7:12] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_zerone_capture_defense_v1_query_proto_init() }
@@ -484,7 +573,7 @@ func file_zerone_capture_defense_v1_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_capture_defense_v1_query_proto_rawDesc), len(file_zerone_capture_defense_v1_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

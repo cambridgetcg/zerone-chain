@@ -77,22 +77,8 @@ func (q queryServer) ChallengesByDomain(goCtx context.Context, req *types.QueryC
 	return &types.QueryChallengesByDomainResponse{Challenges: challenges}, nil
 }
 
-// ---------- Extended Query Server (non-proto) ----------
-
-type queryExtServer struct {
-	types.UnimplementedQueryExtServer
-	Keeper
-}
-
-// NewQueryExtServerImpl returns an implementation of the QueryExtServer interface.
-func NewQueryExtServerImpl(keeper Keeper) types.QueryExtServer {
-	return &queryExtServer{Keeper: keeper}
-}
-
-var _ types.QueryExtServer = &queryExtServer{}
-
 // ActiveChallenges returns all challenges with an active (non-terminal) status.
-func (q queryExtServer) ActiveChallenges(goCtx context.Context, _ *types.QueryActiveChallengesRequest) (*types.QueryActiveChallengesResponse, error) {
+func (q queryServer) ActiveChallenges(goCtx context.Context, _ *types.QueryActiveChallengesRequest) (*types.QueryActiveChallengesResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	var active []*types.CaptureChallenge
 	q.IterateChallenges(ctx, func(ch *types.CaptureChallenge) bool {

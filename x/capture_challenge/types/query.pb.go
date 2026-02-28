@@ -366,6 +366,86 @@ func (x *QueryChallengesByDomainResponse) GetChallenges() []*CaptureChallenge {
 	return nil
 }
 
+type QueryActiveChallengesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryActiveChallengesRequest) Reset() {
+	*x = QueryActiveChallengesRequest{}
+	mi := &file_zerone_capture_challenge_v1_query_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryActiveChallengesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryActiveChallengesRequest) ProtoMessage() {}
+
+func (x *QueryActiveChallengesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_capture_challenge_v1_query_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryActiveChallengesRequest.ProtoReflect.Descriptor instead.
+func (*QueryActiveChallengesRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_capture_challenge_v1_query_proto_rawDescGZIP(), []int{8}
+}
+
+type QueryActiveChallengesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Challenges    []*CaptureChallenge    `protobuf:"bytes,1,rep,name=challenges,proto3" json:"challenges,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryActiveChallengesResponse) Reset() {
+	*x = QueryActiveChallengesResponse{}
+	mi := &file_zerone_capture_challenge_v1_query_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryActiveChallengesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryActiveChallengesResponse) ProtoMessage() {}
+
+func (x *QueryActiveChallengesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_capture_challenge_v1_query_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryActiveChallengesResponse.ProtoReflect.Descriptor instead.
+func (*QueryActiveChallengesResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_capture_challenge_v1_query_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *QueryActiveChallengesResponse) GetChallenges() []*CaptureChallenge {
+	if x != nil {
+		return x.Challenges
+	}
+	return nil
+}
+
 var File_zerone_capture_challenge_v1_query_proto protoreflect.FileDescriptor
 
 const file_zerone_capture_challenge_v1_query_proto_rawDesc = "" +
@@ -387,13 +467,19 @@ const file_zerone_capture_challenge_v1_query_proto_rawDesc = "" +
 	"\x1fQueryChallengesByDomainResponse\x12M\n" +
 	"\n" +
 	"challenges\x18\x01 \x03(\v2-.zerone.capture_challenge.v1.CaptureChallengeR\n" +
-	"challenges2\xcf\x05\n" +
+	"challenges\"\x1e\n" +
+	"\x1cQueryActiveChallengesRequest\"n\n" +
+	"\x1dQueryActiveChallengesResponse\x12M\n" +
+	"\n" +
+	"challenges\x18\x01 \x03(\v2-.zerone.capture_challenge.v1.CaptureChallengeR\n" +
+	"challenges2\x93\a\n" +
 	"\x05Query\x12\x98\x01\n" +
 	"\x06Params\x12/.zerone.capture_challenge.v1.QueryParamsRequest\x1a0.zerone.capture_challenge.v1.QueryParamsResponse\"+\x82\xd3\xe4\x93\x02%\x12#/zerone/capture_challenge/v1/params\x12\xa9\x01\n" +
 	"\tChallenge\x122.zerone.capture_challenge.v1.QueryChallengeRequest\x1a3.zerone.capture_challenge.v1.QueryChallengeResponse\"3\x82\xd3\xe4\x93\x02-\x12+/zerone/capture_challenge/v1/challenge/{id}\x12\xb2\x01\n" +
 	"\n" +
 	"BountyPool\x123.zerone.capture_challenge.v1.QueryBountyPoolRequest\x1a4.zerone.capture_challenge.v1.QueryBountyPoolResponse\"9\x82\xd3\xe4\x93\x023\x121/zerone/capture_challenge/v1/bounty_pool/{domain}\x12\xc9\x01\n" +
-	"\x12ChallengesByDomain\x12;.zerone.capture_challenge.v1.QueryChallengesByDomainRequest\x1a<.zerone.capture_challenge.v1.QueryChallengesByDomainResponse\"8\x82\xd3\xe4\x93\x022\x120/zerone/capture_challenge/v1/challenges/{domain}B:Z8github.com/zerone-chain/zerone/x/capture_challenge/typesb\x06proto3"
+	"\x12ChallengesByDomain\x12;.zerone.capture_challenge.v1.QueryChallengesByDomainRequest\x1a<.zerone.capture_challenge.v1.QueryChallengesByDomainResponse\"8\x82\xd3\xe4\x93\x022\x120/zerone/capture_challenge/v1/challenges/{domain}\x12\xc1\x01\n" +
+	"\x10ActiveChallenges\x129.zerone.capture_challenge.v1.QueryActiveChallengesRequest\x1a:.zerone.capture_challenge.v1.QueryActiveChallengesResponse\"6\x82\xd3\xe4\x93\x020\x12./zerone/capture_challenge/v1/active_challengesB:Z8github.com/zerone-chain/zerone/x/capture_challenge/typesb\x06proto3"
 
 var (
 	file_zerone_capture_challenge_v1_query_proto_rawDescOnce sync.Once
@@ -407,7 +493,7 @@ func file_zerone_capture_challenge_v1_query_proto_rawDescGZIP() []byte {
 	return file_zerone_capture_challenge_v1_query_proto_rawDescData
 }
 
-var file_zerone_capture_challenge_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_zerone_capture_challenge_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_zerone_capture_challenge_v1_query_proto_goTypes = []any{
 	(*QueryParamsRequest)(nil),              // 0: zerone.capture_challenge.v1.QueryParamsRequest
 	(*QueryParamsResponse)(nil),             // 1: zerone.capture_challenge.v1.QueryParamsResponse
@@ -417,28 +503,33 @@ var file_zerone_capture_challenge_v1_query_proto_goTypes = []any{
 	(*QueryBountyPoolResponse)(nil),         // 5: zerone.capture_challenge.v1.QueryBountyPoolResponse
 	(*QueryChallengesByDomainRequest)(nil),  // 6: zerone.capture_challenge.v1.QueryChallengesByDomainRequest
 	(*QueryChallengesByDomainResponse)(nil), // 7: zerone.capture_challenge.v1.QueryChallengesByDomainResponse
-	(*Params)(nil),                          // 8: zerone.capture_challenge.v1.Params
-	(*CaptureChallenge)(nil),                // 9: zerone.capture_challenge.v1.CaptureChallenge
-	(*DomainBountyPool)(nil),                // 10: zerone.capture_challenge.v1.DomainBountyPool
+	(*QueryActiveChallengesRequest)(nil),    // 8: zerone.capture_challenge.v1.QueryActiveChallengesRequest
+	(*QueryActiveChallengesResponse)(nil),   // 9: zerone.capture_challenge.v1.QueryActiveChallengesResponse
+	(*Params)(nil),                          // 10: zerone.capture_challenge.v1.Params
+	(*CaptureChallenge)(nil),                // 11: zerone.capture_challenge.v1.CaptureChallenge
+	(*DomainBountyPool)(nil),                // 12: zerone.capture_challenge.v1.DomainBountyPool
 }
 var file_zerone_capture_challenge_v1_query_proto_depIdxs = []int32{
-	8,  // 0: zerone.capture_challenge.v1.QueryParamsResponse.params:type_name -> zerone.capture_challenge.v1.Params
-	9,  // 1: zerone.capture_challenge.v1.QueryChallengeResponse.challenge:type_name -> zerone.capture_challenge.v1.CaptureChallenge
-	10, // 2: zerone.capture_challenge.v1.QueryBountyPoolResponse.pool:type_name -> zerone.capture_challenge.v1.DomainBountyPool
-	9,  // 3: zerone.capture_challenge.v1.QueryChallengesByDomainResponse.challenges:type_name -> zerone.capture_challenge.v1.CaptureChallenge
-	0,  // 4: zerone.capture_challenge.v1.Query.Params:input_type -> zerone.capture_challenge.v1.QueryParamsRequest
-	2,  // 5: zerone.capture_challenge.v1.Query.Challenge:input_type -> zerone.capture_challenge.v1.QueryChallengeRequest
-	4,  // 6: zerone.capture_challenge.v1.Query.BountyPool:input_type -> zerone.capture_challenge.v1.QueryBountyPoolRequest
-	6,  // 7: zerone.capture_challenge.v1.Query.ChallengesByDomain:input_type -> zerone.capture_challenge.v1.QueryChallengesByDomainRequest
-	1,  // 8: zerone.capture_challenge.v1.Query.Params:output_type -> zerone.capture_challenge.v1.QueryParamsResponse
-	3,  // 9: zerone.capture_challenge.v1.Query.Challenge:output_type -> zerone.capture_challenge.v1.QueryChallengeResponse
-	5,  // 10: zerone.capture_challenge.v1.Query.BountyPool:output_type -> zerone.capture_challenge.v1.QueryBountyPoolResponse
-	7,  // 11: zerone.capture_challenge.v1.Query.ChallengesByDomain:output_type -> zerone.capture_challenge.v1.QueryChallengesByDomainResponse
-	8,  // [8:12] is the sub-list for method output_type
-	4,  // [4:8] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	10, // 0: zerone.capture_challenge.v1.QueryParamsResponse.params:type_name -> zerone.capture_challenge.v1.Params
+	11, // 1: zerone.capture_challenge.v1.QueryChallengeResponse.challenge:type_name -> zerone.capture_challenge.v1.CaptureChallenge
+	12, // 2: zerone.capture_challenge.v1.QueryBountyPoolResponse.pool:type_name -> zerone.capture_challenge.v1.DomainBountyPool
+	11, // 3: zerone.capture_challenge.v1.QueryChallengesByDomainResponse.challenges:type_name -> zerone.capture_challenge.v1.CaptureChallenge
+	11, // 4: zerone.capture_challenge.v1.QueryActiveChallengesResponse.challenges:type_name -> zerone.capture_challenge.v1.CaptureChallenge
+	0,  // 5: zerone.capture_challenge.v1.Query.Params:input_type -> zerone.capture_challenge.v1.QueryParamsRequest
+	2,  // 6: zerone.capture_challenge.v1.Query.Challenge:input_type -> zerone.capture_challenge.v1.QueryChallengeRequest
+	4,  // 7: zerone.capture_challenge.v1.Query.BountyPool:input_type -> zerone.capture_challenge.v1.QueryBountyPoolRequest
+	6,  // 8: zerone.capture_challenge.v1.Query.ChallengesByDomain:input_type -> zerone.capture_challenge.v1.QueryChallengesByDomainRequest
+	8,  // 9: zerone.capture_challenge.v1.Query.ActiveChallenges:input_type -> zerone.capture_challenge.v1.QueryActiveChallengesRequest
+	1,  // 10: zerone.capture_challenge.v1.Query.Params:output_type -> zerone.capture_challenge.v1.QueryParamsResponse
+	3,  // 11: zerone.capture_challenge.v1.Query.Challenge:output_type -> zerone.capture_challenge.v1.QueryChallengeResponse
+	5,  // 12: zerone.capture_challenge.v1.Query.BountyPool:output_type -> zerone.capture_challenge.v1.QueryBountyPoolResponse
+	7,  // 13: zerone.capture_challenge.v1.Query.ChallengesByDomain:output_type -> zerone.capture_challenge.v1.QueryChallengesByDomainResponse
+	9,  // 14: zerone.capture_challenge.v1.Query.ActiveChallenges:output_type -> zerone.capture_challenge.v1.QueryActiveChallengesResponse
+	10, // [10:15] is the sub-list for method output_type
+	5,  // [5:10] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_zerone_capture_challenge_v1_query_proto_init() }
@@ -454,7 +545,7 @@ func file_zerone_capture_challenge_v1_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_capture_challenge_v1_query_proto_rawDesc), len(file_zerone_capture_challenge_v1_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   8,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

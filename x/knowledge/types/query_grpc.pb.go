@@ -51,6 +51,7 @@ const (
 	Query_DomainDiversityHistory_FullMethodName = "/zerone.knowledge.v1.Query/DomainDiversityHistory"
 	Query_ValidatorIndependence_FullMethodName  = "/zerone.knowledge.v1.Query/ValidatorIndependence"
 	Query_ConformityAlerts_FullMethodName       = "/zerone.knowledge.v1.Query/ConformityAlerts"
+	Query_MetabolismStatus_FullMethodName       = "/zerone.knowledge.v1.Query/MetabolismStatus"
 )
 
 // QueryClient is the client API for Query service.
@@ -123,6 +124,7 @@ type QueryClient interface {
 	ValidatorIndependence(ctx context.Context, in *QueryValidatorIndependenceRequest, opts ...grpc.CallOption) (*QueryValidatorIndependenceResponse, error)
 	// ConformityAlerts queries domains with active conformity alerts.
 	ConformityAlerts(ctx context.Context, in *QueryConformityAlertsRequest, opts ...grpc.CallOption) (*QueryConformityAlertsResponse, error)
+	MetabolismStatus(ctx context.Context, in *QueryMetabolismStatusRequest, opts ...grpc.CallOption) (*QueryMetabolismStatusResponse, error)
 }
 
 type queryClient struct {
@@ -453,6 +455,16 @@ func (c *queryClient) ConformityAlerts(ctx context.Context, in *QueryConformityA
 	return out, nil
 }
 
+func (c *queryClient) MetabolismStatus(ctx context.Context, in *QueryMetabolismStatusRequest, opts ...grpc.CallOption) (*QueryMetabolismStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMetabolismStatusResponse)
+	err := c.cc.Invoke(ctx, Query_MetabolismStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -523,7 +535,6 @@ type QueryServer interface {
 	ValidatorIndependence(context.Context, *QueryValidatorIndependenceRequest) (*QueryValidatorIndependenceResponse, error)
 	// ConformityAlerts queries domains with active conformity alerts.
 	ConformityAlerts(context.Context, *QueryConformityAlertsRequest) (*QueryConformityAlertsResponse, error)
-	// MetabolismStatus returns aggregate metabolism health statistics.
 	MetabolismStatus(context.Context, *QueryMetabolismStatusRequest) (*QueryMetabolismStatusResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
@@ -1231,6 +1242,24 @@ func _Query_ConformityAlerts_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_MetabolismStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMetabolismStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).MetabolismStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_MetabolismStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).MetabolismStatus(ctx, req.(*QueryMetabolismStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1365,6 +1394,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ConformityAlerts",
 			Handler:    _Query_ConformityAlerts_Handler,
+		},
+		{
+			MethodName: "MetabolismStatus",
+			Handler:    _Query_MetabolismStatus_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

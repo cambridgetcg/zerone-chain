@@ -88,22 +88,8 @@ func (q queryServer) CrossStratumRequirements(goCtx context.Context, req *types.
 	return &types.QueryCrossStratumRequirementsResponse{Requirements: reqs}, nil
 }
 
-// ---------- Extended Query Server (non-proto) ----------
-
-type queryExtServer struct {
-	types.UnimplementedQueryExtServer
-	Keeper
-}
-
-// NewQueryExtServerImpl returns an implementation of the QueryExtServer interface.
-func NewQueryExtServerImpl(keeper Keeper) types.QueryExtServer {
-	return &queryExtServer{Keeper: keeper}
-}
-
-var _ types.QueryExtServer = &queryExtServer{}
-
 // FlaggedDomains returns all domains with active capture flags.
-func (q queryExtServer) FlaggedDomains(goCtx context.Context, _ *types.QueryFlaggedDomainsRequest) (*types.QueryFlaggedDomainsResponse, error) {
+func (q queryServer) FlaggedDomains(goCtx context.Context, _ *types.QueryFlaggedDomainsRequest) (*types.QueryFlaggedDomainsResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	var flagged []*types.CaptureMetrics
 	q.IterateCaptureMetrics(ctx, func(m *types.CaptureMetrics) bool {
