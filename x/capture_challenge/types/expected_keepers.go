@@ -25,9 +25,10 @@ type DomainQualificationKeeper interface {
 	ReduceQualificationWeight(ctx context.Context, validator string, domain string, reductionBps uint64, expiryHeight uint64) error
 }
 
-// KnowledgeKeeper allows adjusting verification thresholds on confirmed capture.
+// KnowledgeKeeper allows adjusting verification thresholds and recording role impact on confirmed capture.
 type KnowledgeKeeper interface {
 	IncreaseVerificationThreshold(ctx context.Context, domain string, additionalVerifiers uint32, expiryHeight uint64) error
+	RecordChallengeRoleImpact(ctx context.Context, factId, domain string, upheld bool) error
 }
 
 // CaptureMetricsData is a plain struct to avoid circular imports with capture_defense/types.

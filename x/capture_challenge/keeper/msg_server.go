@@ -255,6 +255,11 @@ func (m msgServer) ResolveChallenge(goCtx context.Context, msg *types.MsgResolve
 			if err := m.knowledgeKeeper.IncreaseVerificationThreshold(ctx, challenge.Domain, 2, expiryHeight); err != nil {
 				m.Logger(ctx).Error("failed to increase verification threshold", "domain", challenge.Domain, "err", err)
 			}
+
+			// Record role impact for domain elasticity (R29-3)
+			if err := m.knowledgeKeeper.RecordChallengeRoleImpact(ctx, challenge.Id, challenge.Domain, true); err != nil {
+				m.Logger(ctx).Error("failed to record challenge role impact", "domain", challenge.Domain, "err", err)
+			}
 		}
 
 		// Emit capture_confirmed event for alignment module
@@ -295,6 +300,13 @@ func (m msgServer) ResolveChallenge(goCtx context.Context, msg *types.MsgResolve
 		// Clear capture flag on rejected challenge (R28-8)
 		if m.captureDefenseKeeper != nil {
 			m.captureDefenseKeeper.ClearCaptureFlag(ctx, challenge.Domain)
+		}
+
+		// Record role impact — challenge rejected means original verifiers were right (R29-3)
+		if m.knowledgeKeeper != nil {
+			if err := m.knowledgeKeeper.RecordChallengeRoleImpact(ctx, challenge.Id, challenge.Domain, false); err != nil {
+				m.Logger(ctx).Error("failed to record challenge role impact", "domain", challenge.Domain, "err", err)
+			}
 		}
 
 	case types.ChallengeOutcome_CHALLENGE_OUTCOME_PARTIAL:
