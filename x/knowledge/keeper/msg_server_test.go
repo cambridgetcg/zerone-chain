@@ -472,7 +472,7 @@ func TestMsgServer_AddFact_Success(t *testing.T) {
 	fact, found := k.GetFact(ctx, resp.FactId)
 	require.True(t, found)
 	require.Equal(t, types.FactStatus_FACT_STATUS_VERIFIED, fact.Status)
-	require.Equal(t, uint64(900_000), fact.Confidence)
+	require.Equal(t, uint64(880_000), fact.Confidence, "900k input clamped to MaxConfidence (880,000)")
 }
 
 func TestMsgServer_AddFact_Unauthorized(t *testing.T) {

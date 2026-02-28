@@ -1000,8 +1000,8 @@ func TestRound_RejectedOutcome(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_REJECT, result.Verdict,
 		"all 3 reject (100%) must exceed 77% threshold → REJECT")
-	require.Equal(t, uint64(1_000_000), result.Confidence,
-		"unanimous reject gives 100% confidence (1,000,000)")
+	require.Equal(t, uint64(880_000), result.Confidence,
+		"unanimous reject gives raw 100% but capped at MaxConfidence (880,000)")
 
 	// Complete and verify claim status
 	require.NoError(t, k.CompleteRound(ctx, round, result))
@@ -1010,7 +1010,7 @@ func TestRound_RejectedOutcome(t *testing.T) {
 }
 
 func TestRound_ConfidenceAggregation(t *testing.T) {
-	// 3 of 3 accept (all with equal stake) → confidence 1,000,000 ≥ 770,000 threshold.
+	// 3 of 3 accept (all with equal stake) → raw confidence 1,000,000 capped at 880,000 ≥ 770,000 threshold.
 	k, ctx, _, sk := setupKnowledgeTestFull(t)
 
 	for i := 0; i < 3; i++ {
@@ -1045,6 +1045,6 @@ func TestRound_ConfidenceAggregation(t *testing.T) {
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
 	require.GreaterOrEqual(t, result.Confidence, uint64(770_000),
 		"acceptance confidence must meet or exceed the 770,000 threshold")
-	require.Equal(t, uint64(1_000_000), result.Confidence,
-		"unanimous accept gives 100% confidence")
+	require.Equal(t, uint64(880_000), result.Confidence,
+		"unanimous accept gives raw 100% but capped at MaxConfidence (880,000)")
 }

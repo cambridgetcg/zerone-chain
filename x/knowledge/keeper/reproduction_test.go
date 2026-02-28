@@ -197,8 +197,8 @@ func TestReproduction_ParentEnergyBonus(t *testing.T) {
 
 	updatedParent, found := k.GetFact(ctx, "parent-energy")
 	require.True(t, found)
-	// Parent started at 4000 energy, bonus is 300 → 4300
-	require.Equal(t, uint64(4300), updatedParent.Energy)
+	// Parent started at 4000 energy, bonus is 30,000 → 34,000
+	require.Equal(t, uint64(34_000), updatedParent.Energy)
 }
 
 // TestReproduction_ProgenyCountPropagation verifies progeny count propagates up lineage.

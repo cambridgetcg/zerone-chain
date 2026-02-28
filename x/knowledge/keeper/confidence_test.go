@@ -36,7 +36,7 @@ func TestAggregate_UnanimousAccept(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	require.Equal(t, uint64(1_000_000), result.Confidence) // 100% accept
+	require.Equal(t, uint64(880_000), result.Confidence) // 100% accept capped at MaxConfidence
 }
 
 func TestAggregate_UnanimousReject(t *testing.T) {
@@ -64,7 +64,7 @@ func TestAggregate_UnanimousReject(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_REJECT, result.Verdict)
-	require.Equal(t, uint64(1_000_000), result.Confidence)
+	require.Equal(t, uint64(880_000), result.Confidence) // 100% reject capped at MaxConfidence
 }
 
 func TestAggregate_SplitVote_Inconclusive(t *testing.T) {
@@ -125,7 +125,7 @@ func TestAggregate_StakeWeighted(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	require.Equal(t, uint64(900_000), result.Confidence) // 900k/1000k = 90%
+	require.Equal(t, uint64(880_000), result.Confidence) // 900k/1000k = 90% capped at MaxConfidence (880,000)
 }
 
 func TestAggregate_BelowMinVerifiers(t *testing.T) {
@@ -175,7 +175,7 @@ func TestAggregate_SingleVerifier_WithMinVerifiers1(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	require.Equal(t, uint64(1_000_000), result.Confidence)
+	require.Equal(t, uint64(880_000), result.Confidence) // 100% accept capped at MaxConfidence
 }
 
 func TestAggregate_ZeroStakeValidator(t *testing.T) {
@@ -493,7 +493,7 @@ func TestAggregate_UnanimousMalformed(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_MALFORMED, result.Verdict)
-	require.Equal(t, uint64(1_000_000), result.Confidence) // 100% malformed
+	require.Equal(t, uint64(880_000), result.Confidence) // 100% malformed capped at MaxConfidence
 }
 
 func TestAggregate_MalformedSupermajority(t *testing.T) {
