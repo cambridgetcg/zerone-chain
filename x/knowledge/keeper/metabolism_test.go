@@ -433,7 +433,7 @@ func TestPatronage_ImmediateEnergyBoost(t *testing.T) {
 
 	// Apply patronage boost
 	fact2, _ := k.GetFact(ctx, "fact-ipe")
-	k.ApplyPatronageEnergyBoost(ctx, fact2, durationBlocks)
+	k.ApplyPatronageEnergyBoost(ctx, fact2, durationBlocks, "")
 
 	updated, found := k.GetFact(ctx, "fact-ipe")
 	require.True(t, found)
@@ -452,7 +452,7 @@ func TestPatronage_AtRiskRecovery(t *testing.T) {
 	// Long patronage to ensure recovery above 300K threshold
 	// Need boost >= 50K. boost = 20,000 * epochs / 10. epochs = 500,000 / 10,000 = 50. boost = 20,000 * 50 / 10 = 100,000.
 	fact2, _ := k.GetFact(ctx, "fact-prec")
-	k.ApplyPatronageEnergyBoost(ctx, fact2, 500_000)
+	k.ApplyPatronageEnergyBoost(ctx, fact2, 500_000, "")
 
 	updated, found := k.GetFact(ctx, "fact-prec")
 	require.True(t, found)
@@ -470,7 +470,7 @@ func TestPatronage_EnergyCapped(t *testing.T) {
 	require.NoError(t, k.SetFact(ctx, fact))
 
 	fact2, _ := k.GetFact(ctx, "fact-pcap")
-	k.ApplyPatronageEnergyBoost(ctx, fact2, 100_000)
+	k.ApplyPatronageEnergyBoost(ctx, fact2, 100_000, "")
 
 	updated, found := k.GetFact(ctx, "fact-pcap")
 	require.True(t, found)
@@ -685,7 +685,7 @@ func TestMetabolism_FullLifecycle(t *testing.T) {
 
 	// ─── Phase 3: Patronage saves it ─────────────────────────────
 	// Apply patronage with enough boost to cross 300K threshold
-	k.ApplyPatronageEnergyBoost(ctx, updated, 500_000) // big patronage
+	k.ApplyPatronageEnergyBoost(ctx, updated, 500_000, "") // big patronage
 	updated, _ = k.GetFact(ctx, "fact-life")
 	require.Equal(t, types.FactStatus_FACT_STATUS_ACTIVE, updated.Status,
 		"patronage should recover fact to ACTIVE")

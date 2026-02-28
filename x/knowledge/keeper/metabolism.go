@@ -204,7 +204,7 @@ func (k Keeper) ResetEpochCitationCounters(ctx context.Context) {
 
 // ApplyPatronageEnergyBoost gives an immediate energy boost when patronage is set.
 // Boost is proportional to patronage duration: MetabolismEnergyPerPatronage * epochs / 10.
-func (k Keeper) ApplyPatronageEnergyBoost(ctx context.Context, fact *types.Fact, durationBlocks uint64) {
+func (k Keeper) ApplyPatronageEnergyBoost(ctx context.Context, fact *types.Fact, durationBlocks uint64, patronAddr string) {
 	params, err := k.GetParams(ctx)
 	if err != nil {
 		return
@@ -221,6 +221,14 @@ func (k Keeper) ApplyPatronageEnergyBoost(ctx context.Context, fact *types.Fact,
 	boost := params.MetabolismEnergyPerPatronage * durationEpochs / 10
 	if boost == 0 {
 		boost = params.MetabolismEnergyPerPatronage // minimum one epoch worth
+	}
+
+	// Apply human patronage bonus (R28-5)
+	if params.HumanPatronageBonusBps > 0 && patronAddr != "" {
+		accountType := k.getAccountType(ctx, patronAddr)
+		if accountType == "human" {
+			boost = safeMulDiv(boost, 1_000_000+params.HumanPatronageBonusBps, 1_000_000)
+		}
 	}
 
 	oldStatus := fact.Status
