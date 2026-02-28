@@ -131,6 +131,26 @@ func (k Keeper) GetInboundCrossDomainCitationCount(ctx context.Context, domain s
 
 // ─── Birth and death pressure ───────────────────────────────────────────────
 
+// GetDeathPressureMultiplier returns the decay multiplier for a domain.
+// >1M BPS = faster decay (overcrowded), <1M BPS = slower decay (sparse), 1M = normal.
+func (k Keeper) GetDeathPressureMultiplier(ctx context.Context, domain string) uint64 {
+	params, err := k.GetParams(ctx)
+	if err != nil || params.DomainBaseCapacity == 0 {
+		return BPSCapacity
+	}
+	pressure := k.GetDomainPressure(ctx, domain)
+
+	if pressure > BPSCapacity {
+		// Overcrowded: accelerate decay
+		excess := pressure - BPSCapacity
+		return BPSCapacity + safeMulDiv(excess, params.OvercrowdingDecayMultiplierBps-BPSCapacity, BPSCapacity)
+	} else if pressure < BPSCapacity/2 {
+		// Very sparse (< 50% capacity): slow decay to 75%
+		return BPSCapacity * 3 / 4
+	}
+	return BPSCapacity // normal range
+}
+
 // ApplyBirthPressure adjusts initial energy based on domain pressure.
 // Sparse domains give an energy bonus; overcrowded domains give no bonus.
 func (k Keeper) ApplyBirthPressure(ctx context.Context, domain string, baseEnergy uint64) uint64 {

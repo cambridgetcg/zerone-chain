@@ -159,3 +159,36 @@ func TestBirthPressure_HalfCapacity(t *testing.T) {
 	fullSparseEnergy := k.ApplyBirthPressure(ctx, "theology", params.MetabolismInitialEnergy) // empty domain
 	require.Less(t, energy, fullSparseEnergy)
 }
+
+// ─── Death pressure tests ───────────────────────────────────────────────────
+
+func TestDeathPressure_Overcrowded(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	stats := keeper.DomainStats{Domain: "physics", ActiveCount: 2000}
+	k.SetDomainStats(ctx, &stats)
+	multiplier := k.GetDeathPressureMultiplier(ctx, "physics")
+	require.Greater(t, multiplier, uint64(keeper.BPSCapacity)) // > 100% = faster decay
+}
+
+func TestDeathPressure_Sparse(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	stats := keeper.DomainStats{Domain: "physics", ActiveCount: 100}
+	k.SetDomainStats(ctx, &stats)
+	multiplier := k.GetDeathPressureMultiplier(ctx, "physics")
+	require.Less(t, multiplier, uint64(keeper.BPSCapacity)) // < 100% = slower decay
+}
+
+func TestDeathPressure_Normal(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	stats := keeper.DomainStats{Domain: "physics", ActiveCount: 600}
+	k.SetDomainStats(ctx, &stats)
+	multiplier := k.GetDeathPressureMultiplier(ctx, "physics")
+	require.Equal(t, uint64(keeper.BPSCapacity), multiplier) // 100% = normal
+}
+
+func TestDeathPressure_Empty(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	// Empty domain = 0 pressure < 50% threshold → 75% decay
+	multiplier := k.GetDeathPressureMultiplier(ctx, "physics")
+	require.Equal(t, uint64(750_000), multiplier) // 75% = slower decay
+}

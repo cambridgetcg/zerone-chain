@@ -40,6 +40,10 @@ func (k Keeper) ProcessMetabolism(ctx context.Context, epoch uint64) error {
 		// ─── Calculate maintenance cost ───────────────────
 		cost := k.calculateMaintenanceCost(fact, params, domainCounts)
 
+		// Apply domain carrying capacity death pressure (R29-1)
+		deathMultiplier := k.GetDeathPressureMultiplier(ctx, fact.Domain)
+		cost = safeMulDiv(cost, deathMultiplier, BPSCapacity)
+
 		// ─── Calculate energy income ──────────────────────
 		income := k.calculateEnergyIncome(ctx, fact, params)
 
