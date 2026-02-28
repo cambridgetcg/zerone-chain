@@ -1030,6 +1030,12 @@ func NewZeroneApp(
 		alignmentEmergencyAdapter,
 		alignmentVestingRewardsAdapter,
 	)
+	// R29-6: Wire global pacing from alignment to consuming modules.
+	alignmentPacingAdapter := zeronealignmentkeeper.NewAlignmentPacingAdapter(app.AlignmentKeeper)
+	app.KnowledgeKeeper.SetPacingKeeper(alignmentPacingAdapter)
+	app.CaptureDefenseKeeper.SetPacingKeeper(alignmentPacingAdapter)
+	app.PartnershipsKeeper.SetPacingKeeper(alignmentPacingAdapter)
+	app.DiscoveryKeeper.SetPacingKeeper(alignmentPacingAdapter)
 	// ---- Autopoiesis keeper (R7-1) ----
 	apStakingAdapter := zeronestakingkeeper.NewStakingForAutopoiesisAdapter(app.ZeroneStakingKeeper)
 	app.AutopoiesisKeeper = zeroneapkeeper.NewKeeper(
