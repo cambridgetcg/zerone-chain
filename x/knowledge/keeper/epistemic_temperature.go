@@ -10,6 +10,35 @@ import (
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
+// TemperatureCategory returns a human-readable category for a temperature value.
+func TemperatureCategory(temp uint64) string {
+	switch {
+	case temp < 300_000:
+		return "cold"
+	case temp < 500_000:
+		return "cool"
+	case temp <= 700_000:
+		return "neutral"
+	case temp < 800_000:
+		return "warm"
+	default:
+		return "hot"
+	}
+}
+
+// emitTemperatureEvent emits an event when epistemic temperature is updated.
+func (k Keeper) emitTemperatureEvent(ctx context.Context, domain string, state types.DomainEpistemicState) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.epistemic_temperature_changed",
+		sdk.NewAttribute("domain", domain),
+		sdk.NewAttribute("temperature_bps", fmt.Sprintf("%d", state.Temperature)),
+		sdk.NewAttribute("category", TemperatureCategory(state.Temperature)),
+		sdk.NewAttribute("conformity_streak", fmt.Sprintf("%d", state.ConformityStreak)),
+		sdk.NewAttribute("recent_vindications", fmt.Sprintf("%d", state.VindicationCount)),
+	))
+}
+
 // SetDomainEpistemicState stores the epistemic temperature state for a domain.
 func (k Keeper) SetDomainEpistemicState(ctx context.Context, state *types.DomainEpistemicState) error {
 	store := k.storeService.OpenKVStore(ctx)
@@ -140,6 +169,9 @@ func (k Keeper) UpdateEpistemicTemperature(ctx context.Context, domain string) e
 		}
 	}
 	state.VindicationCount = recentVindications
+
+	// Emit temperature event
+	k.emitTemperatureEvent(ctx, domain, state)
 
 	state.LastTemperatureUpdate = height
 	return k.SetDomainEpistemicState(ctx, &state)

@@ -110,6 +110,31 @@ func TestCountVindicationsInWindow(t *testing.T) {
 	require.Equal(t, uint64(0), count)
 }
 
+func TestTemperatureCategory(t *testing.T) {
+	tests := []struct {
+		temp     uint64
+		expected string
+	}{
+		{0, "cold"},
+		{200_000, "cold"},
+		{299_999, "cold"},
+		{300_000, "cool"},
+		{400_000, "cool"},
+		{499_999, "cool"},
+		{500_000, "neutral"},
+		{600_000, "neutral"},
+		{700_000, "neutral"},
+		{700_001, "warm"},
+		{750_000, "warm"},
+		{799_999, "warm"},
+		{800_000, "hot"},
+		{1_000_000, "hot"},
+	}
+	for _, tt := range tests {
+		require.Equal(t, tt.expected, keeper.TemperatureCategory(tt.temp), "temp=%d", tt.temp)
+	}
+}
+
 func TestUpdateEpistemicTemperature_DecayToNeutral(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 	ctx = advanceBlocks(ctx, 9_900) // height 100 + 9900 = 10,000 (first fitness epoch)
