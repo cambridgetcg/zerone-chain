@@ -759,3 +759,131 @@ func TestGetRecentHealthIndicesEmpty(t *testing.T) {
 		t.Errorf("expected 0 entries, got %d", len(results))
 	}
 }
+
+// --- Test: Full EndBlocker lifecycle — healthy → degraded → recovery ---
+
+func TestEndBlockerFullCycle(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	// Wire autopoiesis.
+	autoMock := &mockAutopoiesisKeeper{}
+	k.SetAutopoiesisKeeper(autoMock)
+
+	// Set all dimensions to healthy values.
+	mocks.knowledge.verificationRate = 800_000
+	mocks.knowledge.consensusDiversity = 700_000
+	mocks.staking.totalStaked = big.NewInt(800_000_000_000)
+	mocks.staking.activeValidators = 100
+	mocks.staking.targetValidators = 111
+	mocks.ontology.domainCount = 80
+	mocks.vestingRewards.totalSupply = big.NewInt(1_000_000_000_000)
+
+	am := alignment.NewAppModule(nil, k)
+
+	// --- Block 100: First observation (should be healthy) ---
+	ctx = ctx.WithBlockHeight(100)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock at 100 failed: %v", err)
+	}
+
+	obs, found := k.GetObservation(ctx, 100)
+	if !found {
+		t.Fatal("expected observation at height 100")
+	}
+	if obs.KnowledgeQuality == 0 {
+		t.Error("expected non-zero knowledge quality")
+	}
+
+	hi, found := k.GetHealthIndex(ctx, 100)
+	if !found {
+		t.Fatal("expected health index at height 100")
+	}
+	if hi.Category != types.CategoryHealthy {
+		t.Errorf("expected healthy at block 100, got %s (composite=%d)", hi.Category, hi.CompositeScore)
+	}
+
+	state := k.GetState(ctx)
+	if state.ObservationCount != 1 {
+		t.Errorf("expected observation_count=1, got %d", state.ObservationCount)
+	}
+	if state.PreviousCategory != types.CategoryHealthy {
+		t.Errorf("expected PreviousCategory=healthy, got %s", state.PreviousCategory)
+	}
+
+	// --- Degrade dimensions ---
+	mocks.knowledge.verificationRate = 200_000
+	mocks.knowledge.consensusDiversity = 200_000
+	mocks.staking.totalStaked = big.NewInt(200_000_000_000)
+	mocks.staking.activeValidators = 30
+	mocks.ontology.domainCount = 10
+
+	// --- Block 200: Second observation (should be degraded/critical) ---
+	ctx = ctx.WithBlockHeight(200)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock at 200 failed: %v", err)
+	}
+
+	hi2, found := k.GetHealthIndex(ctx, 200)
+	if !found {
+		t.Fatal("expected health index at height 200")
+	}
+	if hi2.Category == types.CategoryHealthy {
+		t.Error("expected NOT healthy with degraded dimensions")
+	}
+
+	state2 := k.GetState(ctx)
+	if state2.ObservationCount != 2 {
+		t.Errorf("expected observation_count=2, got %d", state2.ObservationCount)
+	}
+	if !state2.DegradedFrequencyActive {
+		t.Error("expected DegradedFrequencyActive=true after health degradation")
+	}
+
+	// Verify corrections were generated (dimensions below degraded threshold).
+	corrections, total := k.GetCorrections(ctx, 100, 0)
+	if total == 0 {
+		t.Error("expected corrections generated during degraded observation")
+	}
+	_ = corrections
+
+	// --- Recover dimensions ---
+	mocks.knowledge.verificationRate = 900_000
+	mocks.knowledge.consensusDiversity = 900_000
+	mocks.staking.totalStaked = big.NewInt(900_000_000_000)
+	mocks.staking.activeValidators = 111
+	mocks.ontology.domainCount = 100
+
+	// --- Recovery: Degraded frequency means interval=50, so height 250 should trigger ---
+	ctx = ctx.WithBlockHeight(250)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock at 250 failed: %v", err)
+	}
+
+	hi3, found := k.GetHealthIndex(ctx, 250)
+	if !found {
+		t.Fatal("expected health index at height 250")
+	}
+	if hi3.Category != types.CategoryHealthy {
+		t.Errorf("expected healthy after recovery, got %s (composite=%d)", hi3.Category, hi3.CompositeScore)
+	}
+
+	state3 := k.GetState(ctx)
+	if state3.DegradedFrequencyActive {
+		t.Error("expected DegradedFrequencyActive=false after recovery to healthy")
+	}
+	if state3.PreviousCategory != types.CategoryHealthy {
+		t.Errorf("expected PreviousCategory=healthy after recovery, got %s", state3.PreviousCategory)
+	}
+	if state3.ObservationCount != 3 {
+		t.Errorf("expected observation_count=3, got %d", state3.ObservationCount)
+	}
+
+	// --- Verify history query returns all 3 observations ---
+	results := k.GetRecentHealthIndices(ctx, 10)
+	if len(results) != 3 {
+		t.Errorf("expected 3 health history entries, got %d", len(results))
+	}
+	if len(results) > 0 && results[0].Height != 250 {
+		t.Errorf("expected most recent entry at height 250, got %d", results[0].Height)
+	}
+}
