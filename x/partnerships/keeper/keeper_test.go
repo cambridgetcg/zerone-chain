@@ -3063,3 +3063,101 @@ func TestGetPendingOpsForPartnership_FiltersNonPending(t *testing.T) {
 		t.Errorf("expected op-pend-1, got %s", pending[0].Id)
 	}
 }
+
+// ==================== HUMAN COERCION FREEZE MULTIPLIER (R28-5) ====================
+
+// mockPartnershipsAuthKeeper implements types.ZeroneAuthKeeper for tests.
+type mockPartnershipsAuthKeeper struct {
+	accounts map[string]string
+}
+
+func newMockPartnershipsAuthKeeper() *mockPartnershipsAuthKeeper {
+	return &mockPartnershipsAuthKeeper{accounts: make(map[string]string)}
+}
+
+func (m *mockPartnershipsAuthKeeper) GetAccountType(_ context.Context, address string) (string, bool) {
+	t, ok := m.accounts[address]
+	return t, ok
+}
+
+func TestCoercionSignal_HumanFreezeMultiplier(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+	bk.setBalance(humanAddr, "uzrn", 10000000)
+	bk.setBalance(agentAddr, "uzrn", 10000000)
+
+	// Set up auth keeper with human account type
+	authKeeper := newMockPartnershipsAuthKeeper()
+	authKeeper.accounts[humanAddr] = "human"
+	authKeeper.accounts[agentAddr] = "agent"
+	k.SetZeroneAuthKeeper(authKeeper)
+
+	ms := keeper.NewMsgServerImpl(k)
+	pid, _ := proposeAndAccept(t, ms, ctx, humanAddr, agentAddr)
+
+	params := k.GetParams(ctx)
+	currentBlock := uint64(ctx.BlockHeight())
+	expectedExpiry := currentBlock + params.CoercionReviewBlocks*params.HumanCoercionFreezeMultiplierBps/1_000_000
+
+	cs, err := k.HandleCoercionSignal(ctx, pid, humanAddr)
+	if err != nil {
+		t.Fatalf("HandleCoercionSignal failed: %v", err)
+	}
+
+	if cs.ExpiresAt != expectedExpiry {
+		t.Errorf("human coercion freeze: expected ExpiresAt=%d (base=%d * 1.5), got %d",
+			expectedExpiry, params.CoercionReviewBlocks, cs.ExpiresAt)
+	}
+}
+
+func TestCoercionSignal_AgentNoMultiplier(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+	bk.setBalance(humanAddr, "uzrn", 10000000)
+	bk.setBalance(agentAddr, "uzrn", 10000000)
+
+	// Set up auth keeper with agent account type for the raiser
+	authKeeper := newMockPartnershipsAuthKeeper()
+	authKeeper.accounts[humanAddr] = "human"
+	authKeeper.accounts[agentAddr] = "agent"
+	k.SetZeroneAuthKeeper(authKeeper)
+
+	ms := keeper.NewMsgServerImpl(k)
+	pid, _ := proposeAndAccept(t, ms, ctx, humanAddr, agentAddr)
+
+	params := k.GetParams(ctx)
+	currentBlock := uint64(ctx.BlockHeight())
+	expectedExpiry := currentBlock + params.CoercionReviewBlocks // no multiplier for agent
+
+	cs, err := k.HandleCoercionSignal(ctx, pid, agentAddr)
+	if err != nil {
+		t.Fatalf("HandleCoercionSignal failed: %v", err)
+	}
+
+	if cs.ExpiresAt != expectedExpiry {
+		t.Errorf("agent coercion freeze: expected ExpiresAt=%d (no multiplier), got %d",
+			expectedExpiry, cs.ExpiresAt)
+	}
+}
+
+func TestCoercionSignal_NoAuthKeeperFallback(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+	bk.setBalance(humanAddr, "uzrn", 10000000)
+	bk.setBalance(agentAddr, "uzrn", 10000000)
+
+	// Do NOT set zeroneAuthKeeper — should fall back to base duration
+	ms := keeper.NewMsgServerImpl(k)
+	pid, _ := proposeAndAccept(t, ms, ctx, humanAddr, agentAddr)
+
+	params := k.GetParams(ctx)
+	currentBlock := uint64(ctx.BlockHeight())
+	expectedExpiry := currentBlock + params.CoercionReviewBlocks
+
+	cs, err := k.HandleCoercionSignal(ctx, pid, humanAddr)
+	if err != nil {
+		t.Fatalf("HandleCoercionSignal failed: %v", err)
+	}
+
+	if cs.ExpiresAt != expectedExpiry {
+		t.Errorf("no auth keeper fallback: expected ExpiresAt=%d (base), got %d",
+			expectedExpiry, cs.ExpiresAt)
+	}
+}

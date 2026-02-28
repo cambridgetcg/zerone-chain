@@ -28,4 +28,5 @@ message Params {
   string min_partnership_stake = 11;
   uint64 seed_partnership_duration = 12;
   string seed_common_pot_cap = 13;
+  uint64 human_coercion_freeze_multiplier_bps = 14;
 }
