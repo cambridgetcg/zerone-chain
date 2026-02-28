@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -34,6 +35,12 @@ func NewTxCmd() *cobra.Command {
 		NewCreateSeedPartnershipCmd(),
 		NewJoinFormationPoolCmd(),
 		NewLeaveFormationPoolCmd(),
+		NewProposeMentorshipCmd(),
+		NewAcceptMentorshipCmd(),
+		NewGraduateMenteeCmd(),
+		NewEndMentorshipCmd(),
+		NewAcceptMatchCmd(),
+		NewDeclineMatchCmd(),
 	)
 
 	return txCmd
@@ -325,6 +332,144 @@ func NewLeaveFormationPoolCmd() *cobra.Command {
 		},
 	}
 
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewProposeMentorshipCmd creates a CLI command for MsgProposeMentorship.
+func NewProposeMentorshipCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "propose-mentorship [mentee] [domain] [duration-blocks]",
+		Short: "Propose a mentorship to a mentee",
+		Args:  cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			duration, err := strconv.ParseUint(args[2], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid duration: %w", err)
+			}
+			msg := &types.MsgProposeMentorship{
+				Mentor:         clientCtx.GetFromAddress().String(),
+				Mentee:         args[0],
+				Domain:         args[1],
+				DurationBlocks: duration,
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewAcceptMentorshipCmd creates a CLI command for MsgAcceptMentorship.
+func NewAcceptMentorshipCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "accept-mentorship [mentorship-id]",
+		Short: "Accept a mentorship proposal",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			msg := &types.MsgAcceptMentorship{
+				Mentee:       clientCtx.GetFromAddress().String(),
+				MentorshipId: args[0],
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewGraduateMenteeCmd creates a CLI command for MsgGraduateMentee.
+func NewGraduateMenteeCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "graduate-mentee [mentorship-id]",
+		Short: "Graduate a mentee from an active mentorship",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			msg := &types.MsgGraduateMentee{
+				Mentor:       clientCtx.GetFromAddress().String(),
+				MentorshipId: args[0],
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewEndMentorshipCmd creates a CLI command for MsgEndMentorship.
+func NewEndMentorshipCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "end-mentorship [mentorship-id]",
+		Short: "End a mentorship early",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			msg := &types.MsgEndMentorship{
+				Sender:       clientCtx.GetFromAddress().String(),
+				MentorshipId: args[0],
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewAcceptMatchCmd creates a CLI command for MsgAcceptFormationMatch.
+func NewAcceptMatchCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "accept-match [match-id]",
+		Short: "Accept a formation pool match",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			msg := &types.MsgAcceptFormationMatch{
+				Accepter: clientCtx.GetFromAddress().String(),
+				MatchId:  args[0],
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewDeclineMatchCmd creates a CLI command for MsgDeclineFormationMatch.
+func NewDeclineMatchCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "decline-match [match-id]",
+		Short: "Decline a formation pool match",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+			msg := &types.MsgDeclineFormationMatch{
+				Decliner: clientCtx.GetFromAddress().String(),
+				MatchId:  args[0],
+			}
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
