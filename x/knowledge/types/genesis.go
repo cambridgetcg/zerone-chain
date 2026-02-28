@@ -117,7 +117,7 @@ func DefaultParams() Params {
 		ReproductionRoyaltyBps:                 50_000,  // 5% of child rewards to parent
 		ReproductionRoyaltyDecayBps:            500_000, // 50% per generation
 		ReproductionMaxRoyaltyDepth:            5,       // Max 5 generations
-		ReproductionParentEnergyBonus:          300,     // 300 energy to parent on child creation
+		ReproductionParentEnergyBonus:          30_000,  // 30,000 energy to parent on child creation
 		ReproductionChildFitnessInheritanceBps: 200_000, // Child starts with 20% of parent fitness
 		ReproductionMaxChildren:                20,      // Max 20 direct children per fact
 
@@ -401,6 +401,9 @@ func (p *Params) Validate() error {
 	}
 	if p.MetabolismActiveThreshold > p.MetabolismEnergyCap {
 		return fmt.Errorf("metabolism_active_threshold (%d) must be <= metabolism_energy_cap (%d)", p.MetabolismActiveThreshold, p.MetabolismEnergyCap)
+	}
+	if p.MetabolismExtinctionThreshold == 0 {
+		return fmt.Errorf("metabolism_extinction_threshold must be > 0")
 	}
 	if p.MetabolismExtinctionThreshold >= p.MetabolismActiveThreshold {
 		return fmt.Errorf("metabolism_extinction_threshold (%d) must be < metabolism_active_threshold (%d)", p.MetabolismExtinctionThreshold, p.MetabolismActiveThreshold)
