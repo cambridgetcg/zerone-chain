@@ -239,6 +239,76 @@ func (k Keeper) setCorrectionCount(ctx context.Context, count uint64) {
 	}
 }
 
+// --- Correction Outcomes ---
+
+func (k Keeper) SetCorrectionOutcome(ctx context.Context, outcome *types.CorrectionOutcome) {
+	st := k.storeService.OpenKVStore(ctx)
+	bz, err := json.Marshal(outcome)
+	if err != nil {
+		panic("failed to marshal correction outcome: " + err.Error())
+	}
+	if err := st.Set(types.CorrectionOutcomeKey(outcome.Height, outcome.Dimension), bz); err != nil {
+		panic("failed to set correction outcome: " + err.Error())
+	}
+}
+
+func (k Keeper) GetCorrectionOutcome(ctx context.Context, height uint64, dimension string) (*types.CorrectionOutcome, bool) {
+	st := k.storeService.OpenKVStore(ctx)
+	bz, err := st.Get(types.CorrectionOutcomeKey(height, dimension))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var outcome types.CorrectionOutcome
+	if err := json.Unmarshal(bz, &outcome); err != nil {
+		return nil, false
+	}
+	return &outcome, true
+}
+
+// GetCorrectionsAtHeight returns all correction outcomes recorded at a given height.
+func (k Keeper) GetCorrectionsAtHeight(ctx context.Context, height uint64) []*types.CorrectionOutcome {
+	st := k.storeService.OpenKVStore(ctx)
+	prefix := types.CorrectionOutcomeHeightPrefix(height)
+	iter, err := st.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+
+	var outcomes []*types.CorrectionOutcome
+	for ; iter.Valid(); iter.Next() {
+		var o types.CorrectionOutcome
+		if json.Unmarshal(iter.Value(), &o) == nil {
+			outcomes = append(outcomes, &o)
+		}
+	}
+	return outcomes
+}
+
+// GetRecentCorrectionOutcomes returns the most recent N evaluated correction outcomes.
+func (k Keeper) GetRecentCorrectionOutcomes(ctx context.Context, windowSize uint64) []*types.CorrectionOutcome {
+	st := k.storeService.OpenKVStore(ctx)
+	iter, err := st.ReverseIterator(types.CorrectionOutcomeKeyPrefix, prefixEndBytes(types.CorrectionOutcomeKeyPrefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+
+	var outcomes []*types.CorrectionOutcome
+	maxIter := 10_000
+	count := 0
+	for ; iter.Valid() && uint64(len(outcomes)) < windowSize && count < maxIter; iter.Next() {
+		count++
+		var o types.CorrectionOutcome
+		if json.Unmarshal(iter.Value(), &o) == nil {
+			if o.ScoreAfter > 0 { // only include evaluated outcomes
+				outcomes = append(outcomes, &o)
+			}
+		}
+	}
+	return outcomes
+}
+
 // --- Genesis ---
 
 func (k Keeper) InitGenesis(ctx context.Context, genState *types.GenesisState) {
