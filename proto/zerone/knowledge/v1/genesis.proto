@@ -181,6 +181,12 @@ message Params {
   uint64 epistemic_cold_confidence_cap_bps      = 122; // Max confidence in cold domains (default: 600,000 = 60%)
   uint64 epistemic_hot_confidence_growth_bps    = 123; // Confidence growth multiplier in hot domains (default: 1,500,000 = 150%)
   uint64 epistemic_temperature_window_blocks    = 124; // Lookback window for vindication counting (default: 10,000)
+
+  // ─── Domain role elasticity (R29-3) ──────────────────────────────────
+  uint64 role_elasticity_min_calls          = 125; // Min calls per role before elasticity activates (default: 10)
+  uint64 role_elasticity_max_multiplier_bps = 126; // Max bonus scaling (default: 2,000,000 = 200%)
+  uint64 role_elasticity_min_multiplier_bps = 127; // Min bonus scaling (default: 500,000 = 50%)
+  uint64 role_elasticity_decay_epochs       = 128; // Blocks between 5% decay cycles (default: 100)
 }
 
 // GenesisState is the genesis state of the knowledge module.

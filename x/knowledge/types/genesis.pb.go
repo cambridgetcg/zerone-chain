@@ -174,6 +174,11 @@ type Params struct {
 	EpistemicColdConfidenceCapBps    uint64 `protobuf:"varint,122,opt,name=epistemic_cold_confidence_cap_bps,json=epistemicColdConfidenceCapBps,proto3" json:"epistemic_cold_confidence_cap_bps,omitempty"`        // Max confidence in cold domains (default: 600,000 = 60%)
 	EpistemicHotConfidenceGrowthBps  uint64 `protobuf:"varint,123,opt,name=epistemic_hot_confidence_growth_bps,json=epistemicHotConfidenceGrowthBps,proto3" json:"epistemic_hot_confidence_growth_bps,omitempty"`  // Confidence growth multiplier in hot domains (default: 1,500,000 = 150%)
 	EpistemicTemperatureWindowBlocks uint64 `protobuf:"varint,124,opt,name=epistemic_temperature_window_blocks,json=epistemicTemperatureWindowBlocks,proto3" json:"epistemic_temperature_window_blocks,omitempty"` // Lookback window for vindication counting (default: 10,000)
+	// ─── Domain role elasticity (R29-3) ──────────────────────────────────
+	RoleElasticityMinCalls         uint64 `protobuf:"varint,125,opt,name=role_elasticity_min_calls,json=roleElasticityMinCalls,proto3" json:"role_elasticity_min_calls,omitempty"`
+	RoleElasticityMaxMultiplierBps uint64 `protobuf:"varint,126,opt,name=role_elasticity_max_multiplier_bps,json=roleElasticityMaxMultiplierBps,proto3" json:"role_elasticity_max_multiplier_bps,omitempty"`
+	RoleElasticityMinMultiplierBps uint64 `protobuf:"varint,127,opt,name=role_elasticity_min_multiplier_bps,json=roleElasticityMinMultiplierBps,proto3" json:"role_elasticity_min_multiplier_bps,omitempty"`
+	RoleElasticityDecayEpochs      uint64 `protobuf:"varint,128,opt,name=role_elasticity_decay_epochs,json=roleElasticityDecayEpochs,proto3" json:"role_elasticity_decay_epochs,omitempty"`
 	unknownFields                    protoimpl.UnknownFields
 	sizeCache                        protoimpl.SizeCache
 }
@@ -1072,6 +1077,34 @@ func (x *Params) GetEpistemicHotConfidenceGrowthBps() uint64 {
 func (x *Params) GetEpistemicTemperatureWindowBlocks() uint64 {
 	if x != nil {
 		return x.EpistemicTemperatureWindowBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetRoleElasticityMinCalls() uint64 {
+	if x != nil {
+		return x.RoleElasticityMinCalls
+	}
+	return 0
+}
+
+func (x *Params) GetRoleElasticityMaxMultiplierBps() uint64 {
+	if x != nil {
+		return x.RoleElasticityMaxMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetRoleElasticityMinMultiplierBps() uint64 {
+	if x != nil {
+		return x.RoleElasticityMinMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetRoleElasticityDecayEpochs() uint64 {
+	if x != nil {
+		return x.RoleElasticityDecayEpochs
 	}
 	return 0
 }

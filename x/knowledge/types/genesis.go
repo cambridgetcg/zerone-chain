@@ -177,6 +177,12 @@ func DefaultParams() Params {
 		EpistemicColdConfidenceCapBps:    600_000,   // 60% max confidence in cold domains
 		EpistemicHotConfidenceGrowthBps:  1_500_000, // 150% confidence growth multiplier in hot domains
 		EpistemicTemperatureWindowBlocks: 10_000,    // Lookback window for vindication counting
+
+		// ─── Domain role elasticity (R29-3) ──────────────────────────────
+		RoleElasticityMinCalls:         10,
+		RoleElasticityMaxMultiplierBps: 2_000_000, // 200% max bonus scaling
+		RoleElasticityMinMultiplierBps: 500_000,   // 50% min bonus scaling
+		RoleElasticityDecayEpochs:      100,        // decay every 100 blocks
 	}
 }
 
@@ -557,6 +563,23 @@ func (p *Params) Validate() error {
 	}
 	if p.OvercrowdingDecayMultiplierBps < 1_000_000 {
 		return fmt.Errorf("overcrowding_decay_multiplier_bps must be >= 1,000,000 (at least 100%%)")
+	}
+
+	// ─── Domain role elasticity (R29-3) ──────────────────────────────
+	if p.RoleElasticityMinCalls == 0 {
+		return fmt.Errorf("role_elasticity_min_calls must be > 0")
+	}
+	if p.RoleElasticityMaxMultiplierBps < 1_000_000 {
+		return fmt.Errorf("role_elasticity_max_multiplier_bps must be >= 1,000,000 (at least 100%%)")
+	}
+	if p.RoleElasticityMinMultiplierBps > 1_000_000 {
+		return fmt.Errorf("role_elasticity_min_multiplier_bps must be <= 1,000,000 (at most 100%%)")
+	}
+	if p.RoleElasticityMinMultiplierBps >= p.RoleElasticityMaxMultiplierBps {
+		return fmt.Errorf("role_elasticity_min_multiplier_bps must be < max_multiplier_bps")
+	}
+	if p.RoleElasticityDecayEpochs == 0 {
+		return fmt.Errorf("role_elasticity_decay_epochs must be > 0")
 	}
 
 	return nil
