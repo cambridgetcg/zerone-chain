@@ -192,3 +192,41 @@ func TestUpdateEpistemicTemperature_NewDomainStartsNeutral(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, uint64(500_000), state.Temperature) // neutral, no decay for neutral
 }
+
+func TestClampConfidence_ColdDomainCap(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// Set cold temperature for physics
+	require.NoError(t, k.SetDomainEpistemicState(ctx, &types.DomainEpistemicState{
+		Domain:      "physics",
+		Temperature: 200_000, // Cold (< 300,000)
+	}))
+
+	// Default MaxConfidence=880,000, but cold cap=600,000
+	clamped := k.ClampConfidence(ctx, 750_000, "physics")
+	require.Equal(t, uint64(600_000), clamped)
+}
+
+func TestClampConfidence_HotDomainAllowsHigher(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// Set very hot temperature (> 800,000)
+	require.NoError(t, k.SetDomainEpistemicState(ctx, &types.DomainEpistemicState{
+		Domain:      "physics",
+		Temperature: 850_000,
+	}))
+
+	// Hot domains: SurvivedChallengeConfidenceCap=880,000 — same as MaxConfidence
+	// Value 860,000 <= 880,000, should pass through
+	clamped := k.ClampConfidence(ctx, 860_000, "physics")
+	require.Equal(t, uint64(860_000), clamped)
+}
+
+func TestClampConfidence_NeutralDomainUnchanged(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// No epistemic state set — falls through to global cap
+	// Default MaxConfidence is 880,000, so 750,000 passes through
+	clamped := k.ClampConfidence(ctx, 750_000, "physics")
+	require.Equal(t, uint64(750_000), clamped)
+}

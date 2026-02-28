@@ -242,7 +242,35 @@ func (k Keeper) ClampConfidence(ctx context.Context, confidence uint64, domain s
 		}
 	}
 
-	// Apply global hard cap
+	// Apply epistemic temperature cap modulation (R29-2)
+	if domain != "" {
+		epistemicState, found, err := k.GetDomainEpistemicState(ctx, domain)
+		if err == nil && found {
+			effectiveCap := params.MaxConfidence
+			if effectiveCap == 0 {
+				effectiveCap = 880_000
+			}
+
+			// Cold domains: lower cap — untested consensus shouldn't be highly confident
+			if epistemicState.Temperature < 300_000 && params.EpistemicColdConfidenceCapBps > 0 {
+				if params.EpistemicColdConfidenceCapBps < effectiveCap {
+					effectiveCap = params.EpistemicColdConfidenceCapBps
+				}
+			}
+
+			// Very hot domains: allow up to SurvivedChallengeConfidenceCap
+			if epistemicState.Temperature > 800_000 && params.SurvivedChallengeConfidenceCap > effectiveCap {
+				effectiveCap = params.SurvivedChallengeConfidenceCap
+			}
+
+			if confidence > effectiveCap {
+				confidence = effectiveCap
+			}
+			return confidence
+		}
+	}
+
+	// Fallback: apply global hard cap (no epistemic state found)
 	if params.MaxConfidence > 0 && confidence > params.MaxConfidence {
 		confidence = params.MaxConfidence
 	}
