@@ -1,4 +1,4 @@
-.PHONY: build install test lint proto-gen proto-swagger-gen clean pr-check cosmovisor-init boot-test genesis-check \
+.PHONY: build install test lint proto-gen proto-swagger-gen proto-check clean pr-check cosmovisor-init boot-test genesis-check \
        build-linux-amd64 build-linux-arm64 build-darwin-arm64 build-all release
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
@@ -32,6 +32,9 @@ proto-swagger-gen:
 	go run scripts/merge_swagger.go
 	rm -rf tmp-swagger-gen
 
+proto-check:
+	@bash scripts/proto-audit.sh
+
 # ── Cross-compile targets ──────────────────────────────────────────────
 
 build-linux-amd64:
@@ -59,7 +62,7 @@ release: build-all
 clean:
 	rm -rf build/
 
-pr-check: lint test build
+pr-check: lint test proto-check build
 	@echo "PR check passed"
 
 cosmovisor-init: build
