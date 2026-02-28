@@ -32,3 +32,8 @@ type PartnershipsKeeper interface {
 	SetDomainFormationBonus(ctx context.Context, domain string, bonusBps uint64, reason string, expiryHeight uint64)
 	GetPartnershipCountByParticipant(ctx context.Context, addr string, domain string) uint64
 }
+
+// PacingKeeper provides global pacing signals for adaptive analysis timing (R29-6).
+type PacingKeeper interface {
+	GetGlobalPacingMultiplier(ctx context.Context) (creationBps, analysisBps uint64)
+}

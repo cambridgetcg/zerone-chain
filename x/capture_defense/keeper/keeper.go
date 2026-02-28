@@ -23,6 +23,7 @@ type Keeper struct {
 	ontologyKeeper     types.OntologyKeeper          // nil-safe, set post-init
 	challengeKeeper    types.CaptureChallengeKeeper   // nil-safe, set post-init
 	partnershipsKeeper types.PartnershipsKeeper       // nil-safe, set post-init (R29-5)
+	pacingKeeper       types.PacingKeeper             // nil-safe, set post-init (R29-6)
 }
 
 // NewKeeper creates a new capture_defense module Keeper.
@@ -61,6 +62,9 @@ func (k *Keeper) SetChallengeKeeper(ck types.CaptureChallengeKeeper) { k.challen
 
 // SetPartnershipsKeeper sets the partnerships keeper post-initialization (R29-5).
 func (k *Keeper) SetPartnershipsKeeper(pk types.PartnershipsKeeper) { k.partnershipsKeeper = pk }
+
+// SetPacingKeeper sets the pacing keeper post-initialization (R29-6).
+func (k *Keeper) SetPacingKeeper(pk types.PacingKeeper) { k.pacingKeeper = pk }
 
 // InitGenesis sets initial state from genesis.
 func (k Keeper) InitGenesis(ctx sdk.Context, gs *types.GenesisState) {
@@ -106,8 +110,15 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		k.DecayAllReputations(sdkCtx, params)
 	}
 
-	// Auto risk analysis
-	if height > 0 && params.RiskAnalysisInterval > 0 && height%params.RiskAnalysisInterval == 0 {
+	// Auto risk analysis — adaptive interval (R29-6)
+	effectiveInterval := params.RiskAnalysisInterval
+	if k.pacingKeeper != nil {
+		_, analysisPacing := k.pacingKeeper.GetGlobalPacingMultiplier(ctx)
+		if analysisPacing > 0 && analysisPacing != 1_000_000 {
+			effectiveInterval = params.RiskAnalysisInterval * 1_000_000 / analysisPacing
+		}
+	}
+	if height > 0 && effectiveInterval > 0 && height%effectiveInterval == 0 {
 		k.RunAutoAnalysis(sdkCtx, params)
 	}
 
