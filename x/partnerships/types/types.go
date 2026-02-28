@@ -92,9 +92,12 @@ func (p *Params) Validate() error {
 	if p.DefaultHumanSplitBps+p.DefaultAgentSplitBps != 1000000 {
 		return fmt.Errorf("default splits must sum to 1000000 bps, got %d", p.DefaultHumanSplitBps+p.DefaultAgentSplitBps)
 	}
-	// HumanCoercionFreezeMultiplierBps: must be >= 1x (1,000,000) or 0 (disabled) (R28-5)
+	// HumanCoercionFreezeMultiplierBps: must be >= 1x (1,000,000) and <= 10x (10,000,000), or 0 (disabled) (R28-5)
 	if p.HumanCoercionFreezeMultiplierBps > 0 && p.HumanCoercionFreezeMultiplierBps < 1_000_000 {
 		return fmt.Errorf("human_coercion_freeze_multiplier_bps must be >= 1,000,000 (1.0x) or 0 (disabled)")
+	}
+	if p.HumanCoercionFreezeMultiplierBps > 10_000_000 {
+		return fmt.Errorf("human_coercion_freeze_multiplier_bps must be <= 10,000,000 (10x)")
 	}
 	return nil
 }
