@@ -536,6 +536,21 @@ func (p *Params) Validate() error {
 		return fmt.Errorf("dual_validation_bonus_bps must be <= 1,000,000")
 	}
 
+	// ─── Epistemic temperature (R29-2) ──────────────────────────────
+	if p.EpistemicTemperatureDecayBps > 1_000_000 {
+		return fmt.Errorf("epistemic_temperature_decay_bps must be <= 1,000,000")
+	}
+	if p.EpistemicConformityCoolingBps > 1_000_000 {
+		return fmt.Errorf("epistemic_conformity_cooling_bps must be <= 1,000,000")
+	}
+	if p.EpistemicVindicationHeatingBps > 1_000_000 {
+		return fmt.Errorf("epistemic_vindication_heating_bps must be <= 1,000,000")
+	}
+	if p.EpistemicColdConfidenceCapBps > 1_000_000 {
+		return fmt.Errorf("epistemic_cold_confidence_cap_bps must be <= 1,000,000")
+	}
+	// EpistemicHotConfidenceGrowthBps is intentionally allowed > 1,000,000 (it's a multiplier, e.g. 1,500,000 = 150%)
+
 	// ─── Domain carrying capacity (R29-1) ──────────────────────────
 	if p.DomainBaseCapacity == 0 {
 		return fmt.Errorf("domain_base_capacity must be > 0")

@@ -162,7 +162,7 @@ func (k Keeper) UpdateEpistemicTemperature(ctx context.Context, domain string) e
 	recentVindications := k.CountVindicationsInWindow(ctx, domain, height, windowBlocks)
 	if recentVindications > state.VindicationCount {
 		newVindications := recentVindications - state.VindicationCount
-		heating := params.EpistemicVindicationHeatingBps * newVindications
+		heating := safeMulDiv(params.EpistemicVindicationHeatingBps, newVindications, 1)
 		state.Temperature += heating
 		if state.Temperature > BPS {
 			state.Temperature = BPS
@@ -170,10 +170,10 @@ func (k Keeper) UpdateEpistemicTemperature(ctx context.Context, domain string) e
 	}
 	state.VindicationCount = recentVindications
 
+	state.LastTemperatureUpdate = height
+
 	// Emit temperature event
 	k.emitTemperatureEvent(ctx, domain, state)
-
-	state.LastTemperatureUpdate = height
 	return k.SetDomainEpistemicState(ctx, &state)
 }
 

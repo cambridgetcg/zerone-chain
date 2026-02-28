@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"fmt"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -192,6 +193,38 @@ func TestUpdateEpistemicTemperature_NewDomainStartsNeutral(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, found)
 	require.Equal(t, uint64(500_000), state.Temperature) // neutral, no decay for neutral
+}
+
+func TestUpdateEpistemicTemperature_VindicationHeatingCrosses700k(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ctx = advanceBlocks(ctx, 9_900) // height = 10,000
+
+	// Start at neutral
+	require.NoError(t, k.SetDomainEpistemicState(ctx, &types.DomainEpistemicState{
+		Domain:      "physics",
+		Temperature: 500_000,
+	}))
+
+	// Create 3 facts with vindication records (3 vindication events)
+	for i := 1; i <= 3; i++ {
+		fid := fmt.Sprintf("f-vind-%d", i)
+		makeTestFact(t, k, ctx, fid, "disproven fact", "physics", "general", "zrn1submitter1", 700_000)
+		require.NoError(t, k.SetVindicationRecord(ctx, fid, types.VindicationRecord{
+			Verifier:     "v1",
+			FactId:       fid,
+			VindicatedAt: 9000,
+			DisprovenBy:  "f-new",
+		}))
+	}
+
+	require.NoError(t, k.UpdateEpistemicTemperature(ctx, "physics"))
+
+	state, found, err := k.GetDomainEpistemicState(ctx, "physics")
+	require.NoError(t, err)
+	require.True(t, found)
+	// 3 vindications × 100,000 heating = 300,000 added to 500,000 = 800,000
+	// (decay has no effect at neutral, so only heating applies)
+	require.Greater(t, state.Temperature, uint64(700_000), "3 vindications from neutral should cross 700,000")
 }
 
 func TestClampConfidence_ColdDomainCap(t *testing.T) {
