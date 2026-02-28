@@ -135,6 +135,15 @@ func (k Keeper) UpdateAllFitnessScores(ctx context.Context) error {
 		fact.SatisfactionUpEpoch = 0     // Reset epoch satisfaction counters
 		fact.SatisfactionDownEpoch = 0
 
+		// Confidence growth for healthy facts
+		if params.ConfidenceGrowthPerEpochBps > 0 && fact.Confidence > 0 {
+			growth := safeMulDiv(fact.Confidence, params.ConfidenceGrowthPerEpochBps, 1_000_000)
+			if growth > 0 {
+				fact.Confidence += growth
+				fact.Confidence = k.ClampConfidence(ctx, fact.Confidence, fact.Domain)
+			}
+		}
+
 		if err := k.SetFact(ctx, fact); err != nil {
 			k.Logger(ctx).Error("failed to update fitness", "fact_id", fact.Id, "error", err)
 			continue

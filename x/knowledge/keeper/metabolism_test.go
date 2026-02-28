@@ -557,3 +557,90 @@ func TestMetabolism_RecoveryEvent(t *testing.T) {
 	}
 	require.True(t, found, "should emit recovery event")
 }
+
+func TestConfidence_GrowthAtEpoch(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	params, _ := k.GetParams(ctx)
+
+	// ACTIVE fact with 500K confidence — should grow by ConfidenceGrowthPerEpochBps (1.1%)
+	fact := &types.Fact{
+		Id:           "fact-cg",
+		Content:      "Confidence growth test fact!",
+		Domain:       "physics",
+		Status:       types.FactStatus_FACT_STATUS_ACTIVE,
+		Confidence:   500_000,
+		Energy:       500_000,
+		EnergyCap:    1_000_000,
+		EpochBorn:    0,
+		FitnessScore: 500_000,
+		Submitter:    "zrn1test",
+	}
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	require.NoError(t, k.UpdateAllFitnessScores(ctx))
+
+	updated, found := k.GetFact(ctx, "fact-cg")
+	require.True(t, found)
+
+	// Growth = 500,000 * 11,000 / 1,000,000 = 5,500
+	// New confidence should be 505,500
+	require.Equal(t, uint64(505_500), updated.Confidence)
+	_ = params
+}
+
+func TestConfidence_GrowthCappedAtMax(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	params, _ := k.GetParams(ctx)
+
+	// Fact near MaxConfidence — growth should be capped
+	fact := &types.Fact{
+		Id:           "fact-cgc",
+		Content:      "Confidence growth cap test!!",
+		Domain:       "physics",
+		Status:       types.FactStatus_FACT_STATUS_VERIFIED,
+		Confidence:   875_000, // near MaxConfidence (880,000)
+		Energy:       500_000,
+		EnergyCap:    1_000_000,
+		EpochBorn:    0,
+		FitnessScore: 500_000,
+		Submitter:    "zrn1test",
+	}
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	require.NoError(t, k.UpdateAllFitnessScores(ctx))
+
+	updated, found := k.GetFact(ctx, "fact-cgc")
+	require.True(t, found)
+	// Growth would be 875,000 * 11,000 / 1,000,000 = 9,625 → 884,625
+	// But capped at MaxConfidence (880,000)
+	require.LessOrEqual(t, updated.Confidence, params.MaxConfidence)
+	require.Equal(t, params.MaxConfidence, updated.Confidence)
+}
+
+func TestConfidence_NoGrowthWhenAtRisk(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// AT_RISK fact — should NOT grow confidence (not iterated by UpdateAllFitnessScores)
+	fact := &types.Fact{
+		Id:               "fact-cng",
+		Content:          "No growth when at risk!!!!",
+		Domain:           "physics",
+		Status:           types.FactStatus_FACT_STATUS_AT_RISK,
+		Confidence:       500_000,
+		Energy:           100_000,
+		EnergyCap:        1_000_000,
+		EpochBorn:        0,
+		FitnessScore:     500_000,
+		AtRiskSinceEpoch: 1,
+		Submitter:        "zrn1test",
+	}
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	require.NoError(t, k.UpdateAllFitnessScores(ctx))
+
+	updated, found := k.GetFact(ctx, "fact-cng")
+	require.True(t, found)
+	require.Equal(t, uint64(500_000), updated.Confidence, "AT_RISK fact should not grow confidence")
+}
