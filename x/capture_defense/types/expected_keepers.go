@@ -20,3 +20,8 @@ type StakingKeeper interface {
 type OntologyKeeper interface {
 	GetDepthForDomain(ctx context.Context, domainName string) (uint32, error)
 }
+
+// CaptureChallengeKeeper allows capture_defense to auto-submit challenges.
+type CaptureChallengeKeeper interface {
+	AutoSubmitChallenge(ctx context.Context, domain string, riskScore uint64, hhi uint64, evidence string) error
+}

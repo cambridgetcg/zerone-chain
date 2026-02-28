@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	"cosmossdk.io/core/store"
 	"cosmossdk.io/log"
@@ -19,7 +20,8 @@ type Keeper struct {
 	authority       string
 	knowledgeKeeper types.KnowledgeKeeper
 	stakingKeeper   types.StakingKeeper
-	ontologyKeeper  types.OntologyKeeper // nil-safe, set post-init
+	ontologyKeeper  types.OntologyKeeper          // nil-safe, set post-init
+	challengeKeeper types.CaptureChallengeKeeper // nil-safe, set post-init
 }
 
 // NewKeeper creates a new capture_defense module Keeper.
@@ -52,6 +54,9 @@ func (k *Keeper) SetStakingKeeper(sk types.StakingKeeper) { k.stakingKeeper = sk
 
 // SetOntologyKeeper sets the ontology keeper post-initialization.
 func (k *Keeper) SetOntologyKeeper(ok types.OntologyKeeper) { k.ontologyKeeper = ok }
+
+// SetChallengeKeeper sets the capture challenge keeper post-initialization.
+func (k *Keeper) SetChallengeKeeper(ck types.CaptureChallengeKeeper) { k.challengeKeeper = ck }
 
 // InitGenesis sets initial state from genesis.
 func (k Keeper) InitGenesis(ctx sdk.Context, gs *types.GenesisState) {
@@ -106,11 +111,29 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 }
 
 // RunAutoAnalysis runs capture detection on all domains with recent history.
+// When a domain is flagged, it auto-submits a challenge to capture_challenge.
 func (k Keeper) RunAutoAnalysis(ctx sdk.Context, params *types.Params) {
 	domains := k.GetDomainsWithHistory(ctx)
 	for _, domain := range domains {
-		k.AnalyzeCaptureRisk(ctx, domain, params)
+		metrics := k.AnalyzeCaptureRisk(ctx, domain, params)
+		if metrics == nil {
+			continue
+		}
+		if metrics.Flagged && k.challengeKeeper != nil {
+			evidence := formatMetricsAsEvidence(metrics)
+			if err := k.challengeKeeper.AutoSubmitChallenge(ctx, domain, metrics.RiskScore, metrics.HerfindahlIndex, evidence); err != nil {
+				k.Logger(ctx).Error("auto-challenge submission failed", "domain", domain, "err", err)
+			}
+		}
 	}
+}
+
+// formatMetricsAsEvidence creates a human-readable evidence string from capture metrics.
+func formatMetricsAsEvidence(m *types.CaptureMetrics) string {
+	return fmt.Sprintf(
+		"Auto-detected capture risk: HHI=%d, timing_correlation=%d, verdict_correlation=%d, top3_share=%d, risk_score=%d, analyzed_at_block=%d",
+		m.HerfindahlIndex, m.TimingCorrelation, m.VerdictCorrelation, m.Top3Share, m.RiskScore, m.AnalyzedAtBlock,
+	)
 }
 
 // RecordVerificationFromKnowledge records verification history from the knowledge module.
