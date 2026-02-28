@@ -3786,3 +3786,135 @@ func TestMentorship_AutoProposePartnership(t *testing.T) {
 		t.Error("expected partnership to be auto-proposed on graduation")
 	}
 }
+
+// ==================== FULL LIFECYCLE INTEGRATION TESTS ====================
+
+func TestIntegration_MentorshipToPartnership(t *testing.T) {
+	ms, k, ctx, bk := setupMsgServer(t)
+	bk.setBalance(humanAddr, "uzrn", 10000000)
+	bk.setBalance(agentAddr, "uzrn", 10000000)
+
+	// 1. Propose mentorship
+	resp, err := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+		Mentor: humanAddr, Mentee: agentAddr, Domain: "physics", DurationBlocks: 100,
+	})
+	if err != nil {
+		t.Fatalf("propose failed: %v", err)
+	}
+
+	// 2. Accept mentorship
+	_, err = ms.AcceptMentorship(ctx, &types.MsgAcceptMentorship{
+		Mentee: agentAddr, MentorshipId: resp.MentorshipId,
+	})
+	if err != nil {
+		t.Fatalf("accept failed: %v", err)
+	}
+
+	m, _ := k.GetMentorship(ctx, resp.MentorshipId)
+	if m.Status != "active" {
+		t.Fatalf("expected active, got %s", m.Status)
+	}
+
+	// 3. Auto-graduate after duration
+	ctx201 := ctxAtHeight(ctx, 201)
+	k.AutoGraduateMentorships(ctx201)
+
+	m, _ = k.GetMentorship(ctx201, resp.MentorshipId)
+	if m.Status != "graduated" {
+		t.Fatalf("expected graduated, got %s", m.Status)
+	}
+
+	// 4. Partnership should have been auto-proposed
+	partnerships := k.GetAllPartnerships(ctx201)
+	if len(partnerships) == 0 {
+		t.Fatal("expected auto-proposed partnership")
+	}
+
+	p := partnerships[0]
+	if p.Status != types.StatusPending {
+		t.Errorf("expected pending, got %s", p.Status)
+	}
+
+	// 5. Accept the partnership
+	_, err = ms.AcceptPartnership(ctx201, &types.MsgAcceptPartnership{
+		Accepter:      agentAddr,
+		PartnershipId: p.Id,
+		Deposit:       "1000000",
+	})
+	if err != nil {
+		t.Fatalf("accept partnership failed: %v", err)
+	}
+
+	p, _ = k.GetPartnership(ctx201, p.Id)
+	if p.Status != types.StatusActive {
+		t.Errorf("expected active partnership, got %s", p.Status)
+	}
+}
+
+func TestIntegration_FormationPoolToPartnership(t *testing.T) {
+	ms, k, ctx, bk := setupMsgServer(t)
+	bk.setBalance(humanAddr, "uzrn", 10000000)
+	bk.setBalance(agentAddr, "uzrn", 10000000)
+
+	// 1. Both join formation pool
+	_, err := ms.JoinFormationPool(ctx, &types.MsgJoinFormationPool{
+		Joiner: humanAddr, Domains: []string{"physics", "math"}, PreferredRole: "human",
+	})
+	if err != nil {
+		t.Fatalf("join pool (human) failed: %v", err)
+	}
+
+	_, err = ms.JoinFormationPool(ctx, &types.MsgJoinFormationPool{
+		Joiner: agentAddr, Domains: []string{"physics"}, PreferredRole: "agent",
+	})
+	if err != nil {
+		t.Fatalf("join pool (agent) failed: %v", err)
+	}
+
+	// 2. Matching runs at interval
+	ctx100 := ctxAtHeight(ctx, 100)
+	k.RunFormationMatching(ctx100)
+
+	matches := k.GetAllFormationMatches(ctx100)
+	if len(matches) != 1 {
+		t.Fatalf("expected 1 match, got %d", len(matches))
+	}
+
+	matchId := matches[0].Id
+
+	// 3. Both accept
+	_, err = ms.AcceptFormationMatch(ctx100, &types.MsgAcceptFormationMatch{
+		Accepter: humanAddr, MatchId: matchId,
+	})
+	if err != nil {
+		t.Fatalf("accept match (human) failed: %v", err)
+	}
+
+	_, err = ms.AcceptFormationMatch(ctx100, &types.MsgAcceptFormationMatch{
+		Accepter: agentAddr, MatchId: matchId,
+	})
+	if err != nil {
+		t.Fatalf("accept match (agent) failed: %v", err)
+	}
+
+	// 4. Match should be accepted, partnership proposed
+	fm, _ := k.GetFormationMatch(ctx100, matchId)
+	if fm.Status != "accepted" {
+		t.Errorf("expected accepted, got %s", fm.Status)
+	}
+
+	partnerships := k.GetAllPartnerships(ctx100)
+	if len(partnerships) == 0 {
+		t.Fatal("expected partnership after both accept")
+	}
+
+	// 5. Pool entries should be removed
+	_, inPool := k.GetPoolEntry(ctx100, humanAddr)
+	if inPool {
+		t.Error("expected human removed from pool")
+	}
+	_, inPool = k.GetPoolEntry(ctx100, agentAddr)
+	if inPool {
+		t.Error("expected agent removed from pool")
+	}
+}
