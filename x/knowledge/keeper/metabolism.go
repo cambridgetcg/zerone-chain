@@ -247,11 +247,12 @@ func (k Keeper) ApplyPatronageEnergyBoost(ctx context.Context, fact *types.Fact,
 		boost = params.MetabolismEnergyPerPatronage // minimum one epoch worth
 	}
 
-	// Apply human patronage bonus (R28-5)
+	// Apply human patronage bonus (R28-5), modulated by domain role elasticity (R29-3)
 	if params.HumanPatronageBonusBps > 0 && patronAddr != "" {
 		accountType := k.getAccountType(ctx, patronAddr)
 		if accountType == "human" {
-			boost = safeMulDiv(boost, 1_000_000+params.HumanPatronageBonusBps, 1_000_000)
+			_, humanBonus := k.GetRoleElasticity(ctx, fact.Domain)
+			boost = safeMulDiv(boost, 1_000_000+humanBonus, 1_000_000)
 		}
 	}
 

@@ -54,11 +54,13 @@ func (k Keeper) AggregateVerificationResult(ctx context.Context, round *types.Ve
 			stake = 1 // minimum weight for unknown validators
 		}
 
-		// Apply agent verification bonus (R28-5)
+		// Apply agent verification bonus (R28-5), modulated by domain role elasticity (R29-3)
 		if params.AgentVerificationBonusBps > 0 {
 			accountType := k.getAccountType(ctx, reveal.Verifier)
 			if accountType == "agent" {
-				stake = safeMulDiv(stake, 1_000_000+params.AgentVerificationBonusBps, 1_000_000)
+				domain := k.getDomainForRound(ctx, round)
+				agentBonus, _ := k.GetRoleElasticity(ctx, domain)
+				stake = safeMulDiv(stake, 1_000_000+agentBonus, 1_000_000)
 			}
 		}
 

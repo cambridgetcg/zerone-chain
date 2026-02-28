@@ -293,8 +293,20 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 	fact.Confidence = ApplyRoleBonusToConfidence(fact.Confidence, claim.ClaimType, accountType, params)
 
 	// Apply dual validation bonus for partnership claims (R28-5)
+	// Scale by weaker role's accuracy in the domain (R29-3)
 	if claim.PartnershipId != "" {
-		fact.Confidence = ApplyDualValidationBonus(fact.Confidence, params)
+		agentAcc, humanAcc := k.GetRoleAccuracies(ctx, claim.Domain)
+		weakerAccuracy := agentAcc
+		if humanAcc < weakerAccuracy || weakerAccuracy == 0 {
+			weakerAccuracy = humanAcc
+		}
+		if weakerAccuracy > 0 {
+			scaledBonusBps := safeMulDiv(params.DualValidationBonusBps, weakerAccuracy, BPS)
+			fact.Confidence = safeMulDiv(fact.Confidence, 1_000_000+scaledBonusBps, 1_000_000)
+		} else {
+			// No track record yet — use full static bonus
+			fact.Confidence = ApplyDualValidationBonus(fact.Confidence, params)
+		}
 	}
 
 	// Apply confidence ceiling (stratum + global MaxConfidence hard cap)
