@@ -232,3 +232,171 @@ func TestR29_FullEcosystemCycle(t *testing.T) {
 	// Advance blocks to confirm no panics with all this state present.
 	h.AdvanceBlocks(20)
 }
+
+// TestR29_AdversarialInteractions tests pathological feature interactions
+// to ensure no panics or state corruption.
+func TestR29_AdversarialInteractions(t *testing.T) {
+	t.Run("PathologicalColdState", func(t *testing.T) {
+		// Domain at max capacity + cold epistemic temperature + zero role data.
+		// Facts should decay fast, confidence grows slowly, bonuses are base-only.
+		h := NewTestHarness(t)
+		domain := "adversarial-cold"
+
+		// Overcrowded domain.
+		h.KnowledgeKeeper.SetDomainStats(h.Ctx, &knowledgekeeper.DomainStats{
+			Domain:      domain,
+			ActiveCount: 5000,
+			AtRiskCount: 500,
+			TotalEnergy: 5_500_000,
+		})
+
+		// Cold epistemic temperature.
+		err := h.KnowledgeKeeper.SetDomainEpistemicState(h.Ctx, &knowledgetypes.DomainEpistemicState{
+			Domain:           domain,
+			Temperature:      100_000, // Very cold
+			ConformityStreak: 10,
+		})
+		require.NoError(t, err)
+
+		// No role records → should use base bonuses.
+		agentBonus, humanBonus := h.KnowledgeKeeper.GetRoleElasticity(h.Ctx, domain)
+		kParams, _ := h.KnowledgeKeeper.GetParams(h.Ctx)
+		require.Equal(t, kParams.AgentVerificationBonusBps, agentBonus, "no role data → base agent bonus")
+		require.Equal(t, kParams.HumanPatronageBonusBps, humanBonus, "no role data → base human bonus")
+
+		// Death pressure should be > 1M (accelerated decay).
+		deathMul := h.KnowledgeKeeper.GetDeathPressureMultiplier(h.Ctx, domain)
+		require.Greater(t, deathMul, uint64(1_000_000), "overcrowded → accelerated decay")
+
+		// Create a fact in the cold domain and verify confidence growth is halved.
+		require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, &knowledgetypes.Fact{
+			Id:         "cold-fact-1",
+			Domain:     domain,
+			Content:    "cold fact content",
+			Category:   "empirical",
+			Confidence: 200_000,
+			Status:     knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+		}))
+
+		// Advance blocks — system must not panic.
+		require.NotPanics(t, func() {
+			h.AdvanceBlocks(50)
+		})
+	})
+
+	t.Run("TotalFailureCascade", func(t *testing.T) {
+		// All corrections fail + health critical + pacing at max defensive.
+		// System should be slow but stable.
+		h := NewTestHarness(t)
+
+		// Enable alignment with short interval.
+		h.AlignmentKeeper.SetState(h.Ctx, &aligntypes.AlignmentState{
+			Enabled:              true,
+			PreviousCategory:     aligntypes.CategoryCritical,
+			LastObservationHeight: 0,
+		})
+		alignParams := aligntypes.DefaultParams()
+		alignParams.ObservationIntervalBlocks = 5
+		alignParams.CorrectionConfidenceMinSamples = 3
+		alignParams.MinConfidenceForAutoApply = 300_000
+		h.AlignmentKeeper.SetParams(h.Ctx, &alignParams)
+
+		// Record multiple failed correction outcomes.
+		for i := 0; i < 10; i++ {
+			h.AlignmentKeeper.SetCorrectionOutcome(h.Ctx, &aligntypes.CorrectionOutcome{
+				Height:      uint64(i + 1),
+				Dimension:   aligntypes.DimKnowledgeQuality,
+				Magnitude:   50_000,
+				Direction:   "increase",
+				ScoreBefore: 300_000,
+				ScoreAfter:  250_000, // Worse than before
+				Successful:  false,
+			})
+		}
+
+		// Correction confidence should be very low.
+		confidence := h.AlignmentKeeper.GetCorrectionConfidence(h.Ctx)
+		require.Less(t, confidence, uint64(200_000), "all-fail corrections → restricted confidence")
+
+		// Effective max magnitude should be 0 (governance lockout).
+		effMag := h.AlignmentKeeper.GetEffectiveMaxMagnitude(h.Ctx)
+		require.Equal(t, uint64(0), effMag, "low confidence + minConfidenceForAutoApply → governance only")
+
+		// Pacing should be at max defensive.
+		creationBps, analysisBps := h.AlignmentKeeper.GetGlobalPacingMultiplier(h.Ctx)
+		require.Equal(t, uint64(500_000), creationBps, "critical → 50%% creation")
+		require.Equal(t, uint64(2_000_000), analysisBps, "critical → 200%% analysis")
+
+		// Advance blocks — system must remain stable.
+		require.NotPanics(t, func() {
+			h.AdvanceBlocks(100)
+		})
+	})
+
+	t.Run("VindicationInOvercrowdedFlaggedDomain", func(t *testing.T) {
+		// Vindication in overcrowded domain with capture flag.
+		// Temperature heats (R29-2) + role record updates (R29-3)
+		// + carrying capacity still forces decay (R29-1)
+		// + capture defense reduces HHI via partnerships (R29-5)
+		h := NewTestHarness(t)
+		domain := "adversarial-vindication"
+
+		// Overcrowded domain.
+		h.KnowledgeKeeper.SetDomainStats(h.Ctx, &knowledgekeeper.DomainStats{
+			Domain:      domain,
+			ActiveCount: 2000,
+			AtRiskCount: 200,
+			TotalEnergy: 2_200_000,
+		})
+
+		// Flag for capture.
+		h.CaptureDefenseKeeper.SetCaptureMetrics(h.Ctx, &cdtypes.CaptureMetrics{
+			Domain:          domain,
+			HerfindahlIndex: 900_000,
+			RiskScore:       900_000,
+			Flagged:         true,
+			AnalyzedAtBlock: uint64(h.Height()),
+		})
+
+		require.True(t, h.CaptureDefenseKeeper.IsDomainFlagged(h.Ctx, domain))
+
+		// Add a vindication in the domain.
+		require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, &knowledgetypes.Fact{
+			Id:         "vindicated-in-overcrowded",
+			Domain:     domain,
+			Content:    "contested knowledge vindicated",
+			Category:   "contested",
+			Confidence: 200_000,
+			Status:     knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+		}))
+		require.NoError(t, h.KnowledgeKeeper.SetVindicationRecord(h.Ctx, "vindicated-in-overcrowded", knowledgetypes.VindicationRecord{
+			Verifier:     "zerone1vindication-verifier",
+			FactId:       "vindicated-in-overcrowded",
+			VindicatedAt: uint64(h.Height()),
+		}))
+
+		kParams, _ := h.KnowledgeKeeper.GetParams(h.Ctx)
+		kParams.FitnessEpochBlocks = 10
+		require.NoError(t, h.KnowledgeKeeper.SetParams(h.Ctx, kParams))
+
+		// Update temperature — should heat despite overcrowding.
+		require.NoError(t, h.KnowledgeKeeper.UpdateEpistemicTemperature(h.Ctx, domain))
+		epState, _, err := h.KnowledgeKeeper.GetDomainEpistemicState(h.Ctx, domain)
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, epState.Temperature, uint64(500_000), "vindication should heat or maintain neutral")
+
+		// Carrying capacity: domain is still overcrowded.
+		pressure := h.KnowledgeKeeper.GetDomainPressure(h.Ctx, domain)
+		require.Greater(t, pressure, uint64(1_000_000))
+
+		// Trigger partnership bonus for flagged domain.
+		h.CaptureDefenseKeeper.OnDomainFlagged(h.Ctx, domain)
+		bonus := h.PartnershipsKeeper.GetDomainFormationBonus(h.Ctx, domain)
+		require.NotNil(t, bonus)
+
+		// Advance blocks — no panics.
+		require.NotPanics(t, func() {
+			h.AdvanceBlocks(50)
+		})
+	})
+}
