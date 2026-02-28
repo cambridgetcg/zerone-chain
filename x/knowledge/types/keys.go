@@ -121,6 +121,9 @@ var (
 
 	// ─── Capture defense overrides (R28-8) ──────────────────────────────
 	VerificationThresholdOverrideKeyPrefix = []byte{0x52} // 0x52 | domain → threshold override (binary)
+
+	// ─── Epistemic temperature (R29-2) ─────────────────────────────────
+	EpistemicStatePrefix = []byte{0x53} // 0x53 | domain → DomainEpistemicState (JSON)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -349,4 +352,9 @@ func VindicationRecordPrefixForFact(factId string) []byte {
 	key = append(key, []byte(factId)...)
 	key = append(key, '/')
 	return key
+}
+
+// EpistemicStateKey returns the store key for a domain's epistemic state.
+func EpistemicStateKey(domain string) []byte {
+	return append(append([]byte{}, EpistemicStatePrefix...), []byte(domain)...)
 }

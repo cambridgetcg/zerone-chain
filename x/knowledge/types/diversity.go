@@ -34,3 +34,12 @@ type ConformityStreak struct {
 	ConsecutiveEpochs uint64 `json:"consecutive_epochs"`
 	LastEpoch         uint64 `json:"last_epoch"`
 }
+
+// DomainEpistemicState tracks epistemic temperature for a knowledge domain (R29-2).
+type DomainEpistemicState struct {
+	Domain                string `json:"domain"`
+	Temperature           uint64 `json:"temperature"`             // BPS: 500_000 = neutral
+	ConformityStreak      uint64 `json:"conformity_streak"`       // consecutive high-conformity epochs
+	VindicationCount      uint64 `json:"vindication_count"`       // vindications counted in current window
+	LastTemperatureUpdate uint64 `json:"last_temperature_update"` // block height
+}
