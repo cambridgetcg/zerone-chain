@@ -153,6 +153,7 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 	am.keeper.ExpireSeedPartnerships(sdkCtx)
 	am.keeper.ExpireFormationMatches(sdkCtx)
 	am.keeper.ExpireFormationBonuses(sdkCtx) // R29-5: expire structural immunity bonuses
+	am.keeper.ExpireFormationFreezes(sdkCtx) // R31-3: expire domain formation freezes
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -28,6 +29,27 @@ func (k msgServer) ProposePartnership(goCtx context.Context, msg *types.MsgPropo
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	params := k.GetParams(ctx)
 	currentBlock := uint64(ctx.BlockHeight())
+
+	// R31-3: Check domain formation freeze.
+	if msg.Domain != "" {
+		if freeze := k.GetDomainFormationFreeze(ctx, msg.Domain); freeze != nil {
+			if currentBlock < freeze.ExpiryHeight {
+				ctx.EventManager().EmitEvent(
+					sdk.NewEvent("zerone.partnerships.formation_blocked",
+						sdk.NewAttribute("domain", msg.Domain),
+						sdk.NewAttribute("freeze_expiry", fmt.Sprintf("%d", freeze.ExpiryHeight)),
+						sdk.NewAttribute("freeze_reason", freeze.Reason),
+						sdk.NewAttribute("requester", msg.Proposer),
+					),
+				)
+				return nil, errors.Wrapf(types.ErrDomainFrozen,
+					"domain %s is under formation freeze until block %d: %s",
+					msg.Domain, freeze.ExpiryHeight, freeze.Reason)
+			}
+			// Freeze expired — clear it.
+			k.DeleteDomainFormationFreeze(ctx, msg.Domain)
+		}
+	}
 
 	// Check for existing non-dissolved partnership between these two
 	existingByHuman := k.GetPartnershipsByHuman(ctx, msg.Proposer)

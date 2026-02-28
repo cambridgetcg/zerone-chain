@@ -47,4 +47,7 @@ var (
 	ErrMatchNotFound       = errors.Register(ModuleName, 60, "formation match not found")
 	ErrNotMatchParticipant = errors.Register(ModuleName, 61, "sender is not a participant of this match")
 	ErrMatchNotProposed    = errors.Register(ModuleName, 62, "match is not in proposed status")
+
+	// Formation freeze errors (R31-3)
+	ErrDomainFrozen = errors.Register(ModuleName, 70, "domain is under formation freeze")
 )

@@ -28,4 +28,5 @@ var (
 	FormationBonusKeyPrefix    = []byte{0x18} // R29-5: domain formation bonuses
 	FormationBonusParamsKey    = []byte{0x19} // R29-5: formation bonus params
 	LastParamUpdateHeightKey  = []byte{0x1a} // R31-5: last param update block height
+	FormationFreezeKeyPrefix = []byte{0x1B} // R31-3: domain formation freezes
 )

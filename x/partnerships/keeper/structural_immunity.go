@@ -133,3 +133,70 @@ func (k Keeper) ExpireFormationBonuses(ctx sdk.Context) {
 		_ = kvStore.Delete(key)
 	}
 }
+
+// ---------- Domain Formation Freeze CRUD (R31-3) ----------
+
+func formationFreezeKey(domain string) []byte {
+	return append(types.FormationFreezeKeyPrefix, []byte(domain)...)
+}
+
+// SetDomainFormationFreeze stores a formation freeze for a domain.
+func (k Keeper) SetDomainFormationFreeze(ctx sdk.Context, domain string, expiryHeight uint64, reason string) {
+	freeze := &types.DomainFormationFreeze{
+		Domain:       domain,
+		ExpiryHeight: expiryHeight,
+		Reason:       reason,
+	}
+	kvStore := k.storeService.OpenKVStore(ctx)
+	bz, err := json.Marshal(freeze)
+	if err != nil {
+		panic("failed to marshal formation freeze: " + err.Error())
+	}
+	_ = kvStore.Set(formationFreezeKey(domain), bz)
+}
+
+// GetDomainFormationFreeze returns the formation freeze for a domain, if any.
+func (k Keeper) GetDomainFormationFreeze(ctx sdk.Context, domain string) *types.DomainFormationFreeze {
+	kvStore := k.storeService.OpenKVStore(ctx)
+	bz, err := kvStore.Get(formationFreezeKey(domain))
+	if err != nil || bz == nil {
+		return nil
+	}
+	var freeze types.DomainFormationFreeze
+	if err := json.Unmarshal(bz, &freeze); err != nil {
+		return nil
+	}
+	return &freeze
+}
+
+// DeleteDomainFormationFreeze removes a formation freeze.
+func (k Keeper) DeleteDomainFormationFreeze(ctx sdk.Context, domain string) {
+	kvStore := k.storeService.OpenKVStore(ctx)
+	_ = kvStore.Delete(formationFreezeKey(domain))
+}
+
+// ExpireFormationFreezes removes expired formation freezes.
+func (k Keeper) ExpireFormationFreezes(ctx sdk.Context) {
+	currentBlock := uint64(ctx.BlockHeight())
+	kvStore := k.storeService.OpenKVStore(ctx)
+	iter, err := kvStore.Iterator(types.FormationFreezeKeyPrefix, prefixEndBytes(types.FormationFreezeKeyPrefix))
+	if err != nil {
+		return
+	}
+
+	var toDelete [][]byte
+	for ; iter.Valid(); iter.Next() {
+		var freeze types.DomainFormationFreeze
+		if err := json.Unmarshal(iter.Value(), &freeze); err != nil {
+			continue
+		}
+		if freeze.ExpiryHeight > 0 && freeze.ExpiryHeight <= currentBlock {
+			toDelete = append(toDelete, append([]byte{}, iter.Key()...))
+		}
+	}
+	iter.Close()
+
+	for _, key := range toDelete {
+		_ = kvStore.Delete(key)
+	}
+}
