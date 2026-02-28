@@ -54,6 +54,14 @@ func (k Keeper) AggregateVerificationResult(ctx context.Context, round *types.Ve
 			stake = 1 // minimum weight for unknown validators
 		}
 
+		// Apply agent verification bonus (R28-5)
+		if params.AgentVerificationBonusBps > 0 {
+			accountType := k.getAccountType(ctx, reveal.Verifier)
+			if accountType == "agent" {
+				stake = safeMulDiv(stake, 1_000_000+params.AgentVerificationBonusBps, 1_000_000)
+			}
+		}
+
 		totalVoteStake += stake
 		switch reveal.Vote {
 		case "accept":
