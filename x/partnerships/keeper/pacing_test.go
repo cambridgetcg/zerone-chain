@@ -113,17 +113,19 @@ func TestPacing_Degraded_CreationBps750000(t *testing.T) {
 	pk := &mockPacingKeeper{creationBps: 750_000, analysisBps: 1_000_000}
 	k.SetPacingKeeper(pk)
 
-	// Block 100: should NOT trigger (100 % 133 != 0)
-	ctx100 := ctxAtHeight(ctx, 100)
-	k.RunFormationMatching(ctx100)
-	matches := k.GetAllFormationMatches(ctx100)
-	assert.Len(t, matches, 0, "should NOT match at block 100 with degraded pacing (effective=133)")
+	// R31-5: cycleBase = lastParamUpdateHeight = 100 (set above).
+	// effectiveInterval = 133 → matching fires when (block - 100) % 133 == 0 → block 233.
+	// Block 200: should NOT trigger ((200 - 100) % 133 = 100 % 133 != 0)
+	ctx200 := ctxAtHeight(ctx, 200)
+	k.RunFormationMatching(ctx200)
+	matches := k.GetAllFormationMatches(ctx200)
+	assert.Len(t, matches, 0, "should NOT match at block 200 with degraded pacing (effective=133)")
 
-	// Block 133: should trigger (133 % 133 == 0)
-	ctx133 := ctxAtHeight(ctx, 133)
-	k.RunFormationMatching(ctx133)
-	matches = k.GetAllFormationMatches(ctx133)
-	assert.Len(t, matches, 1, "should match at block 133 with degraded pacing (effective=133)")
+	// Block 233: should trigger ((233 - 100) % 133 = 133 % 133 == 0)
+	ctx233 := ctxAtHeight(ctx, 233)
+	k.RunFormationMatching(ctx233)
+	matches = k.GetAllFormationMatches(ctx233)
+	assert.Len(t, matches, 1, "should match at block 233 with degraded pacing (effective=133)")
 }
 
 func TestPacing_Critical_CreationBps500000(t *testing.T) {
@@ -153,17 +155,19 @@ func TestPacing_Critical_CreationBps500000(t *testing.T) {
 	pk := &mockPacingKeeper{creationBps: 500_000, analysisBps: 1_000_000}
 	k.SetPacingKeeper(pk)
 
-	// Block 100: should NOT trigger (100 % 200 != 0)
-	ctx100 := ctxAtHeight(ctx, 100)
-	k.RunFormationMatching(ctx100)
-	matches := k.GetAllFormationMatches(ctx100)
-	assert.Len(t, matches, 0, "should NOT match at block 100 with critical pacing (effective=200)")
-
-	// Block 200: should trigger (200 % 200 == 0)
+	// R31-5: cycleBase = lastParamUpdateHeight = 100 (set above).
+	// effectiveInterval = 200 → matching fires when (block - 100) % 200 == 0 → block 300.
+	// Block 200: should NOT trigger ((200 - 100) % 200 = 100 % 200 != 0)
 	ctx200 := ctxAtHeight(ctx, 200)
 	k.RunFormationMatching(ctx200)
-	matches = k.GetAllFormationMatches(ctx200)
-	assert.Len(t, matches, 1, "should match at block 200 with critical pacing (effective=200)")
+	matches := k.GetAllFormationMatches(ctx200)
+	assert.Len(t, matches, 0, "should NOT match at block 200 with critical pacing (effective=200)")
+
+	// Block 300: should trigger ((300 - 100) % 200 = 200 % 200 == 0)
+	ctx300 := ctxAtHeight(ctx, 300)
+	k.RunFormationMatching(ctx300)
+	matches = k.GetAllFormationMatches(ctx300)
+	assert.Len(t, matches, 1, "should match at block 300 with critical pacing (effective=200)")
 }
 
 func TestPacing_Neutral_CreationBps1000000(t *testing.T) {

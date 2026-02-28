@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"cosmossdk.io/core/store"
@@ -108,6 +109,22 @@ func (k Keeper) SetParams(ctx sdk.Context, params *types.Params) {
 		panic(fmt.Sprintf("failed to marshal params: %v", err))
 	}
 	_ = kvStore.Set(types.ParamsKey, bz)
+
+	// R31-5: Record param update height for formation matching cycle reset.
+	height := uint64(ctx.BlockHeight())
+	heightBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightBz, height)
+	_ = kvStore.Set(types.LastParamUpdateHeightKey, heightBz)
+}
+
+// GetLastParamUpdateHeight returns the block height at which params were last updated (R31-5).
+func (k Keeper) GetLastParamUpdateHeight(ctx sdk.Context) uint64 {
+	kvStore := k.storeService.OpenKVStore(ctx)
+	bz, err := kvStore.Get(types.LastParamUpdateHeightKey)
+	if err != nil || bz == nil || len(bz) < 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
 }
 
 // GetParams returns module parameters.

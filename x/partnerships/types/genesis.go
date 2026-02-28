@@ -25,6 +25,7 @@ func DefaultParams() *Params {
 		FormationMatchIntervalBlocks:           100,
 		MatchAcceptanceBlocks:                  200,
 		AutoProposePartnershipOnGraduation:     true,
+		SocialSaturationThreshold:              4, // R31-5: min unique participants for social benefit
 	}
 }
 

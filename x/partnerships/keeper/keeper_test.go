@@ -17,6 +17,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
 
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
 
@@ -3917,4 +3918,60 @@ func TestIntegration_FormationPoolToPartnership(t *testing.T) {
 	if inPool {
 		t.Error("expected agent removed from pool")
 	}
+}
+
+// ---------- R31-5: LastParamUpdateHeight ----------
+
+func TestSetParams_RecordsUpdateHeight(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	ctx = ctx.WithBlockHeight(42)
+	params := types.DefaultParams()
+	k.SetParams(ctx, params)
+
+	height := k.GetLastParamUpdateHeight(ctx)
+	require.Equal(t, uint64(42), height)
+
+	ctx = ctx.WithBlockHeight(100)
+	k.SetParams(ctx, params)
+	height = k.GetLastParamUpdateHeight(ctx)
+	require.Equal(t, uint64(100), height)
+}
+
+// ---------- R31-5: Formation Matching Cycle Reset ----------
+
+func TestRunFormationMatching_ResetsOnParamChange(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	params := types.DefaultParams()
+	params.FormationMatchIntervalBlocks = 10
+	ctx = ctx.WithBlockHeight(1)
+	k.SetParams(ctx, params)
+
+	k.SetPoolEntry(ctx, &types.PoolEntry{Address: "addr1", Status: "active", Domains: []string{"physics"}, RegisteredAt: 1})
+	k.SetPoolEntry(ctx, &types.PoolEntry{Address: "addr2", Status: "active", Domains: []string{"physics"}, PreferredRole: "agent", RegisteredAt: 1})
+
+	// lastParamUpdate=1, so cycle fires when (block - 1) % 10 == 0 → block=11
+	ctx = ctx.WithBlockHeight(11)
+	k.RunFormationMatching(ctx)
+	matches := k.GetAllFormationMatches(ctx)
+	require.Len(t, matches, 1, "matching should run at block 11")
+
+	// New pool entries
+	k.SetPoolEntry(ctx, &types.PoolEntry{Address: "addr3", Status: "active", Domains: []string{"physics"}, RegisteredAt: 1})
+	k.SetPoolEntry(ctx, &types.PoolEntry{Address: "addr4", Status: "active", Domains: []string{"physics"}, PreferredRole: "agent", RegisteredAt: 1})
+
+	// Update params at block 13 — resets cycle
+	ctx = ctx.WithBlockHeight(13)
+	k.SetParams(ctx, params)
+
+	// Block 15 (15-13=2, 2%10 != 0) — should NOT run
+	ctx = ctx.WithBlockHeight(15)
+	k.RunFormationMatching(ctx)
+	require.Len(t, k.GetAllFormationMatches(ctx), 1, "matching should not run at block 15")
+
+	// Block 23 (23-13=10, 10%10 == 0) — should run
+	ctx = ctx.WithBlockHeight(23)
+	k.RunFormationMatching(ctx)
+	require.Len(t, k.GetAllFormationMatches(ctx), 2, "matching should run at block 23")
 }

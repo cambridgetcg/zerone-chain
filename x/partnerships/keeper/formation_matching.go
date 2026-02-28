@@ -76,7 +76,14 @@ func (k Keeper) RunFormationMatching(ctx sdk.Context) {
 			effectiveInterval = params.FormationMatchIntervalBlocks * 1_000_000 / creationPacing
 		}
 	}
-	if effectiveInterval == 0 || currentBlock%effectiveInterval != 0 {
+	if effectiveInterval == 0 {
+		return
+	}
+
+	// R31-5: Earth → Water — param changes reset matching cycle.
+	lastParamUpdate := k.GetLastParamUpdateHeight(ctx)
+	cycleBase := lastParamUpdate // reset cycle origin on param change
+	if currentBlock < cycleBase || (currentBlock-cycleBase)%effectiveInterval != 0 {
 		return
 	}
 
