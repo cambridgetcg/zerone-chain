@@ -115,6 +115,8 @@ type ZeroneAuthKeeper interface {
 type CaptureDefenseKeeper interface {
 	RecordVerificationHistory(ctx context.Context, domain, roundId string, validators []string, verdicts []bool, submitBlocks []uint64)
 	UpdateReputation(ctx context.Context, validator string, domain string, stratum string, approved bool)
+	// GetDomainCapturePenalty returns whether a domain is flagged and its HHI-based penalty (R31-1).
+	GetDomainCapturePenalty(ctx context.Context, domain string) (flagged bool, penaltyBps uint64)
 }
 
 // PacingKeeper provides global pacing signals from the alignment module (R29-6).

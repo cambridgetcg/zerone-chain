@@ -45,3 +45,12 @@ func (a *KnowledgeCaptureDefenseAdapter) UpdateReputation(
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	a.k.UpdateReputation(ctx, validator, domain, stratum, approved)
 }
+
+// GetDomainCapturePenalty implements knowledgetypes.CaptureDefenseKeeper (R31-1).
+func (a *KnowledgeCaptureDefenseAdapter) GetDomainCapturePenalty(
+	goCtx context.Context,
+	domain string,
+) (bool, uint64) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return a.k.GetDomainCapturePenalty(ctx, domain)
+}

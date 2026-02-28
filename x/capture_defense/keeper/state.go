@@ -247,6 +247,16 @@ func (k Keeper) GetCaptureMetrics(ctx context.Context, domain string) (*types.Ca
 	return &m, true
 }
 
+// GetDomainCapturePenalty returns whether a domain is flagged and its HHI as penalty BPS (R31-1).
+// Metal controls Wood: penalty scales with HHI concentration.
+func (k Keeper) GetDomainCapturePenalty(ctx context.Context, domain string) (bool, uint64) {
+	metrics, found := k.GetCaptureMetrics(ctx, domain)
+	if !found || !metrics.Flagged {
+		return false, 0
+	}
+	return true, metrics.HerfindahlIndex
+}
+
 // DeleteCaptureMetrics removes capture metrics for a domain.
 func (k Keeper) DeleteCaptureMetrics(ctx context.Context, domain string) {
 	kvStore := k.storeService.OpenKVStore(ctx)
