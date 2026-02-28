@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -91,10 +92,36 @@ func (k Keeper) GenerateCorrections(ctx context.Context, scores *types.Dimension
 	return corrections
 }
 
-// ApplyCorrections dispatches corrections to autopoiesis if available.
+// ApplyCorrections dispatches corrections to autopoiesis if within bounds.
+// Corrections exceeding MaxAutoApplyMagnitudeBps emit a governance-required event.
 // Nil-safe: if autopoiesisKeeper is nil, corrections are stored with applied=false.
 func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.CorrectionRecord) {
+	params := k.GetParams(ctx)
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
 	for _, c := range corrections {
+		// Check magnitude bounds.
+		if params.MaxAutoApplyMagnitudeBps > 0 && c.Magnitude > params.MaxAutoApplyMagnitudeBps {
+			k.Logger(ctx).Info("correction exceeds auto-apply bounds, requires governance",
+				"dimension", c.Dimension,
+				"parameter", c.Parameter,
+				"magnitude", c.Magnitude,
+				"max_auto_apply", params.MaxAutoApplyMagnitudeBps,
+			)
+			sdkCtx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.alignment.correction_governance_required",
+					sdk.NewAttribute("dimension", c.Dimension),
+					sdk.NewAttribute("parameter", c.Parameter),
+					sdk.NewAttribute("direction", c.Direction),
+					sdk.NewAttribute("magnitude", fmt.Sprintf("%d", c.Magnitude)),
+					sdk.NewAttribute("max_auto_apply", fmt.Sprintf("%d", params.MaxAutoApplyMagnitudeBps)),
+				),
+			)
+			c.Applied = false
+			k.AddCorrection(ctx, c)
+			continue
+		}
+
 		if k.autopoiesisKeeper != nil {
 			err := k.autopoiesisKeeper.SuggestAdjustment(ctx, c.Parameter, c.Direction, c.Magnitude)
 			if err == nil {

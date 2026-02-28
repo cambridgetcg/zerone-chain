@@ -486,6 +486,71 @@ func TestAutopoiesisNilSafe(t *testing.T) {
 	}
 }
 
+// --- Test 10: Bounded correction — small magnitude auto-applied ---
+
+func TestBoundedCorrectionSmallAutoApplied(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	autoMock := &mockAutopoiesisKeeper{}
+	mocks.autopoiesis = autoMock
+	k.SetAutopoiesisKeeper(autoMock)
+
+	corrections := []*types.CorrectionRecord{{
+		Height:    100,
+		Dimension: types.DimKnowledgeQuality,
+		Parameter: "knowledge.reward_multiplier",
+		Direction: "increase",
+		Magnitude: 100_000, // 10% — below 50% default max
+		Timestamp: 1000,
+	}}
+
+	k.ApplyCorrections(ctx, corrections)
+
+	if len(autoMock.adjustments) != 1 {
+		t.Fatalf("expected 1 adjustment, got %d", len(autoMock.adjustments))
+	}
+	stored, _ := k.GetCorrections(ctx, 100, 0)
+	if len(stored) == 0 || !stored[0].Applied {
+		t.Fatal("expected correction marked as applied")
+	}
+}
+
+// --- Test 11: Bounded correction — large magnitude blocked ---
+
+func TestBoundedCorrectionLargeBlocked(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	params := k.GetParams(ctx)
+	params.MaxAutoApplyMagnitudeBps = 50_000 // 5%
+	k.SetParams(ctx, params)
+
+	autoMock := &mockAutopoiesisKeeper{}
+	mocks.autopoiesis = autoMock
+	k.SetAutopoiesisKeeper(autoMock)
+
+	corrections := []*types.CorrectionRecord{{
+		Height:    100,
+		Dimension: types.DimKnowledgeQuality,
+		Parameter: "knowledge.reward_multiplier",
+		Direction: "increase",
+		Magnitude: 200_000, // 20% — exceeds 5% max
+		Timestamp: 1000,
+	}}
+
+	k.ApplyCorrections(ctx, corrections)
+
+	if len(autoMock.adjustments) != 0 {
+		t.Fatalf("expected 0 adjustments for large correction, got %d", len(autoMock.adjustments))
+	}
+	stored, _ := k.GetCorrections(ctx, 100, 0)
+	if len(stored) == 0 {
+		t.Fatal("expected correction stored")
+	}
+	if stored[0].Applied {
+		t.Fatal("expected correction NOT applied (magnitude exceeds bounds)")
+	}
+}
+
 // --- Test 9: Param validation rejects invalid configs ---
 
 func TestParamValidation(t *testing.T) {
