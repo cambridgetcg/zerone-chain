@@ -49,3 +49,8 @@ type VestingRewardsKeeper interface {
 	// GetTotalSupply returns the total token supply as a big.Int.
 	GetTotalSupply(ctx context.Context) *big.Int
 }
+
+// CaptureDefenseKeeper provides capture risk data for the security sensor.
+type CaptureDefenseKeeper interface {
+	GetFlaggedDomainCount(ctx context.Context) uint64
+}

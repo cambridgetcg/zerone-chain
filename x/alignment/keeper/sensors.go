@@ -72,8 +72,9 @@ func (k Keeper) senseGovernanceParticipation(ctx context.Context) uint64 {
 	return count * types.BPS / targetDomains
 }
 
-// senseNetworkSecurity computes active/target validator ratio as BPS.
-// Nil-safe: returns NeutralBPS if keeper is nil.
+// senseNetworkSecurity computes active/target validator ratio as BPS,
+// then applies a capture risk penalty based on flagged domain ratio.
+// Nil-safe: returns NeutralBPS if staking keeper is nil.
 func (k Keeper) senseNetworkSecurity(ctx context.Context) uint64 {
 	if k.stakingKeeper == nil {
 		return types.NeutralBPS
@@ -83,11 +84,28 @@ func (k Keeper) senseNetworkSecurity(ctx context.Context) uint64 {
 	if target == 0 {
 		return types.NeutralBPS
 	}
-	ratio := active * types.BPS / target
-	if ratio > types.BPS {
-		return types.BPS
+	baseSecurity := active * types.BPS / target
+	if baseSecurity > types.BPS {
+		baseSecurity = types.BPS
 	}
-	return ratio
+
+	// Apply capture risk penalty (R28-8).
+	if k.captureDefenseKeeper != nil {
+		flaggedCount := k.captureDefenseKeeper.GetFlaggedDomainCount(ctx)
+		if flaggedCount > 0 && k.ontologyKeeper != nil {
+			totalDomains := k.ontologyKeeper.GetDomainCount(ctx)
+			if totalDomains > 0 {
+				captureRatio := flaggedCount * types.BPS / totalDomains
+				if captureRatio > types.BPS {
+					captureRatio = types.BPS
+				}
+				// security = baseSecurity * (1 - captureRatio)
+				baseSecurity = baseSecurity * (types.BPS - captureRatio) / types.BPS
+			}
+		}
+	}
+
+	return baseSecurity
 }
 
 // senseStakingRatio computes staked/supply from the staking angle.
