@@ -523,6 +523,8 @@ type QueryServer interface {
 	ValidatorIndependence(context.Context, *QueryValidatorIndependenceRequest) (*QueryValidatorIndependenceResponse, error)
 	// ConformityAlerts queries domains with active conformity alerts.
 	ConformityAlerts(context.Context, *QueryConformityAlertsRequest) (*QueryConformityAlertsResponse, error)
+	// MetabolismStatus returns aggregate metabolism health statistics.
+	MetabolismStatus(context.Context, *QueryMetabolismStatusRequest) (*QueryMetabolismStatusResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -628,6 +630,9 @@ func (UnimplementedQueryServer) ValidatorIndependence(context.Context, *QueryVal
 }
 func (UnimplementedQueryServer) ConformityAlerts(context.Context, *QueryConformityAlertsRequest) (*QueryConformityAlertsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ConformityAlerts not implemented")
+}
+func (UnimplementedQueryServer) MetabolismStatus(context.Context, *QueryMetabolismStatusRequest) (*QueryMetabolismStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MetabolismStatus not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}

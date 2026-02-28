@@ -7,6 +7,8 @@
 package types
 
 import (
+	"fmt"
+
 	query "github.com/cosmos/cosmos-sdk/types/query"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -3367,6 +3369,85 @@ func (x *ConformityAlert) GetConsecutiveEpochs() uint64 {
 func (x *ConformityAlert) GetThresholdBps() uint64 {
 	if x != nil {
 		return x.ThresholdBps
+	}
+	return 0
+}
+
+// ─── Metabolism dashboard types (hand-written, not proto-generated) ───────────
+
+type QueryMetabolismStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryMetabolismStatusRequest) Reset()        { *x = QueryMetabolismStatusRequest{} }
+func (x *QueryMetabolismStatusRequest) String() string { return fmt.Sprintf("%+v", *x) }
+func (*QueryMetabolismStatusRequest) ProtoMessage()    {}
+
+type QueryMetabolismStatusResponse struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	TotalFacts     uint64                 `protobuf:"varint,1,opt,name=total_facts,json=totalFacts,proto3" json:"total_facts,omitempty"`
+	ActiveCount    uint64                 `protobuf:"varint,2,opt,name=active_count,json=activeCount,proto3" json:"active_count,omitempty"`
+	AtRiskCount    uint64                 `protobuf:"varint,3,opt,name=at_risk_count,json=atRiskCount,proto3" json:"at_risk_count,omitempty"`
+	ExpiredCount   uint64                 `protobuf:"varint,4,opt,name=expired_count,json=expiredCount,proto3" json:"expired_count,omitempty"`
+	PrunedCount    uint64                 `protobuf:"varint,5,opt,name=pruned_count,json=prunedCount,proto3" json:"pruned_count,omitempty"`
+	AvgEnergy      uint64                 `protobuf:"varint,6,opt,name=avg_energy,json=avgEnergy,proto3" json:"avg_energy,omitempty"`
+	CurrentEpoch   uint64                 `protobuf:"varint,7,opt,name=current_epoch,json=currentEpoch,proto3" json:"current_epoch,omitempty"`
+	NextEpochBlock uint64                 `protobuf:"varint,8,opt,name=next_epoch_block,json=nextEpochBlock,proto3" json:"next_epoch_block,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *QueryMetabolismStatusResponse) Reset()        { *x = QueryMetabolismStatusResponse{} }
+func (x *QueryMetabolismStatusResponse) String() string { return fmt.Sprintf("%+v", *x) }
+func (*QueryMetabolismStatusResponse) ProtoMessage()    {}
+
+func (x *QueryMetabolismStatusResponse) GetTotalFacts() uint64 {
+	if x != nil {
+		return x.TotalFacts
+	}
+	return 0
+}
+func (x *QueryMetabolismStatusResponse) GetActiveCount() uint64 {
+	if x != nil {
+		return x.ActiveCount
+	}
+	return 0
+}
+func (x *QueryMetabolismStatusResponse) GetAtRiskCount() uint64 {
+	if x != nil {
+		return x.AtRiskCount
+	}
+	return 0
+}
+func (x *QueryMetabolismStatusResponse) GetExpiredCount() uint64 {
+	if x != nil {
+		return x.ExpiredCount
+	}
+	return 0
+}
+func (x *QueryMetabolismStatusResponse) GetPrunedCount() uint64 {
+	if x != nil {
+		return x.PrunedCount
+	}
+	return 0
+}
+func (x *QueryMetabolismStatusResponse) GetAvgEnergy() uint64 {
+	if x != nil {
+		return x.AvgEnergy
+	}
+	return 0
+}
+func (x *QueryMetabolismStatusResponse) GetCurrentEpoch() uint64 {
+	if x != nil {
+		return x.CurrentEpoch
+	}
+	return 0
+}
+func (x *QueryMetabolismStatusResponse) GetNextEpochBlock() uint64 {
+	if x != nil {
+		return x.NextEpochBlock
 	}
 	return 0
 }

@@ -80,6 +80,7 @@ func GetQueryCmd() *cobra.Command {
 		NewQueryConformityAlertsCmd(),
 		NewQueryVindicationPendingCmd(),
 		NewQueryVindicationRecordCmd(),
+		NewQueryMetabolismStatusCmd(),
 	)
 
 	return queryCmd
@@ -957,6 +958,32 @@ func NewQueryVindicationRecordCmd() *cobra.Command {
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), string(out))
 			return nil
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryMetabolismStatusCmd creates a CLI command for querying aggregate metabolism health statistics.
+func NewQueryMetabolismStatusCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "metabolism-status",
+		Short: "Query aggregate metabolism health statistics",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			req := &types.QueryMetabolismStatusRequest{}
+			resp := &types.QueryMetabolismStatusResponse{}
+
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/MetabolismStatus", req, resp); err != nil {
+				return err
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
 		},
 	}
 	flags.AddQueryFlagsToCmd(cmd)

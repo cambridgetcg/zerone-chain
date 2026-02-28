@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strconv"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -402,6 +403,59 @@ func (q *queryServer) FactsAtRisk(ctx context.Context, req *types.QueryFactsAtRi
 	})
 
 	return &types.QueryFactsAtRiskResponse{Facts: facts}, nil
+}
+
+// MetabolismStatus returns aggregate metabolism health statistics.
+func (q *queryServer) MetabolismStatus(ctx context.Context, req *types.QueryMetabolismStatusRequest) (*types.QueryMetabolismStatusResponse, error) {
+	params, err := q.keeper.GetParams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+
+	var totalFacts, activeCount, atRiskCount, expiredCount, prunedCount uint64
+	var totalEnergy uint64
+
+	q.keeper.IterateFacts(ctx, func(fact *types.Fact) bool {
+		totalFacts++
+		totalEnergy += fact.Energy
+		switch fact.Status {
+		case types.FactStatus_FACT_STATUS_VERIFIED, types.FactStatus_FACT_STATUS_ACTIVE, types.FactStatus_FACT_STATUS_PROVISIONAL:
+			activeCount++
+		case types.FactStatus_FACT_STATUS_AT_RISK:
+			atRiskCount++
+		case types.FactStatus_FACT_STATUS_EXPIRED:
+			expiredCount++
+		case types.FactStatus_FACT_STATUS_PRUNED:
+			prunedCount++
+		}
+		return false
+	})
+
+	avgEnergy := uint64(0)
+	if totalFacts > 0 {
+		avgEnergy = totalEnergy / totalFacts
+	}
+
+	currentEpoch := uint64(0)
+	nextEpochBlock := uint64(0)
+	if params.FitnessEpochBlocks > 0 {
+		currentEpoch = height / params.FitnessEpochBlocks
+		nextEpochBlock = (currentEpoch + 1) * params.FitnessEpochBlocks
+	}
+
+	return &types.QueryMetabolismStatusResponse{
+		TotalFacts:     totalFacts,
+		ActiveCount:    activeCount,
+		AtRiskCount:    atRiskCount,
+		ExpiredCount:   expiredCount,
+		PrunedCount:    prunedCount,
+		AvgEnergy:      avgEnergy,
+		CurrentEpoch:   currentEpoch,
+		NextEpochBlock: nextEpochBlock,
+	}, nil
 }
 
 // FactLineage traces a fact's ancestry up to the root.

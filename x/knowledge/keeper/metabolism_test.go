@@ -619,6 +619,34 @@ func TestConfidence_GrowthCappedAtMax(t *testing.T) {
 	require.Equal(t, params.MaxConfidence, updated.Confidence)
 }
 
+func TestMetabolismStatus_Query(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// Create facts in various states
+	active1 := makeEnergyFact("fact-ms-a1", "Active fact one content!!", "physics", 500_000, types.FactStatus_FACT_STATUS_ACTIVE)
+	active2 := makeEnergyFact("fact-ms-a2", "Active fact two content!!", "physics", 700_000, types.FactStatus_FACT_STATUS_VERIFIED)
+	atRisk := makeEnergyFact("fact-ms-ar", "At risk fact for query!!!", "physics", 100_000, types.FactStatus_FACT_STATUS_AT_RISK)
+	atRisk.AtRiskSinceEpoch = 1
+	expired := makeEnergyFact("fact-ms-ex", "Expired fact for query!!!", "physics", 5_000, types.FactStatus_FACT_STATUS_EXPIRED)
+	expired.AtRiskSinceEpoch = 1
+
+	for _, f := range []*types.Fact{active1, active2, atRisk, expired} {
+		require.NoError(t, k.SetFact(ctx, f))
+	}
+
+	qs := keeper.NewQueryServerImpl(k)
+	resp, err := qs.MetabolismStatus(ctx, &types.QueryMetabolismStatusRequest{})
+	require.NoError(t, err)
+
+	require.Equal(t, uint64(4), resp.TotalFacts)
+	require.Equal(t, uint64(2), resp.ActiveCount)
+	require.Equal(t, uint64(1), resp.AtRiskCount)
+	require.Equal(t, uint64(1), resp.ExpiredCount)
+	require.Equal(t, uint64(0), resp.PrunedCount)
+	// Avg energy = (500K + 700K + 100K + 5K) / 4 = 326,250
+	require.Equal(t, uint64(326_250), resp.AvgEnergy)
+}
+
 func TestConfidence_NoGrowthWhenAtRisk(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 
