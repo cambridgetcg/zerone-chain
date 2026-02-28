@@ -644,3 +644,67 @@ func TestStratumCapacity_AllDepthMultipliers(t *testing.T) {
 		})
 	}
 }
+
+// ─── R31-5: Mentorship graduations (Water → Wood) ───────────────────────────
+
+func TestDomainStats_MentorshipGraduations(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	stats := keeper.DomainStats{
+		Domain:                "philosophy",
+		ActiveCount:           10,
+		MentorshipGraduations: 3,
+		TotalEnergy:           100000,
+		LastUpdated:           50,
+	}
+	k.SetDomainStats(ctx, &stats)
+
+	got, found := k.GetDomainStats(ctx, "philosophy")
+	require.True(t, found)
+	require.Equal(t, uint64(3), got.MentorshipGraduations)
+}
+
+func TestApplyMentorshipDividend(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	stats := keeper.DomainStats{Domain: "physics", ActiveCount: 5, TotalEnergy: 100000}
+	k.SetDomainStats(ctx, &stats)
+
+	k.ApplyMentorshipDividend(ctx, "physics", "mentor1", "mentee1")
+
+	got, found := k.GetDomainStats(ctx, "physics")
+	require.True(t, found)
+	require.Equal(t, uint64(1), got.MentorshipGraduations)
+	require.Equal(t, uint64(150000), got.TotalEnergy)
+
+	k.ApplyMentorshipDividend(ctx, "physics", "mentor2", "mentee2")
+	got, _ = k.GetDomainStats(ctx, "physics")
+	require.Equal(t, uint64(2), got.MentorshipGraduations)
+	require.Equal(t, uint64(200000), got.TotalEnergy)
+}
+
+func TestApplyMentorshipDividend_EnergyCap(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	stats := keeper.DomainStats{Domain: "physics", TotalEnergy: 990000}
+	k.SetDomainStats(ctx, &stats)
+
+	k.ApplyMentorshipDividend(ctx, "physics", "mentor1", "mentee1")
+
+	got, _ := k.GetDomainStats(ctx, "physics")
+	require.Equal(t, uint64(1000000), got.TotalEnergy)
+}
+
+func TestGetDomainCarryingCapacity_MentorshipBonus(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	baseCapacity := k.GetDomainCarryingCapacity(ctx, "physics")
+	require.Equal(t, uint64(1000), baseCapacity)
+
+	stats := keeper.DomainStats{Domain: "physics", MentorshipGraduations: 3}
+	k.SetDomainStats(ctx, &stats)
+
+	// 1000 + 3 * 5 = 1015
+	capacity := k.GetDomainCarryingCapacity(ctx, "physics")
+	require.Equal(t, uint64(1015), capacity)
+}

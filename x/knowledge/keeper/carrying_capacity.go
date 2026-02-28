@@ -12,11 +12,12 @@ import (
 
 // DomainStats tracks the population of a domain for carrying capacity calculations.
 type DomainStats struct {
-	Domain      string `json:"domain"`
-	ActiveCount uint64 `json:"active_count"`
-	AtRiskCount uint64 `json:"at_risk_count"`
-	TotalEnergy uint64 `json:"total_energy"`
-	LastUpdated uint64 `json:"last_updated"` // block height
+	Domain                string `json:"domain"`
+	ActiveCount           uint64 `json:"active_count"`
+	AtRiskCount           uint64 `json:"at_risk_count"`
+	TotalEnergy           uint64 `json:"total_energy"`
+	LastUpdated           uint64 `json:"last_updated"`            // block height
+	MentorshipGraduations uint64 `json:"mentorship_graduations"` // R31-5: Water → Wood
 }
 
 func (k Keeper) SetDomainStats(ctx context.Context, stats *DomainStats) {
@@ -70,6 +71,44 @@ func (k Keeper) DecrementDomainFactCount(ctx context.Context, domain string, was
 	k.SetDomainStats(ctx, stats)
 }
 
+// ApplyMentorshipDividend adds energy to a domain and increments its graduation
+// counter when a mentorship graduates (R31-5: Water → Wood).
+func (k Keeper) ApplyMentorshipDividend(ctx context.Context, domain, mentor, mentee string) {
+	params, _ := k.GetParams(ctx)
+	dividendEnergy := params.MentorshipDividendEnergy
+	if dividendEnergy == 0 {
+		dividendEnergy = 50_000 // safety default
+	}
+
+	stats, _ := k.GetDomainStats(ctx, domain)
+	stats.Domain = domain
+	stats.MentorshipGraduations++
+	stats.TotalEnergy += dividendEnergy
+
+	// Cap at MetabolismEnergyCap
+	energyCap := params.MetabolismEnergyCap
+	if energyCap == 0 {
+		energyCap = 1_000_000
+	}
+	if stats.TotalEnergy > energyCap {
+		stats.TotalEnergy = energyCap
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	stats.LastUpdated = uint64(sdkCtx.BlockHeight())
+	k.SetDomainStats(ctx, stats)
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.mentorship_dividend_applied",
+		sdk.NewAttribute("domain", domain),
+		sdk.NewAttribute("mentor", mentor),
+		sdk.NewAttribute("mentee", mentee),
+		sdk.NewAttribute("energy_added", fmt.Sprintf("%d", dividendEnergy)),
+		sdk.NewAttribute("total_energy", fmt.Sprintf("%d", stats.TotalEnergy)),
+		sdk.NewAttribute("graduations", fmt.Sprintf("%d", stats.MentorshipGraduations)),
+	))
+}
+
 // TransitionDomainFactStatus updates stats when a fact moves between active/at-risk.
 func (k Keeper) TransitionDomainFactStatus(ctx context.Context, domain string, toActive bool) {
 	stats, _ := k.GetDomainStats(ctx, domain)
@@ -100,7 +139,12 @@ func (k Keeper) GetDomainCarryingCapacity(ctx context.Context, domain string) ui
 	}
 	inbound := k.GetInboundCrossDomainCitationCount(ctx, domain)
 	bonus := inbound * params.DomainCapacityGrowthPerCitation
-	total := base + bonus
+
+	// R31-5: Water → Wood — mentorship graduations expand carrying capacity.
+	stats, _ := k.GetDomainStats(ctx, domain)
+	mentorshipBonus := stats.MentorshipGraduations * params.MentorshipCapacityBonus
+
+	total := base + bonus + mentorshipBonus
 
 	// Metal controls Wood: capture flag penalty reduces capacity (R31-1)
 	if k.captureDefenseKeeper != nil {
