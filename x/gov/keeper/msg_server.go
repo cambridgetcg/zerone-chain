@@ -398,6 +398,41 @@ func (ms *msgServer) AttachUpgradePlan(goCtx context.Context, msg *types.MsgAtta
 	return &types.MsgAttachUpgradePlanResponse{}, nil
 }
 
+// --- Domain Formation Freeze Handler ---
+
+// DomainFormationFreeze imposes a formation cooldown on a domain (authority only).
+func (ms *msgServer) DomainFormationFreeze(goCtx context.Context, msg *types.MsgDomainFormationFreeze) (*types.MsgDomainFormationFreezeResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if ms.GetAuthority() != msg.Authority {
+		return nil, types.ErrUnauthorized
+	}
+
+	if msg.Domain == "" {
+		return nil, fmt.Errorf("domain cannot be empty")
+	}
+	if msg.DurationBlocks == 0 {
+		return nil, fmt.Errorf("duration_blocks must be > 0")
+	}
+
+	expiryHeight := uint64(ctx.BlockHeight()) + msg.DurationBlocks
+
+	if ms.partnershipsKeeper != nil {
+		ms.partnershipsKeeper.SetDomainFormationFreeze(ctx, msg.Domain, expiryHeight, msg.Reason)
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.gov.domain_formation_freeze",
+			sdk.NewAttribute("domain", msg.Domain),
+			sdk.NewAttribute("duration_blocks", fmt.Sprintf("%d", msg.DurationBlocks)),
+			sdk.NewAttribute("expiry_height", fmt.Sprintf("%d", expiryHeight)),
+			sdk.NewAttribute("reason", msg.Reason),
+		),
+	)
+
+	return &types.MsgDomainFormationFreezeResponse{}, nil
+}
+
 // --- Research Spend Message Handlers ---
 
 // SubmitResearchSpend delegates to the keeper's SubmitResearchSpend method.

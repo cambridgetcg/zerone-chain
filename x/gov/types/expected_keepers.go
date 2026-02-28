@@ -58,3 +58,8 @@ type EmergencyKeeper interface {
 type AlignmentKeeper interface {
 	GetHealthCategory(ctx context.Context) string
 }
+
+// PartnershipsKeeper defines the partnerships module interface for governance-controlled formation.
+type PartnershipsKeeper interface {
+	SetDomainFormationFreeze(ctx context.Context, domain string, expiryHeight uint64, reason string)
+}
