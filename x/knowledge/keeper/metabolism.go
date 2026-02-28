@@ -91,8 +91,21 @@ func (k Keeper) ProcessMetabolism(ctx context.Context, epoch uint64) error {
 			continue
 		}
 
-		// Emit event on status change
+		// Emit event on status change and update domain stats (R29-1)
 		if oldStatus != fact.Status {
+			switch {
+			case fact.Status == types.FactStatus_FACT_STATUS_AT_RISK:
+				k.TransitionDomainFactStatus(ctx, fact.Domain, false) // active → at-risk
+			case fact.Status == types.FactStatus_FACT_STATUS_ACTIVE &&
+				(oldStatus == types.FactStatus_FACT_STATUS_AT_RISK || oldStatus == types.FactStatus_FACT_STATUS_EXPIRED):
+				k.TransitionDomainFactStatus(ctx, fact.Domain, true) // at-risk → active
+			case fact.Status == types.FactStatus_FACT_STATUS_EXPIRED ||
+				fact.Status == types.FactStatus_FACT_STATUS_PRUNED:
+				wasActive := oldStatus == types.FactStatus_FACT_STATUS_ACTIVE ||
+					oldStatus == types.FactStatus_FACT_STATUS_VERIFIED ||
+					oldStatus == types.FactStatus_FACT_STATUS_PROVISIONAL
+				k.DecrementDomainFactCount(ctx, fact.Domain, wasActive, fact.Energy)
+			}
 			k.emitMetabolismStatusEvent(ctx, fact, oldStatus, epoch)
 		}
 	}

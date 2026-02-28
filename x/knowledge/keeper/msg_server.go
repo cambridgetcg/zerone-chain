@@ -462,6 +462,9 @@ func (m *msgServer) AddFact(ctx context.Context, msg *types.MsgAddFact) (*types.
 		return nil, err
 	}
 
+	// Update domain stats for carrying capacity (R29-1)
+	m.keeper.IncrementDomainFactCount(ctx, fact.Domain, true, fact.Energy)
+
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.knowledge.add_fact",
 			sdk.NewAttribute("fact_id", factID),

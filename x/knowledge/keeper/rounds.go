@@ -310,6 +310,9 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		return "", err
 	}
 
+	// Update domain stats for carrying capacity (R29-1)
+	k.IncrementDomainFactCount(ctx, fact.Domain, true, fact.Energy)
+
 	// Index fact by structured subject and tags
 	if fact.Structure != nil {
 		if err := k.IndexFactBySubject(ctx, fact); err != nil {
