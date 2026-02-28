@@ -25,6 +25,7 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryChallengeCmd(),
 		NewQueryBountyPoolCmd(),
 		NewQueryChallengesByDomainCmd(),
+		NewQueryActiveChallengesCmd(),
 	)
 
 	return queryCmd
@@ -95,6 +96,32 @@ func NewQueryBountyPoolCmd() *cobra.Command {
 			resp := &types.QueryBountyPoolResponse{}
 			if err := clientCtx.Invoke(cmd.Context(), "/zerone.capture_challenge.v1.Query/BountyPool", req, resp); err != nil {
 				return fmt.Errorf("failed to query bounty pool: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryActiveChallengesCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "active",
+		Short: "Query all active capture challenges",
+		Long:  "Query all capture challenges with an active (non-terminal) status: OPEN, EVIDENCE, or UNDER_REVIEW.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			req := &types.QueryActiveChallengesRequest{}
+			resp := &types.QueryActiveChallengesResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.capture_challenge.v1.QueryExt/ActiveChallenges", req, resp); err != nil {
+				return fmt.Errorf("failed to query active challenges: %w", err)
 			}
 
 			return clientCtx.PrintObjectLegacy(resp)
