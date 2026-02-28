@@ -202,43 +202,27 @@ func (k Keeper) ResetEpochCitationCounters(ctx context.Context) {
 	}
 }
 
-// emitMetabolismStatusEvent emits events for fact status changes due to metabolism.
+// emitMetabolismStatusEvent emits a unified fact_status_changed event.
 func (k Keeper) emitMetabolismStatusEvent(ctx context.Context, fact *types.Fact, oldStatus types.FactStatus, epoch uint64) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 
-	switch fact.Status {
-	case types.FactStatus_FACT_STATUS_AT_RISK:
-		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
-			"zerone.knowledge.fact_at_risk",
-			sdk.NewAttribute("fact_id", fact.Id),
-			sdk.NewAttribute("energy", "0"),
-			sdk.NewAttribute("domain", fact.Domain),
-		))
-	case types.FactStatus_FACT_STATUS_EXPIRED:
-		atRiskDuration := epoch - fact.AtRiskSinceEpoch
-		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
-			"zerone.knowledge.fact_expired",
-			sdk.NewAttribute("fact_id", fact.Id),
-			sdk.NewAttribute("at_risk_epochs", fmt.Sprintf("%d", atRiskDuration)),
-		))
-	case types.FactStatus_FACT_STATUS_PRUNED:
-		contentPreview := fact.Content
-		if len(contentPreview) > 100 {
-			contentPreview = contentPreview[:100]
-		}
-		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
-			"zerone.knowledge.fact_pruned",
-			sdk.NewAttribute("fact_id", fact.Id),
-			sdk.NewAttribute("content_preview", contentPreview),
-		))
-	case types.FactStatus_FACT_STATUS_ACTIVE:
-		if oldStatus == types.FactStatus_FACT_STATUS_AT_RISK ||
-			oldStatus == types.FactStatus_FACT_STATUS_EXPIRED {
-			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
-				"zerone.knowledge.fact_recovered",
-				sdk.NewAttribute("fact_id", fact.Id),
-				sdk.NewAttribute("energy", fmt.Sprintf("%d", fact.Energy)),
-			))
-		}
+	reason := "decay"
+	if fact.Status == types.FactStatus_FACT_STATUS_ACTIVE &&
+		(oldStatus == types.FactStatus_FACT_STATUS_AT_RISK || oldStatus == types.FactStatus_FACT_STATUS_EXPIRED) {
+		reason = "recovery"
+	} else if fact.Status == types.FactStatus_FACT_STATUS_EXPIRED {
+		reason = "extinction"
+	} else if fact.Status == types.FactStatus_FACT_STATUS_PRUNED {
+		reason = "extinction"
 	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.fact_status_changed",
+		sdk.NewAttribute("fact_id", fact.Id),
+		sdk.NewAttribute("old_status", oldStatus.String()),
+		sdk.NewAttribute("new_status", fact.Status.String()),
+		sdk.NewAttribute("energy", fmt.Sprintf("%d", fact.Energy)),
+		sdk.NewAttribute("reason", reason),
+		sdk.NewAttribute("epoch", fmt.Sprintf("%d", epoch)),
+	))
 }

@@ -379,3 +379,62 @@ func TestFactsAtRisk_Query(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, resp.Facts, 1, "should respect limit")
 }
+
+func TestMetabolism_UnifiedStatusEvent(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// Fact that will transition VERIFIED → AT_RISK
+	fact := makeEnergyFact("fact-ev", "Event test fact content!!", "physics", 305_000, types.FactStatus_FACT_STATUS_VERIFIED)
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	require.NoError(t, k.ProcessMetabolism(ctx, 1))
+
+	// Check for unified event
+	events := ctx.EventManager().Events()
+	found := false
+	for _, event := range events {
+		if event.Type == "zerone.knowledge.fact_status_changed" {
+			found = true
+			attrs := make(map[string]string)
+			for _, attr := range event.Attributes {
+				attrs[attr.Key] = attr.Value
+			}
+			require.Equal(t, "fact-ev", attrs["fact_id"])
+			require.Equal(t, "FACT_STATUS_VERIFIED", attrs["old_status"])
+			require.Equal(t, "FACT_STATUS_AT_RISK", attrs["new_status"])
+			require.Equal(t, "decay", attrs["reason"])
+			require.NotEmpty(t, attrs["energy"])
+		}
+	}
+	require.True(t, found, "should emit fact_status_changed event")
+}
+
+func TestMetabolism_RecoveryEvent(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+
+	// AT_RISK fact that will recover
+	fact := makeEnergyFact("fact-rev", "Recovery event test fact!", "physics", 0, types.FactStatus_FACT_STATUS_AT_RISK)
+	fact.AtRiskSinceEpoch = 1
+	fact.QueryCountEpoch = 400 // 400 * 1000 = 400K income, -10K cost = 390K > 300K
+	require.NoError(t, k.SetFact(ctx, fact))
+
+	require.NoError(t, k.ProcessMetabolism(ctx, 2))
+
+	events := ctx.EventManager().Events()
+	found := false
+	for _, event := range events {
+		if event.Type == "zerone.knowledge.fact_status_changed" {
+			attrs := make(map[string]string)
+			for _, attr := range event.Attributes {
+				attrs[attr.Key] = attr.Value
+			}
+			if attrs["fact_id"] == "fact-rev" {
+				found = true
+				require.Equal(t, "FACT_STATUS_AT_RISK", attrs["old_status"])
+				require.Equal(t, "FACT_STATUS_ACTIVE", attrs["new_status"])
+				require.Equal(t, "recovery", attrs["reason"])
+			}
+		}
+	}
+	require.True(t, found, "should emit recovery event")
+}
