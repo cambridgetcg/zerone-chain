@@ -16,7 +16,12 @@ func DefaultParams() Params {
 		DegradedThreshold:            400_000, // 40%
 		HealthyThreshold:             700_000, // 70%
 		Enabled:                      true,
-		MaxAutoApplyMagnitudeBps:     500_000, // 50% — conservative testnet default
+		MaxAutoApplyMagnitudeBps:             500_000,   // 50% — conservative testnet default
+		CorrectionConfidenceWindowSize:       50,
+		CorrectionConfidenceMinSamples:       5,
+		MinConfidenceForAutoApply:            200_000,   // 20%
+		CorrectionBoundsMinMultiplierBps:     300_000,   // 30%
+		CorrectionBoundsMaxMultiplierBps:     2_000_000, // 200%
 	}
 }
 
@@ -66,6 +71,10 @@ func (p *Params) Validate() error {
 
 	if p.MaxAutoApplyMagnitudeBps > BPS {
 		return ErrInvalidMaxAutoApply
+	}
+
+	if p.CorrectionBoundsMinMultiplierBps > p.CorrectionBoundsMaxMultiplierBps {
+		return ErrInvalidConfidenceBounds
 	}
 
 	return nil

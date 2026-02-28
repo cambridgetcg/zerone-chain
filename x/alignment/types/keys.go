@@ -16,7 +16,8 @@ var (
 	ScoresKeyPrefix        = []byte{0x04}
 	HealthIndexKeyPrefix   = []byte{0x05}
 	CorrectionKeyPrefix    = []byte{0x06}
-	CorrectionCountKey     = []byte{0x07}
+	CorrectionCountKey         = []byte{0x07}
+	CorrectionOutcomeKeyPrefix = []byte{0x08}
 )
 
 // ObservationKey returns the store key for an observation at a given height.
@@ -45,6 +46,17 @@ func CorrectionKey(height uint64, index uint32) []byte {
 	key[len(CorrectionKeyPrefix)+10] = byte(index >> 8)
 	key[len(CorrectionKeyPrefix)+11] = byte(index)
 	return key
+}
+
+// CorrectionOutcomeKey returns the store key for a correction outcome at height + dimension.
+func CorrectionOutcomeKey(height uint64, dimension string) []byte {
+	prefix := append(CorrectionOutcomeKeyPrefix, heightBytes(height)...)
+	return append(prefix, []byte(dimension)...)
+}
+
+// CorrectionOutcomeHeightPrefix returns the key prefix for all outcomes at a height.
+func CorrectionOutcomeHeightPrefix(height uint64) []byte {
+	return append(CorrectionOutcomeKeyPrefix, heightBytes(height)...)
 }
 
 // heightBytes encodes a uint64 as 8 big-endian bytes for ordered iteration.
