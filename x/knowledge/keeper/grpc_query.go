@@ -830,6 +830,56 @@ func (q *queryServer) ConformityAlerts(ctx context.Context, _ *types.QueryConfor
 	return &types.QueryConformityAlertsResponse{Alerts: alerts}, nil
 }
 
+// EpistemicTemperature queries a domain's epistemic temperature state (R29-2).
+func (q *queryServer) EpistemicTemperature(ctx context.Context, req *types.QueryEpistemicTemperatureRequest) (*types.QueryEpistemicTemperatureResponse, error) {
+	if req.Domain == "" {
+		return nil, status.Error(codes.InvalidArgument, "domain is required")
+	}
+
+	params, err := q.keeper.GetParams(ctx)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	state, err := q.keeper.GetOrInitDomainEpistemicState(ctx, req.Domain)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Calculate effective confidence cap
+	effectiveCap := params.MaxConfidence
+	if effectiveCap == 0 {
+		effectiveCap = 880_000
+	}
+	if state.Temperature < 300_000 && params.EpistemicColdConfidenceCapBps > 0 {
+		if params.EpistemicColdConfidenceCapBps < effectiveCap {
+			effectiveCap = params.EpistemicColdConfidenceCapBps
+		}
+	}
+	if state.Temperature > 800_000 && params.SurvivedChallengeConfidenceCap > effectiveCap {
+		effectiveCap = params.SurvivedChallengeConfidenceCap
+	}
+
+	// Calculate effective growth rate
+	growthRate := params.ConfidenceGrowthPerEpochBps
+	if state.Temperature > 700_000 && params.EpistemicHotConfidenceGrowthBps > 0 {
+		growthRate = safeMulDiv(growthRate, params.EpistemicHotConfidenceGrowthBps, BPS)
+	}
+	if state.Temperature < 300_000 {
+		growthRate = safeMulDiv(growthRate, 500_000, BPS)
+	}
+
+	return &types.QueryEpistemicTemperatureResponse{
+		Domain:                 req.Domain,
+		TemperatureBps:         state.Temperature,
+		Category:               TemperatureCategory(state.Temperature),
+		ConformityStreak:       state.ConformityStreak,
+		RecentVindications:     state.VindicationCount,
+		EffectiveConfidenceCap: effectiveCap,
+		EffectiveGrowthRate:    growthRate,
+	}, nil
+}
+
 // DomainCapacity queries carrying capacity and pressure for a domain (R29-1).
 func (q *queryServer) DomainCapacity(ctx context.Context, req *types.QueryDomainCapacityRequest) (*types.QueryDomainCapacityResponse, error) {
 	if req.Domain == "" {

@@ -82,6 +82,7 @@ func GetQueryCmd() *cobra.Command {
 		NewQueryVindicationRecordCmd(),
 		NewQueryMetabolismStatusCmd(),
 		NewQueryDomainCapacityCmd(),
+		NewQueryEpistemicTemperatureCmd(),
 	)
 
 	return queryCmd
@@ -984,6 +985,29 @@ func NewQueryDomainCapacityCmd() *cobra.Command {
 				return fmt.Errorf("failed to query domain capacity: %w", err)
 			}
 
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryEpistemicTemperatureCmd queries a domain's epistemic temperature.
+func NewQueryEpistemicTemperatureCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "epistemic-temperature [domain]",
+		Short: "Query epistemic temperature for a domain",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryEpistemicTemperatureRequest{Domain: args[0]}
+			resp := &types.QueryEpistemicTemperatureResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/EpistemicTemperature", req, resp); err != nil {
+				return fmt.Errorf("failed to query epistemic temperature: %w", err)
+			}
 			return clientCtx.PrintObjectLegacy(resp)
 		},
 	}

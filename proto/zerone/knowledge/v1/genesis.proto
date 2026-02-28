@@ -173,6 +173,14 @@ message Params {
   uint64 domain_capacity_growth_per_citation = 116; // Capacity bonus per inbound cross-domain citation (default: 1)
   uint64 overcrowding_decay_multiplier_bps = 117; // Decay multiplier at 2× capacity (default: 1,500,000 = 150%)
   uint64 underpopulation_birth_bonus_bps   = 118; // Energy bonus for facts in sparse domains (default: 200,000 = 20%)
+
+  // ─── Epistemic temperature (R29-2) ──────────────────────────────────
+  uint64 epistemic_temperature_decay_bps        = 119; // Per-epoch decay toward neutral (default: 995,000 = 99.5%)
+  uint64 epistemic_conformity_cooling_bps       = 120; // Cooling per high-conformity epoch (default: 50,000 = 5%)
+  uint64 epistemic_vindication_heating_bps      = 121; // Heating per vindication event (default: 100,000 = 10%)
+  uint64 epistemic_cold_confidence_cap_bps      = 122; // Max confidence in cold domains (default: 600,000 = 60%)
+  uint64 epistemic_hot_confidence_growth_bps    = 123; // Confidence growth multiplier in hot domains (default: 1,500,000 = 150%)
+  uint64 epistemic_temperature_window_blocks    = 124; // Lookback window for vindication counting (default: 10,000)
 }
 
 // GenesisState is the genesis state of the knowledge module.

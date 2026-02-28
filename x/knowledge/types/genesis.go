@@ -169,6 +169,14 @@ func DefaultParams() Params {
 		DomainCapacityGrowthPerCitation: 1,
 		OvercrowdingDecayMultiplierBps:  1_500_000, // 150% decay at 2× capacity
 		UnderpopulationBirthBonusBps:    200_000,   // 20% energy bonus in sparse domains
+
+		// ─── Epistemic temperature (R29-2) ──────────────────────────────────
+		EpistemicTemperatureDecayBps:     995_000,   // 99.5% per-epoch decay toward neutral
+		EpistemicConformityCoolingBps:    50_000,    // 5% cooling per high-conformity epoch
+		EpistemicVindicationHeatingBps:   100_000,   // 10% heating per vindication event
+		EpistemicColdConfidenceCapBps:    600_000,   // 60% max confidence in cold domains
+		EpistemicHotConfidenceGrowthBps:  1_500_000, // 150% confidence growth multiplier in hot domains
+		EpistemicTemperatureWindowBlocks: 10_000,    // Lookback window for vindication counting
 	}
 }
 

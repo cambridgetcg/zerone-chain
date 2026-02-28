@@ -167,8 +167,15 @@ type Params struct {
 	DomainCapacityGrowthPerCitation uint64 `protobuf:"varint,116,opt,name=domain_capacity_growth_per_citation,json=domainCapacityGrowthPerCitation,proto3" json:"domain_capacity_growth_per_citation,omitempty"` // Capacity bonus per inbound cross-domain citation (default: 1)
 	OvercrowdingDecayMultiplierBps  uint64 `protobuf:"varint,117,opt,name=overcrowding_decay_multiplier_bps,json=overcrowdingDecayMultiplierBps,proto3" json:"overcrowding_decay_multiplier_bps,omitempty"`      // Decay multiplier at 2× capacity (default: 1,500,000 = 150%)
 	UnderpopulationBirthBonusBps    uint64 `protobuf:"varint,118,opt,name=underpopulation_birth_bonus_bps,json=underpopulationBirthBonusBps,proto3" json:"underpopulation_birth_bonus_bps,omitempty"`            // Energy bonus for facts in sparse domains (default: 200,000 = 20%)
-	unknownFields                   protoimpl.UnknownFields
-	sizeCache                       protoimpl.SizeCache
+	// ─── Epistemic temperature (R29-2) ──────────────────────────────────
+	EpistemicTemperatureDecayBps     uint64 `protobuf:"varint,119,opt,name=epistemic_temperature_decay_bps,json=epistemicTemperatureDecayBps,proto3" json:"epistemic_temperature_decay_bps,omitempty"`             // Per-epoch decay toward neutral (default: 995,000 = 99.5%)
+	EpistemicConformityCoolingBps    uint64 `protobuf:"varint,120,opt,name=epistemic_conformity_cooling_bps,json=epistemicConformityCoolingBps,proto3" json:"epistemic_conformity_cooling_bps,omitempty"`          // Cooling per high-conformity epoch (default: 50,000 = 5%)
+	EpistemicVindicationHeatingBps   uint64 `protobuf:"varint,121,opt,name=epistemic_vindication_heating_bps,json=epistemicVindicationHeatingBps,proto3" json:"epistemic_vindication_heating_bps,omitempty"`       // Heating per vindication event (default: 100,000 = 10%)
+	EpistemicColdConfidenceCapBps    uint64 `protobuf:"varint,122,opt,name=epistemic_cold_confidence_cap_bps,json=epistemicColdConfidenceCapBps,proto3" json:"epistemic_cold_confidence_cap_bps,omitempty"`        // Max confidence in cold domains (default: 600,000 = 60%)
+	EpistemicHotConfidenceGrowthBps  uint64 `protobuf:"varint,123,opt,name=epistemic_hot_confidence_growth_bps,json=epistemicHotConfidenceGrowthBps,proto3" json:"epistemic_hot_confidence_growth_bps,omitempty"`  // Confidence growth multiplier in hot domains (default: 1,500,000 = 150%)
+	EpistemicTemperatureWindowBlocks uint64 `protobuf:"varint,124,opt,name=epistemic_temperature_window_blocks,json=epistemicTemperatureWindowBlocks,proto3" json:"epistemic_temperature_window_blocks,omitempty"` // Lookback window for vindication counting (default: 10,000)
+	unknownFields                    protoimpl.UnknownFields
+	sizeCache                        protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1027,6 +1034,48 @@ func (x *Params) GetUnderpopulationBirthBonusBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetEpistemicTemperatureDecayBps() uint64 {
+	if x != nil {
+		return x.EpistemicTemperatureDecayBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicConformityCoolingBps() uint64 {
+	if x != nil {
+		return x.EpistemicConformityCoolingBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicVindicationHeatingBps() uint64 {
+	if x != nil {
+		return x.EpistemicVindicationHeatingBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicColdConfidenceCapBps() uint64 {
+	if x != nil {
+		return x.EpistemicColdConfidenceCapBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicHotConfidenceGrowthBps() uint64 {
+	if x != nil {
+		return x.EpistemicHotConfidenceGrowthBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicTemperatureWindowBlocks() uint64 {
+	if x != nil {
+		return x.EpistemicTemperatureWindowBlocks
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
@@ -1124,7 +1173,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xf57\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xb7;\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1244,7 +1293,13 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x14domain_base_capacity\x18s \x01(\x04R\x12domainBaseCapacity\x12L\n" +
 	"#domain_capacity_growth_per_citation\x18t \x01(\x04R\x1fdomainCapacityGrowthPerCitation\x12I\n" +
 	"!overcrowding_decay_multiplier_bps\x18u \x01(\x04R\x1eovercrowdingDecayMultiplierBps\x12E\n" +
-	"\x1funderpopulation_birth_bonus_bps\x18v \x01(\x04R\x1cunderpopulationBirthBonusBps\"\xcd\x03\n" +
+	"\x1funderpopulation_birth_bonus_bps\x18v \x01(\x04R\x1cunderpopulationBirthBonusBps\x12E\n" +
+	"\x1fepistemic_temperature_decay_bps\x18w \x01(\x04R\x1cepistemicTemperatureDecayBps\x12G\n" +
+	" epistemic_conformity_cooling_bps\x18x \x01(\x04R\x1depistemicConformityCoolingBps\x12I\n" +
+	"!epistemic_vindication_heating_bps\x18y \x01(\x04R\x1eepistemicVindicationHeatingBps\x12H\n" +
+	"!epistemic_cold_confidence_cap_bps\x18z \x01(\x04R\x1depistemicColdConfidenceCapBps\x12L\n" +
+	"#epistemic_hot_confidence_growth_bps\x18{ \x01(\x04R\x1fepistemicHotConfidenceGrowthBps\x12M\n" +
+	"#epistemic_temperature_window_blocks\x18| \x01(\x04R epistemicTemperatureWindowBlocks\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

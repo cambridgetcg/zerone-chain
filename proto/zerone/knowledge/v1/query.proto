@@ -185,6 +185,11 @@ service Query {
   rpc DomainCapacity(QueryDomainCapacityRequest) returns (QueryDomainCapacityResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/domains/{domain}/capacity";
   }
+
+  // EpistemicTemperature queries a domain's epistemic temperature state (R29-2).
+  rpc EpistemicTemperature(QueryEpistemicTemperatureRequest) returns (QueryEpistemicTemperatureResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/epistemic_temperature/{domain}";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -540,4 +545,20 @@ message QueryDomainCapacityResponse {
   uint64 pressure_bps   = 5;
   string category       = 6;
   uint64 total_energy   = 7;
+}
+
+// ─── Epistemic temperature query messages (R29-2) ────────────────────────────
+
+message QueryEpistemicTemperatureRequest {
+  string domain = 1;
+}
+
+message QueryEpistemicTemperatureResponse {
+  string domain                    = 1;
+  uint64 temperature_bps           = 2;
+  string category                  = 3;
+  uint64 conformity_streak         = 4;
+  uint64 recent_vindications       = 5;
+  uint64 effective_confidence_cap  = 6;
+  uint64 effective_growth_rate     = 7;
 }
