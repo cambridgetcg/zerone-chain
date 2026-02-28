@@ -982,20 +982,20 @@ func (x *MentorshipConfig) GetSponsorVerifications() uint64 {
 }
 
 type Mentorship struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	MentorAddr           string                 `protobuf:"bytes,2,opt,name=mentor_addr,json=mentorAddr,proto3" json:"mentor_addr,omitempty"`
-	MenteeAddr           string                 `protobuf:"bytes,3,opt,name=mentee_addr,json=menteeAddr,proto3" json:"mentee_addr,omitempty"`
-	Domain               string                 `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`
-	Status               string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
-	StartBlock           uint64                 `protobuf:"varint,6,opt,name=start_block,json=startBlock,proto3" json:"start_block,omitempty"`
-	DurationBlocks       uint64                 `protobuf:"varint,7,opt,name=duration_blocks,json=durationBlocks,proto3" json:"duration_blocks,omitempty"`
-	MenteeVerifications  uint64                 `protobuf:"varint,8,opt,name=mentee_verifications,json=menteeVerifications,proto3" json:"mentee_verifications,omitempty"`
-	MenteeClaimsSubmitted uint64                `protobuf:"varint,9,opt,name=mentee_claims_submitted,json=menteeClaimsSubmitted,proto3" json:"mentee_claims_submitted,omitempty"`
-	GraduationThreshold  uint64                 `protobuf:"varint,10,opt,name=graduation_threshold,json=graduationThreshold,proto3" json:"graduation_threshold,omitempty"`
-	GraduationClaimsReq  uint64                 `protobuf:"varint,11,opt,name=graduation_claims_req,json=graduationClaimsReq,proto3" json:"graduation_claims_req,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	MentorAddr            string                 `protobuf:"bytes,2,opt,name=mentor_addr,json=mentorAddr,proto3" json:"mentor_addr,omitempty"`
+	MenteeAddr            string                 `protobuf:"bytes,3,opt,name=mentee_addr,json=menteeAddr,proto3" json:"mentee_addr,omitempty"`
+	Domain                string                 `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`
+	Status                string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	StartBlock            uint64                 `protobuf:"varint,6,opt,name=start_block,json=startBlock,proto3" json:"start_block,omitempty"`
+	DurationBlocks        uint64                 `protobuf:"varint,7,opt,name=duration_blocks,json=durationBlocks,proto3" json:"duration_blocks,omitempty"`
+	MenteeVerifications   uint64                 `protobuf:"varint,8,opt,name=mentee_verifications,json=menteeVerifications,proto3" json:"mentee_verifications,omitempty"`
+	MenteeClaimsSubmitted uint64                 `protobuf:"varint,9,opt,name=mentee_claims_submitted,json=menteeClaimsSubmitted,proto3" json:"mentee_claims_submitted,omitempty"`
+	GraduationThreshold   uint64                 `protobuf:"varint,10,opt,name=graduation_threshold,json=graduationThreshold,proto3" json:"graduation_threshold,omitempty"`
+	GraduationClaimsReq   uint64                 `protobuf:"varint,11,opt,name=graduation_claims_req,json=graduationClaimsReq,proto3" json:"graduation_claims_req,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Mentorship) Reset() {
@@ -1216,59 +1216,141 @@ func (x *FormationMatch) GetAddr2Accepted() bool {
 var File_zerone_partnerships_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_types_proto_rawDesc = "" +
-	"\n\"zerone/partnerships/v1/types.proto\x12\x16zerone.partnerships.v1\"t\n\tExitSt" +
-	"ate\x12!\n\x0cinitiated_by\x18\x01 \x01(\tR\x0binitiatedBy\x12!\n\x0cinitiated_at\x18\x02 \x01(\x04R\x0binitiate" +
-	"dAt\x12!\n\x0ccooldown_end\x18\x03 \x01(\x04R\x0bcooldownEnd\"\x84\x04\n\x0bPartnership\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id" +
-	"\x12\x1d\n\nhuman_addr\x18\x02 \x01(\tR\thumanAddr\x12\x1d\n\nagent_addr\x18\x03 \x01(\tR\tagentAddr\x12\x16\n\x06stat" +
-	"us\x18\x04 \x01(\tR\x06status\x12\x12\n\x04tier\x18\x05 \x01(\rR\x04tier\x12\x1b\n\tlock_tier\x18\x06 \x01(\rR\x08lockTier\x12&\n\x0fl" +
-	"ock_expires_at\x18\x07 \x01(\x04R\rlockExpiresAt\x12&\n\x0fsplit_human_bps\x18\x08 \x01(\x04R\rsplitHum" +
-	"anBps\x12&\n\x0fsplit_agent_bps\x18\t \x01(\x04R\rsplitAgentBps\x12,\n\x12common_pot_balance\x18\n " +
-	"\x01(\tR\x10commonPotBalance\x12!\n\x0ctotal_earned\x18\x0b \x01(\tR\x0btotalEarned\x12+\n\x11cooperatio" +
-	"n_score\x18\x0c \x01(\x04R\x10cooperationScore\x12&\n\x0fformed_at_block\x18\r \x01(\x04R\rformedAtBloc" +
-	"k\x12@\n\nexit_state\x18\x0e \x01(\x0b2!.zerone.partnerships.v1.ExitStateR\texitState\"\xed\x01" +
-	"\n\x11DeliberationState\x12\x1f\n\x0bamount_tier\x18\x01 \x01(\tR\namountTier\x12\"\n\rfloor_ends_at\x18" +
-	"\x02 \x01(\x04R\x0bfloorEndsAt\x12$\n\x0ewindow_ends_at\x18\x03 \x01(\x04R\x0cwindowEndsAt\x12\x1c\n\trationale\x18" +
-	"\x04 \x01(\tR\trationale\x12.\n\x13counter_proposal_of\x18\x05 \x01(\tR\x11counterProposalOf\x12\x1f\n\x0bch" +
-	"ain_depth\x18\x06 \x01(\rR\nchainDepth\"\xa3\x02\n\x12ConsensusOperation\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12%\n\x0e" +
-	"partnership_id\x18\x02 \x01(\tR\rpartnershipId\x12\x17\n\x07op_type\x18\x03 \x01(\tR\x06opType\x12\x1f\n\x0bpropos" +
-	"ed_by\x18\x04 \x01(\tR\nproposedBy\x12\x16\n\x06amount\x18\x05 \x01(\tR\x06amount\x12\x16\n\x06status\x18\x06 \x01(\tR\x06statu" +
-	"s\x12M\n\x0cdeliberation\x18\x07 \x01(\x0b2).zerone.partnerships.v1.DeliberationStateR\x0cde" +
-	"liberation\x12\x1d\n\ncreated_at\x18\x08 \x01(\x04R\tcreatedAt\"\xc5\x01\n\x0cSafetyFreeze\x12%\n\x0epartners" +
-	"hip_id\x18\x01 \x01(\tR\rpartnershipId\x12\x1b\n\tfrozen_by\x18\x02 \x01(\tR\x08frozenBy\x12\x1b\n\tfrozen_at\x18" +
-	"\x03 \x01(\x04R\x08frozenAt\x12\x1d\n\nexpires_at\x18\x04 \x01(\x04R\texpiresAt\x125\n\x17freeze_count_this_ep" +
-	"och\x18\x05 \x01(\rR\x14freezeCountThisEpoch\"\xc9\x01\n\x0eCoercionSignal\x12\x1b\n\tsignal_id\x18\x01 \x01(\tR" +
-	"\x08signalId\x12%\n\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId\x12\x1b\n\traised_by\x18\x03 \x01(\tR\x08r" +
-	"aisedBy\x12\x1b\n\traised_at\x18\x04 \x01(\x04R\x08raisedAt\x12\x1d\n\nexpires_at\x18\x05 \x01(\x04R\texpiresAt\x12\x1a\n" +
-	"\x08resolved\x18\x06 \x01(\x08R\x08resolved\"\x8d\x01\n\x11RejectionCooldown\x12%\n\x0epartnership_id\x18\x01 \x01(" +
-	"\tR\rpartnershipId\x12'\n\x0frejection_count\x18\x02 \x01(\rR\x0erejectionCount\x12(\n\x10cooldown_" +
-	"ends_at\x18\x03 \x01(\x04R\x0ecooldownEndsAt\"\xe7\x02\n\x0fSeedPartnership\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n\nh" +
-	"uman_addr\x18\x02 \x01(\tR\thumanAddr\x12\x1d\n\nagent_addr\x18\x03 \x01(\tR\tagentAddr\x12\x1d\n\ncreated_a" +
-	"t\x18\x04 \x01(\x04R\tcreatedAt\x12\x1d\n\nexpires_at\x18\x05 \x01(\x04R\texpiresAt\x12-\n\x12human_contributio" +
-	"n\x18\x06 \x01(\tR\x11humanContribution\x12-\n\x12agent_contribution\x18\x07 \x01(\tR\x11agentContribut" +
-	"ion\x12\x16\n\x06status\x18\x08 \x01(\tR\x06status\x12,\n\x12common_pot_balance\x18\t \x01(\tR\x10commonPotBala" +
-	"nce\x12$\n\x0ecommon_pot_cap\x18\n \x01(\tR\x0ccommonPotCap\"\xb9\x02\n\tPoolEntry\x12\x18\n\x07address\x18\x01 \x01" +
-	"(\tR\x07address\x12\x18\n\x07domains\x18\x02 \x03(\tR\x07domains\x12%\n\x0epreferred_role\x18\x03 \x01(\tR\rpreferr" +
-	"edRole\x12\x1b\n\tstake_min\x18\x04 \x01(\tR\x08stakeMin\x12\x1b\n\tstake_max\x18\x05 \x01(\tR\x08stakeMax\x12#\n\rre" +
-	"gistered_at\x18\x06 \x01(\x04R\x0cregisteredAt\x12\x18\n\x07deposit\x18\x07 \x01(\tR\x07deposit\x12\x1d\n\nexpires_a" +
-	"t\x18\x08 \x01(\x04R\texpiresAt\x12\x16\n\x06status\x18\t \x01(\tR\x06status\x12!\n\x0cmatched_with\x18\n \x01(\tR\x0bmatc" +
-	"hedWith\"\xb5\x03\n\x10MentorshipConfig\x12!\n\x0csponsor_addr\x18\x01 \x01(\tR\x0bsponsorAddr\x12\x1f\n\x0bmen" +
-	"tee_addr\x18\x02 \x01(\tR\nmenteeAddr\x12%\n\x0epartnership_id\x18\x03 \x01(\tR\rpartnershipId\x121\n\x14s" +
-	"ponsor_contribution\x18\x04 \x01(\tR\x13sponsorContribution\x12/\n\x13mentee_contribution\x18" +
-	"\x05 \x01(\tR\x12menteeContribution\x12*\n\x11sponsor_split_bps\x18\x06 \x01(\x04R\x0fsponsorSplitBps\x12" +
-	"(\n\x10mentee_split_bps\x18\x07 \x01(\x04R\x0ementeeSplitBps\x12)\n\x10graduation_block\x18\x08 \x01(\x04R\x0fg" +
-	"raduationBlock\x12\x1c\n\tgraduated\x18\t \x01(\x08R\tgraduated\x123\n\x15sponsor_verifications\x18" +
-	"\n \x01(\x04R\x14sponsorVerifications\"\xaa\x03\n\nMentorship\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n\x0bmentor_a" +
-	"ddr\x18\x02 \x01(\tR\nmentorAddr\x12\x1f\n\x0bmentee_addr\x18\x03 \x01(\tR\nmenteeAddr\x12\x16\n\x06domain\x18\x04 \x01(\t" +
-	"R\x06domain\x12\x16\n\x06status\x18\x05 \x01(\tR\x06status\x12\x1f\n\x0bstart_block\x18\x06 \x01(\x04R\nstartBlock\x12'\n\x0fd" +
-	"uration_blocks\x18\x07 \x01(\x04R\x0edurationBlocks\x121\n\x14mentee_verifications\x18\x08 \x01(\x04R\x13me" +
-	"nteeVerifications\x126\n\x17mentee_claims_submitted\x18\t \x01(\x04R\x15menteeClaimsSubmit" +
-	"ted\x121\n\x14graduation_threshold\x18\n \x01(\x04R\x13graduationThreshold\x122\n\x15graduation_c" +
-	"laims_req\x18\x0b \x01(\x04R\x13graduationClaimsReq\"\x88\x02\n\x0eFormationMatch\x12\x0e\n\x02id\x18\x01 \x01(\tR\x02i" +
-	"d\x12\x14\n\x05addr1\x18\x02 \x01(\tR\x05addr1\x12\x14\n\x05addr2\x18\x03 \x01(\tR\x05addr2\x12\x14\n\x05score\x18\x04 \x01(\x04R\x05score\x12\x1f\n" +
-	"\x0bproposed_at\x18\x05 \x01(\x04R\nproposedAt\x12\x1d\n\nexpires_at\x18\x06 \x01(\x04R\texpiresAt\x12\x16\n\x06statu" +
-	"s\x18\x07 \x01(\tR\x06status\x12%\n\x0eaddr1_accepted\x18\x08 \x01(\x08R\raddr1Accepted\x12%\n\x0eaddr2_accept" +
-	"ed\x18\t \x01(\x08R\raddr2AcceptedB5Z3github.com/zerone-chain/zerone/x/partnershi" +
-	"ps/typesb\x06proto3"
+	"\n" +
+	"\"zerone/partnerships/v1/types.proto\x12\x16zerone.partnerships.v1\"t\n" +
+	"\tExitState\x12!\n" +
+	"\finitiated_by\x18\x01 \x01(\tR\vinitiatedBy\x12!\n" +
+	"\finitiated_at\x18\x02 \x01(\x04R\vinitiatedAt\x12!\n" +
+	"\fcooldown_end\x18\x03 \x01(\x04R\vcooldownEnd\"\x84\x04\n" +
+	"\vPartnership\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"human_addr\x18\x02 \x01(\tR\thumanAddr\x12\x1d\n" +
+	"\n" +
+	"agent_addr\x18\x03 \x01(\tR\tagentAddr\x12\x16\n" +
+	"\x06status\x18\x04 \x01(\tR\x06status\x12\x12\n" +
+	"\x04tier\x18\x05 \x01(\rR\x04tier\x12\x1b\n" +
+	"\tlock_tier\x18\x06 \x01(\rR\blockTier\x12&\n" +
+	"\x0flock_expires_at\x18\a \x01(\x04R\rlockExpiresAt\x12&\n" +
+	"\x0fsplit_human_bps\x18\b \x01(\x04R\rsplitHumanBps\x12&\n" +
+	"\x0fsplit_agent_bps\x18\t \x01(\x04R\rsplitAgentBps\x12,\n" +
+	"\x12common_pot_balance\x18\n" +
+	" \x01(\tR\x10commonPotBalance\x12!\n" +
+	"\ftotal_earned\x18\v \x01(\tR\vtotalEarned\x12+\n" +
+	"\x11cooperation_score\x18\f \x01(\x04R\x10cooperationScore\x12&\n" +
+	"\x0fformed_at_block\x18\r \x01(\x04R\rformedAtBlock\x12@\n" +
+	"\n" +
+	"exit_state\x18\x0e \x01(\v2!.zerone.partnerships.v1.ExitStateR\texitState\"\xed\x01\n" +
+	"\x11DeliberationState\x12\x1f\n" +
+	"\vamount_tier\x18\x01 \x01(\tR\n" +
+	"amountTier\x12\"\n" +
+	"\rfloor_ends_at\x18\x02 \x01(\x04R\vfloorEndsAt\x12$\n" +
+	"\x0ewindow_ends_at\x18\x03 \x01(\x04R\fwindowEndsAt\x12\x1c\n" +
+	"\trationale\x18\x04 \x01(\tR\trationale\x12.\n" +
+	"\x13counter_proposal_of\x18\x05 \x01(\tR\x11counterProposalOf\x12\x1f\n" +
+	"\vchain_depth\x18\x06 \x01(\rR\n" +
+	"chainDepth\"\xa3\x02\n" +
+	"\x12ConsensusOperation\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12%\n" +
+	"\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId\x12\x17\n" +
+	"\aop_type\x18\x03 \x01(\tR\x06opType\x12\x1f\n" +
+	"\vproposed_by\x18\x04 \x01(\tR\n" +
+	"proposedBy\x12\x16\n" +
+	"\x06amount\x18\x05 \x01(\tR\x06amount\x12\x16\n" +
+	"\x06status\x18\x06 \x01(\tR\x06status\x12M\n" +
+	"\fdeliberation\x18\a \x01(\v2).zerone.partnerships.v1.DeliberationStateR\fdeliberation\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\b \x01(\x04R\tcreatedAt\"\xc5\x01\n" +
+	"\fSafetyFreeze\x12%\n" +
+	"\x0epartnership_id\x18\x01 \x01(\tR\rpartnershipId\x12\x1b\n" +
+	"\tfrozen_by\x18\x02 \x01(\tR\bfrozenBy\x12\x1b\n" +
+	"\tfrozen_at\x18\x03 \x01(\x04R\bfrozenAt\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\x04R\texpiresAt\x125\n" +
+	"\x17freeze_count_this_epoch\x18\x05 \x01(\rR\x14freezeCountThisEpoch\"\xc9\x01\n" +
+	"\x0eCoercionSignal\x12\x1b\n" +
+	"\tsignal_id\x18\x01 \x01(\tR\bsignalId\x12%\n" +
+	"\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId\x12\x1b\n" +
+	"\traised_by\x18\x03 \x01(\tR\braisedBy\x12\x1b\n" +
+	"\traised_at\x18\x04 \x01(\x04R\braisedAt\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x05 \x01(\x04R\texpiresAt\x12\x1a\n" +
+	"\bresolved\x18\x06 \x01(\bR\bresolved\"\x8d\x01\n" +
+	"\x11RejectionCooldown\x12%\n" +
+	"\x0epartnership_id\x18\x01 \x01(\tR\rpartnershipId\x12'\n" +
+	"\x0frejection_count\x18\x02 \x01(\rR\x0erejectionCount\x12(\n" +
+	"\x10cooldown_ends_at\x18\x03 \x01(\x04R\x0ecooldownEndsAt\"\xe7\x02\n" +
+	"\x0fSeedPartnership\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
+	"\n" +
+	"human_addr\x18\x02 \x01(\tR\thumanAddr\x12\x1d\n" +
+	"\n" +
+	"agent_addr\x18\x03 \x01(\tR\tagentAddr\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x04 \x01(\x04R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x05 \x01(\x04R\texpiresAt\x12-\n" +
+	"\x12human_contribution\x18\x06 \x01(\tR\x11humanContribution\x12-\n" +
+	"\x12agent_contribution\x18\a \x01(\tR\x11agentContribution\x12\x16\n" +
+	"\x06status\x18\b \x01(\tR\x06status\x12,\n" +
+	"\x12common_pot_balance\x18\t \x01(\tR\x10commonPotBalance\x12$\n" +
+	"\x0ecommon_pot_cap\x18\n" +
+	" \x01(\tR\fcommonPotCap\"\xb9\x02\n" +
+	"\tPoolEntry\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12\x18\n" +
+	"\adomains\x18\x02 \x03(\tR\adomains\x12%\n" +
+	"\x0epreferred_role\x18\x03 \x01(\tR\rpreferredRole\x12\x1b\n" +
+	"\tstake_min\x18\x04 \x01(\tR\bstakeMin\x12\x1b\n" +
+	"\tstake_max\x18\x05 \x01(\tR\bstakeMax\x12#\n" +
+	"\rregistered_at\x18\x06 \x01(\x04R\fregisteredAt\x12\x18\n" +
+	"\adeposit\x18\a \x01(\tR\adeposit\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\b \x01(\x04R\texpiresAt\x12\x16\n" +
+	"\x06status\x18\t \x01(\tR\x06status\x12!\n" +
+	"\fmatched_with\x18\n" +
+	" \x01(\tR\vmatchedWith\"\xb5\x03\n" +
+	"\x10MentorshipConfig\x12!\n" +
+	"\fsponsor_addr\x18\x01 \x01(\tR\vsponsorAddr\x12\x1f\n" +
+	"\vmentee_addr\x18\x02 \x01(\tR\n" +
+	"menteeAddr\x12%\n" +
+	"\x0epartnership_id\x18\x03 \x01(\tR\rpartnershipId\x121\n" +
+	"\x14sponsor_contribution\x18\x04 \x01(\tR\x13sponsorContribution\x12/\n" +
+	"\x13mentee_contribution\x18\x05 \x01(\tR\x12menteeContribution\x12*\n" +
+	"\x11sponsor_split_bps\x18\x06 \x01(\x04R\x0fsponsorSplitBps\x12(\n" +
+	"\x10mentee_split_bps\x18\a \x01(\x04R\x0ementeeSplitBps\x12)\n" +
+	"\x10graduation_block\x18\b \x01(\x04R\x0fgraduationBlock\x12\x1c\n" +
+	"\tgraduated\x18\t \x01(\bR\tgraduated\x123\n" +
+	"\x15sponsor_verifications\x18\n" +
+	" \x01(\x04R\x14sponsorVerifications\"\xaa\x03\n" +
+	"\n" +
+	"Mentorship\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vmentor_addr\x18\x02 \x01(\tR\n" +
+	"mentorAddr\x12\x1f\n" +
+	"\vmentee_addr\x18\x03 \x01(\tR\n" +
+	"menteeAddr\x12\x16\n" +
+	"\x06domain\x18\x04 \x01(\tR\x06domain\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1f\n" +
+	"\vstart_block\x18\x06 \x01(\x04R\n" +
+	"startBlock\x12'\n" +
+	"\x0fduration_blocks\x18\a \x01(\x04R\x0edurationBlocks\x121\n" +
+	"\x14mentee_verifications\x18\b \x01(\x04R\x13menteeVerifications\x126\n" +
+	"\x17mentee_claims_submitted\x18\t \x01(\x04R\x15menteeClaimsSubmitted\x121\n" +
+	"\x14graduation_threshold\x18\n" +
+	" \x01(\x04R\x13graduationThreshold\x122\n" +
+	"\x15graduation_claims_req\x18\v \x01(\x04R\x13graduationClaimsReq\"\x88\x02\n" +
+	"\x0eFormationMatch\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05addr1\x18\x02 \x01(\tR\x05addr1\x12\x14\n" +
+	"\x05addr2\x18\x03 \x01(\tR\x05addr2\x12\x14\n" +
+	"\x05score\x18\x04 \x01(\x04R\x05score\x12\x1f\n" +
+	"\vproposed_at\x18\x05 \x01(\x04R\n" +
+	"proposedAt\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\x04R\texpiresAt\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12%\n" +
+	"\x0eaddr1_accepted\x18\b \x01(\bR\raddr1Accepted\x12%\n" +
+	"\x0eaddr2_accepted\x18\t \x01(\bR\raddr2AcceptedB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
 
 var (
 	file_zerone_partnerships_v1_types_proto_rawDescOnce sync.Once

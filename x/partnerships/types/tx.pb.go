@@ -1158,34 +1158,55 @@ func (x *MsgProposeMentorship) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgProposeMentorship) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgProposeMentorship) ProtoMessage()               {}
+
+func (x *MsgProposeMentorship) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgProposeMentorship) ProtoMessage() {}
+
 func (x *MsgProposeMentorship) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgProposeMentorship.ProtoReflect.Descriptor instead.
 func (*MsgProposeMentorship) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{22}
 }
+
 func (x *MsgProposeMentorship) GetMentor() string {
-	if x != nil { return x.Mentor }
+	if x != nil {
+		return x.Mentor
+	}
 	return ""
 }
+
 func (x *MsgProposeMentorship) GetMentee() string {
-	if x != nil { return x.Mentee }
+	if x != nil {
+		return x.Mentee
+	}
 	return ""
 }
+
 func (x *MsgProposeMentorship) GetDomain() string {
-	if x != nil { return x.Domain }
+	if x != nil {
+		return x.Domain
+	}
 	return ""
 }
+
 func (x *MsgProposeMentorship) GetDurationBlocks() uint64 {
-	if x != nil { return x.DurationBlocks }
+	if x != nil {
+		return x.DurationBlocks
+	}
 	return 0
 }
 
@@ -1202,22 +1223,34 @@ func (x *MsgProposeMentorshipResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgProposeMentorshipResponse) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgProposeMentorshipResponse) ProtoMessage()               {}
+
+func (x *MsgProposeMentorshipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgProposeMentorshipResponse) ProtoMessage() {}
+
 func (x *MsgProposeMentorshipResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgProposeMentorshipResponse.ProtoReflect.Descriptor instead.
 func (*MsgProposeMentorshipResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{23}
 }
+
 func (x *MsgProposeMentorshipResponse) GetMentorshipId() string {
-	if x != nil { return x.MentorshipId }
+	if x != nil {
+		return x.MentorshipId
+	}
 	return ""
 }
 
@@ -1235,26 +1268,41 @@ func (x *MsgAcceptMentorship) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgAcceptMentorship) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgAcceptMentorship) ProtoMessage()               {}
+
+func (x *MsgAcceptMentorship) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptMentorship) ProtoMessage() {}
+
 func (x *MsgAcceptMentorship) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgAcceptMentorship.ProtoReflect.Descriptor instead.
 func (*MsgAcceptMentorship) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{24}
 }
+
 func (x *MsgAcceptMentorship) GetMentee() string {
-	if x != nil { return x.Mentee }
+	if x != nil {
+		return x.Mentee
+	}
 	return ""
 }
+
 func (x *MsgAcceptMentorship) GetMentorshipId() string {
-	if x != nil { return x.MentorshipId }
+	if x != nil {
+		return x.MentorshipId
+	}
 	return ""
 }
 
@@ -1270,17 +1318,26 @@ func (x *MsgAcceptMentorshipResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgAcceptMentorshipResponse) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgAcceptMentorshipResponse) ProtoMessage()               {}
+
+func (x *MsgAcceptMentorshipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptMentorshipResponse) ProtoMessage() {}
+
 func (x *MsgAcceptMentorshipResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgAcceptMentorshipResponse.ProtoReflect.Descriptor instead.
 func (*MsgAcceptMentorshipResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{25}
 }
@@ -1299,26 +1356,41 @@ func (x *MsgGraduateMentee) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgGraduateMentee) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgGraduateMentee) ProtoMessage()               {}
+
+func (x *MsgGraduateMentee) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgGraduateMentee) ProtoMessage() {}
+
 func (x *MsgGraduateMentee) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgGraduateMentee.ProtoReflect.Descriptor instead.
 func (*MsgGraduateMentee) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{26}
 }
+
 func (x *MsgGraduateMentee) GetMentor() string {
-	if x != nil { return x.Mentor }
+	if x != nil {
+		return x.Mentor
+	}
 	return ""
 }
+
 func (x *MsgGraduateMentee) GetMentorshipId() string {
-	if x != nil { return x.MentorshipId }
+	if x != nil {
+		return x.MentorshipId
+	}
 	return ""
 }
 
@@ -1334,17 +1406,26 @@ func (x *MsgGraduateMenteeResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgGraduateMenteeResponse) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgGraduateMenteeResponse) ProtoMessage()               {}
+
+func (x *MsgGraduateMenteeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgGraduateMenteeResponse) ProtoMessage() {}
+
 func (x *MsgGraduateMenteeResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgGraduateMenteeResponse.ProtoReflect.Descriptor instead.
 func (*MsgGraduateMenteeResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{27}
 }
@@ -1363,26 +1444,41 @@ func (x *MsgEndMentorship) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgEndMentorship) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgEndMentorship) ProtoMessage()               {}
+
+func (x *MsgEndMentorship) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgEndMentorship) ProtoMessage() {}
+
 func (x *MsgEndMentorship) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgEndMentorship.ProtoReflect.Descriptor instead.
 func (*MsgEndMentorship) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{28}
 }
+
 func (x *MsgEndMentorship) GetSender() string {
-	if x != nil { return x.Sender }
+	if x != nil {
+		return x.Sender
+	}
 	return ""
 }
+
 func (x *MsgEndMentorship) GetMentorshipId() string {
-	if x != nil { return x.MentorshipId }
+	if x != nil {
+		return x.MentorshipId
+	}
 	return ""
 }
 
@@ -1398,17 +1494,26 @@ func (x *MsgEndMentorshipResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgEndMentorshipResponse) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgEndMentorshipResponse) ProtoMessage()               {}
+
+func (x *MsgEndMentorshipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgEndMentorshipResponse) ProtoMessage() {}
+
 func (x *MsgEndMentorshipResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgEndMentorshipResponse.ProtoReflect.Descriptor instead.
 func (*MsgEndMentorshipResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{29}
 }
@@ -1427,26 +1532,41 @@ func (x *MsgAcceptFormationMatch) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgAcceptFormationMatch) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgAcceptFormationMatch) ProtoMessage()               {}
+
+func (x *MsgAcceptFormationMatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptFormationMatch) ProtoMessage() {}
+
 func (x *MsgAcceptFormationMatch) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgAcceptFormationMatch.ProtoReflect.Descriptor instead.
 func (*MsgAcceptFormationMatch) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{30}
 }
+
 func (x *MsgAcceptFormationMatch) GetAccepter() string {
-	if x != nil { return x.Accepter }
+	if x != nil {
+		return x.Accepter
+	}
 	return ""
 }
+
 func (x *MsgAcceptFormationMatch) GetMatchId() string {
-	if x != nil { return x.MatchId }
+	if x != nil {
+		return x.MatchId
+	}
 	return ""
 }
 
@@ -1462,17 +1582,26 @@ func (x *MsgAcceptFormationMatchResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgAcceptFormationMatchResponse) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgAcceptFormationMatchResponse) ProtoMessage()               {}
+
+func (x *MsgAcceptFormationMatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptFormationMatchResponse) ProtoMessage() {}
+
 func (x *MsgAcceptFormationMatchResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgAcceptFormationMatchResponse.ProtoReflect.Descriptor instead.
 func (*MsgAcceptFormationMatchResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{31}
 }
@@ -1491,26 +1620,41 @@ func (x *MsgDeclineFormationMatch) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgDeclineFormationMatch) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgDeclineFormationMatch) ProtoMessage()               {}
+
+func (x *MsgDeclineFormationMatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgDeclineFormationMatch) ProtoMessage() {}
+
 func (x *MsgDeclineFormationMatch) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgDeclineFormationMatch.ProtoReflect.Descriptor instead.
 func (*MsgDeclineFormationMatch) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{32}
 }
+
 func (x *MsgDeclineFormationMatch) GetDecliner() string {
-	if x != nil { return x.Decliner }
+	if x != nil {
+		return x.Decliner
+	}
 	return ""
 }
+
 func (x *MsgDeclineFormationMatch) GetMatchId() string {
-	if x != nil { return x.MatchId }
+	if x != nil {
+		return x.MatchId
+	}
 	return ""
 }
 
@@ -1526,17 +1670,26 @@ func (x *MsgDeclineFormationMatchResponse) Reset() {
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
-func (x *MsgDeclineFormationMatchResponse) String() string           { return protoimpl.X.MessageStringOf(x) }
-func (*MsgDeclineFormationMatchResponse) ProtoMessage()               {}
+
+func (x *MsgDeclineFormationMatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgDeclineFormationMatchResponse) ProtoMessage() {}
+
 func (x *MsgDeclineFormationMatchResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil { ms.StoreMessageInfo(mi) }
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
 		return ms
 	}
 	return mi.MessageOf(x)
 }
+
+// Deprecated: Use MsgDeclineFormationMatchResponse.ProtoReflect.Descriptor instead.
 func (*MsgDeclineFormationMatchResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{33}
 }
@@ -1544,81 +1697,119 @@ func (*MsgDeclineFormationMatchResponse) Descriptor() ([]byte, []int) {
 var File_zerone_partnerships_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_tx_proto_rawDesc = "" +
-	"\n\x1fzerone/partnerships/v1/tx.proto\x12\x16zerone.partnerships.v1\x1a\x17cosmos/msg/" +
-	"v1/msg.proto\x1a\"zerone/partnerships/v1/types.proto\x1a$zerone/partnerships/" +
-	"v1/genesis.proto\"\xaa\x01\n\x15MsgProposePartnership\x12\x1a\n\x08proposer\x18\x01 \x01(\tR\x08proposer" +
-	"\x12\x18\n\x07partner\x18\x02 \x01(\tR\x07partner\x12'\n\x0finitial_deposit\x18\x03 \x01(\tR\x0einitialDeposit\x12#\n" +
-	"\rproposed_tier\x18\x04 \x01(\rR\x0cproposedTier:\r\x82\xe7\xb0*\x08proposer\"F\n\x1dMsgProposePartner" +
-	"shipResponse\x12%\n\x0epartnership_id\x18\x01 \x01(\tR\rpartnershipId\"\x82\x01\n\x14MsgAcceptPartn" +
-	"ership\x12\x1a\n\x08accepter\x18\x01 \x01(\tR\x08accepter\x12%\n\x0epartnership_id\x18\x02 \x01(\tR\rpartnershi" +
-	"pId\x12\x18\n\x07deposit\x18\x03 \x01(\tR\x07deposit:\r\x82\xe7\xb0*\x08accepter\"\x1e\n\x1cMsgAcceptPartnershipRe" +
-	"sponse\"\xb8\x01\n\x15MsgProposeConsensusOp\x12\x1a\n\x08proposer\x18\x01 \x01(\tR\x08proposer\x12%\n\x0epartne" +
-	"rship_id\x18\x02 \x01(\tR\rpartnershipId\x12\x17\n\x07op_type\x18\x03 \x01(\tR\x06opType\x12\x16\n\x06amount\x18\x04 \x01(\t" +
-	"R\x06amount\x12\x1c\n\trationale\x18\x05 \x01(\tR\trationale:\r\x82\xe7\xb0*\x08proposer\"B\n\x1dMsgProposeCon" +
-	"sensusOpResponse\x12!\n\x0coperation_id\x18\x01 \x01(\tR\x0boperationId\"\xdf\x01\n\x12MsgVoteConsens" +
-	"usOp\x12\x14\n\x05voter\x18\x01 \x01(\tR\x05voter\x12%\n\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId\x12!\n\x0co" +
-	"peration_id\x18\x03 \x01(\tR\x0boperationId\x12\x18\n\x07approve\x18\x04 \x01(\x08R\x07approve\x12\x1c\n\trationale\x18" +
-	"\x05 \x01(\tR\trationale\x12%\n\x0ecounter_amount\x18\x06 \x01(\tR\rcounterAmount:\n\x82\xe7\xb0*\x05voter\"N\n" +
-	"\x1aMsgVoteConsensusOpResponse\x120\n\x14counter_operation_id\x18\x01 \x01(\tR\x12counterOper" +
-	"ationId\"`\n\x0fMsgSafetyFreeze\x12\x18\n\x07freezer\x18\x01 \x01(\tR\x07freezer\x12%\n\x0epartnership_id" +
-	"\x18\x02 \x01(\tR\rpartnershipId:\x0c\x82\xe7\xb0*\x07freezer\"8\n\x17MsgSafetyFreezeResponse\x12\x1d\n\nexpi" +
-	"res_at\x18\x01 \x01(\x04R\texpiresAt\"d\n\x16MsgRaiseCoercionSignal\x12\x16\n\x06raiser\x18\x01 \x01(\tR\x06rai" +
-	"ser\x12%\n\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId:\x0b\x82\xe7\xb0*\x06raiser\"=\n\x1eMsgRaiseCoe" +
-	"rcionSignalResponse\x12\x1b\n\tsignal_id\x18\x01 \x01(\tR\x08signalId\"m\n\x16MsgInitiateDissolu" +
-	"tion\x12\x1c\n\tinitiator\x18\x01 \x01(\tR\tinitiator\x12%\n\x0epartnership_id\x18\x02 \x01(\tR\rpartnershi" +
-	"pId:\x0e\x82\xe7\xb0*\tinitiator\"C\n\x1eMsgInitiateDissolutionResponse\x12!\n\x0ccooldown_end\x18" +
-	"\x01 \x01(\x04R\x0bcooldownEnd\"\x81\x01\n\x18MsgCreateSeedPartnership\x12\x14\n\x05human\x18\x01 \x01(\tR\x05human\x12" +
-	"\x14\n\x05agent\x18\x02 \x01(\tR\x05agent\x12-\n\x12human_contribution\x18\x03 \x01(\tR\x11humanContribution:\n" +
-	"\x82\xe7\xb0*\x05human\";\n MsgCreateSeedPartnershipResponse\x12\x17\n\x07seed_id\x18\x01 \x01(\tR\x06seedI" +
-	"d\"\x96\x01\n\x14MsgJoinFormationPool\x12\x16\n\x06joiner\x18\x01 \x01(\tR\x06joiner\x12\x18\n\x07domains\x18\x02 \x03(\tR\x07d" +
-	"omains\x12%\n\x0epreferred_role\x18\x03 \x01(\tR\rpreferredRole\x12\x18\n\x07deposit\x18\x04 \x01(\tR\x07deposi" +
-	"t:\x0b\x82\xe7\xb0*\x06joiner\"\x1e\n\x1cMsgJoinFormationPoolResponse\"<\n\x15MsgLeaveFormationPoo" +
-	"l\x12\x16\n\x06leaver\x18\x01 \x01(\tR\x06leaver:\x0b\x82\xe7\xb0*\x06leaver\"\x1f\n\x1dMsgLeaveFormationPoolRespons" +
-	"e\"w\n\x0fMsgUpdateParams\x12\x1c\n\tauthority\x18\x01 \x01(\tR\tauthority\x126\n\x06params\x18\x02 \x01(\x0b2\x1e.z" +
-	"erone.partnerships.v1.ParamsR\x06params:\x0e\x82\xe7\xb0*\tauthority\"\x19\n\x17MsgUpdateParam" +
-	"sResponse\"\x94\x01\n\x14MsgProposeMentorship\x12\x16\n\x06mentor\x18\x01 \x01(\tR\x06mentor\x12\x16\n\x06mentee\x18\x02" +
-	" \x01(\tR\x06mentee\x12\x16\n\x06domain\x18\x03 \x01(\tR\x06domain\x12'\n\x0fduration_blocks\x18\x04 \x01(\x04R\x0eduratio" +
-	"nBlocks:\x0b\x82\xe7\xb0*\x06mentor\"C\n\x1cMsgProposeMentorshipResponse\x12#\n\rmentorship_id\x18" +
-	"\x01 \x01(\tR\x0cmentorshipId\"_\n\x13MsgAcceptMentorship\x12\x16\n\x06mentee\x18\x01 \x01(\tR\x06mentee\x12#\n\r" +
-	"mentorship_id\x18\x02 \x01(\tR\x0cmentorshipId:\x0b\x82\xe7\xb0*\x06mentee\"\x1d\n\x1bMsgAcceptMentorshipR" +
-	"esponse\"]\n\x11MsgGraduateMentee\x12\x16\n\x06mentor\x18\x01 \x01(\tR\x06mentor\x12#\n\rmentorship_id\x18" +
-	"\x02 \x01(\tR\x0cmentorshipId:\x0b\x82\xe7\xb0*\x06mentor\"\x1b\n\x19MsgGraduateMenteeResponse\"\\\n\x10MsgEn" +
-	"dMentorship\x12\x16\n\x06sender\x18\x01 \x01(\tR\x06sender\x12#\n\rmentorship_id\x18\x02 \x01(\tR\x0cmentorship" +
-	"Id:\x0b\x82\xe7\xb0*\x06sender\"\x1a\n\x18MsgEndMentorshipResponse\"_\n\x17MsgAcceptFormationMatch" +
-	"\x12\x1a\n\x08accepter\x18\x01 \x01(\tR\x08accepter\x12\x19\n\x08match_id\x18\x02 \x01(\tR\x07matchId:\r\x82\xe7\xb0*\x08accepter" +
-	"\"!\n\x1fMsgAcceptFormationMatchResponse\"`\n\x18MsgDeclineFormationMatch\x12\x1a\n\x08dec" +
-	"liner\x18\x01 \x01(\tR\x08decliner\x12\x19\n\x08match_id\x18\x02 \x01(\tR\x07matchId:\r\x82\xe7\xb0*\x08decliner\"\"\n Msg" +
-	"DeclineFormationMatchResponse2\x92\x10\n\x03Msg\x12z\n\x12ProposePartnership\x12-.zerone.p" +
-	"artnerships.v1.MsgProposePartnership\x1a5.zerone.partnerships.v1.MsgPropo" +
-	"sePartnershipResponse\x12w\n\x11AcceptPartnership\x12,.zerone.partnerships.v1.Ms" +
-	"gAcceptPartnership\x1a4.zerone.partnerships.v1.MsgAcceptPartnershipRespon" +
-	"se\x12z\n\x12ProposeConsensusOp\x12-.zerone.partnerships.v1.MsgProposeConsensusO" +
-	"p\x1a5.zerone.partnerships.v1.MsgProposeConsensusOpResponse\x12q\n\x0fVoteConsen" +
-	"susOp\x12*.zerone.partnerships.v1.MsgVoteConsensusOp\x1a2.zerone.partnership" +
-	"s.v1.MsgVoteConsensusOpResponse\x12h\n\x0cSafetyFreeze\x12'.zerone.partnerships." +
-	"v1.MsgSafetyFreeze\x1a/.zerone.partnerships.v1.MsgSafetyFreezeResponse\x12}\n" +
-	"\x13RaiseCoercionSignal\x12..zerone.partnerships.v1.MsgRaiseCoercionSignal\x1a6" +
-	".zerone.partnerships.v1.MsgRaiseCoercionSignalResponse\x12}\n\x13InitiateDiss" +
-	"olution\x12..zerone.partnerships.v1.MsgInitiateDissolution\x1a6.zerone.partn" +
-	"erships.v1.MsgInitiateDissolutionResponse\x12\x83\x01\n\x15CreateSeedPartnership\x120." +
-	"zerone.partnerships.v1.MsgCreateSeedPartnership\x1a8.zerone.partnerships." +
-	"v1.MsgCreateSeedPartnershipResponse\x12w\n\x11JoinFormationPool\x12,.zerone.part" +
-	"nerships.v1.MsgJoinFormationPool\x1a4.zerone.partnerships.v1.MsgJoinForma" +
-	"tionPoolResponse\x12z\n\x12LeaveFormationPool\x12-.zerone.partnerships.v1.MsgLea" +
-	"veFormationPool\x1a5.zerone.partnerships.v1.MsgLeaveFormationPoolResponse" +
-	"\x12h\n\x0cUpdateParams\x12'.zerone.partnerships.v1.MsgUpdateParams\x1a/.zerone.par" +
-	"tnerships.v1.MsgUpdateParamsResponse\x12w\n\x11ProposeMentorship\x12,.zerone.par" +
-	"tnerships.v1.MsgProposeMentorship\x1a4.zerone.partnerships.v1.MsgProposeM" +
-	"entorshipResponse\x12t\n\x10AcceptMentorship\x12+.zerone.partnerships.v1.MsgAcce" +
-	"ptMentorship\x1a3.zerone.partnerships.v1.MsgAcceptMentorshipResponse\x12n\n\x0eG" +
-	"raduateMentee\x12).zerone.partnerships.v1.MsgGraduateMentee\x1a1.zerone.part" +
-	"nerships.v1.MsgGraduateMenteeResponse\x12k\n\rEndMentorship\x12(.zerone.partne" +
-	"rships.v1.MsgEndMentorship\x1a0.zerone.partnerships.v1.MsgEndMentorshipRe" +
-	"sponse\x12\x80\x01\n\x14AcceptFormationMatch\x12/.zerone.partnerships.v1.MsgAcceptForm" +
-	"ationMatch\x1a7.zerone.partnerships.v1.MsgAcceptFormationMatchResponse\x12\x83\x01" +
-	"\n\x15DeclineFormationMatch\x120.zerone.partnerships.v1.MsgDeclineFormationMa" +
-	"tch\x1a8.zerone.partnerships.v1.MsgDeclineFormationMatchResponse\x1a\x05\x80\xe7\xb0*\x01B5" +
-	"Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
+	"\n" +
+	"\x1fzerone/partnerships/v1/tx.proto\x12\x16zerone.partnerships.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\"zerone/partnerships/v1/types.proto\x1a$zerone/partnerships/v1/genesis.proto\"\xaa\x01\n" +
+	"\x15MsgProposePartnership\x12\x1a\n" +
+	"\bproposer\x18\x01 \x01(\tR\bproposer\x12\x18\n" +
+	"\apartner\x18\x02 \x01(\tR\apartner\x12'\n" +
+	"\x0finitial_deposit\x18\x03 \x01(\tR\x0einitialDeposit\x12#\n" +
+	"\rproposed_tier\x18\x04 \x01(\rR\fproposedTier:\r\x82\xe7\xb0*\bproposer\"F\n" +
+	"\x1dMsgProposePartnershipResponse\x12%\n" +
+	"\x0epartnership_id\x18\x01 \x01(\tR\rpartnershipId\"\x82\x01\n" +
+	"\x14MsgAcceptPartnership\x12\x1a\n" +
+	"\baccepter\x18\x01 \x01(\tR\baccepter\x12%\n" +
+	"\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId\x12\x18\n" +
+	"\adeposit\x18\x03 \x01(\tR\adeposit:\r\x82\xe7\xb0*\baccepter\"\x1e\n" +
+	"\x1cMsgAcceptPartnershipResponse\"\xb8\x01\n" +
+	"\x15MsgProposeConsensusOp\x12\x1a\n" +
+	"\bproposer\x18\x01 \x01(\tR\bproposer\x12%\n" +
+	"\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId\x12\x17\n" +
+	"\aop_type\x18\x03 \x01(\tR\x06opType\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\tR\x06amount\x12\x1c\n" +
+	"\trationale\x18\x05 \x01(\tR\trationale:\r\x82\xe7\xb0*\bproposer\"B\n" +
+	"\x1dMsgProposeConsensusOpResponse\x12!\n" +
+	"\foperation_id\x18\x01 \x01(\tR\voperationId\"\xdf\x01\n" +
+	"\x12MsgVoteConsensusOp\x12\x14\n" +
+	"\x05voter\x18\x01 \x01(\tR\x05voter\x12%\n" +
+	"\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId\x12!\n" +
+	"\foperation_id\x18\x03 \x01(\tR\voperationId\x12\x18\n" +
+	"\aapprove\x18\x04 \x01(\bR\aapprove\x12\x1c\n" +
+	"\trationale\x18\x05 \x01(\tR\trationale\x12%\n" +
+	"\x0ecounter_amount\x18\x06 \x01(\tR\rcounterAmount:\n" +
+	"\x82\xe7\xb0*\x05voter\"N\n" +
+	"\x1aMsgVoteConsensusOpResponse\x120\n" +
+	"\x14counter_operation_id\x18\x01 \x01(\tR\x12counterOperationId\"`\n" +
+	"\x0fMsgSafetyFreeze\x12\x18\n" +
+	"\afreezer\x18\x01 \x01(\tR\afreezer\x12%\n" +
+	"\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId:\f\x82\xe7\xb0*\afreezer\"8\n" +
+	"\x17MsgSafetyFreezeResponse\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x01 \x01(\x04R\texpiresAt\"d\n" +
+	"\x16MsgRaiseCoercionSignal\x12\x16\n" +
+	"\x06raiser\x18\x01 \x01(\tR\x06raiser\x12%\n" +
+	"\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId:\v\x82\xe7\xb0*\x06raiser\"=\n" +
+	"\x1eMsgRaiseCoercionSignalResponse\x12\x1b\n" +
+	"\tsignal_id\x18\x01 \x01(\tR\bsignalId\"m\n" +
+	"\x16MsgInitiateDissolution\x12\x1c\n" +
+	"\tinitiator\x18\x01 \x01(\tR\tinitiator\x12%\n" +
+	"\x0epartnership_id\x18\x02 \x01(\tR\rpartnershipId:\x0e\x82\xe7\xb0*\tinitiator\"C\n" +
+	"\x1eMsgInitiateDissolutionResponse\x12!\n" +
+	"\fcooldown_end\x18\x01 \x01(\x04R\vcooldownEnd\"\x81\x01\n" +
+	"\x18MsgCreateSeedPartnership\x12\x14\n" +
+	"\x05human\x18\x01 \x01(\tR\x05human\x12\x14\n" +
+	"\x05agent\x18\x02 \x01(\tR\x05agent\x12-\n" +
+	"\x12human_contribution\x18\x03 \x01(\tR\x11humanContribution:\n" +
+	"\x82\xe7\xb0*\x05human\";\n" +
+	" MsgCreateSeedPartnershipResponse\x12\x17\n" +
+	"\aseed_id\x18\x01 \x01(\tR\x06seedId\"\x96\x01\n" +
+	"\x14MsgJoinFormationPool\x12\x16\n" +
+	"\x06joiner\x18\x01 \x01(\tR\x06joiner\x12\x18\n" +
+	"\adomains\x18\x02 \x03(\tR\adomains\x12%\n" +
+	"\x0epreferred_role\x18\x03 \x01(\tR\rpreferredRole\x12\x18\n" +
+	"\adeposit\x18\x04 \x01(\tR\adeposit:\v\x82\xe7\xb0*\x06joiner\"\x1e\n" +
+	"\x1cMsgJoinFormationPoolResponse\"<\n" +
+	"\x15MsgLeaveFormationPool\x12\x16\n" +
+	"\x06leaver\x18\x01 \x01(\tR\x06leaver:\v\x82\xe7\xb0*\x06leaver\"\x1f\n" +
+	"\x1dMsgLeaveFormationPoolResponse\"w\n" +
+	"\x0fMsgUpdateParams\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x126\n" +
+	"\x06params\x18\x02 \x01(\v2\x1e.zerone.partnerships.v1.ParamsR\x06params:\x0e\x82\xe7\xb0*\tauthority\"\x19\n" +
+	"\x17MsgUpdateParamsResponse\"\x94\x01\n" +
+	"\x14MsgProposeMentorship\x12\x16\n" +
+	"\x06mentor\x18\x01 \x01(\tR\x06mentor\x12\x16\n" +
+	"\x06mentee\x18\x02 \x01(\tR\x06mentee\x12\x16\n" +
+	"\x06domain\x18\x03 \x01(\tR\x06domain\x12'\n" +
+	"\x0fduration_blocks\x18\x04 \x01(\x04R\x0edurationBlocks:\v\x82\xe7\xb0*\x06mentor\"C\n" +
+	"\x1cMsgProposeMentorshipResponse\x12#\n" +
+	"\rmentorship_id\x18\x01 \x01(\tR\fmentorshipId\"_\n" +
+	"\x13MsgAcceptMentorship\x12\x16\n" +
+	"\x06mentee\x18\x01 \x01(\tR\x06mentee\x12#\n" +
+	"\rmentorship_id\x18\x02 \x01(\tR\fmentorshipId:\v\x82\xe7\xb0*\x06mentee\"\x1d\n" +
+	"\x1bMsgAcceptMentorshipResponse\"]\n" +
+	"\x11MsgGraduateMentee\x12\x16\n" +
+	"\x06mentor\x18\x01 \x01(\tR\x06mentor\x12#\n" +
+	"\rmentorship_id\x18\x02 \x01(\tR\fmentorshipId:\v\x82\xe7\xb0*\x06mentor\"\x1b\n" +
+	"\x19MsgGraduateMenteeResponse\"\\\n" +
+	"\x10MsgEndMentorship\x12\x16\n" +
+	"\x06sender\x18\x01 \x01(\tR\x06sender\x12#\n" +
+	"\rmentorship_id\x18\x02 \x01(\tR\fmentorshipId:\v\x82\xe7\xb0*\x06sender\"\x1a\n" +
+	"\x18MsgEndMentorshipResponse\"_\n" +
+	"\x17MsgAcceptFormationMatch\x12\x1a\n" +
+	"\baccepter\x18\x01 \x01(\tR\baccepter\x12\x19\n" +
+	"\bmatch_id\x18\x02 \x01(\tR\amatchId:\r\x82\xe7\xb0*\baccepter\"!\n" +
+	"\x1fMsgAcceptFormationMatchResponse\"`\n" +
+	"\x18MsgDeclineFormationMatch\x12\x1a\n" +
+	"\bdecliner\x18\x01 \x01(\tR\bdecliner\x12\x19\n" +
+	"\bmatch_id\x18\x02 \x01(\tR\amatchId:\r\x82\xe7\xb0*\bdecliner\"\"\n" +
+	" MsgDeclineFormationMatchResponse2\x92\x10\n" +
+	"\x03Msg\x12z\n" +
+	"\x12ProposePartnership\x12-.zerone.partnerships.v1.MsgProposePartnership\x1a5.zerone.partnerships.v1.MsgProposePartnershipResponse\x12w\n" +
+	"\x11AcceptPartnership\x12,.zerone.partnerships.v1.MsgAcceptPartnership\x1a4.zerone.partnerships.v1.MsgAcceptPartnershipResponse\x12z\n" +
+	"\x12ProposeConsensusOp\x12-.zerone.partnerships.v1.MsgProposeConsensusOp\x1a5.zerone.partnerships.v1.MsgProposeConsensusOpResponse\x12q\n" +
+	"\x0fVoteConsensusOp\x12*.zerone.partnerships.v1.MsgVoteConsensusOp\x1a2.zerone.partnerships.v1.MsgVoteConsensusOpResponse\x12h\n" +
+	"\fSafetyFreeze\x12'.zerone.partnerships.v1.MsgSafetyFreeze\x1a/.zerone.partnerships.v1.MsgSafetyFreezeResponse\x12}\n" +
+	"\x13RaiseCoercionSignal\x12..zerone.partnerships.v1.MsgRaiseCoercionSignal\x1a6.zerone.partnerships.v1.MsgRaiseCoercionSignalResponse\x12}\n" +
+	"\x13InitiateDissolution\x12..zerone.partnerships.v1.MsgInitiateDissolution\x1a6.zerone.partnerships.v1.MsgInitiateDissolutionResponse\x12\x83\x01\n" +
+	"\x15CreateSeedPartnership\x120.zerone.partnerships.v1.MsgCreateSeedPartnership\x1a8.zerone.partnerships.v1.MsgCreateSeedPartnershipResponse\x12w\n" +
+	"\x11JoinFormationPool\x12,.zerone.partnerships.v1.MsgJoinFormationPool\x1a4.zerone.partnerships.v1.MsgJoinFormationPoolResponse\x12z\n" +
+	"\x12LeaveFormationPool\x12-.zerone.partnerships.v1.MsgLeaveFormationPool\x1a5.zerone.partnerships.v1.MsgLeaveFormationPoolResponse\x12h\n" +
+	"\fUpdateParams\x12'.zerone.partnerships.v1.MsgUpdateParams\x1a/.zerone.partnerships.v1.MsgUpdateParamsResponse\x12w\n" +
+	"\x11ProposeMentorship\x12,.zerone.partnerships.v1.MsgProposeMentorship\x1a4.zerone.partnerships.v1.MsgProposeMentorshipResponse\x12t\n" +
+	"\x10AcceptMentorship\x12+.zerone.partnerships.v1.MsgAcceptMentorship\x1a3.zerone.partnerships.v1.MsgAcceptMentorshipResponse\x12n\n" +
+	"\x0eGraduateMentee\x12).zerone.partnerships.v1.MsgGraduateMentee\x1a1.zerone.partnerships.v1.MsgGraduateMenteeResponse\x12k\n" +
+	"\rEndMentorship\x12(.zerone.partnerships.v1.MsgEndMentorship\x1a0.zerone.partnerships.v1.MsgEndMentorshipResponse\x12\x80\x01\n" +
+	"\x14AcceptFormationMatch\x12/.zerone.partnerships.v1.MsgAcceptFormationMatch\x1a7.zerone.partnerships.v1.MsgAcceptFormationMatchResponse\x12\x83\x01\n" +
+	"\x15DeclineFormationMatch\x120.zerone.partnerships.v1.MsgDeclineFormationMatch\x1a8.zerone.partnerships.v1.MsgDeclineFormationMatchResponse\x1a\x05\x80\xe7\xb0*\x01B5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
 
 var (
 	file_zerone_partnerships_v1_tx_proto_rawDescOnce sync.Once

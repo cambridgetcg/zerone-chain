@@ -773,15 +773,19 @@ func (zcd ZeroneCapabilityDecorator) AnteHandle(ctx sdk.Context, tx sdk.Tx, simu
 
 		// Check if the signing pubkey matches a registered session key
 		session := zcd.findSessionByPubKey(ctx, address, signer.PubKeyHex, currentHeight)
-		if session == nil {
-			// Not signing with a session key — operational/identity key, no restrictions
-			continue
-		}
-
-		// Enforce session capabilities against ALL message types in the tx.
-		for _, msg := range msgs {
-			if err := zcd.checkCapability(session, msg); err != nil {
-				return ctx, err
+		if session != nil {
+			// Session key: enforce session capabilities (default-deny)
+			for _, msg := range msgs {
+				if err := zcd.checkCapability(session, msg); err != nil {
+					return ctx, err
+				}
+			}
+		} else {
+			// Primary key: enforce account-level capabilities (default-allow)
+			for _, msg := range msgs {
+				if err := zcd.checkAccountCapability(ctx, address, msg); err != nil {
+					return ctx, err
+				}
 			}
 		}
 	}
@@ -863,6 +867,75 @@ func (zcd ZeroneCapabilityDecorator) checkCapability(session *zeroneauthtypes.Se
 	}
 }
 
+// checkAccountCapability enforces account-level capabilities for primary key signers.
+// Unlike session keys (default-deny), primary keys use default-allow for unrecognized types.
+func (zcd ZeroneCapabilityDecorator) checkAccountCapability(ctx sdk.Context, address string, msg sdk.Msg) error {
+	msgType := sdk.MsgTypeURL(msg)
+
+	// Auth management messages are always allowed (registration, key rotation, etc.)
+	if isAuthManagementMsg(msgType) {
+		return nil
+	}
+
+	account, found := zcd.zak.GetAccount(ctx, address)
+	if !found {
+		// Unregistered account: block Zerone-specific ops, allow everything else
+		if isZeroneSpecificMsg(msgType) {
+			return zeroneauthtypes.ErrAccountCapabilityDenied
+		}
+		return nil
+	}
+
+	return zcd.checkRegisteredAccountCapability(account, msgType)
+}
+
+// checkRegisteredAccountCapability enforces capabilities for registered accounts.
+// Flag-based capabilities (CanSubmitClaims, CanChallenge) are checked from AccountFlags.
+// Type-based restrictions (staking, voting, research, disputes) are derived from account_type.
+func (zcd ZeroneCapabilityDecorator) checkRegisteredAccountCapability(account *zeroneauthtypes.Account, msgType string) error {
+	flags := account.Flags
+	accountType := account.AccountType
+
+	switch {
+	case isClaimSubmissionMsg(msgType):
+		if flags == nil || !flags.CanSubmitClaims {
+			return zeroneauthtypes.ErrAccountCapabilityDenied
+		}
+		return nil
+	case isChallengeMsg(msgType):
+		if flags == nil || !flags.CanChallenge {
+			return zeroneauthtypes.ErrAccountCapabilityDenied
+		}
+		return nil
+	case isStakeMsg(msgType):
+		if accountType == "contract" {
+			return zeroneauthtypes.ErrAccountCapabilityDenied
+		}
+		return nil
+	case isVoteMsg(msgType):
+		if accountType == "contract" {
+			return zeroneauthtypes.ErrAccountCapabilityDenied
+		}
+		return nil
+	case isResearchMsg(msgType):
+		if accountType == "contract" {
+			return zeroneauthtypes.ErrAccountCapabilityDenied
+		}
+		return nil
+	case isDisputeMsg(msgType):
+		if accountType == "contract" {
+			return zeroneauthtypes.ErrAccountCapabilityDenied
+		}
+		return nil
+	case isPartnershipMsg(msgType), isTransferMsg(msgType), isICAMsg(msgType):
+		// Allowed for all registered account types
+		return nil
+	default:
+		// Default-allow for primary keys (preserves authz/fee grants/etc.)
+		return nil
+	}
+}
+
 func isTransferMsg(msgType string) bool {
 	return msgType == "/cosmos.bank.v1beta1.MsgSend" ||
 		msgType == "/cosmos.bank.v1beta1.MsgMultiSend" ||
@@ -876,11 +949,46 @@ func isStakeMsg(msgType string) bool {
 		msgType == "/zerone.staking.v1.MsgRegisterValidator"
 }
 
-func isClaimMsg(msgType string) bool {
+func isClaimSubmissionMsg(msgType string) bool {
 	return msgType == "/zerone.knowledge.v1.MsgSubmitClaim" ||
 		msgType == "/zerone.knowledge.v1.MsgSubmitCommitment" ||
-		msgType == "/zerone.knowledge.v1.MsgSubmitReveal" ||
-		msgType == "/zerone.knowledge.v1.MsgChallengeFact"
+		msgType == "/zerone.knowledge.v1.MsgSubmitReveal"
+}
+
+func isChallengeMsg(msgType string) bool {
+	return msgType == "/zerone.knowledge.v1.MsgChallengeFact"
+}
+
+func isClaimMsg(msgType string) bool {
+	return isClaimSubmissionMsg(msgType) || isChallengeMsg(msgType)
+}
+
+// isAuthManagementMsg checks if a message is an auth management operation.
+// These are always allowed — accounts must be able to register and manage keys.
+func isAuthManagementMsg(msgType string) bool {
+	return msgType == "/zerone.auth.v1.MsgRegisterAccount" ||
+		msgType == "/zerone.auth.v1.MsgRotateKey" ||
+		msgType == "/zerone.auth.v1.MsgCreateSession" ||
+		msgType == "/zerone.auth.v1.MsgRevokeSession" ||
+		msgType == "/zerone.auth.v1.MsgRecoverAccount" ||
+		msgType == "/zerone.auth.v1.MsgFreezeAccount" ||
+		msgType == "/zerone.auth.v1.MsgUnfreezeAccount" ||
+		msgType == "/zerone.auth.v1.MsgSetRecoveryConfig" ||
+		msgType == "/zerone.auth.v1.MsgInitiateRecovery" ||
+		msgType == "/zerone.auth.v1.MsgSubmitRecoveryShard" ||
+		msgType == "/zerone.auth.v1.MsgChallengeRecovery" ||
+		msgType == "/zerone.auth.v1.MsgExecuteRecovery"
+}
+
+// isZeroneSpecificMsg checks if a message is a Zerone-specific operation
+// that requires registration. Used for unregistered account gating.
+func isZeroneSpecificMsg(msgType string) bool {
+	return isClaimSubmissionMsg(msgType) ||
+		isChallengeMsg(msgType) ||
+		isPartnershipMsg(msgType) ||
+		isResearchMsg(msgType) ||
+		isDisputeMsg(msgType) ||
+		isICAMsg(msgType)
 }
 
 // isICAMsg checks if a message type URL is an ICA message.

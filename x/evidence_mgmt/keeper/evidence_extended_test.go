@@ -679,8 +679,14 @@ func TestMsgSubmitEvidenceValidateBasic(t *testing.T) {
 		wantErr bool
 	}{
 		{"valid", func() *types.MsgSubmitEvidence {
-			return &types.MsgSubmitEvidence{Submitter: validSubmitter, EvidenceType: types.EvidenceType_EVIDENCE_TYPE_DOCUMENT, ContentHash: "hash"}
+			return &types.MsgSubmitEvidence{Submitter: validSubmitter, EvidenceType: types.EvidenceType_EVIDENCE_TYPE_DOCUMENT, ContentHash: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"}
 		}, false},
+		{"invalid content hash (not hex)", func() *types.MsgSubmitEvidence {
+			return &types.MsgSubmitEvidence{Submitter: validSubmitter, EvidenceType: types.EvidenceType_EVIDENCE_TYPE_DOCUMENT, ContentHash: "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"}
+		}, true},
+		{"invalid content hash (wrong length)", func() *types.MsgSubmitEvidence {
+			return &types.MsgSubmitEvidence{Submitter: validSubmitter, EvidenceType: types.EvidenceType_EVIDENCE_TYPE_DOCUMENT, ContentHash: "abcd1234"}
+		}, true},
 		{"empty submitter", func() *types.MsgSubmitEvidence {
 			return &types.MsgSubmitEvidence{Submitter: "", EvidenceType: types.EvidenceType_EVIDENCE_TYPE_DOCUMENT, ContentHash: "hash"}
 		}, true},

@@ -28,7 +28,9 @@ type Keeper struct {
 
 	autopoiesisKeeper types.AutopoiesisKeeper
 
-	// blockTxCount is set by PreBlocker each block with the actual transaction count.
+	// blockTxCount is set by PotPreBlocker each block with the user transaction count
+	// (excluding vote extension injection pseudo-txs). Read by BeginBlock to determine
+	// if block rewards should be minted (PoT: 0% for empty blocks).
 	blockTxCount int
 }
 

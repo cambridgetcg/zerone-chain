@@ -8,6 +8,8 @@
 #
 # Usage:
 #   scripts/localnet.sh start    # Build, init, start all 4 validators
+#   scripts/localnet.sh init     # Build + init only (for axiom injection before boot)
+#   scripts/localnet.sh boot     # Start validators from initialized state
 #   scripts/localnet.sh stop     # Stop all validators
 #   scripts/localnet.sh status   # Query each validator's height + power
 #   scripts/localnet.sh logs [N] # Tail validator N's logs (default: all)
@@ -70,19 +72,19 @@ zeroned_coord() {
   "${BINARY}" "$@" --home "${COORDINATOR_HOME}"
 }
 
-# ── cmd_start ────────────────────────────────────────────────────────────
+# ── cmd_init ─────────────────────────────────────────────────────────────
+# Initializes the localnet: builds binary, creates genesis, sets up all
+# validators, validates genesis, configures networking. Does NOT start
+# the validators. Use 'boot' after init (or 'start' for init+boot).
 
-cmd_start() {
+cmd_init() {
   echo "═══════════════════════════════════════════════════════════════"
-  echo "  Zerone — Local Testnet: START"
+  echo "  Zerone — Local Testnet: INIT"
   echo "  Chain: ${CHAIN_ID} | Validators: ${NUM_VALIDATORS} | Block: 2521ms"
   echo "═══════════════════════════════════════════════════════════════"
   echo ""
 
   check_deps
-
-  # Trap EXIT for cleanup on failure
-  trap 'echo ""; warn "Script interrupted — run: scripts/localnet.sh stop"' INT TERM
 
   # ── Step 1: Build ────────────────────────────────────────────────────
   info "Building zeroned binary..."
@@ -154,6 +156,18 @@ cmd_start() {
     .app_state.knowledge.params.quorum_threshold = 660000 |
     .app_state.knowledge.params.max_validators_per_round = 22 |
     .app_state.knowledge.params.verification_reward = "3000000"
+  '
+
+  # Research module — fast params for local testing
+  patch_genesis '
+    .app_state.research.params.review_period_blocks = 20 |
+    .app_state.research.params.min_reviewer_count = 2
+  '
+
+  # Partnerships module — fast params for local testing
+  patch_genesis '
+    .app_state.partnerships.params.safety_freeze_duration_blocks = 10 |
+    .app_state.partnerships.params.coercion_review_blocks = 15
   '
 
   # Vesting rewards — lower min_validators for local testing
@@ -339,7 +353,25 @@ cmd_start() {
     info "  ${local_name}: P2P=${local_p2p} RPC=${local_rpc} gRPC=${local_grpc} API=${local_api}"
   done
 
-  # ── Step 11: Start all validators ───────────────────────────────────
+  ok "Localnet initialized — ready for 'boot' or 'start'"
+  echo ""
+  echo "  Genesis:   ${COORDINATOR_HOME}/config/genesis.json"
+  echo "  State dir: ${BASE_DIR}"
+  echo ""
+  echo "  Next steps:"
+  echo "    scripts/localnet.sh boot    # Start validators from initialized state"
+  echo "    scripts/localnet.sh start   # (or re-run start for init + boot)"
+}
+
+# ── _boot_validators (internal) ──────────────────────────────────────────
+# Starts all validator processes and waits for consensus.
+# Called by cmd_start and cmd_boot.
+
+_boot_validators() {
+  # Trap EXIT for cleanup on failure
+  trap 'echo ""; warn "Script interrupted — run: scripts/localnet.sh stop"' INT TERM
+
+  # ── Start all validators ───────────────────────────────────────────
   info "Starting ${NUM_VALIDATORS} validators..."
 
   for i in $(seq 0 $((NUM_VALIDATORS - 1))); do
@@ -357,7 +389,7 @@ cmd_start() {
     info "  ${local_name} started (PID=${local_pid})"
   done
 
-  # ── Step 12: Wait for consensus ─────────────────────────────────────
+  # ── Wait for consensus ─────────────────────────────────────────────
   info "Waiting for consensus (target: block 3)..."
   local rpc_url="http://127.0.0.1:$(rpc_port 0)"
   local max_wait=60
@@ -381,8 +413,40 @@ cmd_start() {
     warn "Timed out waiting for block 3 after ${max_wait}s"
     warn "Check logs: scripts/localnet.sh logs"
   fi
+}
 
-  # ── Summary ─────────────────────────────────────────────────────────
+# ── cmd_boot ─────────────────────────────────────────────────────────────
+# Starts validators from an already-initialized localnet state.
+# Use after 'init' (e.g., to inject axioms between init and boot).
+
+cmd_boot() {
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "  Zerone — Local Testnet: BOOT (from initialized state)"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+
+  [ -d "${BASE_DIR}/val0" ] || die "No initialized localnet found. Run 'init' first."
+  [ -f "${BINARY}" ] || die "Binary not found: ${BINARY}. Run 'init' or 'make build' first."
+
+  _boot_validators
+
+  _print_summary
+}
+
+# ── cmd_start ────────────────────────────────────────────────────────────
+# Full pipeline: init + boot.
+
+cmd_start() {
+  cmd_init
+
+  _boot_validators
+
+  _print_summary
+}
+
+# ── _print_summary (internal) ───────────────────────────────────────────
+
+_print_summary() {
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
   echo "  Zerone — Local Testnet RUNNING"
@@ -632,16 +696,20 @@ cmd_resume() {
 
 case "${1:-help}" in
   start)   cmd_start ;;
+  init)    cmd_init ;;
+  boot)    cmd_boot ;;
   stop)    cmd_stop ;;
   resume)  cmd_resume ;;
   status)  cmd_status ;;
   logs)    cmd_logs "${2:-}" ;;
   clean)   cmd_clean ;;
   help|--help|-h)
-    echo "Usage: $0 {start|stop|resume|status|logs [N]|clean}"
+    echo "Usage: $0 {start|init|boot|stop|resume|status|logs [N]|clean}"
     echo ""
     echo "Commands:"
     echo "  start       Build, init, and start 4-validator local testnet"
+    echo "  init        Build and init only (no start — for axiom injection)"
+    echo "  boot        Start validators from already-initialized state"
     echo "  stop        Stop all validators"
     echo "  resume      Rebuild and restart validators from existing state"
     echo "  status      Query each validator's block height and voting power"

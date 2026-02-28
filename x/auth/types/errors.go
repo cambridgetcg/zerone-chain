@@ -33,4 +33,5 @@ var (
 	ErrBootstrapDisabled          = errors.Register(ModuleName, 27, "bootstrap fund is disabled")
 	ErrBootstrapInsufficientFunds = errors.Register(ModuleName, 28, "bootstrap fund has insufficient balance")
 	ErrDIDDerivationMismatch      = errors.Register(ModuleName, 29, "DID does not derive from public key")
+	ErrAccountCapabilityDenied    = errors.Register(ModuleName, 30, "account capability denied")
 )

@@ -19,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Partnership_FullMethodName            = "/zerone.partnerships.v1.Query/Partnership"
-	Query_PartnershipsByAddress_FullMethodName  = "/zerone.partnerships.v1.Query/PartnershipsByAddress"
-	Query_PendingOps_FullMethodName             = "/zerone.partnerships.v1.Query/PendingOps"
-	Query_FormationPool_FullMethodName          = "/zerone.partnerships.v1.Query/FormationPool"
-	Query_Params_FullMethodName                 = "/zerone.partnerships.v1.Query/Params"
-	Query_Mentorship_FullMethodName             = "/zerone.partnerships.v1.Query/Mentorship"
-	Query_MentorshipsByAddress_FullMethodName   = "/zerone.partnerships.v1.Query/MentorshipsByAddress"
-	Query_FormationMatches_FullMethodName       = "/zerone.partnerships.v1.Query/FormationMatches"
+	Query_Partnership_FullMethodName           = "/zerone.partnerships.v1.Query/Partnership"
+	Query_PartnershipsByAddress_FullMethodName = "/zerone.partnerships.v1.Query/PartnershipsByAddress"
+	Query_PendingOps_FullMethodName            = "/zerone.partnerships.v1.Query/PendingOps"
+	Query_FormationPool_FullMethodName         = "/zerone.partnerships.v1.Query/FormationPool"
+	Query_Params_FullMethodName                = "/zerone.partnerships.v1.Query/Params"
+	Query_Mentorship_FullMethodName            = "/zerone.partnerships.v1.Query/Mentorship"
+	Query_MentorshipsByAddress_FullMethodName  = "/zerone.partnerships.v1.Query/MentorshipsByAddress"
+	Query_FormationMatches_FullMethodName      = "/zerone.partnerships.v1.Query/FormationMatches"
 )
 
 // QueryClient is the client API for Query service.

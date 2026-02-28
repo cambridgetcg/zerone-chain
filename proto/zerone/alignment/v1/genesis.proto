@@ -37,4 +37,11 @@ message Params {
 
   // Maximum correction magnitude (BPS) for auto-apply. Above this requires governance.
   uint64 max_auto_apply_magnitude_bps = 11;
+
+  // Correction confidence params (R29-4).
+  uint64 correction_confidence_window_size = 12;
+  uint64 correction_confidence_min_samples = 13;
+  uint64 min_confidence_for_auto_apply = 14;
+  uint64 correction_bounds_min_multiplier_bps = 15;
+  uint64 correction_bounds_max_multiplier_bps = 16;
 }

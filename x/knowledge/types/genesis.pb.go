@@ -175,12 +175,12 @@ type Params struct {
 	EpistemicHotConfidenceGrowthBps  uint64 `protobuf:"varint,123,opt,name=epistemic_hot_confidence_growth_bps,json=epistemicHotConfidenceGrowthBps,proto3" json:"epistemic_hot_confidence_growth_bps,omitempty"`  // Confidence growth multiplier in hot domains (default: 1,500,000 = 150%)
 	EpistemicTemperatureWindowBlocks uint64 `protobuf:"varint,124,opt,name=epistemic_temperature_window_blocks,json=epistemicTemperatureWindowBlocks,proto3" json:"epistemic_temperature_window_blocks,omitempty"` // Lookback window for vindication counting (default: 10,000)
 	// ─── Domain role elasticity (R29-3) ──────────────────────────────────
-	RoleElasticityMinCalls         uint64 `protobuf:"varint,125,opt,name=role_elasticity_min_calls,json=roleElasticityMinCalls,proto3" json:"role_elasticity_min_calls,omitempty"`
-	RoleElasticityMaxMultiplierBps uint64 `protobuf:"varint,126,opt,name=role_elasticity_max_multiplier_bps,json=roleElasticityMaxMultiplierBps,proto3" json:"role_elasticity_max_multiplier_bps,omitempty"`
-	RoleElasticityMinMultiplierBps uint64 `protobuf:"varint,127,opt,name=role_elasticity_min_multiplier_bps,json=roleElasticityMinMultiplierBps,proto3" json:"role_elasticity_min_multiplier_bps,omitempty"`
-	RoleElasticityDecayEpochs      uint64 `protobuf:"varint,128,opt,name=role_elasticity_decay_epochs,json=roleElasticityDecayEpochs,proto3" json:"role_elasticity_decay_epochs,omitempty"`
-	unknownFields                    protoimpl.UnknownFields
-	sizeCache                        protoimpl.SizeCache
+	RoleElasticityMinCalls         uint64 `protobuf:"varint,125,opt,name=role_elasticity_min_calls,json=roleElasticityMinCalls,proto3" json:"role_elasticity_min_calls,omitempty"`                           // Min calls per role before elasticity activates (default: 10)
+	RoleElasticityMaxMultiplierBps uint64 `protobuf:"varint,126,opt,name=role_elasticity_max_multiplier_bps,json=roleElasticityMaxMultiplierBps,proto3" json:"role_elasticity_max_multiplier_bps,omitempty"` // Max bonus scaling (default: 2,000,000 = 200%)
+	RoleElasticityMinMultiplierBps uint64 `protobuf:"varint,127,opt,name=role_elasticity_min_multiplier_bps,json=roleElasticityMinMultiplierBps,proto3" json:"role_elasticity_min_multiplier_bps,omitempty"` // Min bonus scaling (default: 500,000 = 50%)
+	RoleElasticityDecayEpochs      uint64 `protobuf:"varint,128,opt,name=role_elasticity_decay_epochs,json=roleElasticityDecayEpochs,proto3" json:"role_elasticity_decay_epochs,omitempty"`                  // Blocks between 5% decay cycles (default: 100)
+	unknownFields                  protoimpl.UnknownFields
+	sizeCache                      protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1206,7 +1206,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xb7;\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xcc=\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1332,7 +1332,11 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"!epistemic_vindication_heating_bps\x18y \x01(\x04R\x1eepistemicVindicationHeatingBps\x12H\n" +
 	"!epistemic_cold_confidence_cap_bps\x18z \x01(\x04R\x1depistemicColdConfidenceCapBps\x12L\n" +
 	"#epistemic_hot_confidence_growth_bps\x18{ \x01(\x04R\x1fepistemicHotConfidenceGrowthBps\x12M\n" +
-	"#epistemic_temperature_window_blocks\x18| \x01(\x04R epistemicTemperatureWindowBlocks\"\xcd\x03\n" +
+	"#epistemic_temperature_window_blocks\x18| \x01(\x04R epistemicTemperatureWindowBlocks\x129\n" +
+	"\x19role_elasticity_min_calls\x18} \x01(\x04R\x16roleElasticityMinCalls\x12J\n" +
+	"\"role_elasticity_max_multiplier_bps\x18~ \x01(\x04R\x1eroleElasticityMaxMultiplierBps\x12J\n" +
+	"\"role_elasticity_min_multiplier_bps\x18\x7f \x01(\x04R\x1eroleElasticityMinMultiplierBps\x12@\n" +
+	"\x1crole_elasticity_decay_epochs\x18\x80\x01 \x01(\x04R\x19roleElasticityDecayEpochs\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

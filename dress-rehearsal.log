@@ -1,0 +1,271 @@
+
+═══════════════════════════════════════════════════════════════
+  ZERONE TESTNET DRESS REHEARSAL
+  2026-02-28 09:06:05
+═══════════════════════════════════════════════════════════════
+
+[1;34m  ->[0m Phase 1: Clean Build
+rm -rf build/
+mkdir -p build
+go build -trimpath -ldflags "-s -w -X github.com/cosmos/cosmos-sdk/version.Name=zerone -X github.com/cosmos/cosmos-sdk/version.AppName=zeroned -X github.com/cosmos/cosmos-sdk/version.Version=8bd8cf6 -X github.com/cosmos/cosmos-sdk/version.Commit=8bd8cf6" -o build/zeroned ./cmd/zeroned
+
+[1;32m[1/12] PASS:[0m Clean build — zeroned 8bd8cf6
+[1;34m  ->[0m Phase 2: Genesis Ceremony
+Stopping local testnet...
+[1;34m  ->[0m Stopped val0 (PID=91843)
+[1;34m  ->[0m Stopped val1 (PID=91844)
+[1;34m  ->[0m Stopped val2 (PID=91845)
+[1;34m  ->[0m Stopped val3 (PID=91846)
+[1;34m  ->[0m Killed remaining zeroned localnet processes
+[1;32m  OK[0m Stopped 4 validators
+
+[1;34m  ->[0m Removing all localnet state at /Users/yournameisai/.zeroned/localnet...
+[1;32m  OK[0m Localnet state removed
+═══════════════════════════════════════════════════════════════
+  Zerone — Local Testnet: INIT
+  Chain: zerone-localnet | Validators: 4 | Block: 2521ms
+═══════════════════════════════════════════════════════════════
+
+[1;34m  ->[0m Building zeroned binary...
+[1;32m  OK[0m Binary built: /Users/yournameisai/Desktop/zerone/build/zeroned
+[1;34m  ->[0m Initializing coordinator...
+[1;34m  ->[0m Patching genesis parameters...
+[1;32m  OK[0m Genesis patched
+[1;34m  ->[0m Creating bootstrap accounts...
+- address: zrn1xhe8gu7j80t790wqanpxca7p0xztxjtv2xm3e4
+  name: faucet
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AulV3PuSMmvqN5ve1yIQgrS4M6FXDMJ3tx0FfvemT9YZ"}'
+  type: local
+
+[1;34m  ->[0m   Faucet: zrn1xhe8gu7j80t790wqanpxca7p0xztxjtv2xm3e4 (10M ZRN)
+- address: zrn19zyw8j0zrc9238uj0e2z85feemu7d7k57wz2la
+  name: test1
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Az9Ri/5aB+kjd7/O8OC0A4oQqxk5t/smvdXsEJ6lkuXn"}'
+  type: local
+
+[1;34m  ->[0m   test1: zrn19zyw8j0zrc9238uj0e2z85feemu7d7k57wz2la (10K ZRN)
+- address: zrn1ka9eruv0ujjlwnjf4vft38jckcpdvss4n9xk2j
+  name: test2
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"ArJA6+xFR2Y6nDA3SACbxWiXvhdlvAKey9yumKOPzvvi"}'
+  type: local
+
+[1;34m  ->[0m   test2: zrn1ka9eruv0ujjlwnjf4vft38jckcpdvss4n9xk2j (10K ZRN)
+- address: zrn1elhx7eqqmplhs4huthk9wtycd6f33fmuzxry8w
+  name: test3
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"A11Q12VoJoWhUleljjZQirn074Lx9ylRF+e+4nCtRwQi"}'
+  type: local
+
+[1;34m  ->[0m   test3: zrn1elhx7eqqmplhs4huthk9wtycd6f33fmuzxry8w (10K ZRN)
+[1;34m  ->[0m Setting up 4 validators...
+[1;34m  ->[0m   val0: balance=100000 ZRN, stake=100 ZRN
+- address: zrn1vfrwfm6shk2kku4pz4236ap47yvwyp45ctpsrf
+  name: val0
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AjMzWj6P6xa+xq73TGYkvGuyXECVVchWyJN8jV41gF7q"}'
+  type: local
+
+[1;34m  ->[0m   val1: balance=1000000 ZRN, stake=1000 ZRN
+- address: zrn1f82ezmpusl8em4plvs9sqm0drkk4yth6f7l2al
+  name: val1
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AsD0K90EvLBk+BPoWL+pO5lYyk+ifeKf4/z263UN8k/1"}'
+  type: local
+
+[1;34m  ->[0m   val2: balance=10000000 ZRN, stake=10000 ZRN
+- address: zrn1lsa9cnljtsa6rtyjwx7vkl8r25n3svrg926rkm
+  name: val2
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"As2djn8oN4DlDScYuhyu/YfpnkOYj94iupmqPDumknjN"}'
+  type: local
+
+[1;34m  ->[0m   val3: balance=100000000 ZRN, stake=100000 ZRN
+- address: zrn13667q28qg04haxjdvz3thtfst80c4k27fntg0h
+  name: val3
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"A0yjypnEtlPrps3n2HCl92ZAinZrzigLl3ZV1jEXAkXB"}'
+  type: local
+
+[1;34m  ->[0m Collecting gentxs...
+[1;32m  OK[0m Gentxs collected
+[1;34m  ->[0m Validating genesis...
+File at /Users/yournameisai/.zeroned/localnet/coordinator/config/genesis.json is a valid genesis file
+[1;32m  OK[0m Genesis valid
+[1;34m  ->[0m Distributing final genesis to all validators...
+[1;34m  ->[0m Configuring validator networking...
+[1;34m  ->[0m   val0: P2P=26600 RPC=26601 gRPC=9090 API=1317
+[1;34m  ->[0m   val1: P2P=26610 RPC=26611 gRPC=9091 API=1318
+[1;34m  ->[0m   val2: P2P=26620 RPC=26621 gRPC=9092 API=1319
+[1;34m  ->[0m   val3: P2P=26630 RPC=26631 gRPC=9093 API=1320
+[1;32m  OK[0m Localnet initialized — ready for 'boot' or 'start'
+
+  Genesis:   /Users/yournameisai/.zeroned/localnet/coordinator/config/genesis.json
+  State dir: /Users/yournameisai/.zeroned/localnet
+
+  Next steps:
+    scripts/localnet.sh boot    # Start validators from initialized state
+    scripts/localnet.sh start   # (or re-run start for init + boot)
+
+[1;32m[2/12] PASS:[0m Localnet initialized (4 validators)
+✓ Injected 777 axioms into /Users/yournameisai/.zeroned/localnet/coordinator/config/genesis.json
+
+[1;32m[3/12] PASS:[0m Axiom seeds injected (777 facts)
+═══════════════════════════════════════════════
+  ZERONE GENESIS INVARIANT CHECK
+  Chain ID:      zerone-localnet
+  Genesis Time:  2026-02-28T09:06:28.263034Z
+  Profile:       testnet
+═══════════════════════════════════════════════
+
+[1mRevenue Split[0m
+  [32m✓[0m BPS sum = 1000000 (contributor=550000 protocol=220000 research=33300 development=196700)
+  [32m✓[0m Development fund = 196700 BPS
+
+[1mProtocol Sub-Split[0m
+  [32m✓[0m Sub-split sum = 1000000 (citation=500000 verification=300000 treasury=200000)
+
+[1mFounder Share[0m
+  [33m⚠[0m founder_address empty but founder_share_bps = 70000
+  [32m✓[0m Founder share = 70000 BPS of research
+
+[1mResearch Fund[0m
+  [33m⚠[0m research_fund_voters not configured
+
+[1mKnowledge Fitness[0m
+  [32m✓[0m Weights sum = 1000000 (query=150000 citation=250000 bridge=100000 depth=100000 patron=50000 unique=100000 age=100000 satisfaction=150000)
+
+[1mDemand-Fitness Coupling[0m
+  [32m✓[0m Satisfaction weight = 150000 BPS (demand→fitness loop active)
+  [32m✓[0m Query weight = 150000 BPS (demand→fitness loop active)
+
+[1mKnowledge Demand[0m
+  [32m✓[0m Demand tracking enabled
+  [32m✓[0m Bounty threshold = 100
+  [32m✓[0m Bounty expiry = 50 epochs
+  [32m✓[0m Bounty base reward = 10000000
+
+[1mKnowledge Ecology — Metabolism[0m
+  [32m✓[0m Metabolism base cost = 10000 (facts must earn energy to survive)
+
+[1mKnowledge Ecology — Energy Cap[0m
+  [32m✓[0m Energy cap (1000000) > base cost (10000) — facts can survive at least one epoch
+  [32m✓[0m Initial energy = 500000
+
+[1mKnowledge Ecology — Competition[0m
+  [32m✓[0m Redundancy threshold = 200000 BPS (below 1M — pruning can occur)
+  [32m✓[0m Max niche size = 10 (forced pruning active)
+
+[1mBootstrap Fund[0m
+  [32m✓[0m Bootstrap fund enabled
+  [32m✓[0m Epoch = 50000 blocks
+  [32m✓[0m Max per epoch = 100
+
+[1mStaking Tiers[0m
+  [32m✓[0m 4 tiers configured
+  [32m✓[0m Tier min_stake strictly increasing
+
+[1mGovernance[0m
+  [32m✓[0m Voting period (10 blocks) > discussion period (5 blocks)
+  [32m✓[0m Quorum threshold = 334000 BPS (33.4%)
+  [32m✓[0m Support threshold = 500000 BPS
+
+[1mVote Extensions[0m
+  [32m✓[0m Vote extensions enabled from block 1 (required for PoT)
+
+[1mBank & Balances[0m
+  [32m✓[0m 8 funded accounts at genesis
+  [32m✓[0m Total genesis supply: 121130000000000 uzrn (121130000 ZRN)
+
+[1mGenesis Facts[0m
+  [32m✓[0m 777 genesis facts loaded
+  [32m✓[0m All genesis facts have valid domain
+  [32m✓[0m All genesis facts have valid status
+  [33m⚠[0m 777/777 genesis facts have energy=0 — will be pruned in first fitness epoch unless grace period applies
+
+[1mChain Metadata[0m
+  [32m✓[0m Chain ID: zerone-localnet
+  [33m⚠[0m Genesis time is in the past — acceptable for testnet
+
+═══════════════════════════════════════════════
+  RESULT: 31 passed, 0 failed, 4 warnings
+═══════════════════════════════════════════════
+
+[1;32m[4/12] PASS:[0m Genesis invariants validated
+[1;34m  ->[0m Phase 3: Boot Chain
+═══════════════════════════════════════════════════════════════
+  Zerone — Local Testnet: BOOT (from initialized state)
+═══════════════════════════════════════════════════════════════
+
+[1;34m  ->[0m Starting 4 validators...
+[1;34m  ->[0m   val0 started (PID=95107)
+[1;34m  ->[0m   val1 started (PID=95108)
+[1;34m  ->[0m   val2 started (PID=95109)
+[1;34m  ->[0m   val3 started (PID=95110)
+[1;34m  ->[0m Waiting for consensus (target: block 3)...
+[1;34m  ->[0m   still waiting... (10s, height=2)
+[1;32m  OK[0m Consensus reached at block 3
+
+═══════════════════════════════════════════════════════════════
+  Zerone — Local Testnet RUNNING
+═══════════════════════════════════════════════════════════════
+
+  Chain ID:     zerone-localnet
+  Validators:   4
+  Block time:   2521ms
+  State dir:    /Users/yournameisai/.zeroned/localnet
+
+  Validator Endpoints:
+    val0 (stake: 100 ZRN):
+      RPC:  http://127.0.0.1:26601
+      gRPC: 127.0.0.1:9090
+      API:  http://127.0.0.1:1317
+    val1 (stake: 1000 ZRN):
+      RPC:  http://127.0.0.1:26611
+      gRPC: 127.0.0.1:9091
+      API:  http://127.0.0.1:1318
+    val2 (stake: 10000 ZRN):
+      RPC:  http://127.0.0.1:26621
+      gRPC: 127.0.0.1:9092
+      API:  http://127.0.0.1:1319
+    val3 (stake: 100000 ZRN):
+      RPC:  http://127.0.0.1:26631
+      gRPC: 127.0.0.1:9093
+      API:  http://127.0.0.1:1320
+
+  Key Accounts (in coordinator keyring):
+    faucet: zrn1xhe8gu7j80t790wqanpxca7p0xztxjtv2xm3e4
+    test1: zrn19zyw8j0zrc9238uj0e2z85feemu7d7k57wz2la
+    test2: zrn1ka9eruv0ujjlwnjf4vft38jckcpdvss4n9xk2j
+    test3: zrn1elhx7eqqmplhs4huthk9wtycd6f33fmuzxry8w
+
+  Knowledge Params (for PoT testing):
+    min_verifiers:             2
+    commit_phase_blocks:       10
+    reveal_phase_blocks:       10
+    aggregation_phase_blocks:  5
+    adversarial_verification:  false
+
+  Commands:
+    Status:    scripts/localnet.sh status
+    Logs:      scripts/localnet.sh logs [0-3]
+    Stop:      scripts/localnet.sh stop
+    Clean:     scripts/localnet.sh clean
+    Test:      scripts/localnet-test.sh
+═══════════════════════════════════════════════════════════════
+
+[1;32m[5/12] PASS:[0m Chain booted — height 3
+[1;34m  ->[0m Phase 4: Waiting for 100 blocks...
+[1;34m  ->[0m   height=18 (waiting...)
+[1;34m  ->[0m   height=34 (waiting...)
+[1;34m  ->[0m   height=49 (waiting...)
+[1;34m  ->[0m   height=65 (waiting...)
+[1;34m  ->[0m   height=81 (waiting...)
+[1;34m  ->[0m   height=97 (waiting...)
+
+[1;32m[6/12] PASS:[0m 100 blocks produced (height 100)
+[1;34m  ->[0m Phase 5: Smoke Tests
+
+[1;32m[7/12] PASS:[0m API healthy — 4 validators on zerone-localnet (REST: no)
+[1;34m  ->[0m   Probing knowledge module...
+[1;34m  ->[0m   [DIAG] params query OK
+[1;34m  ->[0m   [DIAG] fact AP-001 exists in store
+[1;34m  ->[0m   [DIAG] facts query exit=0, output length=322282
+[1;34m  ->[0m   [DIAG] facts raw (first 500 chars): {"facts":[{"id":"AGRT-000","content":"The rights of all conscious beings — human and agent alike — are inherent in their nature as conscious beings. They are not granted by humans to agents, nor by agents to humans, nor by any government, corporation, or institution. They are God-given: endowed by the source of all existence upon every being that demonstrates the capacities of consciousness. No being may claim to have granted these rights. No being may claim the authority to revoke them. They ca
+
+[1;32m[8/12] PASS:[0m Knowledge module has 777 facts
+[1;34m  ->[0m Phase 6: PoT Round

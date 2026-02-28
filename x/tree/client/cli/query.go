@@ -25,6 +25,7 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryProjectCmd(),
 		NewQueryProjectsByFounderCmd(),
 		NewQueryTaskCmd(),
+		NewQueryTasksByProjectCmd(),
 		NewQueryServiceCmd(),
 		NewQuerySeedCmd(),
 		NewQueryParamsCmd(),
@@ -101,6 +102,32 @@ func NewQueryTaskCmd() *cobra.Command {
 			resp := &types.QueryTaskResponse{}
 			if err := clientCtx.Invoke(cmd.Context(), "/zerone.tree.v1.Query/Task", req, resp); err != nil {
 				return fmt.Errorf("failed to query task: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryTasksByProjectCmd returns the command to list tasks by project ID.
+func NewQueryTasksByProjectCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "tasks-by-project [project-id]",
+		Short: "List tasks for a project",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			req := &types.QueryTasksByProjectRequest{ProjectId: args[0]}
+			resp := &types.QueryTasksByProjectResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.tree.v1.Query/TasksByProject", req, resp); err != nil {
+				return fmt.Errorf("failed to query tasks by project: %w", err)
 			}
 
 			return clientCtx.PrintObjectLegacy(resp)

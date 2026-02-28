@@ -120,22 +120,28 @@ cmd_init() {
 
   # Group 1: Consensus params
   patch '
-    .consensus.params.block.max_gas = "33333333" |
+    .consensus.params.block.max_gas = "50000000" |
     .consensus.params.block.max_bytes = "4194304" |
     .consensus.params.abci.vote_extensions_enable_height = "1"
   '
-  ok "Consensus params: max_gas=33333333, max_bytes=4MB, vote_extensions@1"
+  ok "Consensus params: max_gas=50000000, max_bytes=4MB, vote_extensions@1"
 
   # ── Step 6: Patch module params ──────────────────────────────────────
   info "Patching module parameters (30 custom modules + SDK overrides)..."
 
-  # Group 2: SDK staking + slashing
+  # Group 2: SDK staking + slashing + governance
   patch '
     .app_state.staking.params.bond_denom = "uzrn" |
+    .app_state.staking.params.unbonding_time = "86400s" |
+    .app_state.staking.params.max_validators = 20 |
     .app_state.slashing.params.signed_blocks_window = "100" |
-    .app_state.slashing.params.slash_fraction_downtime = "0.010000000000000000"
+    .app_state.slashing.params.slash_fraction_downtime = "0.010000000000000000" |
+    .app_state.gov.params.voting_period = "86400s" |
+    .app_state.gov.params.expedited_voting_period = "43200s" |
+    .app_state.gov.params.min_deposit = [{"denom":"uzrn","amount":"10000000"}] |
+    .app_state.gov.params.quorum = "0.250000000000000000"
   '
-  ok "SDK overrides: staking bond_denom, slashing params"
+  ok "SDK overrides: staking (unbonding=1d, max_validators=20), slashing, gov (voting=1d, quorum=25%)"
 
   # Group 3: Bank denom metadata
   patch '
@@ -154,13 +160,13 @@ cmd_init() {
   '
   ok "Bank denom metadata: ZRN (uzrn/mzrn/zrn)"
 
-  # Group 4: Knowledge module [TESTNET: min_verifiers=2, challenge_duration halved]
+  # Group 4: Knowledge module [TESTNET: min_verifiers=2, 5-min phases]
   patch '
     .app_state.knowledge.params.min_verifiers = 2 |
     .app_state.knowledge.params.max_verifiers = 22 |
-    .app_state.knowledge.params.commit_phase_blocks = 4 |
-    .app_state.knowledge.params.reveal_phase_blocks = 4 |
-    .app_state.knowledge.params.aggregation_phase_blocks = 3 |
+    .app_state.knowledge.params.commit_phase_blocks = 50 |
+    .app_state.knowledge.params.reveal_phase_blocks = 50 |
+    .app_state.knowledge.params.aggregation_phase_blocks = 5 |
     .app_state.knowledge.params.claim_cooldown_blocks = 50 |
     .app_state.knowledge.params.initial_confidence = 500000 |
     .app_state.knowledge.params.confidence_boost_per_verification = 50000 |
@@ -204,9 +210,10 @@ cmd_init() {
     .app_state.knowledge.params.min_domain_contributors_for_novelty = 3 |
     .app_state.knowledge.params.min_participation_rate_bps = 500000 |
     .app_state.knowledge.params.challenge_stake_ratio_min_bps = 500000 |
-    .app_state.knowledge.params.research_fund_share_bps = 130000
+    .app_state.knowledge.params.research_fund_share_bps = 130000 |
+    .app_state.knowledge.params.fitness_epoch_blocks = 1000
   '
-  ok "Knowledge module: 48 params (min_verifiers=2, challenge_duration=17136)"
+  ok "Knowledge module: 49 params (min_verifiers=2, commit/reveal=50, fitness_epoch=1000)"
 
   # Group 5: Governance [TESTNET: faster periods — voting halved, discussion halved]
   patch '
@@ -257,8 +264,8 @@ cmd_init() {
   # Group 7: Zerone staking [TESTNET: unbonding halved, shorter cooldowns]
   patch '
     .app_state.zerone_staking.params.unbonding_period = 134280 |
-    .app_state.zerone_staking.params.max_validators = 100 |
-    .app_state.zerone_staking.params.min_self_delegation = "111000" |
+    .app_state.zerone_staking.params.max_validators = 20 |
+    .app_state.zerone_staking.params.min_self_delegation = "1000000" |
     .app_state.zerone_staking.params.virtual_stake = "11000000" |
     .app_state.zerone_staking.params.max_slashes_per_epoch = 2 |
     .app_state.zerone_staking.params.slash_decay_period_blocks = 17136 |
@@ -276,7 +283,7 @@ cmd_init() {
       {"name":"Guardian","min_stake":"11111000000","min_reputation":770000,"min_verifications":333,"min_accuracy":770000,"max_slash_count":0,"allowed_categories":["protocol","computational","formal","empirical","oracle","attestation","historical","testimonial"],"reward_multiplier_bps":2000,"selection_weight_bps":1500,"min_contested_verifications":33,"contested_verification_multiplier":3,"slash_multiplier_bps":1000}
     ]
   '
-  ok "Zerone staking: unbonding=134280 redelegation_cooldown=555 (halved from prod)"
+  ok "Zerone staking: max_validators=20 min_self_delegation=1M unbonding=134280"
 
   # Group 8: Vesting rewards [TESTNET: shorter epochs, lower validator threshold]
   patch '
@@ -524,7 +531,7 @@ cmd_init() {
     .app_state.partnerships.params.common_pot_share_bps = 100000 |
     .app_state.partnerships.params.safety_freeze_duration_blocks = 250 |
     .app_state.partnerships.params.max_freezes_per_epoch = 3 |
-    .app_state.partnerships.params.coercion_review_blocks = 1000 |
+    .app_state.partnerships.params.coercion_review_blocks = 100 |
     .app_state.partnerships.params.base_cooldown_blocks = 50 |
     .app_state.partnerships.params.max_counter_proposal_depth = 3 |
     .app_state.partnerships.params.default_human_split_bps = 500000 |
@@ -541,14 +548,14 @@ cmd_init() {
       {"min_blocks":2222222,"multiplier_bps":1770000,"exit_penalty_bps":660000}
     ]
   '
-  ok "Partnerships: formation=500 cooling=2500 seed_duration=5000 (halved from prod)"
+  ok "Partnerships: coercion_review=100 formation=500 cooling=2500 (testnet-tuned)"
 
   # Group 27: Qualification [TESTNET: halved periods]
   patch '
     .app_state.qualification.params.min_stake_amount = "100000000" |
     .app_state.qualification.params.stake_lock_period = 50400 |
-    .app_state.qualification.params.min_verifications = 100 |
-    .app_state.qualification.params.min_accuracy_bps = 800000 |
+    .app_state.qualification.params.min_verifications = 50 |
+    .app_state.qualification.params.min_accuracy_bps = 750000 |
     .app_state.qualification.params.min_reputation_score = 500000 |
     .app_state.qualification.params.qualification_period = 604800 |
     .app_state.qualification.params.probation_period = 151200 |
@@ -558,20 +565,21 @@ cmd_init() {
     .app_state.qualification.params.cross_ref_weight_discount_bps = 200000 |
     .app_state.qualification.params.inheritance_weight_discount_bps = 300000
   '
-  ok "Qualification: stake_lock=50400 qualification=604800 (halved from prod)"
+  ok "Qualification: min_verifications=50 min_accuracy=75% (testnet-tuned)"
 
   # Group 28: Research [TESTNET: shorter review and bounty periods]
   patch '
     .app_state.research.params.min_research_stake = "1000000" |
     .app_state.research.params.min_challenge_stake = "1000000" |
-    .app_state.research.params.review_period_blocks = 34272 |
-    .app_state.research.params.min_reviewer_count = 3 |
+    .app_state.research.params.review_period_blocks = 500 |
+    .app_state.research.params.min_reviewer_count = 2 |
     .app_state.research.params.acceptance_score_threshold = 70 |
     .app_state.research.params.rejection_slash_bps = 330000 |
     .app_state.research.params.max_bounty_reward = "10000000000" |
-    .app_state.research.params.bounty_min_deadline_blocks = 17136
+    .app_state.research.params.bounty_min_deadline_blocks = 17136 |
+    .app_state.research.params.bounty_fulfillment_period_blocks = 1000
   '
-  ok "Research: review=34272 bounty_deadline=17136 (halved from prod)"
+  ok "Research: review=500 min_reviewers=2 bounty_fulfillment=1000 (~100 min)"
 
   # Group 29: Schedule
   patch '
@@ -695,11 +703,14 @@ cmd_init() {
   echo "    Research Treasury: ${RESEARCH_ADDR}   (500,000 ZRN)"
   echo "    Faucet:            ${FAUCET_ADDR}     (100,000 ZRN)"
   echo ""
-  echo "  Testnet Tuning:"
-  echo "    - Governance periods halved (voting=34272, discussion=17136)"
-  echo "    - Emergency cooldowns halved (cooldown=55, epoch=17136)"
-  echo "    - Staking unbonding halved (134280 blocks)"
-  echo "    - Knowledge min_verifiers=2 (prod=3)"
+  echo "  Testnet Tuning (R27-4):"
+  echo "    - Consensus: max_gas=50M, block_time=6s target"
+  echo "    - Knowledge: commit/reveal=50 blocks (~5 min), fitness_epoch=1000"
+  echo "    - Research: review=500 (~50 min), min_reviewers=2, bounty=1000 (~100 min)"
+  echo "    - Qualification: min_verifications=50, min_accuracy=75%"
+  echo "    - Partnerships: coercion_review=100 (~10 min)"
+  echo "    - SDK Gov: voting_period=1 day, min_deposit=10 ZRN, quorum=25%"
+  echo "    - SDK Staking: unbonding=1 day, max_validators=20"
   echo "    - Lower bootstrap balances (1M/500K/100K/100K)"
   echo ""
   echo "  Next: ./scripts/testnet-genesis.sh add-validator <name>"
@@ -1016,7 +1027,7 @@ cmd_verify() {
 
   local max_gas
   max_gas=$(echo "${consensus_json}" | jq -r '.result.consensus_params.block.max_gas')
-  verify_eq "Consensus max_gas" "33333333" "${max_gas}"
+  verify_eq "Consensus max_gas" "50000000" "${max_gas}"
 
   local max_bytes
   max_bytes=$(echo "${consensus_json}" | jq -r '.result.consensus_params.block.max_bytes')
@@ -1037,15 +1048,30 @@ cmd_verify() {
   min_verifiers=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.knowledge.params.min_verifiers')
   verify_eq "Knowledge min_verifiers" "2" "${min_verifiers}"
 
-  # Knowledge challenge_duration_blocks
-  local challenge_duration
-  challenge_duration=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.knowledge.params.challenge_duration_blocks')
-  verify_eq "Knowledge challenge_duration_blocks" "17136" "${challenge_duration}"
+  # Knowledge commit_phase_blocks
+  local commit_phase
+  commit_phase=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.knowledge.params.commit_phase_blocks')
+  verify_eq "Knowledge commit_phase_blocks" "50" "${commit_phase}"
 
-  # Governance voting_period_blocks
-  local voting_period
-  voting_period=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.zerone_gov.params.voting_period_blocks')
-  verify_eq "Governance voting_period_blocks" "34272" "${voting_period}"
+  # Knowledge fitness_epoch_blocks
+  local fitness_epoch
+  fitness_epoch=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.knowledge.params.fitness_epoch_blocks')
+  verify_eq "Knowledge fitness_epoch_blocks" "1000" "${fitness_epoch}"
+
+  # SDK Governance voting_period
+  local sdk_voting_period
+  sdk_voting_period=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.gov.params.voting_period')
+  verify_eq "SDK Gov voting_period" "86400s" "${sdk_voting_period}"
+
+  # SDK Staking unbonding_time
+  local sdk_unbonding
+  sdk_unbonding=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.staking.params.unbonding_time')
+  verify_eq "SDK Staking unbonding_time" "86400s" "${sdk_unbonding}"
+
+  # SDK Staking max_validators
+  local sdk_max_val
+  sdk_max_val=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.staking.params.max_validators')
+  verify_eq "SDK Staking max_validators" "20" "${sdk_max_val}"
 
   # Emergency cooldown_blocks
   local cooldown
@@ -1057,20 +1083,40 @@ cmd_verify() {
   epoch_blocks=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.emergency.params.epoch_blocks')
   verify_eq "Emergency epoch_blocks" "17136" "${epoch_blocks}"
 
-  # Zerone staking unbonding_period
-  local unbonding
-  unbonding=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.zerone_staking.params.unbonding_period')
-  verify_eq "Zerone staking unbonding_period" "134280" "${unbonding}"
+  # Zerone staking max_validators
+  local zrn_max_val
+  zrn_max_val=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.zerone_staking.params.max_validators')
+  verify_eq "Zerone staking max_validators" "20" "${zrn_max_val}"
 
-  # Vesting rewards blocks_per_reward_epoch
-  local reward_epoch
-  reward_epoch=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.vesting_rewards.params.blocks_per_reward_epoch')
-  verify_eq "Vesting blocks_per_reward_epoch" "50000" "${reward_epoch}"
+  # Research review_period_blocks
+  local research_review
+  research_review=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.research.params.review_period_blocks')
+  verify_eq "Research review_period_blocks" "500" "${research_review}"
 
-  # Vesting rewards min_validators_for_full_reward
-  local min_validators
-  min_validators=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.vesting_rewards.params.min_validators_for_full_reward')
-  verify_eq "Vesting min_validators_for_full_reward" "11" "${min_validators}"
+  # Research min_reviewer_count
+  local min_reviewers
+  min_reviewers=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.research.params.min_reviewer_count')
+  verify_eq "Research min_reviewer_count" "2" "${min_reviewers}"
+
+  # Research bounty_fulfillment_period_blocks
+  local bounty_fulfillment
+  bounty_fulfillment=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.research.params.bounty_fulfillment_period_blocks')
+  verify_eq "Research bounty_fulfillment_period" "1000" "${bounty_fulfillment}"
+
+  # Qualification min_verifications
+  local qual_min_verif
+  qual_min_verif=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.qualification.params.min_verifications')
+  verify_eq "Qualification min_verifications" "50" "${qual_min_verif}"
+
+  # Qualification min_accuracy_bps (75%)
+  local qual_accuracy
+  qual_accuracy=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.qualification.params.min_accuracy_bps')
+  verify_eq "Qualification min_accuracy_bps" "750000" "${qual_accuracy}"
+
+  # Partnerships coercion_review_blocks
+  local coercion_review
+  coercion_review=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.partnerships.params.coercion_review_blocks')
+  verify_eq "Partnerships coercion_review" "100" "${coercion_review}"
 
   # Capture challenge evidence_period_blocks
   local evidence_period
@@ -1116,11 +1162,6 @@ cmd_verify() {
   local stake_lock
   stake_lock=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.qualification.params.stake_lock_period')
   verify_eq "Qualification stake_lock_period" "50400" "${stake_lock}"
-
-  # Research review_period_blocks
-  local research_review
-  research_review=$(echo "${genesis_json}" | jq -r '.result.genesis.app_state.research.params.review_period_blocks')
-  verify_eq "Research review_period" "34272" "${research_review}"
 
   # Toolbox share_lock_cooldown_blocks
   local toolbox_lock
@@ -1201,13 +1242,15 @@ case "${1:-help}" in
     echo "  $0 export"
     echo "  $0 verify   # after node is running"
     echo ""
-    echo "Testnet Differences from Production:"
-    echo "  - Lower bootstrap balances (1M/500K/100K vs 10M/5M/500K)"
-    echo "  - Lower validator stake (10K vs 100K)"
-    echo "  - Governance periods halved"
-    echo "  - Emergency cooldowns halved"
-    echo "  - Staking unbonding halved"
-    echo "  - Knowledge min_verifiers=2 (prod=3)"
+    echo "Testnet Differences from Production (R27-4):"
+    echo "  - Consensus: max_gas=50M (target 6s blocks)"
+    echo "  - Knowledge: commit/reveal=50 blocks (~5 min), fitness_epoch=1000"
+    echo "  - Research: review=500 (~50 min), min_reviewers=2, bounty=1000 (~100 min)"
+    echo "  - Qualification: min_verifications=50, min_accuracy=75%"
+    echo "  - Partnerships: coercion_review=100 (~10 min)"
+    echo "  - SDK Gov: voting_period=1 day, min_deposit=10 ZRN, quorum=25%"
+    echo "  - SDK Staking: unbonding=1 day, max_validators=20"
+    echo "  - Lower bootstrap balances (1M/500K/100K/100K)"
     echo ""
     echo "State directory: ${CEREMONY_HOME}"
     echo "Chain ID:        ${CHAIN_ID}"
