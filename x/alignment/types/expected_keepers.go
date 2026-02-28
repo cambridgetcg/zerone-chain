@@ -54,3 +54,10 @@ type VestingRewardsKeeper interface {
 type CaptureDefenseKeeper interface {
 	GetFlaggedDomainCount(ctx context.Context) uint64
 }
+
+// PacingKeeper provides global pacing signals for cross-module adaptive timing (R29-6).
+// Consuming modules hold this interface to modulate their intervals based on system health.
+type PacingKeeper interface {
+	// GetGlobalPacingMultiplier returns creation and analysis pacing multipliers in BPS.
+	GetGlobalPacingMultiplier(ctx context.Context) (creationBps, analysisBps uint64)
+}
