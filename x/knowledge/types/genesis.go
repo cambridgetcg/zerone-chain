@@ -182,7 +182,7 @@ func DefaultParams() Params {
 		RoleElasticityMinCalls:         10,
 		RoleElasticityMaxMultiplierBps: 2_000_000, // 200% max bonus scaling
 		RoleElasticityMinMultiplierBps: 500_000,   // 50% min bonus scaling
-		RoleElasticityDecayEpochs:      100,        // decay every 100 blocks
+		RoleElasticityDecayEpochs:      100,        // decay every 100 fitness epochs
 	}
 }
 

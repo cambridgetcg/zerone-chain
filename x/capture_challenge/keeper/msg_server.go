@@ -257,6 +257,9 @@ func (m msgServer) ResolveChallenge(goCtx context.Context, msg *types.MsgResolve
 			}
 
 			// Record role impact for domain elasticity (R29-3)
+			// NOTE: CaptureChallenge is domain-level (no FactId field), so challenge.Id
+			// won't resolve to a fact. This is a forward-compatible placeholder — role impact
+			// from capture challenges will activate when fact-level linking is added.
 			if err := m.knowledgeKeeper.RecordChallengeRoleImpact(ctx, challenge.Id, challenge.Domain, true); err != nil {
 				m.Logger(ctx).Error("failed to record challenge role impact", "domain", challenge.Domain, "err", err)
 			}
@@ -303,6 +306,7 @@ func (m msgServer) ResolveChallenge(goCtx context.Context, msg *types.MsgResolve
 		}
 
 		// Record role impact — challenge rejected means original verifiers were right (R29-3)
+		// NOTE: See UPHELD note — challenge.Id is not a fact ID, so this is a no-op placeholder.
 		if m.knowledgeKeeper != nil {
 			if err := m.knowledgeKeeper.RecordChallengeRoleImpact(ctx, challenge.Id, challenge.Domain, false); err != nil {
 				m.Logger(ctx).Error("failed to record challenge role impact", "domain", challenge.Domain, "err", err)
