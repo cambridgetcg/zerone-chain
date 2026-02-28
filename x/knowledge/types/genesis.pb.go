@@ -152,7 +152,11 @@ type Params struct {
 	VindicationBonusBps      uint64 `protobuf:"varint,104,opt,name=vindication_bonus_bps,json=vindicationBonusBps,proto3" json:"vindication_bonus_bps,omitempty"`                // % of majority slash pool as bonus to vindicated minority (default: 2000 = 20%)
 	VindicationSlashBps      uint64 `protobuf:"varint,105,opt,name=vindication_slash_bps,json=vindicationSlashBps,proto3" json:"vindication_slash_bps,omitempty"`                // Slash rate for majority on disproven fact (default: 500 = 5%)
 	VindicationWindowBlocks  uint64 `protobuf:"varint,106,opt,name=vindication_window_blocks,json=vindicationWindowBlocks,proto3" json:"vindication_window_blocks,omitempty"`    // How long escrowed entries are eligible (default: 100000)
-	unknownFields            protoimpl.UnknownFields
+	// ─── Metabolism thresholds (R28-4) ────────────────────────────────
+	MetabolismActiveThreshold     uint64 `protobuf:"varint,107,opt,name=metabolism_active_threshold,json=metabolismActiveThreshold,proto3" json:"metabolism_active_threshold,omitempty"`         // Energy below which fact → AT_RISK (default: 300,000 = 30%)
+	MetabolismExtinctionThreshold uint64 `protobuf:"varint,108,opt,name=metabolism_extinction_threshold,json=metabolismExtinctionThreshold,proto3" json:"metabolism_extinction_threshold,omitempty"` // Energy below which (for N epochs) → EXTINCT (default: 10,000 = 1%)
+	MaxConfidence                 uint64 `protobuf:"varint,109,opt,name=max_confidence,json=maxConfidence,proto3" json:"max_confidence,omitempty"`                                              // Hard cap on confidence (default: 880,000 = 88%)
+	unknownFields                 protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
 
@@ -714,6 +718,27 @@ func (x *Params) GetMetabolismAtRiskEpochs() uint64 {
 func (x *Params) GetMetabolismExpiredToPrunedEpochs() uint64 {
 	if x != nil {
 		return x.MetabolismExpiredToPrunedEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismActiveThreshold() uint64 {
+	if x != nil {
+		return x.MetabolismActiveThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismExtinctionThreshold() uint64 {
+	if x != nil {
+		return x.MetabolismExtinctionThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetMaxConfidence() uint64 {
+	if x != nil {
+		return x.MaxConfidence
 	}
 	return 0
 }

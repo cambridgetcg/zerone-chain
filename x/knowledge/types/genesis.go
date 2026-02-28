@@ -98,17 +98,20 @@ func DefaultParams() Params {
 		BootstrapFundFeeCap:         "5000000",   // Fund covers up to 5 ZRN per claim
 
 		// ─── Metabolism ─────────────────────────────────────────────────────
-		MetabolismBaseCost:                100,    // 100 energy drain per epoch
-		MetabolismContentLengthBps:        10_000, // +1% base cost per 100 chars
-		MetabolismDomainCompetitionBps:    5_000,  // +0.5% base cost per 100 domain facts
-		MetabolismEnergyPerQuery:          10,     // 10 energy per agent query
-		MetabolismEnergyPerCitation:       50,     // 50 energy per new citation
-		MetabolismEnergyPerPatronage:      200,    // 200 energy per patronage epoch
-		MetabolismEnergyChallengeSurvival: 500,    // 500 energy one-time for surviving challenge
-		MetabolismEnergyCap:               10_000, // Max 10,000 energy
-		MetabolismInitialEnergy:           5_000,  // Born with 50 epochs of base maintenance
-		MetabolismAtRiskEpochs:            5,      // 5 epochs at zero before expiry
-		MetabolismExpiredToPrunedEpochs:   20,     // 20 epochs after expiry before archive
+		MetabolismBaseCost:                10_000,     // 10,000 energy drain per epoch (1% of cap)
+		MetabolismContentLengthBps:        10_000,     // +1% base cost per 100 chars
+		MetabolismDomainCompetitionBps:    5_000,      // +0.5% base cost per 100 domain facts
+		MetabolismEnergyPerQuery:          1_000,      // 1,000 energy per agent query
+		MetabolismEnergyPerCitation:       5_000,      // 5,000 energy per new citation
+		MetabolismEnergyPerPatronage:      20_000,     // 20,000 energy per patronage epoch
+		MetabolismEnergyChallengeSurvival: 100_000,    // 100,000 energy for surviving challenge
+		MetabolismEnergyCap:               1_000_000,  // Max 1,000,000 energy (matches BPS scale)
+		MetabolismInitialEnergy:           500_000,    // Born with 50% of cap
+		MetabolismAtRiskEpochs:            5,          // 5 epochs at low energy before expiry
+		MetabolismExpiredToPrunedEpochs:   20,         // 20 epochs after expiry before archive
+		MetabolismActiveThreshold:         300_000,    // 30% — below this → AT_RISK
+		MetabolismExtinctionThreshold:     10_000,     // 1% — below this for N epochs → EXTINCT
+		MaxConfidence:                     880_000,    // Hard cap on confidence (matches SurvivedChallengeConfidenceCap)
 
 		// ─── Reproduction ───────────────────────────────────────────────────
 		ReproductionRoyaltyBps:                 50_000,  // 5% of child rewards to parent
@@ -392,6 +395,21 @@ func (p *Params) Validate() error {
 	}
 	if p.MetabolismExpiredToPrunedEpochs == 0 {
 		return fmt.Errorf("metabolism_expired_to_pruned_epochs must be > 0")
+	}
+	if p.MetabolismActiveThreshold == 0 {
+		return fmt.Errorf("metabolism_active_threshold must be > 0")
+	}
+	if p.MetabolismActiveThreshold > p.MetabolismEnergyCap {
+		return fmt.Errorf("metabolism_active_threshold (%d) must be <= metabolism_energy_cap (%d)", p.MetabolismActiveThreshold, p.MetabolismEnergyCap)
+	}
+	if p.MetabolismExtinctionThreshold >= p.MetabolismActiveThreshold {
+		return fmt.Errorf("metabolism_extinction_threshold (%d) must be < metabolism_active_threshold (%d)", p.MetabolismExtinctionThreshold, p.MetabolismActiveThreshold)
+	}
+	if p.MaxConfidence == 0 {
+		return fmt.Errorf("max_confidence must be > 0")
+	}
+	if p.MaxConfidence > 1_000_000 {
+		return fmt.Errorf("max_confidence must be <= 1,000,000")
 	}
 
 	// ─── Reproduction params ──────────────────────────────────────────
