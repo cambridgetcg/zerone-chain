@@ -27,6 +27,7 @@ const (
 	Query_CorrectionHistory_FullMethodName = "/zerone.alignment.v1.Query/CorrectionHistory"
 	Query_HealthHistory_FullMethodName          = "/zerone.alignment.v1.Query/HealthHistory"
 	Query_CorrectionConfidence_FullMethodName   = "/zerone.alignment.v1.Query/CorrectionConfidence"
+	Query_GlobalPacing_FullMethodName           = "/zerone.alignment.v1.Query/GlobalPacing"
 )
 
 // QueryClient is the client API for Query service.
@@ -43,6 +44,7 @@ type QueryClient interface {
 	CorrectionHistory(ctx context.Context, in *QueryCorrectionHistoryRequest, opts ...grpc.CallOption) (*QueryCorrectionHistoryResponse, error)
 	HealthHistory(ctx context.Context, in *QueryHealthHistoryRequest, opts ...grpc.CallOption) (*QueryHealthHistoryResponse, error)
 	CorrectionConfidence(ctx context.Context, in *QueryCorrectionConfidenceRequest, opts ...grpc.CallOption) (*QueryCorrectionConfidenceResponse, error)
+	GlobalPacing(ctx context.Context, in *QueryGlobalPacingRequest, opts ...grpc.CallOption) (*QueryGlobalPacingResponse, error)
 }
 
 type queryClient struct {
@@ -133,6 +135,16 @@ func (c *queryClient) CorrectionConfidence(ctx context.Context, in *QueryCorrect
 	return out, nil
 }
 
+func (c *queryClient) GlobalPacing(ctx context.Context, in *QueryGlobalPacingRequest, opts ...grpc.CallOption) (*QueryGlobalPacingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryGlobalPacingResponse)
+	err := c.cc.Invoke(ctx, Query_GlobalPacing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -147,6 +159,7 @@ type QueryServer interface {
 	CorrectionHistory(context.Context, *QueryCorrectionHistoryRequest) (*QueryCorrectionHistoryResponse, error)
 	HealthHistory(context.Context, *QueryHealthHistoryRequest) (*QueryHealthHistoryResponse, error)
 	CorrectionConfidence(context.Context, *QueryCorrectionConfidenceRequest) (*QueryCorrectionConfidenceResponse, error)
+	GlobalPacing(context.Context, *QueryGlobalPacingRequest) (*QueryGlobalPacingResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -180,6 +193,9 @@ func (UnimplementedQueryServer) HealthHistory(context.Context, *QueryHealthHisto
 }
 func (UnimplementedQueryServer) CorrectionConfidence(context.Context, *QueryCorrectionConfidenceRequest) (*QueryCorrectionConfidenceResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CorrectionConfidence not implemented")
+}
+func (UnimplementedQueryServer) GlobalPacing(context.Context, *QueryGlobalPacingRequest) (*QueryGlobalPacingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GlobalPacing not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -346,6 +362,24 @@ func _Query_CorrectionConfidence_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_GlobalPacing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryGlobalPacingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).GlobalPacing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_GlobalPacing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).GlobalPacing(ctx, req.(*QueryGlobalPacingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -384,6 +418,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CorrectionConfidence",
 			Handler:    _Query_CorrectionConfidence_Handler,
+		},
+		{
+			MethodName: "GlobalPacing",
+			Handler:    _Query_GlobalPacing_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

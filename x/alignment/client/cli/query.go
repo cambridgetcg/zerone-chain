@@ -31,6 +31,7 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryCorrectionHistoryCmd(),
 		NewQueryHealthHistoryCmd(),
 		NewQueryCorrectionConfidenceCmd(),
+		NewQueryGlobalPacingCmd(),
 	)
 
 	return queryCmd
@@ -207,6 +208,28 @@ func NewQueryHealthHistoryCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().Uint32("limit", 20, "Maximum number of entries to return (max 100)")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryGlobalPacingCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "global-pacing",
+		Short: "Query the global adaptive pacing state",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryGlobalPacingRequest{}
+			resp := &types.QueryGlobalPacingResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.alignment.v1.Query/GlobalPacing", req, resp); err != nil {
+				return fmt.Errorf("failed to query global pacing: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }

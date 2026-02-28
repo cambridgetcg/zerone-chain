@@ -58,6 +58,21 @@ func (q queryServer) HealthHistory(ctx context.Context, req *types.QueryHealthHi
 	return &types.QueryHealthHistoryResponse{Entries: entries}, nil
 }
 
+func (q queryServer) GlobalPacing(ctx context.Context, req *types.QueryGlobalPacingRequest) (*types.QueryGlobalPacingResponse, error) {
+	state := q.Keeper.GetState(ctx)
+	category := state.PreviousCategory
+	if category == "" {
+		category = types.CategoryHealthy
+	}
+
+	creation, analysis := q.Keeper.GetGlobalPacingMultiplier(ctx)
+	return &types.QueryGlobalPacingResponse{
+		HealthCategory:        category,
+		CreationMultiplierBps: creation,
+		AnalysisMultiplierBps: analysis,
+	}, nil
+}
+
 func (q queryServer) CorrectionConfidence(ctx context.Context, req *types.QueryCorrectionConfidenceRequest) (*types.QueryCorrectionConfidenceResponse, error) {
 	confidence := q.Keeper.GetCorrectionConfidence(ctx)
 	effectiveMax := q.Keeper.GetEffectiveMaxMagnitude(ctx)
