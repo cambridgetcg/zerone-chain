@@ -887,3 +887,134 @@ func TestEndBlockerFullCycle(t *testing.T) {
 		t.Errorf("expected most recent entry at height 250, got %d", results[0].Height)
 	}
 }
+
+// --- Test: Correction confidence returns neutral without data ---
+
+func TestCorrectionConfidenceNeutralWithoutData(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+	confidence := k.GetCorrectionConfidence(ctx)
+	if confidence != 500_000 {
+		t.Fatalf("expected neutral confidence 500000, got %d", confidence)
+	}
+}
+
+// --- Test: Correction confidence calculation with 8/10 success ---
+
+func TestCorrectionConfidenceCalculation(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height:      100 + i*100,
+			Dimension:   types.DimKnowledgeQuality,
+			Magnitude:   100_000,
+			Direction:   "increase",
+			ScoreBefore: 300_000,
+			ScoreAfter:  400_000,
+			Successful:  i < 8,
+		})
+	}
+
+	confidence := k.GetCorrectionConfidence(ctx)
+	expected := uint64(8) * types.BPS / 10
+	if confidence != expected {
+		t.Fatalf("expected confidence %d, got %d", expected, confidence)
+	}
+}
+
+// --- Test: Correction confidence returns neutral below min samples ---
+
+func TestCorrectionConfidenceMinSamples(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 3; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 400_000, Successful: true,
+		})
+	}
+
+	confidence := k.GetCorrectionConfidence(ctx)
+	if confidence != 500_000 {
+		t.Fatalf("expected neutral 500000 (below min samples), got %d", confidence)
+	}
+}
+
+// --- Test: High confidence widens effective max magnitude ---
+
+func TestEffectiveMaxMagnitudeHighConfidence(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 400_000, Successful: true,
+		})
+	}
+
+	effectiveMax := k.GetEffectiveMaxMagnitude(ctx)
+	params := k.GetParams(ctx)
+	baseMax := params.MaxAutoApplyMagnitudeBps
+
+	if effectiveMax <= baseMax {
+		t.Fatalf("expected effective max > base max with high confidence, got %d <= %d", effectiveMax, baseMax)
+	}
+}
+
+// --- Test: Low confidence triggers governance lockout ---
+
+func TestEffectiveMaxMagnitudeLowConfidence(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 200_000, Successful: false,
+		})
+	}
+
+	effectiveMax := k.GetEffectiveMaxMagnitude(ctx)
+	if effectiveMax != 0 {
+		t.Fatalf("expected effective max = 0 (governance only) with 0%% confidence, got %d", effectiveMax)
+	}
+}
+
+// --- Test: High confidence extends observation interval ---
+
+func TestEffectiveObservationIntervalHighConfidence(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 400_000, Successful: true,
+		})
+	}
+
+	interval := k.GetEffectiveObservationInterval(ctx)
+	params := k.GetParams(ctx)
+	expected := params.ObservationIntervalBlocks * 3 / 2
+	if interval != expected {
+		t.Fatalf("expected interval %d (150%%), got %d", expected, interval)
+	}
+}
+
+// --- Test: Low confidence shortens observation interval ---
+
+func TestEffectiveObservationIntervalLowConfidence(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 200_000, Successful: false,
+		})
+	}
+
+	interval := k.GetEffectiveObservationInterval(ctx)
+	params := k.GetParams(ctx)
+	expected := params.ObservationIntervalBlocks * 2 / 3
+	if interval != expected {
+		t.Fatalf("expected interval %d (67%%), got %d", expected, interval)
+	}
+}
