@@ -127,6 +127,9 @@ var (
 
 	// ─── Domain carrying capacity (R29-1) ──────────────────────────────
 	DomainStatsPrefix = []byte{0x54} // 0x54 | domain → DomainStats (JSON)
+
+	// ─── Domain role elasticity (R29-3) ────────────────────────────────
+	DomainRoleRecordPrefix = []byte{0x55} // 0x55 | domain → DomainRoleRecord (JSON)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -365,4 +368,9 @@ func EpistemicStateKey(domain string) []byte {
 // DomainStatsKey returns the store key for a domain's population stats.
 func DomainStatsKey(domain string) []byte {
 	return append(append([]byte{}, DomainStatsPrefix...), []byte(domain)...)
+}
+
+// DomainRoleRecordKey returns the store key for a domain's role track record.
+func DomainRoleRecordKey(domain string) []byte {
+	return append(append([]byte{}, DomainRoleRecordPrefix...), []byte(domain)...)
 }
