@@ -248,6 +248,9 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 		),
 	)
 
+	// Emit growth pressure event if applicable (R31-1)
+	am.keeper.EmitGrowthPressureEvent(sdkCtx, obs.KnowledgeQuality)
+
 	am.keeper.Logger(ctx).Info("alignment observation complete",
 		"height", height,
 		"composite", scores.Composite,

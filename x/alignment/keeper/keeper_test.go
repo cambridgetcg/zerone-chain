@@ -1175,3 +1175,32 @@ func TestSenseKnowledgeQuality_NoGrowthPressureBelowThreshold(t *testing.T) {
 	obs := k.ObserveAll(ctx)
 	require.Equal(t, uint64(720_000), obs.KnowledgeQuality) // no penalty
 }
+
+// --- Test: Growth pressure event emitted when pending ratio exceeds 150% ---
+
+func TestGrowthPressureEvent(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+	mocks.knowledge.pendingVerificationRatio = 1_600_000 // 160%
+
+	obs := k.ObserveAll(ctx)
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	k.EmitGrowthPressureEvent(sdkCtx, obs.KnowledgeQuality)
+
+	events := sdkCtx.EventManager().Events()
+	found := false
+	for _, e := range events {
+		if e.Type == "zerone.alignment.growth_pressure_detected" {
+			found = true
+			for _, attr := range e.Attributes {
+				switch attr.Key {
+				case "pending_ratio_bps":
+					require.Equal(t, "1600000", attr.Value)
+				case "quality_penalty_applied":
+					require.Equal(t, "true", attr.Value)
+				}
+			}
+		}
+	}
+	require.True(t, found, "expected growth_pressure_detected event")
+}

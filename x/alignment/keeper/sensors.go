@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -127,6 +128,23 @@ func (k Keeper) senseStakingRatio(ctx context.Context) uint64 {
 	totalStaked := k.stakingKeeper.GetTotalStaked(ctx)
 	totalSupply := k.vestingRewardsKeeper.GetTotalSupply(ctx)
 	return ratioBPS(totalStaked, totalSupply)
+}
+
+// EmitGrowthPressureEvent emits a growth_pressure_detected event when verification backlog is high (R31-1).
+func (k Keeper) EmitGrowthPressureEvent(ctx sdk.Context, qualityScore uint64) {
+	if k.knowledgeKeeper == nil {
+		return
+	}
+	pendingRatio := k.knowledgeKeeper.GetPendingVerificationRatio(ctx)
+	if pendingRatio <= 1_500_000 {
+		return // no pressure
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.alignment.growth_pressure_detected",
+		sdk.NewAttribute("pending_ratio_bps", fmt.Sprintf("%d", pendingRatio)),
+		sdk.NewAttribute("quality_penalty_applied", "true"),
+	))
 }
 
 // ratioBPS computes (numerator / denominator) * BPS, capped at BPS.
