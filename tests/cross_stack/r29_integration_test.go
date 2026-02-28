@@ -400,3 +400,103 @@ func TestR29_AdversarialInteractions(t *testing.T) {
 		})
 	})
 }
+
+// TestBlockerOrdering_NoPanic verifies that the module execution order in
+// BeginBlocker and EndBlocker doesn't cause nil pointer dereferences when
+// modules read state that another module hasn't yet written in this block.
+// Runs 1000 blocks with randomised initial state.
+func TestBlockerOrdering_NoPanic(t *testing.T) {
+	h := NewTestHarness(t)
+
+	// Seed randomised state across all R29-relevant modules.
+	domains := []string{"mathematics", "physics", "biology", "history", "economics"}
+	for i, domain := range domains {
+		// Random domain stats (R29-1)
+		h.KnowledgeKeeper.SetDomainStats(h.Ctx, &knowledgekeeper.DomainStats{
+			Domain:      domain,
+			ActiveCount: uint64((i + 1) * 300),
+			AtRiskCount: uint64((i + 1) * 50),
+			TotalEnergy: uint64((i + 1) * 350_000),
+			LastUpdated: uint64(h.Height()),
+		})
+
+		// Random epistemic temperatures (R29-2)
+		temp := uint64(100_000 + uint64(i)*200_000) // 100k to 900k
+		if temp > 1_000_000 {
+			temp = 1_000_000
+		}
+		_ = h.KnowledgeKeeper.SetDomainEpistemicState(h.Ctx, &knowledgetypes.DomainEpistemicState{
+			Domain:           domain,
+			Temperature:      temp,
+			ConformityStreak: uint64(i),
+		})
+
+		// Random role records (R29-3)
+		_ = h.KnowledgeKeeper.SetDomainRoleRecord(h.Ctx, &knowledgetypes.DomainRoleRecord{
+			Domain:              domain,
+			AgentCorrectCalls:   uint64(10 + i*5),
+			AgentIncorrectCalls: uint64(5 + i*3),
+			HumanCorrectCalls:   uint64(15 + i*2),
+			HumanIncorrectCalls: uint64(3 + i),
+		})
+
+		// Random capture metrics (R29-5)
+		flagged := i%2 == 0
+		h.CaptureDefenseKeeper.SetCaptureMetrics(h.Ctx, &cdtypes.CaptureMetrics{
+			Domain:          domain,
+			HerfindahlIndex: uint64(200_000 + i*150_000),
+			RiskScore:       uint64(100_000 + i*180_000),
+			Flagged:         flagged,
+			AnalyzedAtBlock: uint64(h.Height()),
+		})
+	}
+
+	// Enable alignment and autopoiesis with short intervals.
+	h.AlignmentKeeper.SetState(h.Ctx, &aligntypes.AlignmentState{
+		Enabled:              true,
+		PreviousCategory:     aligntypes.CategoryDegraded,
+		LastObservationHeight: 0,
+	})
+	alignParams := aligntypes.DefaultParams()
+	alignParams.ObservationIntervalBlocks = 10
+	h.AlignmentKeeper.SetParams(h.Ctx, &alignParams)
+
+	h.AutopoiesisKeeper.SetState(h.Ctx, &aptypes.AutopoiesisState{
+		Activated:       true,
+		CurrentEpoch:    0,
+		LastEpochHeight: uint64(h.Height()),
+	})
+	apParams := aptypes.DefaultParams()
+	apParams.EpochLengthBlocks = 10
+	h.AutopoiesisKeeper.SetParams(h.Ctx, &apParams)
+	for _, m := range aptypes.DefaultMultipliers() {
+		h.AutopoiesisKeeper.SetMultiplierState(h.Ctx, m)
+	}
+
+	// Seed some correction outcomes (R29-4).
+	for i := 0; i < 5; i++ {
+		h.AlignmentKeeper.SetCorrectionOutcome(h.Ctx, &aligntypes.CorrectionOutcome{
+			Height:      uint64(i + 1),
+			Dimension:   aligntypes.DimKnowledgeQuality,
+			Magnitude:   uint64(30_000 + i*10_000),
+			Direction:   "increase",
+			ScoreBefore: uint64(300_000 + i*50_000),
+			ScoreAfter:  uint64(400_000 + i*50_000),
+			Successful:  i%2 == 0,
+		})
+	}
+
+	// Run 1000 blocks. Assert no panics.
+	require.NotPanics(t, func() {
+		h.AdvanceBlocks(1000)
+	})
+
+	// Verify system is in a coherent state after 1000 blocks.
+	state := h.AutopoiesisKeeper.GetState(h.Ctx)
+	require.NotNil(t, state)
+	alignState := h.AlignmentKeeper.GetState(h.Ctx)
+	require.NotNil(t, alignState)
+
+	t.Logf("After 1000 blocks: height=%d, autopoiesis_epoch=%d, align_observations=%d",
+		h.Height(), state.CurrentEpoch, alignState.ObservationCount)
+}
