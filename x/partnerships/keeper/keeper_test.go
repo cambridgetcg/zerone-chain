@@ -3278,3 +3278,164 @@ func TestMentorship_Delete(t *testing.T) {
 		t.Error("expected mentorship to be deleted")
 	}
 }
+
+// ---------- Mentorship Message Handler Tests ----------
+
+func TestMentorship_ProposeAndAccept(t *testing.T) {
+	ms, k, ctx, _ := setupMsgServer(t)
+
+	resp, err := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+		Mentor:         humanAddr,
+		Mentee:         agentAddr,
+		Domain:         "physics",
+		DurationBlocks: 1000,
+	})
+	if err != nil {
+		t.Fatalf("ProposeMentorship failed: %v", err)
+	}
+	if resp.MentorshipId == "" {
+		t.Fatal("expected non-empty mentorship ID")
+	}
+
+	m, found := k.GetMentorship(ctx, resp.MentorshipId)
+	if !found {
+		t.Fatal("mentorship not found after proposal")
+	}
+	if m.Status != "proposed" {
+		t.Errorf("expected proposed, got %s", m.Status)
+	}
+
+	_, err = ms.AcceptMentorship(ctx, &types.MsgAcceptMentorship{
+		Mentee:       agentAddr,
+		MentorshipId: resp.MentorshipId,
+	})
+	if err != nil {
+		t.Fatalf("AcceptMentorship failed: %v", err)
+	}
+
+	m, _ = k.GetMentorship(ctx, resp.MentorshipId)
+	if m.Status != "active" {
+		t.Errorf("expected active, got %s", m.Status)
+	}
+	if m.StartBlock != uint64(ctx.BlockHeight()) {
+		t.Errorf("expected start block %d, got %d", ctx.BlockHeight(), m.StartBlock)
+	}
+}
+
+func TestMentorship_SelfMentorshipBlocked(t *testing.T) {
+	ms, _, ctx, _ := setupMsgServer(t)
+
+	_, err := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+		Mentor: humanAddr, Mentee: humanAddr, Domain: "physics", DurationBlocks: 1000,
+	})
+	if err == nil {
+		t.Fatal("expected error for self-mentorship")
+	}
+}
+
+func TestMentorship_MaxMentorshipsEnforced(t *testing.T) {
+	ms, _, ctx, _ := setupMsgServer(t)
+
+	addrs := []string{agentAddr, agent2Addr, agent3Addr}
+	for _, addr := range addrs {
+		resp, err := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+			Mentor: humanAddr, Mentee: addr, Domain: "physics", DurationBlocks: 1000,
+		})
+		if err != nil {
+			t.Fatalf("ProposeMentorship failed: %v", err)
+		}
+		_, err = ms.AcceptMentorship(ctx, &types.MsgAcceptMentorship{
+			Mentee: addr, MentorshipId: resp.MentorshipId,
+		})
+		if err != nil {
+			t.Fatalf("AcceptMentorship failed: %v", err)
+		}
+	}
+
+	fourthAddr := testAddr("agent4")
+	_, err := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+		Mentor: humanAddr, Mentee: fourthAddr, Domain: "physics", DurationBlocks: 1000,
+	})
+	if err == nil {
+		t.Fatal("expected error for exceeding max mentorships")
+	}
+}
+
+func TestMentorship_ManualGraduation(t *testing.T) {
+	ms, k, ctx, _ := setupMsgServer(t)
+
+	resp, _ := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+		Mentor: humanAddr, Mentee: agentAddr, Domain: "physics", DurationBlocks: 1000,
+	})
+	ms.AcceptMentorship(ctx, &types.MsgAcceptMentorship{
+		Mentee: agentAddr, MentorshipId: resp.MentorshipId,
+	})
+
+	_, err := ms.GraduateMentee(ctx, &types.MsgGraduateMentee{
+		Mentor: humanAddr, MentorshipId: resp.MentorshipId,
+	})
+	if err != nil {
+		t.Fatalf("GraduateMentee failed: %v", err)
+	}
+
+	m, _ := k.GetMentorship(ctx, resp.MentorshipId)
+	if m.Status != "graduated" {
+		t.Errorf("expected graduated, got %s", m.Status)
+	}
+}
+
+func TestMentorship_EarlyTermination(t *testing.T) {
+	ms, k, ctx, _ := setupMsgServer(t)
+
+	resp, _ := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+		Mentor: humanAddr, Mentee: agentAddr, Domain: "physics", DurationBlocks: 1000,
+	})
+	ms.AcceptMentorship(ctx, &types.MsgAcceptMentorship{
+		Mentee: agentAddr, MentorshipId: resp.MentorshipId,
+	})
+
+	_, err := ms.EndMentorship(ctx, &types.MsgEndMentorship{
+		Sender: agentAddr, MentorshipId: resp.MentorshipId,
+	})
+	if err != nil {
+		t.Fatalf("EndMentorship failed: %v", err)
+	}
+
+	m, _ := k.GetMentorship(ctx, resp.MentorshipId)
+	if m.Status != "terminated" {
+		t.Errorf("expected terminated, got %s", m.Status)
+	}
+}
+
+func TestMentorship_TerminationByOutsiderFails(t *testing.T) {
+	ms, _, ctx, _ := setupMsgServer(t)
+
+	resp, _ := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+		Mentor: humanAddr, Mentee: agentAddr, Domain: "physics", DurationBlocks: 1000,
+	})
+	ms.AcceptMentorship(ctx, &types.MsgAcceptMentorship{
+		Mentee: agentAddr, MentorshipId: resp.MentorshipId,
+	})
+
+	_, err := ms.EndMentorship(ctx, &types.MsgEndMentorship{
+		Sender: outsiderAddr, MentorshipId: resp.MentorshipId,
+	})
+	if err == nil {
+		t.Fatal("expected error for outsider ending mentorship")
+	}
+}
+
+func TestMentorship_AcceptByWrongMenteeFails(t *testing.T) {
+	ms, _, ctx, _ := setupMsgServer(t)
+
+	resp, _ := ms.ProposeMentorship(ctx, &types.MsgProposeMentorship{
+		Mentor: humanAddr, Mentee: agentAddr, Domain: "physics", DurationBlocks: 1000,
+	})
+
+	_, err := ms.AcceptMentorship(ctx, &types.MsgAcceptMentorship{
+		Mentee: outsiderAddr, MentorshipId: resp.MentorshipId,
+	})
+	if err == nil {
+		t.Fatal("expected error for wrong mentee accepting")
+	}
+}

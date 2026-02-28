@@ -655,3 +655,125 @@ func (k msgServer) UpdateParams(goCtx context.Context, msg *types.MsgUpdateParam
 
 	return &types.MsgUpdateParamsResponse{}, nil
 }
+
+// ProposeMentorship creates a new mentorship proposal.
+func (k msgServer) ProposeMentorship(goCtx context.Context, msg *types.MsgProposeMentorship) (*types.MsgProposeMentorshipResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	params := k.GetParams(ctx)
+
+	if msg.Mentor == msg.Mentee {
+		return nil, types.ErrSelfMentorship
+	}
+
+	if k.CountActiveMentorshipsForMentor(ctx, msg.Mentor) >= int(params.MaxMentorshipsPerMentor) {
+		return nil, types.ErrMaxMentorshipsReached
+	}
+
+	if _, found := k.GetActiveMentorshipForMentee(ctx, msg.Mentee); found {
+		return nil, types.ErrAlreadyMentored
+	}
+
+	seq := k.NextSequence(ctx)
+	mentorshipId := fmt.Sprintf("mentorship-%d", seq)
+
+	m := &types.Mentorship{
+		Id:                  mentorshipId,
+		MentorAddr:          msg.Mentor,
+		MenteeAddr:          msg.Mentee,
+		Domain:              msg.Domain,
+		Status:              "proposed",
+		DurationBlocks:      msg.DurationBlocks,
+		GraduationThreshold: params.GraduationVerifications,
+		GraduationClaimsReq: params.GraduationClaims,
+	}
+	k.SetMentorship(ctx, m)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.partnerships.mentorship_proposed",
+			sdk.NewAttribute("mentorship_id", mentorshipId),
+			sdk.NewAttribute("mentor", msg.Mentor),
+			sdk.NewAttribute("mentee", msg.Mentee),
+			sdk.NewAttribute("domain", msg.Domain),
+		),
+	)
+
+	return &types.MsgProposeMentorshipResponse{MentorshipId: mentorshipId}, nil
+}
+
+// AcceptMentorship accepts a pending mentorship proposal.
+func (k msgServer) AcceptMentorship(goCtx context.Context, msg *types.MsgAcceptMentorship) (*types.MsgAcceptMentorshipResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	m, found := k.GetMentorship(ctx, msg.MentorshipId)
+	if !found {
+		return nil, types.ErrMentorshipNotFound
+	}
+	if m.Status != "proposed" {
+		return nil, types.ErrMentorshipNotProposed
+	}
+	if m.MenteeAddr != msg.Mentee {
+		return nil, types.ErrNotMentorshipParticipant
+	}
+
+	m.Status = "active"
+	m.StartBlock = uint64(ctx.BlockHeight())
+	k.SetMentorship(ctx, m)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.partnerships.mentorship_accepted",
+			sdk.NewAttribute("mentorship_id", m.Id),
+			sdk.NewAttribute("mentor", m.MentorAddr),
+			sdk.NewAttribute("mentee", m.MenteeAddr),
+		),
+	)
+
+	return &types.MsgAcceptMentorshipResponse{}, nil
+}
+
+// GraduateMentee manually graduates a mentee from an active mentorship.
+func (k msgServer) GraduateMentee(goCtx context.Context, msg *types.MsgGraduateMentee) (*types.MsgGraduateMenteeResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	m, found := k.GetMentorship(ctx, msg.MentorshipId)
+	if !found {
+		return nil, types.ErrMentorshipNotFound
+	}
+	if m.Status != "active" {
+		return nil, types.ErrMentorshipNotActive
+	}
+	if m.MentorAddr != msg.Mentor {
+		return nil, types.ErrNotMentorshipParticipant
+	}
+
+	k.graduateMentorship(ctx, m)
+
+	return &types.MsgGraduateMenteeResponse{}, nil
+}
+
+// EndMentorship terminates a mentorship early.
+func (k msgServer) EndMentorship(goCtx context.Context, msg *types.MsgEndMentorship) (*types.MsgEndMentorshipResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	m, found := k.GetMentorship(ctx, msg.MentorshipId)
+	if !found {
+		return nil, types.ErrMentorshipNotFound
+	}
+	if m.Status != "proposed" && m.Status != "active" {
+		return nil, types.ErrMentorshipNotActive
+	}
+	if m.MentorAddr != msg.Sender && m.MenteeAddr != msg.Sender {
+		return nil, types.ErrNotMentorshipParticipant
+	}
+
+	m.Status = "terminated"
+	k.SetMentorship(ctx, m)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.partnerships.mentorship_terminated",
+			sdk.NewAttribute("mentorship_id", m.Id),
+			sdk.NewAttribute("terminated_by", msg.Sender),
+		),
+	)
+
+	return &types.MsgEndMentorshipResponse{}, nil
+}
