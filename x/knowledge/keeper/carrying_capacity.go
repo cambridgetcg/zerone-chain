@@ -3,6 +3,9 @@ package keeper
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
@@ -184,4 +187,24 @@ func PressureCategory(pressureBps uint64) string {
 	default:
 		return "overcrowded"
 	}
+}
+
+// ─── Events ─────────────────────────────────────────────────────────────────
+
+// EmitDomainPressureEvent emits a domain_pressure_changed event.
+func (k Keeper) EmitDomainPressureEvent(ctx context.Context, domain string) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	stats, _ := k.GetDomainStats(ctx, domain)
+	capacity := k.GetDomainCarryingCapacity(ctx, domain)
+	pressure := k.GetDomainPressure(ctx, domain)
+	category := PressureCategory(pressure)
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.domain_pressure_changed",
+		sdk.NewAttribute("domain", domain),
+		sdk.NewAttribute("active_count", fmt.Sprintf("%d", stats.ActiveCount)),
+		sdk.NewAttribute("capacity", fmt.Sprintf("%d", capacity)),
+		sdk.NewAttribute("pressure_bps", fmt.Sprintf("%d", pressure)),
+		sdk.NewAttribute("category", category),
+	))
 }

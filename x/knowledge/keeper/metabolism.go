@@ -35,6 +35,7 @@ func (k Keeper) ProcessMetabolism(ctx context.Context, epoch uint64) error {
 
 	domainCounts := k.CountFactsByDomain(ctx)
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	changedDomains := make(map[string]bool) // track domains with status changes (R29-1)
 
 	for _, fact := range factsToProcess {
 		// ─── Calculate maintenance cost ───────────────────
@@ -107,7 +108,13 @@ func (k Keeper) ProcessMetabolism(ctx context.Context, epoch uint64) error {
 				k.DecrementDomainFactCount(ctx, fact.Domain, wasActive, fact.Energy)
 			}
 			k.emitMetabolismStatusEvent(ctx, fact, oldStatus, epoch)
+			changedDomains[fact.Domain] = true
 		}
+	}
+
+	// Emit domain pressure events for domains that changed (R29-1)
+	for domain := range changedDomains {
+		k.EmitDomainPressureEvent(ctx, domain)
 	}
 
 	// Reset epoch citation counters for all facts
