@@ -71,3 +71,50 @@ func TestDomainStats_Transition(t *testing.T) {
 	require.Equal(t, uint64(2), got.ActiveCount)
 	require.Equal(t, uint64(0), got.AtRiskCount)
 }
+
+// ─── Pressure calculation tests ─────────────────────────────────────────────
+
+func TestCarryingCapacity_Base(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	cap := k.GetDomainCarryingCapacity(ctx, "physics")
+	require.Equal(t, uint64(1000), cap) // DomainBaseCapacity default
+}
+
+func TestDomainPressure_Empty(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	pressure := k.GetDomainPressure(ctx, "physics")
+	require.Equal(t, uint64(0), pressure) // no facts = zero pressure
+}
+
+func TestDomainPressure_AtCapacity(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	stats := keeper.DomainStats{Domain: "physics", ActiveCount: 1000, AtRiskCount: 0}
+	k.SetDomainStats(ctx, &stats)
+	pressure := k.GetDomainPressure(ctx, "physics")
+	require.Equal(t, uint64(1_000_000), pressure) // exactly at capacity
+}
+
+func TestDomainPressure_Overcrowded(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	stats := keeper.DomainStats{Domain: "physics", ActiveCount: 2000, AtRiskCount: 0}
+	k.SetDomainStats(ctx, &stats)
+	pressure := k.GetDomainPressure(ctx, "physics")
+	require.Equal(t, uint64(2_000_000), pressure) // 2x capacity
+}
+
+func TestDomainPressure_HalfCapacity(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	stats := keeper.DomainStats{Domain: "physics", ActiveCount: 500, AtRiskCount: 0}
+	k.SetDomainStats(ctx, &stats)
+	pressure := k.GetDomainPressure(ctx, "physics")
+	require.Equal(t, uint64(500_000), pressure) // 50%
+}
+
+func TestPressureCategory(t *testing.T) {
+	require.Equal(t, "sparse", keeper.PressureCategory(100_000))
+	require.Equal(t, "sparse", keeper.PressureCategory(0))
+	require.Equal(t, "normal", keeper.PressureCategory(500_000))
+	require.Equal(t, "crowded", keeper.PressureCategory(900_000))
+	require.Equal(t, "crowded", keeper.PressureCategory(1_000_000))
+	require.Equal(t, "overcrowded", keeper.PressureCategory(1_500_000))
+}

@@ -84,3 +84,61 @@ func (k Keeper) TransitionDomainFactStatus(ctx context.Context, domain string, t
 	}
 	k.SetDomainStats(ctx, stats)
 }
+
+// ─── Carrying capacity and pressure ─────────────────────────────────────────
+
+const BPSCapacity = 1_000_000
+
+func (k Keeper) GetDomainCarryingCapacity(ctx context.Context, domain string) uint64 {
+	params, _ := k.GetParams(ctx)
+	base := params.DomainBaseCapacity
+	if base == 0 {
+		base = 1000 // safety default
+	}
+	inbound := k.GetInboundCrossDomainCitationCount(ctx, domain)
+	bonus := inbound * params.DomainCapacityGrowthPerCitation
+	return base + bonus
+}
+
+func (k Keeper) GetDomainPressure(ctx context.Context, domain string) uint64 {
+	stats, _ := k.GetDomainStats(ctx, domain)
+	capacity := k.GetDomainCarryingCapacity(ctx, domain)
+	if capacity == 0 {
+		return BPSCapacity
+	}
+	population := stats.ActiveCount + stats.AtRiskCount
+	return safeMulDiv(population, BPSCapacity, capacity)
+}
+
+// GetInboundCrossDomainCitationCount counts citations FROM other domains TO facts in this domain.
+func (k Keeper) GetInboundCrossDomainCitationCount(ctx context.Context, domain string) uint64 {
+	count := uint64(0)
+	k.IterateFactsByDomain(ctx, domain, func(factID string) bool {
+		incoming, err := k.GetIncomingRelations(ctx, factID)
+		if err != nil {
+			return false
+		}
+		for _, rel := range incoming {
+			sourceFact, found := k.GetFact(ctx, rel.SourceFactId)
+			if found && sourceFact.Domain != domain {
+				count++
+			}
+		}
+		return false
+	})
+	return count
+}
+
+// PressureCategory returns a human-readable category for the pressure level.
+func PressureCategory(pressureBps uint64) string {
+	switch {
+	case pressureBps < 250_000:
+		return "sparse"
+	case pressureBps < 750_000:
+		return "normal"
+	case pressureBps <= BPSCapacity:
+		return "crowded"
+	default:
+		return "overcrowded"
+	}
+}
