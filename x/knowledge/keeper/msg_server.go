@@ -455,9 +455,15 @@ func (m *msgServer) AddFact(ctx context.Context, msg *types.MsgAddFact) (*types.
 		EnergyLastUpdated: height,
 	}
 
+	// Apply domain carrying capacity birth pressure (R29-1)
+	fact.Energy = m.keeper.ApplyBirthPressure(ctx, msg.Domain, fact.Energy)
+
 	if err := m.keeper.SetFact(ctx, fact); err != nil {
 		return nil, err
 	}
+
+	// Update domain stats for carrying capacity (R29-1)
+	m.keeper.IncrementDomainFactCount(ctx, fact.Domain, true, fact.Energy)
 
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.knowledge.add_fact",

@@ -167,6 +167,12 @@ message Params {
   uint64 agent_verification_bonus_bps  = 112; // +20% vote weight for agent verifiers (BPS)
   uint64 human_patronage_bonus_bps     = 113; // +10% energy boost for human patrons (BPS)
   uint64 dual_validation_bonus_bps     = 114; // +25% confidence for partnership claims (BPS)
+
+  // ─── Domain carrying capacity (R29-1) ──────────────────────────────────
+  uint64 domain_base_capacity              = 115; // Base facts per domain before pressure kicks in (default: 1000)
+  uint64 domain_capacity_growth_per_citation = 116; // Capacity bonus per inbound cross-domain citation (default: 1)
+  uint64 overcrowding_decay_multiplier_bps = 117; // Decay multiplier at 2× capacity (default: 1,500,000 = 150%)
+  uint64 underpopulation_birth_bonus_bps   = 118; // Energy bonus for facts in sparse domains (default: 200,000 = 20%)
 }
 
 // GenesisState is the genesis state of the knowledge module.

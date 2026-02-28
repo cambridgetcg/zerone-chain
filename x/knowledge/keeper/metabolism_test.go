@@ -4,11 +4,19 @@ import (
 	"testing"
 
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zerone-chain/zerone/x/knowledge/keeper"
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
+
+// setDomainNormalPressure sets domain stats to "normal" range so the death
+// pressure multiplier is 1.0 (100%) and existing metabolism tests are not affected.
+// With DomainBaseCapacity=1000, 600 active facts puts pressure at 60% (normal range).
+func setDomainNormalPressure(k keeper.Keeper, ctx sdk.Context, domain string) {
+	k.SetDomainStats(ctx, &keeper.DomainStats{Domain: domain, ActiveCount: 600})
+}
 
 // makeEnergyFact creates a fact with metabolism fields set for testing.
 func makeEnergyFact(id, content, domain string, energy uint64, status types.FactStatus) *types.Fact {
@@ -25,6 +33,7 @@ func makeEnergyFact(id, content, domain string, energy uint64, status types.Fact
 
 func TestMetabolism_BaseDrain(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	fact := makeEnergyFact("fact-bd", "Base drain test fact", "physics", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, fact))
@@ -43,6 +52,7 @@ func TestMetabolism_BaseDrain(t *testing.T) {
 
 func TestMetabolism_QueryIncome(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	fact := makeEnergyFact("fact-qi", "Query income test", "physics", 100_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	fact.QueryCountEpoch = 50 // 50 queries this epoch
@@ -61,6 +71,7 @@ func TestMetabolism_QueryIncome(t *testing.T) {
 
 func TestMetabolism_CitationIncome(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	fact := makeEnergyFact("fact-ci", "Citation income test", "physics", 100_000, types.FactStatus_FACT_STATUS_VERIFIED)
 	require.NoError(t, k.SetFact(ctx, fact))
@@ -86,6 +97,7 @@ func TestMetabolism_CitationIncome(t *testing.T) {
 
 func TestMetabolism_PatronageIncome(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 	ctx = ctx.WithBlockHeader(cmtproto.Header{Height: 500})
 
 	fact := makeEnergyFact("fact-pi", "Patronage income test", "physics", 100_000, types.FactStatus_FACT_STATUS_VERIFIED)
@@ -106,6 +118,7 @@ func TestMetabolism_PatronageIncome(t *testing.T) {
 
 func TestMetabolism_ContentLengthCost(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Short fact (20 chars) — no extra cost
 	shortFact := makeEnergyFact("fact-short", "Short fact content!!", "physics", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
@@ -131,6 +144,8 @@ func TestMetabolism_ContentLengthCost(t *testing.T) {
 
 func TestMetabolism_DomainCompetition(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
+	setDomainNormalPressure(k, ctx, "theology")
 
 	// Create a lonely fact in an empty domain
 	lonelyFact := makeEnergyFact("fact-lonely", "Lonely fact in quiet domain", "theology", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
@@ -164,6 +179,7 @@ func TestMetabolism_DomainCompetition(t *testing.T) {
 
 func TestMetabolism_AtRiskTransition(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Fact with just enough energy to drain to 0
 	fact := makeEnergyFact("fact-ar", "At risk test fact!!!!!", "physics", 10_000, types.FactStatus_FACT_STATUS_VERIFIED)
@@ -182,6 +198,7 @@ func TestMetabolism_AtRiskTransition(t *testing.T) {
 
 func TestMetabolism_ExpiredTransition(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Fact already at risk since epoch 1
 	fact := makeEnergyFact("fact-exp", "Expiring fact test!!!", "physics", 0, types.FactStatus_FACT_STATUS_AT_RISK)
@@ -199,6 +216,7 @@ func TestMetabolism_ExpiredTransition(t *testing.T) {
 
 func TestMetabolism_PrunedTransition(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Fact already at risk since epoch 1
 	fact := makeEnergyFact("fact-prn", "Pruning fact test!!!!", "physics", 0, types.FactStatus_FACT_STATUS_EXPIRED)
@@ -216,6 +234,7 @@ func TestMetabolism_PrunedTransition(t *testing.T) {
 
 func TestMetabolism_Recovery(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Fact at risk with 0 energy — needs enough income to cross 300K threshold
 	fact := makeEnergyFact("fact-rec", "Recovery test fact!!!", "physics", 0, types.FactStatus_FACT_STATUS_AT_RISK)
@@ -236,6 +255,7 @@ func TestMetabolism_Recovery(t *testing.T) {
 
 func TestMetabolism_ChallengeSurvivalBoost(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Create a fact and a rejected challenge claim
 	fact := makeEnergyFact("fact-cs", "Challenge survival test", "physics", 200_000, types.FactStatus_FACT_STATUS_CHALLENGED)
@@ -273,6 +293,7 @@ func TestMetabolism_ChallengeSurvivalBoost(t *testing.T) {
 
 func TestMetabolism_EnergyCap(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Fact near cap with lots of income
 	fact := makeEnergyFact("fact-cap", "Energy cap test fact!!", "physics", 990_000, types.FactStatus_FACT_STATUS_VERIFIED)
@@ -315,6 +336,7 @@ func TestMetabolism_InitialEnergy(t *testing.T) {
 
 func TestMetabolism_MultiLevelThresholds_ActiveToAtRisk(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Energy just above active threshold. After drain, falls below → AT_RISK
 	// ActiveThreshold = 300,000. BaseCost = 10,000. Start at 305,000 → 295,000 → AT_RISK
@@ -331,6 +353,7 @@ func TestMetabolism_MultiLevelThresholds_ActiveToAtRisk(t *testing.T) {
 
 func TestMetabolism_MultiLevelThresholds_StaysHealthy(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Energy well above threshold — should stay healthy, no status change
 	fact := makeEnergyFact("fact-ml4", "Stays healthy test fact!!!", "physics", 500_000, types.FactStatus_FACT_STATUS_VERIFIED)
@@ -382,6 +405,7 @@ func TestFactsAtRisk_Query(t *testing.T) {
 
 func TestMetabolism_UnifiedStatusEvent(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// Fact that will transition VERIFIED → AT_RISK
 	fact := makeEnergyFact("fact-ev", "Event test fact content!!", "physics", 305_000, types.FactStatus_FACT_STATUS_VERIFIED)
@@ -530,6 +554,7 @@ func TestConfidence_MsgAddFactClamped(t *testing.T) {
 
 func TestMetabolism_RecoveryEvent(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 
 	// AT_RISK fact that will recover
 	fact := makeEnergyFact("fact-rev", "Recovery event test fact!", "physics", 0, types.FactStatus_FACT_STATUS_AT_RISK)
@@ -649,6 +674,7 @@ func TestMetabolismStatus_Query(t *testing.T) {
 
 func TestMetabolism_FullLifecycle(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
+	setDomainNormalPressure(k, ctx, "physics")
 	ctx = ctx.WithBlockHeader(cmtproto.Header{Height: 500})
 
 	params, _ := k.GetParams(ctx)

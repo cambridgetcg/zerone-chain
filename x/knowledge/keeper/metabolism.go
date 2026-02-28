@@ -35,10 +35,15 @@ func (k Keeper) ProcessMetabolism(ctx context.Context, epoch uint64) error {
 
 	domainCounts := k.CountFactsByDomain(ctx)
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	changedDomains := make(map[string]bool) // track domains with status changes (R29-1)
 
 	for _, fact := range factsToProcess {
 		// ─── Calculate maintenance cost ───────────────────
 		cost := k.calculateMaintenanceCost(fact, params, domainCounts)
+
+		// Apply domain carrying capacity death pressure (R29-1)
+		deathMultiplier := k.GetDeathPressureMultiplier(ctx, fact.Domain)
+		cost = safeMulDiv(cost, deathMultiplier, BPSCapacity)
 
 		// ─── Calculate energy income ──────────────────────
 		income := k.calculateEnergyIncome(ctx, fact, params)
@@ -87,10 +92,29 @@ func (k Keeper) ProcessMetabolism(ctx context.Context, epoch uint64) error {
 			continue
 		}
 
-		// Emit event on status change
+		// Emit event on status change and update domain stats (R29-1)
 		if oldStatus != fact.Status {
+			switch {
+			case fact.Status == types.FactStatus_FACT_STATUS_AT_RISK:
+				k.TransitionDomainFactStatus(ctx, fact.Domain, false) // active → at-risk
+			case fact.Status == types.FactStatus_FACT_STATUS_ACTIVE &&
+				(oldStatus == types.FactStatus_FACT_STATUS_AT_RISK || oldStatus == types.FactStatus_FACT_STATUS_EXPIRED):
+				k.TransitionDomainFactStatus(ctx, fact.Domain, true) // at-risk → active
+			case fact.Status == types.FactStatus_FACT_STATUS_EXPIRED ||
+				fact.Status == types.FactStatus_FACT_STATUS_PRUNED:
+				wasActive := oldStatus == types.FactStatus_FACT_STATUS_ACTIVE ||
+					oldStatus == types.FactStatus_FACT_STATUS_VERIFIED ||
+					oldStatus == types.FactStatus_FACT_STATUS_PROVISIONAL
+				k.DecrementDomainFactCount(ctx, fact.Domain, wasActive, fact.Energy)
+			}
 			k.emitMetabolismStatusEvent(ctx, fact, oldStatus, epoch)
+			changedDomains[fact.Domain] = true
 		}
+	}
+
+	// Emit domain pressure events for domains that changed (R29-1)
+	for domain := range changedDomains {
+		k.EmitDomainPressureEvent(ctx, domain)
 	}
 
 	// Reset epoch citation counters for all facts

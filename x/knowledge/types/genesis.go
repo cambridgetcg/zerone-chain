@@ -163,6 +163,12 @@ func DefaultParams() Params {
 		AgentVerificationBonusBps:  200_000, // +20% vote weight for agent verifiers
 		HumanPatronageBonusBps:     100_000, // +10% energy boost for human patrons
 		DualValidationBonusBps:     250_000, // +25% confidence for partnership claims
+
+		// ─── Domain carrying capacity (R29-1) ───────────────────────────
+		DomainBaseCapacity:              1_000,
+		DomainCapacityGrowthPerCitation: 1,
+		OvercrowdingDecayMultiplierBps:  1_500_000, // 150% decay at 2× capacity
+		UnderpopulationBirthBonusBps:    200_000,   // 20% energy bonus in sparse domains
 	}
 }
 
@@ -521,5 +527,14 @@ func (p *Params) Validate() error {
 	if p.DualValidationBonusBps > 1_000_000 {
 		return fmt.Errorf("dual_validation_bonus_bps must be <= 1,000,000")
 	}
+
+	// ─── Domain carrying capacity (R29-1) ──────────────────────────
+	if p.DomainBaseCapacity == 0 {
+		return fmt.Errorf("domain_base_capacity must be > 0")
+	}
+	if p.OvercrowdingDecayMultiplierBps < 1_000_000 {
+		return fmt.Errorf("overcrowding_decay_multiplier_bps must be >= 1,000,000 (at least 100%%)")
+	}
+
 	return nil
 }

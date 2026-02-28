@@ -162,8 +162,13 @@ type Params struct {
 	AgentVerificationBonusBps  uint64 `protobuf:"varint,112,opt,name=agent_verification_bonus_bps,json=agentVerificationBonusBps,proto3" json:"agent_verification_bonus_bps,omitempty"`    // +20% vote weight for agent verifiers (BPS)
 	HumanPatronageBonusBps     uint64 `protobuf:"varint,113,opt,name=human_patronage_bonus_bps,json=humanPatronageBonusBps,proto3" json:"human_patronage_bonus_bps,omitempty"`             // +10% energy boost for human patrons (BPS)
 	DualValidationBonusBps     uint64 `protobuf:"varint,114,opt,name=dual_validation_bonus_bps,json=dualValidationBonusBps,proto3" json:"dual_validation_bonus_bps,omitempty"`             // +25% confidence for partnership claims (BPS)
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	// ─── Domain carrying capacity (R29-1) ──────────────────────────────────
+	DomainBaseCapacity              uint64 `protobuf:"varint,115,opt,name=domain_base_capacity,json=domainBaseCapacity,proto3" json:"domain_base_capacity,omitempty"`                                            // Base facts per domain before pressure kicks in (default: 1000)
+	DomainCapacityGrowthPerCitation uint64 `protobuf:"varint,116,opt,name=domain_capacity_growth_per_citation,json=domainCapacityGrowthPerCitation,proto3" json:"domain_capacity_growth_per_citation,omitempty"` // Capacity bonus per inbound cross-domain citation (default: 1)
+	OvercrowdingDecayMultiplierBps  uint64 `protobuf:"varint,117,opt,name=overcrowding_decay_multiplier_bps,json=overcrowdingDecayMultiplierBps,proto3" json:"overcrowding_decay_multiplier_bps,omitempty"`      // Decay multiplier at 2× capacity (default: 1,500,000 = 150%)
+	UnderpopulationBirthBonusBps    uint64 `protobuf:"varint,118,opt,name=underpopulation_birth_bonus_bps,json=underpopulationBirthBonusBps,proto3" json:"underpopulation_birth_bonus_bps,omitempty"`            // Energy bonus for facts in sparse domains (default: 200,000 = 20%)
+	unknownFields                   protoimpl.UnknownFields
+	sizeCache                       protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -994,6 +999,34 @@ func (x *Params) GetDualValidationBonusBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetDomainBaseCapacity() uint64 {
+	if x != nil {
+		return x.DomainBaseCapacity
+	}
+	return 0
+}
+
+func (x *Params) GetDomainCapacityGrowthPerCitation() uint64 {
+	if x != nil {
+		return x.DomainCapacityGrowthPerCitation
+	}
+	return 0
+}
+
+func (x *Params) GetOvercrowdingDecayMultiplierBps() uint64 {
+	if x != nil {
+		return x.OvercrowdingDecayMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetUnderpopulationBirthBonusBps() uint64 {
+	if x != nil {
+		return x.UnderpopulationBirthBonusBps
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
@@ -1091,7 +1124,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xe35\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xf57\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1207,7 +1240,11 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x1dagent_computational_bonus_bps\x18o \x01(\x04R\x1aagentComputationalBonusBps\x12?\n" +
 	"\x1cagent_verification_bonus_bps\x18p \x01(\x04R\x19agentVerificationBonusBps\x129\n" +
 	"\x19human_patronage_bonus_bps\x18q \x01(\x04R\x16humanPatronageBonusBps\x129\n" +
-	"\x19dual_validation_bonus_bps\x18r \x01(\x04R\x16dualValidationBonusBps\"\xcd\x03\n" +
+	"\x19dual_validation_bonus_bps\x18r \x01(\x04R\x16dualValidationBonusBps\x120\n" +
+	"\x14domain_base_capacity\x18s \x01(\x04R\x12domainBaseCapacity\x12L\n" +
+	"#domain_capacity_growth_per_citation\x18t \x01(\x04R\x1fdomainCapacityGrowthPerCitation\x12I\n" +
+	"!overcrowding_decay_multiplier_bps\x18u \x01(\x04R\x1eovercrowdingDecayMultiplierBps\x12E\n" +
+	"\x1funderpopulation_birth_bonus_bps\x18v \x01(\x04R\x1cunderpopulationBirthBonusBps\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

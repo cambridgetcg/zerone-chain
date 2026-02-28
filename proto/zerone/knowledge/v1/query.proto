@@ -180,6 +180,11 @@ service Query {
   rpc MetabolismStatus(QueryMetabolismStatusRequest) returns (QueryMetabolismStatusResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/metabolism/status";
   }
+
+  // DomainCapacity queries carrying capacity and pressure for a domain.
+  rpc DomainCapacity(QueryDomainCapacityRequest) returns (QueryDomainCapacityResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/domains/{domain}/capacity";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -519,4 +524,20 @@ message QueryMetabolismStatusResponse {
   uint64 avg_energy       = 6;
   uint64 current_epoch    = 7;
   uint64 next_epoch_block = 8;
+}
+
+// ─── Domain carrying capacity (R29-1) ────────────────────────────────────────
+
+message QueryDomainCapacityRequest {
+  string domain = 1;
+}
+
+message QueryDomainCapacityResponse {
+  string domain         = 1;
+  uint64 active_count   = 2;
+  uint64 at_risk_count  = 3;
+  uint64 capacity       = 4;
+  uint64 pressure_bps   = 5;
+  string category       = 6;
+  uint64 total_energy   = 7;
 }

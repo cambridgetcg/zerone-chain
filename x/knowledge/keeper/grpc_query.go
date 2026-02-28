@@ -829,3 +829,23 @@ func (q *queryServer) ConformityAlerts(ctx context.Context, _ *types.QueryConfor
 
 	return &types.QueryConformityAlertsResponse{Alerts: alerts}, nil
 }
+
+// DomainCapacity queries carrying capacity and pressure for a domain (R29-1).
+func (q *queryServer) DomainCapacity(ctx context.Context, req *types.QueryDomainCapacityRequest) (*types.QueryDomainCapacityResponse, error) {
+	if req.Domain == "" {
+		return nil, status.Error(codes.InvalidArgument, "domain is required")
+	}
+	stats, _ := q.keeper.GetDomainStats(ctx, req.Domain)
+	capacity := q.keeper.GetDomainCarryingCapacity(ctx, req.Domain)
+	pressure := q.keeper.GetDomainPressure(ctx, req.Domain)
+
+	return &types.QueryDomainCapacityResponse{
+		Domain:      req.Domain,
+		ActiveCount: stats.ActiveCount,
+		AtRiskCount: stats.AtRiskCount,
+		Capacity:    capacity,
+		PressureBps: pressure,
+		Category:    PressureCategory(pressure),
+		TotalEnergy: stats.TotalEnergy,
+	}, nil
+}

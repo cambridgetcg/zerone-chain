@@ -124,6 +124,9 @@ var (
 
 	// ─── Epistemic temperature (R29-2) ─────────────────────────────────
 	EpistemicStatePrefix = []byte{0x53} // 0x53 | domain → DomainEpistemicState (JSON)
+
+	// ─── Domain carrying capacity (R29-1) ──────────────────────────────
+	DomainStatsPrefix = []byte{0x54} // 0x54 | domain → DomainStats (JSON)
 )
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
@@ -357,4 +360,9 @@ func VindicationRecordPrefixForFact(factId string) []byte {
 // EpistemicStateKey returns the store key for a domain's epistemic state.
 func EpistemicStateKey(domain string) []byte {
 	return append(append([]byte{}, EpistemicStatePrefix...), []byte(domain)...)
+}
+
+// DomainStatsKey returns the store key for a domain's population stats.
+func DomainStatsKey(domain string) []byte {
+	return append(append([]byte{}, DomainStatsPrefix...), []byte(domain)...)
 }

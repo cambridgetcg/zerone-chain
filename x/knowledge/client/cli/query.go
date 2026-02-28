@@ -81,6 +81,7 @@ func GetQueryCmd() *cobra.Command {
 		NewQueryVindicationPendingCmd(),
 		NewQueryVindicationRecordCmd(),
 		NewQueryMetabolismStatusCmd(),
+		NewQueryDomainCapacityCmd(),
 	)
 
 	return queryCmd
@@ -958,6 +959,32 @@ func NewQueryVindicationRecordCmd() *cobra.Command {
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), string(out))
 			return nil
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryDomainCapacityCmd creates a CLI command for querying domain carrying capacity and pressure.
+func NewQueryDomainCapacityCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "domain-capacity [domain]",
+		Short: "Query carrying capacity and pressure for a domain",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			req := &types.QueryDomainCapacityRequest{Domain: args[0]}
+			resp := &types.QueryDomainCapacityResponse{}
+
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.knowledge.v1.Query/DomainCapacity", req, resp); err != nil {
+				return fmt.Errorf("failed to query domain capacity: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
 		},
 	}
 	flags.AddQueryFlagsToCmd(cmd)

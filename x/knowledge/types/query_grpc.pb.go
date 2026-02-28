@@ -52,6 +52,7 @@ const (
 	Query_ValidatorIndependence_FullMethodName  = "/zerone.knowledge.v1.Query/ValidatorIndependence"
 	Query_ConformityAlerts_FullMethodName       = "/zerone.knowledge.v1.Query/ConformityAlerts"
 	Query_MetabolismStatus_FullMethodName       = "/zerone.knowledge.v1.Query/MetabolismStatus"
+	Query_DomainCapacity_FullMethodName         = "/zerone.knowledge.v1.Query/DomainCapacity"
 )
 
 // QueryClient is the client API for Query service.
@@ -125,6 +126,8 @@ type QueryClient interface {
 	// ConformityAlerts queries domains with active conformity alerts.
 	ConformityAlerts(ctx context.Context, in *QueryConformityAlertsRequest, opts ...grpc.CallOption) (*QueryConformityAlertsResponse, error)
 	MetabolismStatus(ctx context.Context, in *QueryMetabolismStatusRequest, opts ...grpc.CallOption) (*QueryMetabolismStatusResponse, error)
+	// DomainCapacity queries carrying capacity and pressure for a domain.
+	DomainCapacity(ctx context.Context, in *QueryDomainCapacityRequest, opts ...grpc.CallOption) (*QueryDomainCapacityResponse, error)
 }
 
 type queryClient struct {
@@ -465,6 +468,16 @@ func (c *queryClient) MetabolismStatus(ctx context.Context, in *QueryMetabolismS
 	return out, nil
 }
 
+func (c *queryClient) DomainCapacity(ctx context.Context, in *QueryDomainCapacityRequest, opts ...grpc.CallOption) (*QueryDomainCapacityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDomainCapacityResponse)
+	err := c.cc.Invoke(ctx, Query_DomainCapacity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -536,6 +549,8 @@ type QueryServer interface {
 	// ConformityAlerts queries domains with active conformity alerts.
 	ConformityAlerts(context.Context, *QueryConformityAlertsRequest) (*QueryConformityAlertsResponse, error)
 	MetabolismStatus(context.Context, *QueryMetabolismStatusRequest) (*QueryMetabolismStatusResponse, error)
+	// DomainCapacity queries carrying capacity and pressure for a domain.
+	DomainCapacity(context.Context, *QueryDomainCapacityRequest) (*QueryDomainCapacityResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -644,6 +659,9 @@ func (UnimplementedQueryServer) ConformityAlerts(context.Context, *QueryConformi
 }
 func (UnimplementedQueryServer) MetabolismStatus(context.Context, *QueryMetabolismStatusRequest) (*QueryMetabolismStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method MetabolismStatus not implemented")
+}
+func (UnimplementedQueryServer) DomainCapacity(context.Context, *QueryDomainCapacityRequest) (*QueryDomainCapacityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DomainCapacity not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -1260,6 +1278,24 @@ func _Query_MetabolismStatus_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_DomainCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDomainCapacityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DomainCapacity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DomainCapacity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DomainCapacity(ctx, req.(*QueryDomainCapacityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1398,6 +1434,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MetabolismStatus",
 			Handler:    _Query_MetabolismStatus_Handler,
+		},
+		{
+			MethodName: "DomainCapacity",
+			Handler:    _Query_DomainCapacity_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
