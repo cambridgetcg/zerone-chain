@@ -65,6 +65,10 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 			}
 			return false
 		})
+		// 10. Decay domain role elasticity records (R29-3)
+		if params.RoleElasticityDecayEpochs > 0 && epoch%params.RoleElasticityDecayEpochs == 0 {
+			k.DecayRoleRecords(ctx)
+		}
 	}
 
 	// Advance fact confidence at ConfidenceGrowthEpoch intervals (R29-2)
