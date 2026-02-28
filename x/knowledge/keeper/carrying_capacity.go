@@ -100,12 +100,24 @@ func (k Keeper) GetDomainCarryingCapacity(ctx context.Context, domain string) ui
 	}
 	inbound := k.GetInboundCrossDomainCitationCount(ctx, domain)
 	bonus := inbound * params.DomainCapacityGrowthPerCitation
-	capacity := base + bonus
+	total := base + bonus
+
+	// Metal controls Wood: capture flag penalty reduces capacity (R31-1)
+	if k.captureDefenseKeeper != nil {
+		flagged, penaltyBps := k.captureDefenseKeeper.GetDomainCapturePenalty(ctx, domain)
+		if flagged {
+			reduction := safeMulDiv(total, penaltyBps, BPSCapacity)
+			if reduction >= total {
+				return 1 // minimum capacity — can't go to zero
+			}
+			total = total - reduction
+		}
+	}
 
 	// R31-4: Metal controls Wood — stratum depth constrains carrying capacity.
 	stratumMultiplier := k.getStratumCapacityMultiplier(ctx, domain)
 	if stratumMultiplier < BPSCapacity {
-		effectiveCapacity := capacity * stratumMultiplier / BPSCapacity
+		effectiveCapacity := total * stratumMultiplier / BPSCapacity
 
 		sdkCtx := sdk.UnwrapSDKContext(ctx)
 		depth := uint32(1)
@@ -125,7 +137,7 @@ func (k Keeper) GetDomainCarryingCapacity(ctx context.Context, domain string) ui
 		return effectiveCapacity
 	}
 
-	return capacity
+	return total
 }
 
 // getStratumCapacityMultiplier returns a BPS multiplier based on domain depth.

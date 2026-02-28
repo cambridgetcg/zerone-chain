@@ -464,6 +464,80 @@ func TestStratumCapacity_NoEventForDepth1(t *testing.T) {
 	}
 }
 
+// ─── Capture penalty tests (R31-1: Metal controls Wood) ────────────────────
+
+type mockCaptureDefenseForCapacity struct {
+	flagged   map[string]bool
+	penalties map[string]uint64
+}
+
+func (m *mockCaptureDefenseForCapacity) RecordVerificationHistory(_ context.Context, _, _ string, _ []string, _ []bool, _ []uint64) {
+}
+func (m *mockCaptureDefenseForCapacity) UpdateReputation(_ context.Context, _, _, _ string, _ bool) {
+}
+func (m *mockCaptureDefenseForCapacity) GetDomainCapturePenalty(_ context.Context, domain string) (bool, uint64) {
+	if m.flagged[domain] {
+		return true, m.penalties[domain]
+	}
+	return false, 0
+}
+
+func TestCarryingCapacity_CapturePenalty(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	mockCD := &mockCaptureDefenseForCapacity{
+		flagged:   map[string]bool{"physics": true},
+		penalties: map[string]uint64{"physics": 400_000},
+	}
+	k.SetCaptureDefenseKeeper(mockCD)
+
+	// Base capacity is 1000 (default), no citations = no bonus
+	// Penalty: 1000 * 400_000 / 1_000_000 = 400
+	// Effective: 1000 - 400 = 600
+	capacity := k.GetDomainCarryingCapacity(ctx, "physics")
+	require.Equal(t, uint64(600), capacity)
+}
+
+func TestCarryingCapacity_CapturePenaltyMonopoly(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	mockCD := &mockCaptureDefenseForCapacity{
+		flagged:   map[string]bool{"physics": true},
+		penalties: map[string]uint64{"physics": 1_000_000},
+	}
+	k.SetCaptureDefenseKeeper(mockCD)
+
+	// Full penalty would be 1000 * 1_000_000 / 1_000_000 = 1000
+	// But minimum capacity is 1
+	capacity := k.GetDomainCarryingCapacity(ctx, "physics")
+	require.Equal(t, uint64(1), capacity)
+}
+
+func TestCarryingCapacity_NoPenaltyWhenNotFlagged(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	mockCD := &mockCaptureDefenseForCapacity{
+		flagged:   map[string]bool{},
+		penalties: map[string]uint64{},
+	}
+	k.SetCaptureDefenseKeeper(mockCD)
+
+	capacity := k.GetDomainCarryingCapacity(ctx, "physics")
+	require.Equal(t, uint64(1000), capacity)
+}
+
+func TestCarryingCapacity_UnflagRestoresCapacity(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	mockCD := &mockCaptureDefenseForCapacity{
+		flagged:   map[string]bool{"physics": true},
+		penalties: map[string]uint64{"physics": 400_000},
+	}
+	k.SetCaptureDefenseKeeper(mockCD)
+
+	require.Equal(t, uint64(600), k.GetDomainCarryingCapacity(ctx, "physics"))
+
+	mockCD.flagged["physics"] = false
+
+	require.Equal(t, uint64(1000), k.GetDomainCarryingCapacity(ctx, "physics"))
+}
+
 func TestStratumCapacity_AllDepthMultipliers(t *testing.T) {
 	tests := []struct {
 		depth    uint32
