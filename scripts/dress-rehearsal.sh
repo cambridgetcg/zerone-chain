@@ -243,11 +243,28 @@ pass "Knowledge module has $FACT_COUNT facts"
 info "Phase 6: PoT Round"
 
 # Step 9: Submit a claim and run a full PoT verification round
+# Use direct commands with fixed gas — avoids eval/gas-auto hangs
 CLAIM_TEXT="Dress rehearsal verification claim for Zerone testnet launch readiness"
 REVIEW_FEE="1000000"
 
-TX_HASH=$(submit_tx "${BINARY} tx knowledge submit-claim '${CLAIM_TEXT}' general computational ${REVIEW_FEE} --from faucet ${TX_FLAGS}")
-[ "$TX_HASH" != "TX_FAILED" ] || fail "Claim submission failed (see diagnostics above)"
+COMMON_FLAGS="--node ${RPC_URL} --home ${COORDINATOR_HOME} --keyring-backend ${KEYRING} --chain-id ${CHAIN_ID} --gas 300000 --gas-prices 1${DENOM} --yes --broadcast-mode sync --output json"
+
+info "  Submitting claim..."
+CLAIM_RESULT=$(${BINARY} tx knowledge submit-claim \
+    "${CLAIM_TEXT}" general computational "${REVIEW_FEE}" \
+    --from faucet ${COMMON_FLAGS} 2>&1)
+CLAIM_CODE=$(echo "$CLAIM_RESULT" | jq -r '.code // empty' 2>/dev/null || echo "")
+if [ -n "$CLAIM_CODE" ] && [ "$CLAIM_CODE" != "0" ]; then
+  CLAIM_LOG=$(echo "$CLAIM_RESULT" | jq -r '.raw_log // empty' 2>/dev/null || echo "")
+  info "  [DIAG] claim broadcast failed: code=$CLAIM_CODE log=${CLAIM_LOG:0:300}"
+  fail "Claim submission rejected at broadcast"
+fi
+TX_HASH=$(echo "$CLAIM_RESULT" | jq -r '.txhash // empty' 2>/dev/null || echo "")
+if [ -z "$TX_HASH" ]; then
+  info "  [DIAG] claim result: ${CLAIM_RESULT:0:500}"
+  fail "Claim submission produced no tx hash"
+fi
+
 WAIT_RESULT=0
 wait_tx "$TX_HASH" 60 || WAIT_RESULT=$?
 if [ "$WAIT_RESULT" -eq 2 ]; then
@@ -262,7 +279,6 @@ ROUND_ID=$(${BINARY} query tx "${TX_HASH}" --node "${RPC_URL}" --output json 2>/
   jq -r '[.events[] | select(.type == "zerone.knowledge.verification_round_created") | .attributes[] | select(.key == "round_id") | .value][0] // empty' 2>/dev/null || echo "")
 
 if [ -z "$ROUND_ID" ]; then
-  # Fallback: try to find round from pending claims
   info "  No round_id in events — checking pending claims..."
   ROUND_ID=$(${BINARY} query knowledge pending-claims --node "${RPC_URL}" --output json 2>/dev/null | \
     jq -r '.claims[0].round_id // empty' 2>/dev/null || echo "")
@@ -277,10 +293,15 @@ if [ -n "$ROUND_ID" ]; then
 
   # Submit commitments from val0 and val1
   for val in val0 val1; do
-    COMMIT_TX=$(submit_tx "${BINARY} tx knowledge submit-commitment ${ROUND_ID} ${COMMIT_HASH} --from ${val} ${TX_FLAGS}") || true
-    if [ "$COMMIT_TX" != "TX_FAILED" ] && [ -n "$COMMIT_TX" ]; then
+    COMMIT_RESULT=$(${BINARY} tx knowledge submit-commitment \
+        "${ROUND_ID}" "${COMMIT_HASH}" \
+        --from "${val}" ${COMMON_FLAGS} 2>&1)
+    COMMIT_TX=$(echo "$COMMIT_RESULT" | jq -r '.txhash // empty' 2>/dev/null || echo "")
+    if [ -n "$COMMIT_TX" ]; then
       wait_tx "$COMMIT_TX" 30 || true
       info "  Commitment from ${val} submitted"
+    else
+      info "  [DIAG] ${val} commitment failed: ${COMMIT_RESULT:0:200}"
     fi
   done
 
@@ -290,10 +311,15 @@ if [ -n "$ROUND_ID" ]; then
 
   # Submit reveals
   for val in val0 val1; do
-    REVEAL_TX=$(submit_tx "${BINARY} tx knowledge submit-reveal ${ROUND_ID} accept ${SALT_HEX} --from ${val} ${TX_FLAGS}") || true
-    if [ "$REVEAL_TX" != "TX_FAILED" ] && [ -n "$REVEAL_TX" ]; then
+    REVEAL_RESULT=$(${BINARY} tx knowledge submit-reveal \
+        "${ROUND_ID}" accept "${SALT_HEX}" \
+        --from "${val}" ${COMMON_FLAGS} 2>&1)
+    REVEAL_TX=$(echo "$REVEAL_RESULT" | jq -r '.txhash // empty' 2>/dev/null || echo "")
+    if [ -n "$REVEAL_TX" ]; then
       wait_tx "$REVEAL_TX" 30 || true
       info "  Reveal from ${val} submitted"
+    else
+      info "  [DIAG] ${val} reveal failed: ${REVEAL_RESULT:0:200}"
     fi
   done
 
@@ -331,9 +357,18 @@ fi
 info "Phase 7: Governance (LIP lifecycle)"
 
 # Step 10: Submit a LIP, stake, advance, vote, verify passage
-LIP_TX=$(submit_tx "${BINARY} tx zerone_gov submit-lip 'Dress Rehearsal Parameter Test' 'Verifying governance pipeline for testnet launch readiness' text 1000000 --from faucet ${TX_FLAGS}")
-[ "$LIP_TX" != "TX_FAILED" ] || fail "LIP submission failed"
-wait_tx "$LIP_TX" 30 || fail "LIP tx not included"
+info "  Submitting LIP..."
+LIP_RESULT=$(${BINARY} tx zerone_gov submit-lip \
+    "Dress Rehearsal Parameter Test" \
+    "Verifying governance pipeline for testnet launch readiness" \
+    text 1000000 \
+    --from faucet ${COMMON_FLAGS} 2>&1)
+LIP_TX=$(echo "$LIP_RESULT" | jq -r '.txhash // empty' 2>/dev/null || echo "")
+if [ -z "$LIP_TX" ]; then
+  info "  [DIAG] LIP submit result: ${LIP_RESULT:0:500}"
+  fail "LIP submission failed"
+fi
+wait_tx "$LIP_TX" 60 || fail "LIP tx not included"
 info "  LIP submitted"
 
 sleep 5
@@ -348,8 +383,11 @@ fi
 info "  LIP ID: ${LIP_ID}"
 
 # Stake on the LIP to auto-advance from draft to review
-STAKE_TX=$(submit_tx "${BINARY} tx zerone_gov stake-lip ${LIP_ID} 5000000 --from faucet ${TX_FLAGS}") || true
-if [ "$STAKE_TX" != "TX_FAILED" ] && [ -n "$STAKE_TX" ]; then
+STAKE_RESULT=$(${BINARY} tx zerone_gov stake-lip \
+    "${LIP_ID}" 5000000 \
+    --from faucet ${COMMON_FLAGS} 2>&1)
+STAKE_TX=$(echo "$STAKE_RESULT" | jq -r '.txhash // empty' 2>/dev/null || echo "")
+if [ -n "$STAKE_TX" ]; then
   wait_tx "$STAKE_TX" 30 || true
   info "  Staked — should auto-advance to review"
 fi
@@ -359,8 +397,11 @@ sleep 15
 
 # Advance stages: review -> last_call -> voting
 for stage_num in 1 2; do
-  ADV_TX=$(submit_tx "${BINARY} tx zerone_gov advance-lip-stage ${LIP_ID} --from faucet ${TX_FLAGS}") || true
-  if [ "$ADV_TX" != "TX_FAILED" ] && [ -n "$ADV_TX" ]; then
+  ADV_RESULT=$(${BINARY} tx zerone_gov advance-lip-stage \
+      "${LIP_ID}" \
+      --from faucet ${COMMON_FLAGS} 2>&1)
+  ADV_TX=$(echo "$ADV_RESULT" | jq -r '.txhash // empty' 2>/dev/null || echo "")
+  if [ -n "$ADV_TX" ]; then
     wait_tx "$ADV_TX" 30 || true
     info "  Stage advanced (${stage_num})"
   fi
@@ -369,8 +410,11 @@ done
 
 # All 4 validators vote yes
 for val in val0 val1 val2 val3; do
-  VOTE_TX=$(submit_tx "${BINARY} tx zerone_gov cast-vote ${LIP_ID} yes --from ${val} ${TX_FLAGS}") || true
-  if [ "$VOTE_TX" != "TX_FAILED" ] && [ -n "$VOTE_TX" ]; then
+  VOTE_RESULT=$(${BINARY} tx zerone_gov cast-vote \
+      "${LIP_ID}" yes \
+      --from "${val}" ${COMMON_FLAGS} 2>&1)
+  VOTE_TX=$(echo "$VOTE_RESULT" | jq -r '.txhash // empty' 2>/dev/null || echo "")
+  if [ -n "$VOTE_TX" ]; then
     wait_tx "$VOTE_TX" 30 || true
     info "  ${val} voted yes"
   fi

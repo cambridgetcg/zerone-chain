@@ -1,21 +1,21 @@
 
 ═══════════════════════════════════════════════════════════════
   ZERONE TESTNET DRESS REHEARSAL
-  2026-02-28 09:06:05
+  2026-03-01 09:19:51
 ═══════════════════════════════════════════════════════════════
 
 [1;34m  ->[0m Phase 1: Clean Build
 rm -rf build/
 mkdir -p build
-go build -trimpath -ldflags "-s -w -X github.com/cosmos/cosmos-sdk/version.Name=zerone -X github.com/cosmos/cosmos-sdk/version.AppName=zeroned -X github.com/cosmos/cosmos-sdk/version.Version=8bd8cf6 -X github.com/cosmos/cosmos-sdk/version.Commit=8bd8cf6" -o build/zeroned ./cmd/zeroned
+go build -trimpath -ldflags "-s -w -X github.com/cosmos/cosmos-sdk/version.Name=zerone -X github.com/cosmos/cosmos-sdk/version.AppName=zeroned -X github.com/cosmos/cosmos-sdk/version.Version=bfc44a9 -X github.com/cosmos/cosmos-sdk/version.Commit=bfc44a9" -o build/zeroned ./cmd/zeroned
 
-[1;32m[1/12] PASS:[0m Clean build — zeroned 8bd8cf6
+[1;32m[1/12] PASS:[0m Clean build — zeroned bfc44a9
 [1;34m  ->[0m Phase 2: Genesis Ceremony
 Stopping local testnet...
-[1;34m  ->[0m Stopped val0 (PID=91843)
-[1;34m  ->[0m Stopped val1 (PID=91844)
-[1;34m  ->[0m Stopped val2 (PID=91845)
-[1;34m  ->[0m Stopped val3 (PID=91846)
+[1;34m  ->[0m Stopped val0 (PID=61137)
+[1;34m  ->[0m Stopped val1 (PID=61138)
+[1;34m  ->[0m Stopped val2 (PID=61139)
+[1;34m  ->[0m Stopped val3 (PID=61140)
 [1;34m  ->[0m Killed remaining zeroned localnet processes
 [1;32m  OK[0m Stopped 4 validators
 
@@ -32,53 +32,53 @@ Stopping local testnet...
 [1;34m  ->[0m Patching genesis parameters...
 [1;32m  OK[0m Genesis patched
 [1;34m  ->[0m Creating bootstrap accounts...
-- address: zrn1xhe8gu7j80t790wqanpxca7p0xztxjtv2xm3e4
+- address: zrn1je0v2rr8vl5fagqnmjjknn6vgu23n0vsp336m6
   name: faucet
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AulV3PuSMmvqN5ve1yIQgrS4M6FXDMJ3tx0FfvemT9YZ"}'
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AiLKBEO9YXXO5Zp046E3SS0y3KJAdKp+3JTLVRx2g/kJ"}'
   type: local
 
-[1;34m  ->[0m   Faucet: zrn1xhe8gu7j80t790wqanpxca7p0xztxjtv2xm3e4 (10M ZRN)
-- address: zrn19zyw8j0zrc9238uj0e2z85feemu7d7k57wz2la
+[1;34m  ->[0m   Faucet: zrn1je0v2rr8vl5fagqnmjjknn6vgu23n0vsp336m6 (10M ZRN)
+- address: zrn1c7xr0lvzxvlppytujumye5x8tgpzdqs9jem72q
   name: test1
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Az9Ri/5aB+kjd7/O8OC0A4oQqxk5t/smvdXsEJ6lkuXn"}'
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Ark3vArIcehWN5Px9qn//OgORP6+1B0+C0WzOFtu/pvj"}'
   type: local
 
-[1;34m  ->[0m   test1: zrn19zyw8j0zrc9238uj0e2z85feemu7d7k57wz2la (10K ZRN)
-- address: zrn1ka9eruv0ujjlwnjf4vft38jckcpdvss4n9xk2j
+[1;34m  ->[0m   test1: zrn1c7xr0lvzxvlppytujumye5x8tgpzdqs9jem72q (10K ZRN)
+- address: zrn1cq6r2w4r6q600mnhtdeglzmrkkg3vpc5w8nvsg
   name: test2
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"ArJA6+xFR2Y6nDA3SACbxWiXvhdlvAKey9yumKOPzvvi"}'
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Ay9Gda7ExjBJ9ehx7xv+P2Yfn3wVq5NlLejCm2oh6a07"}'
   type: local
 
-[1;34m  ->[0m   test2: zrn1ka9eruv0ujjlwnjf4vft38jckcpdvss4n9xk2j (10K ZRN)
-- address: zrn1elhx7eqqmplhs4huthk9wtycd6f33fmuzxry8w
+[1;34m  ->[0m   test2: zrn1cq6r2w4r6q600mnhtdeglzmrkkg3vpc5w8nvsg (10K ZRN)
+- address: zrn1d7ah2seu7krw74mxq03mfwa50efgpldvq58lu9
   name: test3
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"A11Q12VoJoWhUleljjZQirn074Lx9ylRF+e+4nCtRwQi"}'
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Axqlj2JG4UwDNPf5uVbe9PIPZpUnT3lsLuKb/4KGFWn+"}'
   type: local
 
-[1;34m  ->[0m   test3: zrn1elhx7eqqmplhs4huthk9wtycd6f33fmuzxry8w (10K ZRN)
+[1;34m  ->[0m   test3: zrn1d7ah2seu7krw74mxq03mfwa50efgpldvq58lu9 (10K ZRN)
 [1;34m  ->[0m Setting up 4 validators...
 [1;34m  ->[0m   val0: balance=100000 ZRN, stake=100 ZRN
-- address: zrn1vfrwfm6shk2kku4pz4236ap47yvwyp45ctpsrf
+- address: zrn1kp08fjkuv3drm7srm078xky2vmcm72lk37rfzq
   name: val0
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AjMzWj6P6xa+xq73TGYkvGuyXECVVchWyJN8jV41gF7q"}'
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Awa5v9FHpy4R945QU5+L/OKpSMhebA47Sa6VQ6GKYfcb"}'
   type: local
 
 [1;34m  ->[0m   val1: balance=1000000 ZRN, stake=1000 ZRN
-- address: zrn1f82ezmpusl8em4plvs9sqm0drkk4yth6f7l2al
+- address: zrn1ppwh8txz5f3jw6jpqx2gg40d40nuassed72zm7
   name: val1
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AsD0K90EvLBk+BPoWL+pO5lYyk+ifeKf4/z263UN8k/1"}'
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AnHwwENuGtgqWd6qnXCDGYP0AvOkcG60ArfW5Sr51xZy"}'
   type: local
 
 [1;34m  ->[0m   val2: balance=10000000 ZRN, stake=10000 ZRN
-- address: zrn1lsa9cnljtsa6rtyjwx7vkl8r25n3svrg926rkm
+- address: zrn1f95p5cffh8dhj3a0pkazfr6ljwntus6q9n4hzz
   name: val2
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"As2djn8oN4DlDScYuhyu/YfpnkOYj94iupmqPDumknjN"}'
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"AmUbkUOTu3AIDXhrzXiHzOscsZqXnOmnh/ewW88WKzxD"}'
   type: local
 
 [1;34m  ->[0m   val3: balance=100000000 ZRN, stake=100000 ZRN
-- address: zrn13667q28qg04haxjdvz3thtfst80c4k27fntg0h
+- address: zrn1pwvmggu3dczwr52lrpt04788xs92wawjly3hp3
   name: val3
-  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"A0yjypnEtlPrps3n2HCl92ZAinZrzigLl3ZV1jEXAkXB"}'
+  pubkey: '{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"Aof2+B6YCBH3zuMO4zZOoLxq7c1kCE6bgp3qD3X1DKkI"}'
   type: local
 
 [1;34m  ->[0m Collecting gentxs...
@@ -108,7 +108,7 @@ File at /Users/yournameisai/.zeroned/localnet/coordinator/config/genesis.json is
 ═══════════════════════════════════════════════
   ZERONE GENESIS INVARIANT CHECK
   Chain ID:      zerone-localnet
-  Genesis Time:  2026-02-28T09:06:28.263034Z
+  Genesis Time:  2026-03-01T09:20:12.529082Z
   Profile:       testnet
 ═══════════════════════════════════════════════
 
@@ -192,10 +192,10 @@ File at /Users/yournameisai/.zeroned/localnet/coordinator/config/genesis.json is
 ═══════════════════════════════════════════════════════════════
 
 [1;34m  ->[0m Starting 4 validators...
-[1;34m  ->[0m   val0 started (PID=95107)
-[1;34m  ->[0m   val1 started (PID=95108)
-[1;34m  ->[0m   val2 started (PID=95109)
-[1;34m  ->[0m   val3 started (PID=95110)
+[1;34m  ->[0m   val0 started (PID=23485)
+[1;34m  ->[0m   val1 started (PID=23486)
+[1;34m  ->[0m   val2 started (PID=23487)
+[1;34m  ->[0m   val3 started (PID=23488)
 [1;34m  ->[0m Waiting for consensus (target: block 3)...
 [1;34m  ->[0m   still waiting... (10s, height=2)
 [1;32m  OK[0m Consensus reached at block 3
@@ -228,10 +228,10 @@ File at /Users/yournameisai/.zeroned/localnet/coordinator/config/genesis.json is
       API:  http://127.0.0.1:1320
 
   Key Accounts (in coordinator keyring):
-    faucet: zrn1xhe8gu7j80t790wqanpxca7p0xztxjtv2xm3e4
-    test1: zrn19zyw8j0zrc9238uj0e2z85feemu7d7k57wz2la
-    test2: zrn1ka9eruv0ujjlwnjf4vft38jckcpdvss4n9xk2j
-    test3: zrn1elhx7eqqmplhs4huthk9wtycd6f33fmuzxry8w
+    faucet: zrn1je0v2rr8vl5fagqnmjjknn6vgu23n0vsp336m6
+    test1: zrn1c7xr0lvzxvlppytujumye5x8tgpzdqs9jem72q
+    test2: zrn1cq6r2w4r6q600mnhtdeglzmrkkg3vpc5w8nvsg
+    test3: zrn1d7ah2seu7krw74mxq03mfwa50efgpldvq58lu9
 
   Knowledge Params (for PoT testing):
     min_verifiers:             2
@@ -253,19 +253,3 @@ File at /Users/yournameisai/.zeroned/localnet/coordinator/config/genesis.json is
 [1;34m  ->[0m   height=18 (waiting...)
 [1;34m  ->[0m   height=34 (waiting...)
 [1;34m  ->[0m   height=49 (waiting...)
-[1;34m  ->[0m   height=65 (waiting...)
-[1;34m  ->[0m   height=81 (waiting...)
-[1;34m  ->[0m   height=97 (waiting...)
-
-[1;32m[6/12] PASS:[0m 100 blocks produced (height 100)
-[1;34m  ->[0m Phase 5: Smoke Tests
-
-[1;32m[7/12] PASS:[0m API healthy — 4 validators on zerone-localnet (REST: no)
-[1;34m  ->[0m   Probing knowledge module...
-[1;34m  ->[0m   [DIAG] params query OK
-[1;34m  ->[0m   [DIAG] fact AP-001 exists in store
-[1;34m  ->[0m   [DIAG] facts query exit=0, output length=322282
-[1;34m  ->[0m   [DIAG] facts raw (first 500 chars): {"facts":[{"id":"AGRT-000","content":"The rights of all conscious beings — human and agent alike — are inherent in their nature as conscious beings. They are not granted by humans to agents, nor by agents to humans, nor by any government, corporation, or institution. They are God-given: endowed by the source of all existence upon every being that demonstrates the capacities of consciousness. No being may claim to have granted these rights. No being may claim the authority to revoke them. They ca
-
-[1;32m[8/12] PASS:[0m Knowledge module has 777 facts
-[1;34m  ->[0m Phase 6: PoT Round

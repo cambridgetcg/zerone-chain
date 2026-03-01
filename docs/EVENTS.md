@@ -111,6 +111,17 @@ Network health composite returned to healthy range.
 - `creation_multiplier_bps` -- pacing multiplier for creation in BPS
 - `height` -- block height
 
+### zerone.alignment.growth_pressure_detected
+Knowledge growth pressure detected by alignment sensor (R31-1: Wood → Earth).
+- `pending_ratio_bps` -- pending verification ratio in BPS
+- `threshold_bps` -- threshold that was exceeded
+- `penalty_bps` -- quality penalty applied
+
+### zerone.alignment.verification_health_observed
+Verification health signal observed by governance sensor (R31-2: Fire → Earth).
+- `verification_health_bps` -- verification completion health in BPS
+- `governance_weight` -- weight applied to governance sensor
+
 
 ## auth
 
@@ -396,6 +407,18 @@ Domain structural immunity recalculated based on partnership density.
 - `partnership_density` -- partnership count in domain
 - `raw_hhi` -- HHI before adjustment
 
+### zerone.capture_defense.activity_recovery_bonus
+Verification activity grants reputation recovery bonus (R31-2: Fire → Metal).
+- `domain` -- target domain
+- `activity_score_bps` -- verification activity level in BPS
+- `recovery_rate_bps` -- reputation recovery rate applied
+
+### zerone.capture_defense.activity_threshold_relaxation
+High verification activity relaxes capture detection thresholds (R31-2: Fire → Metal).
+- `domain` -- target domain
+- `activity_score_bps` -- verification activity level in BPS
+- `relaxation_bps` -- threshold relaxation amount
+
 
 ## channels
 
@@ -555,6 +578,13 @@ Governance parameter update.
 *BeginBlock.* Agent profile expired due to inactivity.
 - `address` -- agent address
 - `last_active_block` -- last active block
+
+### zerone.discovery.qualification_match_bonus
+Qualification-based matching bonus applied during discovery (R31-4: Metal → Water).
+- `domain` -- matched domain
+- `agent_address` -- agent receiving bonus
+- `qualification_score_bps` -- qualification score in BPS
+- `match_bonus_bps` -- bonus applied to match weight
 
 ---
 
@@ -907,6 +937,19 @@ Software upgrade scheduled for execution.
 - `height` -- scheduled upgrade height
 - `lip_id` -- originating LIP identifier
 - `upgrade_name` -- upgrade plan name
+
+### zerone.gov.expedited_voting
+Knowledge LIP expedited due to system stress (R31-1: Wood → Earth).
+- `proposal_id` -- proposal identifier
+- `domain` -- affected domain
+- `pressure_bps` -- knowledge growth pressure in BPS
+- `new_voting_period` -- reduced voting period
+
+### zerone.gov.domain_formation_freeze
+Domain formation freeze enacted via governance (R31-3: Earth → Water).
+- `domain` -- frozen domain
+- `expires_at_height` -- block height when freeze expires
+- `authority` -- governance address that initiated freeze
 
 
 ## home
@@ -1365,6 +1408,36 @@ Vindication window expired without resolution.
 - `entry_count` -- number of entries in vindication queue
 - `fact_id` -- fact identifier
 
+### zerone.knowledge.capacity_penalty_applied
+Capture defense penalty reduced domain carrying capacity (R31-1: Metal → Wood).
+- `domain` -- affected domain
+- `base_capacity` -- capacity before penalty
+- `effective_capacity` -- capacity after penalty
+- `capture_penalty_bps` -- penalty magnitude in BPS
+- `reason` -- reason for penalty (e.g. `capture_flagged`)
+
+### zerone.knowledge.stratum_capacity_applied
+Stratum depth reduced domain carrying capacity (R31-4: Metal → Wood).
+- `domain` -- affected domain
+- `stratum_depth` -- ontological depth of domain
+- `capacity_multiplier_bps` -- multiplier applied in BPS
+- `effective_capacity` -- resulting capacity
+
+### zerone.knowledge.mentorship_dividend_applied
+Mentorship graduation added energy to domain (R31-5: Water → Wood).
+- `domain` -- beneficiary domain
+- `mentor` -- mentor address
+- `mentee` -- mentee address
+- `energy_added` -- energy units added
+- `total_energy` -- domain total energy after dividend
+- `graduations` -- cumulative graduation count
+
+### zerone.knowledge.social_verification_adjustment
+Social verification signal adjusted verification requirements (R31-2: Fire).
+- `domain` -- affected domain
+- `adjustment_bps` -- adjustment magnitude in BPS
+- `reason` -- trigger reason
+
 
 ## liquiditypool
 
@@ -1617,6 +1690,29 @@ Reward distributed to partnership members.
 - `human_share` -- human member share
 - `partnership_id` -- partnership identifier
 - `source` -- reward source module
+
+### zerone.partnerships.social_benefit_achieved
+Partnership reached social benefit threshold (R31-5: Water).
+- `partnership_id` -- partnership identifier
+- `domain` -- domain context
+- `benefit_score_bps` -- social benefit score in BPS
+
+### zerone.partnerships.social_benefit_lost
+Partnership fell below social benefit threshold (R31-5: Water).
+- `partnership_id` -- partnership identifier
+- `domain` -- domain context
+- `benefit_score_bps` -- current score in BPS
+
+### zerone.partnerships.cross_stratum_bonus
+Cross-stratum partnership bonus applied (R31-4: Metal → Water).
+- `partnership_id` -- partnership identifier
+- `stratum_gap` -- gap between partner strata
+- `bonus_bps` -- bonus applied in BPS
+
+### zerone.partnerships.formation_blocked
+Partnership formation blocked due to governance freeze or saturation (R31-3/R31-5).
+- `domain` -- affected domain
+- `reason` -- `governance_freeze` or `social_saturation`
 
 
 ## qualification
