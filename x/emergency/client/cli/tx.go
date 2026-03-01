@@ -27,7 +27,9 @@ func NewTxCmd() *cobra.Command {
 		NewProposeHaltCmd(),
 		NewVoteHaltCmd(),
 		NewProposeRevertCmd(),
+		NewVoteRevertCmd(),
 		NewProposeResumeCmd(),
+		NewVoteResumeCmd(),
 	)
 
 	return txCmd
@@ -120,6 +122,37 @@ func NewProposeRevertCmd() *cobra.Command {
 	return cmd
 }
 
+// NewVoteRevertCmd creates a CLI command for MsgVoteRevert.
+func NewVoteRevertCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "vote-revert [proposal-id] [approve: true/false]",
+		Short: "Vote on a revert ceremony (Guardian-only)",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			approve, err := strconv.ParseBool(args[1])
+			if err != nil {
+				return fmt.Errorf("invalid approve value: %w", err)
+			}
+
+			msg := &types.MsgVoteRevert{
+				Voter:      clientCtx.GetFromAddress().String(),
+				ProposalId: args[0],
+				Approve:    approve,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
 // NewProposeResumeCmd creates a CLI command for MsgProposeResume.
 func NewProposeResumeCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -134,6 +167,37 @@ func NewProposeResumeCmd() *cobra.Command {
 
 			msg := &types.MsgProposeResume{
 				Proposer: clientCtx.GetFromAddress().String(),
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewVoteResumeCmd creates a CLI command for MsgVoteResume.
+func NewVoteResumeCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "vote-resume [proposal-id] [approve: true/false]",
+		Short: "Vote on a resume ceremony (Guardian-only)",
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			approve, err := strconv.ParseBool(args[1])
+			if err != nil {
+				return fmt.Errorf("invalid approve value: %w", err)
+			}
+
+			msg := &types.MsgVoteResume{
+				Voter:      clientCtx.GetFromAddress().String(),
+				ProposalId: args[0],
+				Approve:    approve,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)

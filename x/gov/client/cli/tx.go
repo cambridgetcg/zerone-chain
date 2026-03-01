@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -29,6 +30,7 @@ func NewTxCmd() *cobra.Command {
 		NewAdvanceLIPStageCmd(),
 		NewCastVoteCmd(),
 		NewWithdrawLIPCmd(),
+		NewAttachUpgradePlanCmd(),
 		NewSubmitResearchSpendCmd(),
 		NewVoteResearchSpendCmd(),
 		NewSetResearchVotersCmd(),
@@ -47,12 +49,23 @@ func NewSubmitLIPCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "submit-lip [title] [description] [category] [initial-stake]",
 		Short: "Submit a new LIP proposal",
-		Long:  "Submit a Zerone Improvement Proposal (LIP) with a title, description, category, and initial stake (uzrn).",
-		Args:  cobra.ExactArgs(4),
+		Long: `Submit a Zerone Improvement Proposal (LIP) with a title, description, category, and initial stake (uzrn).
+
+For parameter category LIPs, use --param-changes to specify parameter changes:
+  --param-changes '[{"module":"knowledge","key":"domain_base_capacity","value":"2000"}]'`,
+		Args: cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
+			}
+
+			var paramChanges []*types.ParamChange
+			paramChangesJSON, _ := cmd.Flags().GetString("param-changes")
+			if paramChangesJSON != "" {
+				if err := json.Unmarshal([]byte(paramChangesJSON), &paramChanges); err != nil {
+					return fmt.Errorf("invalid --param-changes JSON: %w", err)
+				}
 			}
 
 			msg := &types.MsgSubmitLIP{
@@ -61,12 +74,14 @@ func NewSubmitLIPCmd() *cobra.Command {
 				Description:  args[1],
 				Category:     args[2],
 				InitialStake: args[3],
+				ParamChanges: paramChanges,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
+	cmd.Flags().String("param-changes", "", `JSON array of param changes, e.g. '[{"module":"knowledge","key":"domain_base_capacity","value":"2000"}]'`)
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -398,6 +413,40 @@ func NewProposePhaseTransitionCmd() *cobra.Command {
 	_ = cmd.MarkFlagRequired("target-phase")
 	_ = cmd.MarkFlagRequired("justification")
 	_ = cmd.MarkFlagRequired("amount")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewAttachUpgradePlanCmd creates a CLI command for MsgAttachUpgradePlan.
+func NewAttachUpgradePlanCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "attach-upgrade-plan [lip-id] [upgrade-name] [height] [info]",
+		Short: "Attach a software upgrade plan to an upgrade-category LIP",
+		Long:  "Attach a software upgrade plan to an upgrade-category LIP (proposer only). The plan triggers at the specified block height.",
+		Args:  cobra.ExactArgs(4),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			height, err := strconv.ParseInt(args[2], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid height: %w", err)
+			}
+
+			msg := &types.MsgAttachUpgradePlan{
+				Proposer:    clientCtx.GetFromAddress().String(),
+				LipId:       args[0],
+				UpgradeName: args[1],
+				Height:      height,
+				Info:        args[3],
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
