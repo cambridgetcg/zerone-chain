@@ -15,6 +15,8 @@ type KnowledgeKeeper interface {
 	GetConsensusDiversity(ctx context.Context) uint64
 	// GetPendingVerificationRatio returns pending claims / active facts in BPS (R31-1).
 	GetPendingVerificationRatio(ctx context.Context) uint64
+	// GetVerificationHealth returns verification throughput, dispute rate, and avg round duration (R31-2).
+	GetVerificationHealth(ctx context.Context) (throughputBps, disputeRateBps, avgRoundDurationBlocks uint64)
 }
 
 // StakingKeeper defines the expected staking module interface.

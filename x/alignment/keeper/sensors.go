@@ -66,20 +66,45 @@ func (k Keeper) senseEconomicStability(ctx context.Context) uint64 {
 	return ratioBPS(totalStaked, totalSupply)
 }
 
-// senseGovernanceParticipation uses domain count as a governance proxy.
-// Normalized: count / 100 (target 100 domains = 100% participation).
-// Nil-safe: returns NeutralBPS if keeper is nil.
+// senseGovernanceParticipation uses domain count and verification health as governance proxies.
+// Weighted: 70% domain count, 30% verification health (R31-2: Fire -> Earth).
+// Nil-safe: returns NeutralBPS if keepers are nil.
 func (k Keeper) senseGovernanceParticipation(ctx context.Context) uint64 {
 	if k.ontologyKeeper == nil {
 		return types.NeutralBPS
 	}
+
+	// Domain count component (70% weight)
 	count := k.ontologyKeeper.GetDomainCount(ctx)
-	// Normalize: 100 domains = 100% (1,000,000 BPS).
 	const targetDomains = 100
-	if count >= targetDomains {
-		return types.BPS
+	domainScore := count * types.BPS / targetDomains
+	if domainScore > types.BPS {
+		domainScore = types.BPS
 	}
-	return count * types.BPS / targetDomains
+
+	// Verification health component (30% weight) — R31-2: Fire -> Earth
+	var verificationHealth uint64
+	if k.knowledgeKeeper != nil {
+		throughput, disputeRate, _ := k.knowledgeKeeper.GetVerificationHealth(ctx)
+
+		verificationHealth = throughput
+		// Extreme dispute rate (>30%) penalises verification health
+		if disputeRate > 300_000 {
+			verificationHealth = verificationHealth * 700_000 / types.BPS
+		}
+
+		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.alignment.verification_health_observed",
+			sdk.NewAttribute("throughput_bps", fmt.Sprintf("%d", throughput)),
+			sdk.NewAttribute("dispute_rate_bps", fmt.Sprintf("%d", disputeRate)),
+		))
+	}
+
+	// Blend: 70% domain count + 30% verification health
+	score := domainScore*700_000/types.BPS + verificationHealth*300_000/types.BPS
+
+	return score
 }
 
 // senseNetworkSecurity computes active/target validator ratio as BPS,

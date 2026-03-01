@@ -67,3 +67,8 @@ func (a *AlignmentKnowledgeAdapter) GetConsensusDiversity(ctx context.Context) u
 func (a *AlignmentKnowledgeAdapter) GetPendingVerificationRatio(ctx context.Context) uint64 {
 	return a.k.GetPendingVerificationRatio(ctx)
 }
+
+// GetVerificationHealth returns verification health metrics for the alignment sensor (R31-2).
+func (a *AlignmentKnowledgeAdapter) GetVerificationHealth(ctx context.Context) (uint64, uint64, uint64) {
+	return a.k.GetVerificationHealth(ctx)
+}
