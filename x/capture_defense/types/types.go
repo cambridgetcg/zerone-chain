@@ -19,6 +19,8 @@ func DefaultParams() *Params {
 		HistoryRetentionBlocks:   50000,  // ~35 hours
 		BaseReputationScore:      500000, // 50% floor
 		MaxHistoryPerDomain:      100,
+		BaseReputationRecoveryBps:   50_000,  // 5% recovery per decay epoch
+		ActivityRecoveryBonusMaxBps: 500_000, // max 50% acceleration from activity
 	}
 }
 

@@ -2344,6 +2344,68 @@ func (x *KnowledgeBounty) GetDemandCount() uint64 {
 	return 0
 }
 
+// CompletedRoundMeta stores metadata for completed verification rounds,
+// indexed by verdict block height for efficient window-based queries (R31-2).
+type CompletedRoundMeta struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Domain         string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	HasDissent     bool                   `protobuf:"varint,2,opt,name=has_dissent,json=hasDissent,proto3" json:"has_dissent,omitempty"`             // true if any verifier dissented from majority
+	DurationBlocks uint64                 `protobuf:"varint,3,opt,name=duration_blocks,json=durationBlocks,proto3" json:"duration_blocks,omitempty"` // verdict_block - started_at_block
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CompletedRoundMeta) Reset() {
+	*x = CompletedRoundMeta{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompletedRoundMeta) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompletedRoundMeta) ProtoMessage() {}
+
+func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompletedRoundMeta.ProtoReflect.Descriptor instead.
+func (*CompletedRoundMeta) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CompletedRoundMeta) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *CompletedRoundMeta) GetHasDissent() bool {
+	if x != nil {
+		return x.HasDissent
+	}
+	return false
+}
+
+func (x *CompletedRoundMeta) GetDurationBlocks() uint64 {
+	if x != nil {
+		return x.DurationBlocks
+	}
+	return 0
+}
+
 var File_zerone_knowledge_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
@@ -2551,7 +2613,12 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x10expires_at_block\x18\x06 \x01(\x04R\x0eexpiresAtBlock\x12\x18\n" +
 	"\aclaimed\x18\a \x01(\bR\aclaimed\x12+\n" +
 	"\x12claimed_by_fact_id\x18\b \x01(\tR\x0fclaimedByFactId\x12!\n" +
-	"\fdemand_count\x18\t \x01(\x04R\vdemandCount*\xe2\x02\n" +
+	"\fdemand_count\x18\t \x01(\x04R\vdemandCount\"v\n" +
+	"\x12CompletedRoundMeta\x12\x16\n" +
+	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x1f\n" +
+	"\vhas_dissent\x18\x02 \x01(\bR\n" +
+	"hasDissent\x12'\n" +
+	"\x0fduration_blocks\x18\x03 \x01(\x04R\x0edurationBlocks*\xe2\x02\n" +
 	"\n" +
 	"FactStatus\x12\x1b\n" +
 	"\x17FACT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -2632,7 +2699,7 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),              // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),             // 1: zerone.knowledge.v1.ClaimStatus
@@ -2656,6 +2723,7 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(*ProvisionalChallenge)(nil), // 19: zerone.knowledge.v1.ProvisionalChallenge
 	(*DemandSignal)(nil),         // 20: zerone.knowledge.v1.DemandSignal
 	(*KnowledgeBounty)(nil),      // 21: zerone.knowledge.v1.KnowledgeBounty
+	(*CompletedRoundMeta)(nil),   // 22: zerone.knowledge.v1.CompletedRoundMeta
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
@@ -2692,7 +2760,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

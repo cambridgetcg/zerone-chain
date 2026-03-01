@@ -187,6 +187,10 @@ func DefaultParams() Params {
 		// ─── Mentorship dividends (R31-5: Water → Wood) ──────────────────────
 		MentorshipDividendEnergy: 50_000,  // 50,000 energy (5% of cap)
 		MentorshipCapacityBonus:  5,       // +5 carrying capacity per graduation
+
+		// ─── Social verification adjustment (R31-2: Water → Fire) ────────
+		SocialSaturationThreshold: 10,
+		ObservationWindowBlocks:   10_000,
 	}
 }
 

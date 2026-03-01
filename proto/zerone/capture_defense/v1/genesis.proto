@@ -13,6 +13,8 @@ message Params {
   uint64 history_retention_blocks    = 5; // how long verification history is kept
   uint64 base_reputation_score       = 6; // floor for decayed scores
   uint64 max_history_per_domain      = 7; // max rounds kept per domain
+  uint64 base_reputation_recovery_bps    = 8; // base recovery rate per decay epoch (default: 50,000 = 5%)
+  uint64 activity_recovery_bonus_max_bps = 9; // max acceleration from verification activity (default: 500,000 = 50%)
 }
 
 message GenesisState {

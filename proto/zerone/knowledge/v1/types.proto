@@ -331,3 +331,11 @@ message KnowledgeBounty {
     string claimed_by_fact_id   = 8;
     uint64 demand_count         = 9;  // Demand that triggered this bounty
 }
+
+// CompletedRoundMeta stores metadata for completed verification rounds,
+// indexed by verdict block height for efficient window-based queries (R31-2).
+message CompletedRoundMeta {
+    string domain          = 1;
+    bool   has_dissent     = 2;  // true if any verifier dissented from majority
+    uint64 duration_blocks = 3;  // verdict_block - started_at_block
+}

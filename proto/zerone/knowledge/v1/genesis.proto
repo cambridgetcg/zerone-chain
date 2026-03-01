@@ -191,6 +191,10 @@ message Params {
   // ─── Mentorship dividends (R31-5: Water → Wood) ──────────────────────
   uint64 mentorship_dividend_energy   = 129; // Energy added to domain on mentorship graduation (default: 50,000)
   uint64 mentorship_capacity_bonus    = 130; // Carrying capacity bonus per graduation (default: 5)
+
+  // ─── Social verification adjustment (R31-2: Water → Fire) ──────────────
+  uint64 social_saturation_threshold = 131; // Partnership density above which verification relaxes (default: 10)
+  uint64 observation_window_blocks   = 132; // Lookback window for verification health metrics (default: 10000)
 }
 
 // GenesisState is the genesis state of the knowledge module.
