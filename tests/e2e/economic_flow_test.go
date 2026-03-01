@@ -59,8 +59,8 @@ func TestEconomicFlow(t *testing.T) {
 
 	chain, ctx := SetupChain(t, 2)
 
-	// ── Phase 1: Wait for reward accumulation ──
-	WaitBlocks(t, chain, ctx, 10)
+	// ── Phase 1: Wait for reward accumulation (spec: 50 blocks) ──
+	WaitBlocks(t, chain, ctx, 50)
 
 	t.Run("ZeroSupplyGenesis_PoTMinting", func(t *testing.T) {
 		// Verify params confirm pure PoT (initial_fund_balance = 0)
@@ -179,6 +179,32 @@ func TestEconomicFlow(t *testing.T) {
 		assert.Equal(t, expectedDev.String(), mustBigInt(t, dist.DevelopmentAmount).String(),
 			"development amount should be the remainder (~19.67%%)")
 
+		// Founder share: 7% of gross research (70,000 bps of 1,000,000)
+		// If founder is inactive (empty address), founder share should be 0 and
+		// all research goes to the research fund. Verify via founder-share-status query.
+		founderStatusOut := QueryModule(t, chain, ctx, "vesting_rewards", "founder-share-status")
+		var founderStatus struct {
+			Active          bool   `json:"active"`
+			FounderShareBps uint64 `json:"founder_share_bps,string"`
+			FounderAddress  string `json:"founder_address"`
+		}
+		require.NoError(t, json.Unmarshal(founderStatusOut, &founderStatus))
+
+		if founderStatus.Active {
+			// When active, founder should get 7% (70,000 bps) of gross research
+			expectedFounder := new(big.Int).Mul(grossResearch, big.NewInt(70_000))
+			expectedFounder.Div(expectedFounder, bps)
+			assert.Equal(t, expectedFounder.String(), founderShare.String(),
+				"founder share should be 7%% of gross research when active")
+		} else {
+			assert.Equal(t, "0", founderShare.String(),
+				"founder share should be 0 when founder is inactive")
+			t.Logf("Founder inactive (address=%q, active=%v) — all research goes to fund",
+				founderStatus.FounderAddress, founderStatus.Active)
+		}
+		t.Logf("Founder share status: active=%v, bps=%d, address=%q",
+			founderStatus.Active, founderStatus.FounderShareBps, founderStatus.FounderAddress)
+
 		// Cross-check: all shares sum to total
 		sum := new(big.Int)
 		sum.Add(sum, mustBigInt(t, dist.ProducerReward))
@@ -214,15 +240,15 @@ func TestEconomicFlow(t *testing.T) {
 		heightBefore, err := chain.Height(ctx)
 		require.NoError(t, err)
 
-		// Wait 20 more blocks
-		WaitBlocks(t, chain, ctx, 20)
+		// Wait 50 more blocks (spec: 100, compromise for test speed)
+		WaitBlocks(t, chain, ctx, 50)
 
 		supplyAfter := queryTotalSupply(t, chain, ctx)
 		heightAfter, err := chain.Height(ctx)
 		require.NoError(t, err)
 
 		blocksElapsed := heightAfter - heightBefore
-		require.Greater(t, blocksElapsed, int64(15), "should have advanced at least 15 blocks")
+		require.Greater(t, blocksElapsed, int64(40), "should have advanced at least 40 blocks")
 
 		// Supply should have increased
 		growth := new(big.Int).Sub(supplyAfter, supplyBefore)
@@ -275,6 +301,80 @@ func TestEconomicFlow(t *testing.T) {
 		assert.True(t, researchAfter.Cmp(researchBefore) > 0,
 			"research fund should grow from fee distribution: before=%s after=%s",
 			researchBefore, researchAfter)
+
+		// Verify fees are distributed proportionally across validators.
+		// Query each validator's outstanding rewards.
+		vals, err := chain.StakingQueryValidators(ctx, "BOND_STATUS_BONDED")
+		require.NoError(t, err)
+		require.GreaterOrEqual(t, len(vals), 2, "should have at least 2 bonded validators")
+
+		type outstandingRewardsResp struct {
+			Rewards struct {
+				Rewards []struct {
+					Denom  string `json:"denom"`
+					Amount string `json:"amount"`
+				} `json:"rewards"`
+			} `json:"rewards"`
+		}
+
+		for i, val := range vals {
+			rewardsOut, _, qErr := chain.GetNode().ExecQuery(ctx,
+				"distribution", "validator-outstanding-rewards", val.OperatorAddress,
+				"--output", "json",
+			)
+			require.NoError(t, qErr, "should query outstanding rewards for validator %d", i)
+
+			var rewardsResp outstandingRewardsResp
+			require.NoError(t, json.Unmarshal(rewardsOut, &rewardsResp))
+
+			hasRewards := false
+			for _, r := range rewardsResp.Rewards.Rewards {
+				if r.Denom == "uzrn" {
+					amt := mustBigInt(t, r.Amount)
+					if amt.Sign() > 0 {
+						hasRewards = true
+						t.Logf("Validator %d (%s) outstanding rewards: %s uzrn",
+							i, val.OperatorAddress, amt)
+					}
+				}
+			}
+			assert.True(t, hasRewards,
+				"validator %d (%s) should have outstanding rewards from fee distribution",
+				i, val.OperatorAddress)
+		}
+	})
+
+	t.Run("VestingScheduleCreation", func(t *testing.T) {
+		// Minimal validation that the vesting infrastructure is wired up.
+		// A full vesting lifecycle (cliff → partial unlock → full unlock) is
+		// impractical in E2E due to long cliff times.
+
+		// 1. Query params — verify vesting is enabled
+		paramsOut := QueryModule(t, chain, ctx, "vesting_rewards", "params")
+
+		// Parse with a broader struct to capture vesting_enabled
+		var fullParams struct {
+			Params struct {
+				VestingEnabled bool `json:"vesting_enabled"`
+			} `json:"params"`
+		}
+		require.NoError(t, json.Unmarshal(paramsOut, &fullParams))
+		assert.True(t, fullParams.Params.VestingEnabled,
+			"vesting should be enabled in params")
+
+		// 2. Query active schedules — verify the query endpoint works
+		schedulesOut := QueryModule(t, chain, ctx, "vesting_rewards", "active-schedules")
+
+		var schedulesResp struct {
+			Schedules []json.RawMessage `json:"schedules"`
+			Total     int               `json:"total"`
+		}
+		require.NoError(t, json.Unmarshal(schedulesOut, &schedulesResp))
+
+		// At this early stage there may be no schedules yet, but the query
+		// should succeed and return a valid (possibly empty) response.
+		t.Logf("Vesting infrastructure: enabled=%v, active_schedules=%d",
+			fullParams.Params.VestingEnabled, schedulesResp.Total)
 	})
 
 	t.Run("StakingRewardFlow", func(t *testing.T) {
