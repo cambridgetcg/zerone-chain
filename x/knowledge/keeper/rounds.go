@@ -204,6 +204,18 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 		}
 	}
 
+	// Index completed round for window-based metrics (R31-2)
+	hasDissent := roundHasDissent(round)
+	duration := height - round.StartedAtBlock
+	completionMeta := &types.CompletedRoundMeta{
+		Domain:         claim.Domain,
+		HasDissent:     hasDissent,
+		DurationBlocks: duration,
+	}
+	if idxErr := k.IndexCompletedRound(ctx, height, round.Id, completionMeta); idxErr != nil {
+		k.Logger(ctx).Debug("failed to index completed round", "round", round.Id, "error", idxErr)
+	}
+
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.verification_round_completed",
 		sdk.NewAttribute("round_id", round.Id),
@@ -516,4 +528,21 @@ func (k Keeper) distributeVerifierReward(ctx context.Context, verifier string, a
 	}
 	coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(new(big.Int).SetUint64(amount))))
 	_ = k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, addr, coins)
+}
+
+// roundHasDissent checks if a round had any verifier dissent (mixed accept/reject votes).
+func roundHasDissent(round *types.VerificationRound) bool {
+	hasAccept, hasReject := false, false
+	for _, reveal := range round.Reveals {
+		switch reveal.Vote {
+		case "accept":
+			hasAccept = true
+		case "reject":
+			hasReject = true
+		}
+		if hasAccept && hasReject {
+			return true
+		}
+	}
+	return false
 }
