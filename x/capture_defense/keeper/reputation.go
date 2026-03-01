@@ -1,6 +1,9 @@
 package keeper
 
 import (
+	"context"
+	"fmt"
+
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/capture_defense/types"
@@ -179,6 +182,42 @@ func DecayReputation(score, base, age, halfLife uint64) uint64 {
 	return base + delta
 }
 
+// calculateReputationRecoveryRate returns the effective recovery rate for a domain,
+// accelerated by verification activity (R31-2: Fire -> Metal).
+func (k Keeper) calculateReputationRecoveryRate(ctx context.Context, domain string) uint64 {
+	params := k.GetParams(ctx)
+	baseRate := params.BaseReputationRecoveryBps
+	if baseRate == 0 {
+		baseRate = 50_000 // fallback default
+	}
+
+	if k.knowledgeKeeper == nil {
+		return baseRate
+	}
+
+	activity := k.knowledgeKeeper.GetDomainVerificationActivity(ctx, domain)
+
+	maxBonus := params.ActivityRecoveryBonusMaxBps
+	if maxBonus == 0 {
+		maxBonus = 500_000 // fallback default
+	}
+
+	// Activity bonus: scales linearly with verification activity
+	activityBonus := activity * maxBonus / types.BPSScale
+	recoveryRate := baseRate + (baseRate * activityBonus / types.BPSScale)
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.capture_defense.activity_recovery_bonus",
+		sdk.NewAttribute("domain", domain),
+		sdk.NewAttribute("verification_activity_bps", fmt.Sprintf("%d", activity)),
+		sdk.NewAttribute("recovery_rate_bps", fmt.Sprintf("%d", recoveryRate)),
+		sdk.NewAttribute("bonus_bps", fmt.Sprintf("%d", activityBonus)),
+	))
+
+	return recoveryRate
+}
+
 // DecayAllReputations iterates all reputations and applies decay toward the base score.
 func (k Keeper) DecayAllReputations(ctx sdk.Context, params *types.Params) {
 	height := uint64(ctx.BlockHeight())
@@ -207,11 +246,22 @@ func (k Keeper) DecayAllReputations(ctx sdk.Context, params *types.Params) {
 		return false
 	})
 
-	// Decay domain reputations
+	// Decay domain reputations with activity-based recovery (R31-2: Fire -> Metal)
 	k.IterateDomainReputations(ctx, func(r *types.DomainReputation) bool {
 		age := height - r.LastUpdatedBlock
 		if age > 0 {
-			r.Score = DecayReputation(r.Score, base, age, halfLife)
+			// Activity-based recovery: active domains have a higher effective floor
+			effectiveBase := base
+			if r.Domain != "" {
+				recoveryRate := k.calculateReputationRecoveryRate(ctx, r.Domain)
+				if recoveryRate > 0 {
+					effectiveBase = base + (recoveryRate * (types.BPSScale - base) / types.BPSScale)
+					if effectiveBase > types.BPSScale {
+						effectiveBase = types.BPSScale
+					}
+				}
+			}
+			r.Score = DecayReputation(r.Score, effectiveBase, age, halfLife)
 			r.LastUpdatedBlock = height
 			k.SetDomainReputation(ctx, r)
 		}
