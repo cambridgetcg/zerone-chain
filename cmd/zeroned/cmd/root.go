@@ -205,6 +205,7 @@ func genesisCommand(encodingConfig app.EncodingConfig) *cobra.Command {
 			encodingConfig.InterfaceRegistry.SigningContext().ValidatorAddressCodec(),
 		),
 		genutilcli.ValidateGenesisCmd(app.ModuleBasics),
+		AddGenesisAccountCmd(app.DefaultNodeHome),
 	)
 
 	return cmd
