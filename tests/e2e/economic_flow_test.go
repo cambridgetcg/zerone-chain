@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
@@ -130,6 +131,7 @@ func TestEconomicFlow(t *testing.T) {
 
 		// Find a block with a distribution
 		var dist blockRewardDist
+		var found bool
 		for h := height - 1; h >= height-5 && h > 2; h-- {
 			out := QueryModule(t, chain, ctx, "vesting_rewards", "block-reward", fmt.Sprintf("%d", h))
 			var resp struct {
@@ -139,9 +141,11 @@ func TestEconomicFlow(t *testing.T) {
 			require.NoError(t, json.Unmarshal(out, &resp))
 			if resp.Found && mustBigInt(t, resp.Distribution.TotalMinted).Sign() > 0 {
 				dist = resp.Distribution
+				found = true
 				break
 			}
 		}
+		require.True(t, found, "should find at least one block with non-zero reward distribution")
 
 		totalMinted := mustBigInt(t, dist.TotalMinted)
 		require.True(t, totalMinted.Sign() > 0, "need a non-zero reward block for revenue split test")
@@ -320,7 +324,6 @@ func TestEconomicFlow(t *testing.T) {
 		for i, val := range vals {
 			rewardsOut, _, qErr := chain.GetNode().ExecQuery(ctx,
 				"distribution", "validator-outstanding-rewards", val.OperatorAddress,
-				"--output", "json",
 			)
 			require.NoError(t, qErr, "should query outstanding rewards for validator %d", i)
 
@@ -329,13 +332,10 @@ func TestEconomicFlow(t *testing.T) {
 
 			hasRewards := false
 			for _, r := range rewardsResp.Rewards.Rewards {
-				if r.Denom == "uzrn" {
-					amt := mustBigInt(t, r.Amount)
-					if amt.Sign() > 0 {
-						hasRewards = true
-						t.Logf("Validator %d (%s) outstanding rewards: %s uzrn",
-							i, val.OperatorAddress, amt)
-					}
+				if r.Denom == "uzrn" && isPositiveDecAmount(r.Amount) {
+					hasRewards = true
+					t.Logf("Validator %d (%s) outstanding rewards: %s uzrn",
+						i, val.OperatorAddress, r.Amount)
 				}
 			}
 			assert.True(t, hasRewards,
@@ -404,7 +404,6 @@ func TestEconomicFlow(t *testing.T) {
 		// Query delegation rewards
 		rewardsOut, _, err := chain.GetNode().ExecQuery(ctx,
 			"distribution", "rewards", delegator.FormattedAddress(), valAddr,
-			"--output", "json",
 		)
 		require.NoError(t, err)
 
@@ -419,12 +418,9 @@ func TestEconomicFlow(t *testing.T) {
 		// There should be some rewards accumulated
 		hasRewards := false
 		for _, r := range rewardsResp.Rewards {
-			if r.Denom == "uzrn" {
-				amt := mustBigInt(t, r.Amount)
-				if amt.Sign() > 0 {
-					hasRewards = true
-					t.Logf("Delegation rewards accumulated: %s uzrn", amt)
-				}
+			if r.Denom == "uzrn" && isPositiveDecAmount(r.Amount) {
+				hasRewards = true
+				t.Logf("Delegation rewards accumulated: %s uzrn", r.Amount)
 			}
 		}
 		assert.True(t, hasRewards, "should have accumulated staking rewards after 15 blocks")
@@ -462,11 +458,37 @@ func mustBigInt(t *testing.T, s string) *big.Int {
 	return v
 }
 
+// isPositiveDecAmount checks if a decimal string (e.g. "123.456") represents a positive value.
+// Distribution module returns DecCoin amounts with 18 decimal places.
+func isPositiveDecAmount(s string) bool {
+	if s == "" || s == "0" {
+		return false
+	}
+	// Strip the decimal part and check the integer portion
+	parts := strings.SplitN(s, ".", 2)
+	v := new(big.Int)
+	if _, ok := v.SetString(parts[0], 10); !ok {
+		return false
+	}
+	if v.Sign() > 0 {
+		return true
+	}
+	// Integer part is 0, check if there are non-zero decimal digits
+	if len(parts) == 2 {
+		for _, c := range parts[1] {
+			if c != '0' {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // queryTotalSupply returns the total ZRN supply as big.Int (in uzrn).
 func queryTotalSupply(t *testing.T, chain *cosmos.CosmosChain, ctx context.Context) *big.Int {
 	t.Helper()
 
-	stdout, _, err := chain.GetNode().ExecQuery(ctx, "bank", "total-supply", "--output", "json")
+	stdout, _, err := chain.GetNode().ExecQuery(ctx, "bank", "total-supply")
 	require.NoError(t, err)
 
 	var resp supplyResp
