@@ -14,8 +14,8 @@ func DefaultParams() *Params {
 		MinContributorsToStart: 1,
 		ContributorsBp:         550000, // 55%
 		ProtocolTreasuryBp:     220000, // 22%
-		ResearchFundBp:         130000, // 13%
-		BurnBp:                 100000, // 10%
+		ResearchFundBp:         33300,  // 3.33%
+		BurnBp:                 196700, // 19.67% — routed to development fund (proto field rename pending)
 		EvidenceTaxBp:          220000, // 22%
 	}
 }

@@ -5,7 +5,7 @@ vendor/
 *.dll
 *.so
 *.dylib
-zeroned
+/zeroned
 
 # IDE
 .idea/
@@ -28,3 +28,5 @@ coverage.out
 # Vault binary
 vault/vault-*
 .worktrees/
+node.log
+node.log

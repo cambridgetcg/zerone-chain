@@ -26,7 +26,7 @@ message Params {
   uint64 wrong_verification_slash_bps = 11; // default: 50,000  (5%)
   uint64 missed_reveal_slash_bps      = 12; // default: 100,000 (10%)
   uint64 equivocation_slash_bps       = 13; // default: 200,000 (20%)
-  uint64 invalid_claim_slash_bps      = 14; // default: 220,000 (22%)
+  uint64 invalid_claim_slash_bps      = 14; // DEPRECATED (R19-6): no longer used — review fee is non-refundable
 
   // ─── Rewards ─────────────────────────────────────────────────────────────
   string verification_reward           = 15; // default: "3000000" (3 ZRN in uzrn)
@@ -35,7 +35,7 @@ message Params {
   // ─── Claim validation ────────────────────────────────────────────────────
   uint64 min_claim_text_length = 17; // default: 20
   uint64 max_claim_text_length = 18; // default: 10,000
-  string min_claim_stake       = 19; // default: "1000000" (1 ZRN in uzrn)
+  string min_review_fee        = 19; // default: "100000" (0.1 ZRN) — non-refundable review fee
 
   // ─── Adversarial verification ────────────────────────────────────────────
   bool   adversarial_verification_enabled = 20; // default: true
@@ -76,6 +76,125 @@ message Params {
 
   // ─── Research fund ───────────────────────────────────────────────────────
   uint64 research_fund_share_bps = 49; // default: 130,000 (13%)
+
+  // ─── Malformed claim slashing ──────────────────────────────────────────
+  uint64 malformed_claim_slash_bps = 50; // default: 500,000 (50%) — harsher than invalid_claim (22%)
+
+  // ─── Fitness scoring ─────────────────────────────────────────────────────
+  uint64 fitness_epoch_blocks        = 51;  // Blocks per fitness epoch
+  uint64 fitness_weight_query_bps    = 52;  // Weight for query rate
+  uint64 fitness_weight_citation_bps = 53;  // Weight for citation rate
+  uint64 fitness_weight_bridge_bps   = 54;  // Weight for bridge score
+  uint64 fitness_weight_depth_bps    = 55;  // Weight for dependency depth
+  uint64 fitness_weight_patron_bps   = 56;  // Weight for active patronage
+  uint64 fitness_weight_unique_bps   = 57;  // Weight for uniqueness
+  uint64 fitness_weight_age_bps      = 58;  // Weight for age penalty
+  uint64 fitness_initial_score       = 59;  // Score assigned at birth (grace period)
+  uint64 fitness_grace_epochs        = 60;  // Epochs before age penalty kicks in
+
+  // ─── Bootstrap fund (R19-7) ────────────────────────────────────────────
+  bool   bootstrap_fund_enabled         = 61; // Whether sponsored claims are accepted
+  string bootstrap_fund_max_per_address = 62; // Max sponsored claims per address (lifetime)
+  string bootstrap_fund_max_per_epoch   = 63; // Max sponsored claims per epoch (rate limit)
+  uint64 bootstrap_fund_epoch_blocks    = 64; // Epoch length in blocks for rate limiting
+  string bootstrap_fund_fee_cap         = 65; // Max fee the fund will cover per claim (uzrn)
+
+  // ─── Metabolism ──────────────────────────────────────────────────────────
+  uint64 metabolism_base_cost                = 66;  // Base energy drain per epoch
+  uint64 metabolism_content_length_bps       = 67;  // Additional cost per 100 chars of content (BPS of base)
+  uint64 metabolism_domain_competition_bps   = 68;  // Additional cost per 100 facts in domain (BPS of base)
+  uint64 metabolism_energy_per_query         = 69;  // Energy gained per query
+  uint64 metabolism_energy_per_citation      = 70;  // Energy gained per new citation
+  uint64 metabolism_energy_per_patronage     = 71;  // Energy gained per patronage epoch
+  uint64 metabolism_energy_challenge_survival = 72; // One-time energy for surviving challenge
+  uint64 metabolism_energy_cap               = 73;  // Maximum energy a fact can hold
+  uint64 metabolism_initial_energy           = 74;  // Starting energy for new facts
+  uint64 metabolism_at_risk_epochs           = 75;  // Epochs at 0 energy before expiry
+  uint64 metabolism_expired_to_pruned_epochs = 76;  // Epochs after expiry before pruning
+
+  // ─── Reproduction ────────────────────────────────────────────────────
+  uint64 reproduction_royalty_bps                   = 77;  // Royalty to parent per child reward epoch
+  uint64 reproduction_royalty_decay_bps             = 78;  // Decay per generation (BPS of previous)
+  uint64 reproduction_max_royalty_depth             = 79;  // Max generations for royalty propagation
+  uint64 reproduction_parent_energy_bonus           = 80;  // Energy bonus to parent when child is created
+  uint64 reproduction_child_fitness_inheritance_bps = 81;  // % of parent fitness inherited by child
+  uint64 reproduction_max_children                  = 82;  // Max direct children per fact
+
+  // ─── Novelty detection ──────────────────────────────────────────────────
+  uint64 novelty_common_knowledge_penalty_bps = 83;  // Default penalty for common knowledge match
+  uint64 novelty_subject_overlap_penalty_bps  = 84;  // Penalty per existing fact with same subject
+  uint64 novelty_precision_bonus_bps          = 85;  // Bonus if more precise than existing
+  uint64 novelty_cross_domain_bonus_bps       = 86;  // Bonus if subject spans multiple domains
+  uint64 novelty_max_overlap_facts            = 87;  // Cap on overlap penalty (after N, no more penalty)
+
+  // ─── Agent demand ────────────────────────────────────────────────
+  uint64 demand_bounty_threshold         = 88;  // Unfulfilled queries per epoch to trigger bounty
+  string demand_bounty_base_reward       = 89;  // Base bounty reward (uzrn)
+  string demand_bounty_per_query_bonus   = 90;  // Additional reward per unfulfilled query (uzrn)
+  uint64 demand_bounty_expiry_epochs     = 91;  // Epochs before unclaimed bounty expires
+  uint64 demand_multiplier_cap           = 92;  // Max demand multiplier for energy (BPS)
+  bool   demand_tracking_enabled         = 93;  // Enable/disable demand tracking
+  repeated string authorized_demand_reporters = 94; // Addresses allowed to report demand
+
+  // ─── Competition (niche dynamics) ──────────────────────────────────
+  uint64 competition_niche_dominance_bonus_bps = 95;  // Fitness bonus for niche leader (BPS)
+  uint64 competition_redundancy_threshold_bps  = 96;  // Below this ratio of leader fitness = redundant (BPS)
+  uint64 competition_max_niche_size            = 97;  // Max facts per niche before forced pruning
+  uint64 competition_symbiosis_bonus_bps       = 98;  // Fitness bonus per SUPPORTS link to healthy fact (BPS)
+
+  // ─── Query satisfaction ──────────────────────────────────────────────
+  uint64 fitness_weight_satisfaction_bps = 99;  // Weight of satisfaction in fitness (default: 150,000 = 15%)
+  uint64 satisfaction_min_ratings        = 100; // Minimum ratings before satisfaction affects fitness (default: 3)
+
+  // ─── Consensus diversity (R28-2) ──────────────────────────────────
+  uint64 diversity_conformity_alert_threshold = 101; // BPS entropy below which a domain is "conforming" (default: 50,000 = 5%)
+  uint64 diversity_conformity_alert_epochs    = 102; // Consecutive low-diversity epochs before alert (default: 3)
+
+  // ─── Retroactive vindication (R28-1) ──────────────────────────────
+  bool   vindication_refund_enabled  = 103; // Master switch for vindication escrow (default: true)
+  uint64 vindication_bonus_bps       = 104; // % of majority slash pool as bonus to vindicated minority (default: 2000 = 20%)
+  uint64 vindication_slash_bps       = 105; // Slash rate for majority on disproven fact (default: 500 = 5%)
+  uint64 vindication_window_blocks   = 106; // How long escrowed entries are eligible (default: 100000)
+
+  // ─── Multi-level energy thresholds (R28-4) ──────────────────────────
+  uint64 metabolism_active_threshold     = 107; // Energy below which fact → AT_RISK (default: 300,000 = 30%)
+  uint64 metabolism_extinction_threshold = 108; // Energy below which (for N epochs) → EXTINCT (default: 10,000 = 1%)
+  uint64 max_confidence                  = 109; // Hard cap on confidence (default: 880,000 = 88%)
+
+  // ─── Role bonuses (R28-5) ──────────────────────────────────────────────
+  uint64 human_empirical_bonus_bps     = 110; // +15% confidence for human OBSERVATION claims (BPS)
+  uint64 agent_computational_bonus_bps = 111; // +15% confidence for agent COMPUTATIONAL claims (BPS)
+  uint64 agent_verification_bonus_bps  = 112; // +20% vote weight for agent verifiers (BPS)
+  uint64 human_patronage_bonus_bps     = 113; // +10% energy boost for human patrons (BPS)
+  uint64 dual_validation_bonus_bps     = 114; // +25% confidence for partnership claims (BPS)
+
+  // ─── Domain carrying capacity (R29-1) ──────────────────────────────────
+  uint64 domain_base_capacity              = 115; // Base facts per domain before pressure kicks in (default: 1000)
+  uint64 domain_capacity_growth_per_citation = 116; // Capacity bonus per inbound cross-domain citation (default: 1)
+  uint64 overcrowding_decay_multiplier_bps = 117; // Decay multiplier at 2× capacity (default: 1,500,000 = 150%)
+  uint64 underpopulation_birth_bonus_bps   = 118; // Energy bonus for facts in sparse domains (default: 200,000 = 20%)
+
+  // ─── Epistemic temperature (R29-2) ──────────────────────────────────
+  uint64 epistemic_temperature_decay_bps        = 119; // Per-epoch decay toward neutral (default: 995,000 = 99.5%)
+  uint64 epistemic_conformity_cooling_bps       = 120; // Cooling per high-conformity epoch (default: 50,000 = 5%)
+  uint64 epistemic_vindication_heating_bps      = 121; // Heating per vindication event (default: 100,000 = 10%)
+  uint64 epistemic_cold_confidence_cap_bps      = 122; // Max confidence in cold domains (default: 600,000 = 60%)
+  uint64 epistemic_hot_confidence_growth_bps    = 123; // Confidence growth multiplier in hot domains (default: 1,500,000 = 150%)
+  uint64 epistemic_temperature_window_blocks    = 124; // Lookback window for vindication counting (default: 10,000)
+
+  // ─── Domain role elasticity (R29-3) ──────────────────────────────────
+  uint64 role_elasticity_min_calls          = 125; // Min calls per role before elasticity activates (default: 10)
+  uint64 role_elasticity_max_multiplier_bps = 126; // Max bonus scaling (default: 2,000,000 = 200%)
+  uint64 role_elasticity_min_multiplier_bps = 127; // Min bonus scaling (default: 500,000 = 50%)
+  uint64 role_elasticity_decay_epochs       = 128; // Blocks between 5% decay cycles (default: 100)
+
+  // ─── Mentorship dividends (R31-5: Water → Wood) ──────────────────────
+  uint64 mentorship_dividend_energy   = 129; // Energy added to domain on mentorship graduation (default: 50,000)
+  uint64 mentorship_capacity_bonus    = 130; // Carrying capacity bonus per graduation (default: 5)
+
+  // ─── Social verification adjustment (R31-2: Water → Fire) ──────────────
+  uint64 social_saturation_threshold = 131; // Partnership density above which verification relaxes (default: 10)
+  uint64 observation_window_blocks   = 132; // Lookback window for verification health metrics (default: 10000)
 }
 
 // GenesisState is the genesis state of the knowledge module.
@@ -85,4 +204,6 @@ message GenesisState {
   repeated Claim            pending_claims = 3;
   repeated VerificationRound active_rounds = 4;
   repeated Domain           domains       = 5;
+  string bootstrap_fund_allocation                 = 6; // Initial fund allocation (uzrn) — one-time genesis mint
+  repeated CommonKnowledgeEntry common_knowledge   = 7; // Seeded common knowledge entries
 }

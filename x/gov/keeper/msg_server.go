@@ -78,6 +78,14 @@ func (ms *msgServer) SubmitLIP(goCtx context.Context, msg *types.MsgSubmitLIP) (
 		CreatedAtBlock: uint64(ctx.BlockHeight()),
 		ParamChanges:   msg.ParamChanges,
 	}
+
+	// Validate phase transition/rollback categories and create metadata.
+	if types.IsPhaseTransitionCategory(category) {
+		if err := ms.ValidatePhaseTransitionLIP(ctx, lip); err != nil {
+			return nil, err
+		}
+	}
+
 	ms.SetLIP(ctx, lip)
 
 	ctx.EventManager().EmitEvent(
@@ -129,7 +137,7 @@ func (ms *msgServer) StakeLIP(goCtx context.Context, msg *types.MsgStakeLIP) (*t
 	if lip.Stage == types.StatusDraft {
 		params := ms.GetParams(ctx)
 		catCfg := types.GetCategoryConfig(params, lip.Category)
-		if catCfg != nil && types.CmpBigIntStrings(lip.StakedAmount, catCfg.RequiredStakeBps) >= 0 {
+		if catCfg != nil && types.CmpBigIntStrings(lip.StakedAmount, catCfg.RequiredStakeUzrn) >= 0 {
 			lip.Stage = types.StatusReview
 			lip.ReviewStartedBlock = uint64(ctx.BlockHeight())
 		}
@@ -189,7 +197,7 @@ func (ms *msgServer) AdvanceLIPStage(goCtx context.Context, msg *types.MsgAdvanc
 
 	case types.StatusLastCall:
 		lip.Stage = types.StatusVoting
-		lip.VotingEndBlock = currentHeight + params.VotingPeriodBlocks
+		lip.VotingEndBlock = currentHeight + ms.getEffectiveVotingPeriod(ctx, lip, params)
 
 	default:
 		return nil, types.ErrInvalidStatus
@@ -257,6 +265,9 @@ func (ms *msgServer) CastVote(goCtx context.Context, msg *types.MsgCastVote) (*t
 		Weight: weight,
 	}
 	ms.SetVote(ctx, vote)
+
+	// Track distinct governance participants for phase exit conditions.
+	ms.RecordDistinctVoter(ctx, msg.Voter)
 
 	// Accumulate tally.
 	switch msg.Option {
@@ -387,6 +398,41 @@ func (ms *msgServer) AttachUpgradePlan(goCtx context.Context, msg *types.MsgAtta
 	return &types.MsgAttachUpgradePlanResponse{}, nil
 }
 
+// --- Domain Formation Freeze Handler ---
+
+// DomainFormationFreeze imposes a formation cooldown on a domain (authority only).
+func (ms *msgServer) DomainFormationFreeze(goCtx context.Context, msg *types.MsgDomainFormationFreeze) (*types.MsgDomainFormationFreezeResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if ms.GetAuthority() != msg.Authority {
+		return nil, types.ErrUnauthorized
+	}
+
+	if msg.Domain == "" {
+		return nil, fmt.Errorf("domain cannot be empty")
+	}
+	if msg.DurationBlocks == 0 {
+		return nil, fmt.Errorf("duration_blocks must be > 0")
+	}
+
+	expiryHeight := uint64(ctx.BlockHeight()) + msg.DurationBlocks
+
+	if ms.partnershipsKeeper != nil {
+		ms.partnershipsKeeper.SetDomainFormationFreeze(ctx, msg.Domain, expiryHeight, msg.Reason)
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.gov.domain_formation_freeze",
+			sdk.NewAttribute("domain", msg.Domain),
+			sdk.NewAttribute("duration_blocks", fmt.Sprintf("%d", msg.DurationBlocks)),
+			sdk.NewAttribute("expiry_height", fmt.Sprintf("%d", expiryHeight)),
+			sdk.NewAttribute("reason", msg.Reason),
+		),
+	)
+
+	return &types.MsgDomainFormationFreezeResponse{}, nil
+}
+
 // --- Research Spend Message Handlers ---
 
 // SubmitResearchSpend delegates to the keeper's SubmitResearchSpend method.
@@ -405,5 +451,25 @@ func (ms *msgServer) VoteResearchSpend(goCtx context.Context, msg *types.MsgVote
 func (ms *msgServer) SetResearchVoters(goCtx context.Context, msg *types.MsgSetResearchVoters) (*types.MsgSetResearchVotersResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	return ms.Keeper.SetResearchVoters(ctx, msg)
+}
+
+// --- Seat Election Message Handlers ---
+
+// NominateSeatElection delegates to the keeper's NominateSeatElection method.
+func (ms *msgServer) NominateSeatElection(goCtx context.Context, msg *types.MsgNominateSeatElection) (*types.MsgNominateSeatElectionResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return ms.Keeper.NominateSeatElection(ctx, msg)
+}
+
+// AcceptSeatNomination delegates to the keeper's AcceptSeatNomination method.
+func (ms *msgServer) AcceptSeatNomination(goCtx context.Context, msg *types.MsgAcceptSeatNomination) (*types.MsgAcceptSeatNominationResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return ms.Keeper.AcceptSeatNomination(ctx, msg)
+}
+
+// VoteSeatElection delegates to the keeper's VoteSeatElection method.
+func (ms *msgServer) VoteSeatElection(goCtx context.Context, msg *types.MsgVoteSeatElection) (*types.MsgVoteSeatElectionResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	return ms.Keeper.VoteSeatElection(ctx, msg)
 }
 

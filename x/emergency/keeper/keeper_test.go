@@ -925,3 +925,1082 @@ func TestEpochCounterReset(t *testing.T) {
 		t.Fatal("expected epoch count 0 after reset")
 	}
 }
+
+// ============================================================
+// Ported tests from legible-money prototype — Batch 1
+// ============================================================
+
+// --- Guardian / Stake Tests ---
+
+// TestGetGuardianStake verifies total stake calculation across multiple guardians.
+func TestGetGuardianStake(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	mock.addGuardian("zrn1g1", "100000000000")
+	mock.addGuardian("zrn1g2", "200000000000")
+	mock.addGuardian("zrn1g3", "300000000000")
+
+	total := k.GetGuardianStake(ctx)
+	if total.String() != "600000000000" {
+		t.Fatalf("expected total guardian stake 600000000000, got %s", total.String())
+	}
+}
+
+// TestGetGuardianStakeWithCouncil verifies council virtual stake is included during bootstrap.
+func TestGetGuardianStakeWithCouncil(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	mock.addGuardian("zrn1g1", "100000000000")
+
+	params := k.GetParams(ctx)
+	params.GenesisCouncil = []string{"zrn1council1", "zrn1council2"}
+	params.CouncilExpiryBlock = 1000
+	params.CouncilVirtualStake = "50000000000"
+	k.SetParams(ctx, params)
+
+	total := k.GetGuardianStake(ctx)
+	// 100B (guardian) + 2 * 50B (council) = 200B
+	if total.String() != "200000000000" {
+		t.Fatalf("expected total stake 200000000000 (including council), got %s", total.String())
+	}
+}
+
+// TestGetGuardianEffectiveStake verifies individual guardian stake lookups.
+func TestGetGuardianEffectiveStake(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	mock.addGuardian("zrn1g1", "100000000000")
+	mock.addNonGuardian("zrn1scholar", "50000000000")
+
+	stake := k.GetGuardianEffectiveStake(ctx, "zrn1g1")
+	if stake.String() != "100000000000" {
+		t.Fatalf("expected guardian stake 100000000000, got %s", stake.String())
+	}
+
+	// Non-guardian should return 0
+	stake = k.GetGuardianEffectiveStake(ctx, "zrn1scholar")
+	if stake.Sign() != 0 {
+		t.Fatalf("expected 0 stake for non-guardian, got %s", stake.String())
+	}
+
+	// Unknown should return 0
+	stake = k.GetGuardianEffectiveStake(ctx, "zrn1unknown")
+	if stake.Sign() != 0 {
+		t.Fatalf("expected 0 stake for unknown, got %s", stake.String())
+	}
+}
+
+// --- Ceremony Validation Tests ---
+
+// TestCannotHaltWhenAlreadyHalted verifies halt proposal when already halted is rejected.
+func TestCannotHaltWhenAlreadyHalted(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	k.SetEmergencyStatus(ctx, types.StatusHalted)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+	_, err := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "already halted",
+	})
+	if err == nil {
+		t.Fatal("expected error when proposing halt while already halted")
+	}
+}
+
+// TestCannotResumeWhenNotHalted verifies resume proposal when status is normal is rejected.
+func TestCannotResumeWhenNotHalted(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	// Status is normal by default
+	msgSvr := keeper.NewMsgServerImpl(k)
+	_, err := msgSvr.ProposeResume(ctx, &types.MsgProposeResume{
+		Proposer: g1,
+	})
+	if err == nil {
+		t.Fatal("expected error when proposing resume while not halted")
+	}
+}
+
+// TestCeremonyActiveBlocksNewProposal verifies active ceremony prevents new proposals.
+func TestCeremonyActiveBlocksNewProposal(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	g2 := "zrn1g2"
+	mock.addGuardian(g1, "100000000000")
+	mock.addGuardian(g2, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.MaxProposalsPerGuardianPerEpoch = 100
+	params.MaxProposalsPerEpoch = 100
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	// First proposal creates an active ceremony
+	_, err := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "first proposal",
+	})
+	if err != nil {
+		t.Fatalf("first proposal should succeed: %v", err)
+	}
+
+	// Second proposal should fail because ceremony is active
+	_, err = msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g2,
+		Reason:   "second proposal",
+	})
+	if err == nil {
+		t.Fatal("expected error when ceremony is already active")
+	}
+}
+
+// --- Voting Mechanics Tests ---
+
+// TestPrecommitInPrevotePhaseRejected verifies that submitting a precommit during prevote phase
+// is handled correctly (vote is treated as a prevote since ceremony is in prevote phase).
+func TestPrecommitInPrevotePhaseRejected(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	g2 := "zrn1g2"
+	g3 := "zrn1g3"
+	mock.addGuardian(g1, "100000000000")
+	mock.addGuardian(g2, "100000000000")
+	mock.addGuardian(g3, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.HaltQuorum = 900000 // 90% — need all 3 to advance to precommit
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "prevote phase test",
+	})
+
+	// g1 prevotes — still in prevote phase (33% < 90%)
+	_, err := msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g1, ProposalId: resp.ProposalId, Approve: true,
+	})
+	if err != nil {
+		t.Fatalf("g1 prevote should succeed: %v", err)
+	}
+
+	// Verify still in prevote phase
+	ceremony, _ := k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase != string(types.PhasePrevote) {
+		t.Fatalf("expected prevote phase, got %s", ceremony.Phase)
+	}
+
+	// g2 votes — this should be recorded as a prevote (phase is still prevote)
+	_, err = msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g2, ProposalId: resp.ProposalId, Approve: true,
+	})
+	if err != nil {
+		t.Fatalf("g2 prevote should succeed: %v", err)
+	}
+
+	// Verify g2's vote was recorded as a prevote
+	ceremony, _ = k.GetCeremony(ctx, resp.ProposalId)
+	_, hasPrevote := ceremony.GetPrevote(g2)
+	if !hasPrevote {
+		t.Fatal("expected g2's vote to be recorded as a prevote")
+	}
+}
+
+// TestStakeWeightedVoting verifies that stake weights affect quorum calculations.
+func TestStakeWeightedVoting(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	// g1 has 90%, g2 has 10%
+	g1 := "zrn1g1"
+	g2 := "zrn1g2"
+	mock.addGuardian(g1, "900000000000")
+	mock.addGuardian(g2, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.HaltQuorum = 750000 // 75%
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "stake weight test",
+	})
+
+	// g2 alone votes (10% < 75%) — should NOT advance to precommit
+	_, err := msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g2, ProposalId: resp.ProposalId, Approve: true,
+	})
+	if err != nil {
+		t.Fatalf("g2 prevote should succeed: %v", err)
+	}
+	ceremony, _ := k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase != string(types.PhasePrevote) {
+		t.Fatalf("expected prevote (10%% < 75%%), got %s", ceremony.Phase)
+	}
+
+	// g1 votes (90% > 75%) — should advance to precommit
+	_, err = msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g1, ProposalId: resp.ProposalId, Approve: true,
+	})
+	if err != nil {
+		t.Fatalf("g1 prevote should succeed: %v", err)
+	}
+	ceremony, _ = k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase != string(types.PhasePrecommit) {
+		t.Fatalf("expected precommit after 100%% stake voted, got %s", ceremony.Phase)
+	}
+}
+
+// TestNonGuardianVoteRejected verifies a non-guardian vote attempt is rejected.
+func TestNonGuardianVoteRejected(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	scholar := "zrn1scholar"
+	mock.addGuardian(g1, "100000000000")
+	mock.addNonGuardian(scholar, "50000000000")
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "non-guardian vote test",
+	})
+
+	// Non-guardian tries to vote
+	_, err := msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter:      scholar,
+		ProposalId: resp.ProposalId,
+		Approve:    true,
+	})
+	if err == nil {
+		t.Fatal("expected error for non-guardian vote attempt")
+	}
+}
+
+// --- State Tests ---
+
+// TestIsHaltedStates verifies IsHalted returns correct values for each status.
+func TestIsHaltedStates(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	tests := []struct {
+		status   types.EmergencyStatus
+		expected bool
+	}{
+		{types.StatusNormal, false},
+		{types.StatusHaltVoting, false},
+		{types.StatusHalted, true},
+		{types.StatusRevertVoting, true},
+		{types.StatusReverting, true},
+		{types.StatusResumeVoting, true},
+	}
+
+	for _, tt := range tests {
+		k.SetEmergencyStatus(ctx, tt.status)
+		got := k.IsHalted(ctx)
+		if got != tt.expected {
+			t.Errorf("IsHalted(%s) = %v, want %v", tt.status, got, tt.expected)
+		}
+	}
+}
+
+// TestAuditLogRecordsActions verifies audit entries are recorded for actions.
+func TestAuditLogRecordsActions(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	// Propose halt — should generate audit entry
+	resp, err := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "audit test",
+	})
+	if err != nil {
+		t.Fatalf("ProposeHalt failed: %v", err)
+	}
+
+	entries := k.GetAuditLog(ctx)
+	if len(entries) == 0 {
+		t.Fatal("expected audit log entries after proposal")
+	}
+
+	// Check halt_proposed audit entry
+	foundProposal := false
+	for _, e := range entries {
+		if e.Action == string(types.AuditHaltProposed) && e.Actor == g1 {
+			foundProposal = true
+			break
+		}
+	}
+	if !foundProposal {
+		t.Fatal("expected halt_proposed audit entry from g1")
+	}
+
+	// Vote — should generate another audit entry
+	_, err = msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g1, ProposalId: resp.ProposalId, Approve: true,
+	})
+	if err != nil {
+		t.Fatalf("VoteHalt failed: %v", err)
+	}
+
+	entries = k.GetAuditLog(ctx)
+	foundVote := false
+	for _, e := range entries {
+		if e.Action == string(types.AuditHaltPrevote) && e.Actor == g1 {
+			foundVote = true
+			break
+		}
+	}
+	if !foundVote {
+		t.Fatal("expected halt_prevote audit entry from g1")
+	}
+}
+
+// --- Query Server Tests ---
+
+// TestQueryActiveCeremony_None verifies query returns no active ceremony when none exists.
+func TestQueryActiveCeremony_None(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	querySvr := keeper.NewQueryServerImpl(k)
+
+	resp, err := querySvr.ActiveCeremony(ctx, &types.QueryActiveCeremonyRequest{})
+	if err != nil {
+		t.Fatalf("query ActiveCeremony failed: %v", err)
+	}
+	if resp.Found {
+		t.Error("expected no active ceremony when none exists")
+	}
+}
+
+// TestQueryActiveCeremony_Found verifies query finds an active ceremony.
+func TestQueryActiveCeremony_Found(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+	querySvr := keeper.NewQueryServerImpl(k)
+
+	_, err := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "query test",
+	})
+	if err != nil {
+		t.Fatalf("ProposeHalt failed: %v", err)
+	}
+
+	resp, err := querySvr.ActiveCeremony(ctx, &types.QueryActiveCeremonyRequest{})
+	if err != nil {
+		t.Fatalf("query ActiveCeremony failed: %v", err)
+	}
+	if !resp.Found {
+		t.Error("expected active ceremony to be found")
+	}
+	if resp.Ceremony == nil {
+		t.Error("expected non-nil ceremony in response")
+	}
+}
+
+// TestQueryCompletedCeremonies verifies querying completed ceremonies.
+func TestQueryCompletedCeremonies(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.HaltQuorum = 500000
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+	querySvr := keeper.NewQueryServerImpl(k)
+
+	// No completed ceremonies initially
+	resp, err := querySvr.CompletedCeremonies(ctx, &types.QueryCompletedCeremoniesRequest{})
+	if err != nil {
+		t.Fatalf("query CompletedCeremonies failed: %v", err)
+	}
+	if resp.Total != 0 {
+		t.Fatalf("expected 0 completed ceremonies, got %d", resp.Total)
+	}
+
+	// Complete a halt ceremony
+	haltResp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{Proposer: g1, Reason: "test"})
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g1, ProposalId: haltResp.ProposalId, Approve: true})
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g1, ProposalId: haltResp.ProposalId, Approve: true})
+
+	// Now should have 1 completed ceremony
+	resp, err = querySvr.CompletedCeremonies(ctx, &types.QueryCompletedCeremoniesRequest{})
+	if err != nil {
+		t.Fatalf("query CompletedCeremonies failed: %v", err)
+	}
+	if resp.Total != 1 {
+		t.Fatalf("expected 1 completed ceremony, got %d", resp.Total)
+	}
+}
+
+// TestQueryAuditLog verifies querying audit log entries.
+func TestQueryAuditLog(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	querySvr := keeper.NewQueryServerImpl(k)
+
+	// No audit entries initially
+	resp, err := querySvr.AuditLog(ctx, &types.QueryAuditLogRequest{})
+	if err != nil {
+		t.Fatalf("query AuditLog failed: %v", err)
+	}
+	if resp.Total != 0 {
+		t.Fatalf("expected 0 audit entries, got %d", resp.Total)
+	}
+
+	// Add an audit entry
+	k.AddAuditEntry(ctx, &types.EmergencyAuditEntry{
+		BlockNumber: 100,
+		Action:      string(types.AuditHaltProposed),
+		Actor:       "zrn1g1",
+		CeremonyId:  "test-123",
+		Details:     "test entry",
+	})
+
+	resp, err = querySvr.AuditLog(ctx, &types.QueryAuditLogRequest{})
+	if err != nil {
+		t.Fatalf("query AuditLog failed: %v", err)
+	}
+	if resp.Total != 1 {
+		t.Fatalf("expected 1 audit entry, got %d", resp.Total)
+	}
+	if len(resp.Entries) != 1 {
+		t.Fatalf("expected 1 entry in response, got %d", len(resp.Entries))
+	}
+	if resp.Entries[0].Actor != "zrn1g1" {
+		t.Fatalf("expected actor zrn1g1, got %s", resp.Entries[0].Actor)
+	}
+}
+
+// --- Halt Expiry Edge Cases ---
+
+// TestCheckHaltExpiry_NotHalted verifies expiry check when not halted is a no-op.
+func TestCheckHaltExpiry_NotHalted(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	// Status is normal by default
+	k.CheckHaltExpiry(ctx)
+	if k.GetEmergencyStatus(ctx) != types.StatusNormal {
+		t.Fatal("status should remain normal after CheckHaltExpiry when not halted")
+	}
+}
+
+// TestCheckHaltExpiry_NoStartBlock verifies edge case with halted but no start block.
+func TestCheckHaltExpiry_NoStartBlock(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	// Halted but no start block recorded (pre-upgrade scenario)
+	k.SetEmergencyStatus(ctx, types.StatusHalted)
+	k.CheckHaltExpiry(ctx)
+	if k.GetEmergencyStatus(ctx) != types.StatusHalted {
+		t.Fatal("should not expire without start block (graceful for pre-upgrade halts)")
+	}
+}
+
+// ============================================================
+// Adversarial Tests (ported from openclaw_emergency_test.go)
+// ============================================================
+
+// TestOC_NonGuardianHaltAttempt verifies a non-guardian cannot vote on halt.
+// Note: TestNonGuardianRejection covers proposal rejection; this tests VOTE rejection.
+func TestOC_NonGuardianHaltAttempt(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	unknown := "zrn1attacker"
+	mock.addGuardian(g1, "100000000000")
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	// Guardian creates a valid ceremony
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "adversarial test",
+	})
+
+	// Completely unknown address tries to vote
+	_, err := msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter:      unknown,
+		ProposalId: resp.ProposalId,
+		Approve:    true,
+	})
+	if err == nil {
+		t.Fatal("OC: unknown address voting on halt should fail")
+	}
+
+	// Non-guardian (Scholar tier) tries to vote
+	mock.addNonGuardian("zrn1scholar", "50000000000")
+	_, err = msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter:      "zrn1scholar",
+		ProposalId: resp.ProposalId,
+		Approve:    true,
+	})
+	if err == nil {
+		t.Fatal("OC: non-guardian voting on halt should fail")
+	}
+}
+
+// TestOC_CooldownBypass verifies cooldown bypass via block height manipulation.
+// Note: TestCooldown covers basic cooldown; this tests the exact boundary.
+func TestOC_CooldownBypass(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	g2 := "zrn1g2"
+	mock.addGuardian(g1, "100000000000")
+	mock.addGuardian(g2, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.CooldownBlocks = 50
+	params.HaltQuorum = 200000 // 20%
+	params.MaxProposalsPerGuardianPerEpoch = 100
+	params.MaxProposalsPerEpoch = 100
+	params.HaltTimeoutBlocks = 5 // Short timeout
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	// First proposal at block 100
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "cooldown boundary test",
+	})
+
+	// Advance past timeout so ceremony fails, then handle failure
+	ctx = ctx.WithBlockHeight(106)
+	k.CheckCeremonyProgress(ctx, resp.ProposalId)
+	k.HandleCeremonyFailure(ctx, resp.ProposalId)
+
+	// Block 149 — still in cooldown (100 + 50 = 150)
+	ctx = ctx.WithBlockHeight(149)
+	_, err := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g2,
+		Reason:   "boundary minus one",
+	})
+	if err == nil {
+		t.Fatal("OC: proposal at cooldown boundary-1 (block 149, cooldown ends at 150) should fail")
+	}
+
+	// Block 150 — exactly at cooldown end
+	ctx = ctx.WithBlockHeight(150)
+	_, err = msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g2,
+		Reason:   "exactly at boundary",
+	})
+	if err != nil {
+		t.Fatalf("OC: proposal at cooldown boundary (block 150) should succeed: %v", err)
+	}
+}
+
+// TestOC_ProposalSpamPerEpoch verifies same guardian cannot propose twice in one epoch.
+// Note: TestAntiAbusePerGuardianLimit covers basic limit; this tests with epoch boundary.
+func TestOC_ProposalSpamPerEpoch(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	g2 := "zrn1g2"
+	mock.addGuardian(g1, "100000000000")
+	mock.addGuardian(g2, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.MaxProposalsPerGuardianPerEpoch = 1
+	params.MaxProposalsPerEpoch = 100
+	params.HaltQuorum = 200000
+	params.CooldownBlocks = 0 // No cooldown for this test
+	params.HaltTimeoutBlocks = 5
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	// g1 proposes at block 100
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "first",
+	})
+
+	// Advance past timeout, fail the ceremony
+	ctx = ctx.WithBlockHeight(106)
+	k.CheckCeremonyProgress(ctx, resp.ProposalId)
+	k.HandleCeremonyFailure(ctx, resp.ProposalId)
+
+	// g1 tries again — should fail (per-guardian limit)
+	_, err := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "second by same guardian",
+	})
+	if err == nil {
+		t.Fatal("OC: same guardian proposing twice per epoch should fail")
+	}
+
+	// g2 should succeed (different guardian)
+	_, err = msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g2,
+		Reason:   "different guardian",
+	})
+	if err != nil {
+		t.Fatalf("OC: different guardian should be able to propose: %v", err)
+	}
+}
+
+// TestOC_PrecommitWithoutPrevote verifies precommit from a guardian who didn't prevote.
+// Note: TestPrecommitWithoutPrevoteRejection exists; this tests a resume ceremony variant.
+func TestOC_PrecommitWithoutPrevote(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	g2 := "zrn1g2"
+	g3 := "zrn1g3"
+	mock.addGuardian(g1, "100000000000")
+	mock.addGuardian(g2, "100000000000")
+	mock.addGuardian(g3, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.HaltQuorum = 500000  // 50%
+	params.ResumeQuorum = 500000
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	// Execute a halt
+	haltResp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{Proposer: g1, Reason: "precommit test"})
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g1, ProposalId: haltResp.ProposalId, Approve: true})
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g2, ProposalId: haltResp.ProposalId, Approve: true})
+	// Now in precommit phase, finalize halt
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g1, ProposalId: haltResp.ProposalId, Approve: true})
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g2, ProposalId: haltResp.ProposalId, Approve: true})
+
+	if k.GetEmergencyStatus(ctx) != types.StatusHalted {
+		t.Fatal("expected halted status for precommit test setup")
+	}
+
+	// Propose resume
+	resumeResp, _ := msgSvr.ProposeResume(ctx, &types.MsgProposeResume{Proposer: g1})
+
+	// g1 and g2 prevote resume
+	msgSvr.VoteResume(ctx, &types.MsgVoteResume{Voter: g1, ProposalId: resumeResp.ProposalId, Approve: true})
+	msgSvr.VoteResume(ctx, &types.MsgVoteResume{Voter: g2, ProposalId: resumeResp.ProposalId, Approve: true})
+
+	// Verify ceremony is in precommit
+	ceremony, _ := k.GetCeremony(ctx, resumeResp.ProposalId)
+	if ceremony.Phase != string(types.PhasePrecommit) {
+		t.Fatalf("expected precommit phase, got %s", ceremony.Phase)
+	}
+
+	// g3 did NOT prevote — precommit on resume should fail
+	_, err := msgSvr.VoteResume(ctx, &types.MsgVoteResume{
+		Voter: g3, ProposalId: resumeResp.ProposalId, Approve: true,
+	})
+	if err == nil {
+		t.Fatal("OC: precommit without prevote on resume ceremony should fail")
+	}
+}
+
+// TestOC_DuplicateVoteInPhase verifies duplicate precommit vote is rejected.
+// Note: TestDuplicateVotePrevention covers prevote duplicates; this tests precommit duplicates.
+func TestOC_DuplicateVoteInPhase(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	g2 := "zrn1g2"
+	mock.addGuardian(g1, "80000000000")
+	mock.addGuardian(g2, "20000000000")
+
+	params := k.GetParams(ctx)
+	params.HaltQuorum = 500000 // 50%
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "dup precommit test",
+	})
+
+	// g1 prevotes (80% > 50%) — advances to precommit
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g1, ProposalId: resp.ProposalId, Approve: true})
+
+	ceremony, _ := k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase != string(types.PhasePrecommit) {
+		t.Fatalf("expected precommit phase, got %s", ceremony.Phase)
+	}
+
+	// g1 first precommit — succeeds
+	_, err := msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g1, ProposalId: resp.ProposalId, Approve: true,
+	})
+	if err != nil {
+		t.Fatalf("first precommit should succeed: %v", err)
+	}
+
+	// g1 duplicate precommit — should fail
+	_, err = msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g1, ProposalId: resp.ProposalId, Approve: true,
+	})
+	if err == nil {
+		t.Fatal("OC: duplicate precommit should fail")
+	}
+}
+
+// TestOC_HaltFromWrongStatus verifies halt proposals are rejected from non-normal statuses.
+func TestOC_HaltFromWrongStatus(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	invalidStatuses := []types.EmergencyStatus{
+		types.StatusHalted,
+		types.StatusResumeVoting,
+		types.StatusRevertVoting,
+		types.StatusReverting,
+		types.StatusHaltVoting,
+	}
+
+	for _, status := range invalidStatuses {
+		k.SetEmergencyStatus(ctx, status)
+		_, err := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+			Proposer: g1,
+			Reason:   "wrong status: " + string(status),
+		})
+		if err == nil {
+			t.Errorf("OC: halt proposal should fail when status is %s", status)
+		}
+	}
+}
+
+// TestOC_RevertDepthExceeded verifies revert at exact boundary of MaxRevertDepth.
+// Note: TestRevertDepthExceeded tests depth > max; this tests depth == max (boundary).
+func TestOC_RevertDepthExceeded(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.MaxRevertDepth = 50
+	params.HaltQuorum = 500000
+	k.SetParams(ctx, params)
+
+	// Halt the chain
+	k.SetEmergencyStatus(ctx, types.StatusHalted)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	// At block 100, revert to block 50 → depth = 50 = MaxRevertDepth (should succeed)
+	_, err := msgSvr.ProposeRevert(ctx, &types.MsgProposeRevert{
+		Proposer:       g1,
+		RevertToHeight: 50,
+		Justification:  "exact max depth",
+	})
+	if err != nil {
+		t.Fatalf("OC: revert at exact max depth (50) should succeed: %v", err)
+	}
+}
+
+// TestOC_RevertDepthExceededByOne verifies revert at max+1 is rejected.
+func TestOC_RevertDepthExceededByOne(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.MaxRevertDepth = 50
+	k.SetParams(ctx, params)
+
+	k.SetEmergencyStatus(ctx, types.StatusHalted)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	// At block 100, revert to block 49 → depth = 51 > MaxRevertDepth (should fail)
+	_, err := msgSvr.ProposeRevert(ctx, &types.MsgProposeRevert{
+		Proposer:       g1,
+		RevertToHeight: 49,
+		Justification:  "one past max depth",
+	})
+	if err == nil {
+		t.Fatal("OC: revert at depth max+1 (51 > 50) should fail")
+	}
+}
+
+// TestOC_ResumeFromNormalState verifies resume when already normal is rejected.
+func TestOC_ResumeFromNormalState(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	// Status is normal by default
+	if k.GetEmergencyStatus(ctx) != types.StatusNormal {
+		t.Fatal("expected normal status")
+	}
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	_, err := msgSvr.ProposeResume(ctx, &types.MsgProposeResume{
+		Proposer: g1,
+	})
+	if err == nil {
+		t.Fatal("OC: resume from normal state should fail")
+	}
+
+	// Also test revert from normal state
+	_, err = msgSvr.ProposeRevert(ctx, &types.MsgProposeRevert{
+		Proposer:       g1,
+		RevertToHeight: 50,
+		Justification:  "not halted",
+	})
+	if err == nil {
+		t.Fatal("OC: revert from normal state should fail")
+	}
+}
+
+// TestOC_QuorumManipulation verifies quorum advances correctly at threshold boundaries.
+func TestOC_QuorumManipulation(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	// 5 guardians with equal stake (20% each)
+	guardians := []string{"zrn1g1", "zrn1g2", "zrn1g3", "zrn1g4", "zrn1g5"}
+	for _, g := range guardians {
+		mock.addGuardian(g, "100000000000")
+	}
+
+	params := k.GetParams(ctx)
+	params.HaltQuorum = 750000 // 75%
+	params.MinDistinctVoters = 1
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: guardians[0],
+		Reason:   "quorum manipulation test",
+	})
+
+	// 2 guardians = 40% < 75% — still prevote
+	for _, g := range guardians[:2] {
+		msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g, ProposalId: resp.ProposalId, Approve: true})
+	}
+	ceremony, _ := k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase != string(types.PhasePrevote) {
+		t.Fatalf("OC: 40%% should still be prevote, got %s", ceremony.Phase)
+	}
+
+	// 3 guardians = 60% < 75% — still prevote
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: guardians[2], ProposalId: resp.ProposalId, Approve: true})
+	ceremony, _ = k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase != string(types.PhasePrevote) {
+		t.Fatalf("OC: 60%% should still be prevote, got %s", ceremony.Phase)
+	}
+
+	// 4 guardians = 80% > 75% — advance to precommit
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: guardians[3], ProposalId: resp.ProposalId, Approve: true})
+	ceremony, _ = k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase != string(types.PhasePrecommit) {
+		t.Fatalf("OC: 80%% should advance to precommit, got %s", ceremony.Phase)
+	}
+
+	// 3 precommits = 60% < 75% — not finalized
+	for _, g := range guardians[:3] {
+		msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: g, ProposalId: resp.ProposalId, Approve: true})
+	}
+	ceremony, _ = k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase == string(types.PhaseFinalized) {
+		t.Fatal("OC: 60% precommit should not finalize at 75% quorum")
+	}
+
+	// 4th precommit → 80% > 75% → finalized
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: guardians[3], ProposalId: resp.ProposalId, Approve: true})
+
+	status := k.GetEmergencyStatus(ctx)
+	if status != types.StatusHalted {
+		t.Fatalf("OC: expected halted after full quorum, got %s", status)
+	}
+}
+
+// TestOC_CeremonyTimeoutEnforcement verifies ceremony timeout at exact deadline boundary.
+func TestOC_CeremonyTimeoutEnforcement(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.HaltPrevoteBlocks = 10
+	params.HaltTimeoutBlocks = 20
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "timeout boundary test",
+	})
+
+	// At prevote deadline boundary (100 + 10 = 110): should still be active
+	ctxAtDeadline := ctx.WithBlockHeight(110)
+	k.CheckCeremonyProgress(ctxAtDeadline, resp.ProposalId)
+	ceremony, _ := k.GetCeremony(ctxAtDeadline, resp.ProposalId)
+	if ceremony.Phase == string(types.PhaseFailed) {
+		t.Error("OC: ceremony should not timeout exactly at prevote deadline")
+	}
+
+	// Just past prevote deadline (111): should fail (prevote quorum not reached)
+	ctxPastDeadline := ctx.WithBlockHeight(111)
+	k.CheckCeremonyProgress(ctxPastDeadline, resp.ProposalId)
+	ceremony, _ = k.GetCeremony(ctxPastDeadline, resp.ProposalId)
+	if ceremony.Phase != string(types.PhaseFailed) {
+		t.Fatalf("OC: ceremony should fail after prevote deadline, got %s", ceremony.Phase)
+	}
+	if ceremony.FailureReason == "" {
+		t.Fatal("OC: expected failure reason to be set")
+	}
+}
+
+// TestOC_VoteFlipRejected verifies that changing vote (YES→NO) in prevote phase is rejected.
+func TestOC_VoteFlipRejected(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	g2 := "zrn1g2"
+	mock.addGuardian(g1, "100000000000")
+	mock.addGuardian(g2, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.HaltQuorum = 900000 // High quorum so g1 alone can't advance
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "vote flip test",
+	})
+
+	// g2 prevotes YES
+	_, err := msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g2, ProposalId: resp.ProposalId, Approve: true,
+	})
+	if err != nil {
+		t.Fatalf("first prevote should succeed: %v", err)
+	}
+
+	// g2 tries to prevote NO (flip) — should fail as duplicate
+	_, err = msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{
+		Voter: g2, ProposalId: resp.ProposalId, Approve: false,
+	})
+	if err == nil {
+		t.Fatal("OC: vote flip (YES→NO) should be rejected as duplicate")
+	}
+}
+
+// TestOC_NoPrevoteRejection verifies that "no" prevotes contribute to quorum impossibility.
+func TestOC_NoPrevoteRejection(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	// 4 guardians with equal stake (25% each)
+	guardians := []string{"zrn1g1", "zrn1g2", "zrn1g3", "zrn1g4"}
+	for _, g := range guardians {
+		mock.addGuardian(g, "100000000000")
+	}
+
+	params := k.GetParams(ctx)
+	params.HaltQuorum = 750000 // 75%
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: guardians[0],
+		Reason:   "no vote test",
+	})
+
+	// g1 votes YES (25%), g2 votes NO (25%)
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: guardians[0], ProposalId: resp.ProposalId, Approve: true})
+	msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: guardians[1], ProposalId: resp.ProposalId, Approve: false})
+
+	// After NO exceeds (100% - 75%) = 25%, quorum should become impossible
+	// g2's NO at 25% = 25% which is equal to threshold (not strictly greater), check behavior
+	ceremony, _ := k.GetCeremony(ctx, resp.ProposalId)
+	if ceremony.Phase == string(types.PhaseFailed) {
+		t.Log("ceremony correctly failed: quorum impossible with 25% NO votes")
+	}
+
+	// g3 also votes NO (now 50% NO > 25% allowed)
+	if ceremony.Phase != string(types.PhaseFailed) {
+		msgSvr.VoteHalt(ctx, &types.MsgVoteHalt{Voter: guardians[2], ProposalId: resp.ProposalId, Approve: false})
+		ceremony, _ = k.GetCeremony(ctx, resp.ProposalId)
+		if ceremony.Phase != string(types.PhaseFailed) {
+			t.Fatal("OC: ceremony should fail when quorum is impossible (50% NO at 75% threshold)")
+		}
+	}
+}
+
+// TestBeginBlockCeremonyTimeout verifies BeginBlock detects ceremony timeout.
+func TestBeginBlockCeremonyTimeout(t *testing.T) {
+	k, mock, ctx := setupKeeper(t)
+
+	g1 := "zrn1g1"
+	mock.addGuardian(g1, "100000000000")
+
+	params := k.GetParams(ctx)
+	params.HaltTimeoutBlocks = 10
+	params.HaltPrevoteBlocks = 5
+	k.SetParams(ctx, params)
+
+	msgSvr := keeper.NewMsgServerImpl(k)
+
+	resp, _ := msgSvr.ProposeHalt(ctx, &types.MsgProposeHalt{
+		Proposer: g1,
+		Reason:   "begin block timeout test",
+	})
+
+	// Advance past timeout deadline
+	ctx = ctx.WithBlockHeight(int64(100 + params.HaltTimeoutBlocks + 1))
+
+	// BeginBlock should detect timeout
+	am := emergency.NewAppModule(nil, k)
+	am.BeginBlock(ctx)
+
+	ceremony, found := k.GetCeremony(ctx, resp.ProposalId)
+	if !found {
+		t.Fatal("ceremony not found after timeout")
+	}
+	if ceremony.Phase != string(types.PhaseFailed) {
+		t.Fatalf("expected failed phase after timeout via BeginBlock, got %s", ceremony.Phase)
+	}
+
+	// Status should revert to normal after halt ceremony failure
+	status := k.GetEmergencyStatus(ctx)
+	if status != types.StatusNormal {
+		t.Fatalf("expected normal after halt failure via BeginBlock, got %s", status)
+	}
+}

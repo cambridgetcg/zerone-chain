@@ -669,3 +669,626 @@ func TestSubmitTxChannelClosedMarksInactive(t *testing.T) {
 	// Suppress unused variable warnings for mock
 	_ = mock
 }
+
+// ============================================================
+// R15-4: Register Interchain Account Tests
+// ============================================================
+
+func TestRegisterInterchainAccount_EmptyOwner(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	msg := &types.MsgRegisterAccount{
+		Owner:        "",
+		ConnectionId: "connection-0",
+	}
+	_, err := ms.RegisterAccount(ctx, msg)
+	if err == nil {
+		t.Fatal("expected error for empty owner")
+	}
+}
+
+func TestRegisterInterchainAccount_EmptyConnectionID(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	msg := &types.MsgRegisterAccount{
+		Owner:        testAddr(1),
+		ConnectionId: "",
+	}
+	_, err := ms.RegisterAccount(ctx, msg)
+	if err == nil {
+		t.Fatal("expected error for empty connection_id")
+	}
+}
+
+func TestRegisterInterchainAccount_MultipleOwners(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	k.SetParams(ctx, &types.Params{
+		MaxRemoteAccountsPerOwner: 10,
+		AllowedHostMsgTypes:       []string{},
+		RegistrationCooldown:      0,
+		MaxMessagesPerTx:          5,
+	})
+
+	owner1 := testAddr(1)
+	owner2 := testAddr(2)
+
+	// Both owners register on connection-0 — should succeed (different owners)
+	_, err := ms.RegisterAccount(ctx, &types.MsgRegisterAccount{Owner: owner1, ConnectionId: "connection-0"})
+	if err != nil {
+		t.Fatalf("owner1 registration should succeed: %v", err)
+	}
+	_, err = ms.RegisterAccount(ctx, &types.MsgRegisterAccount{Owner: owner2, ConnectionId: "connection-0"})
+	if err != nil {
+		t.Fatalf("owner2 registration should succeed: %v", err)
+	}
+
+	accounts1 := k.GetRemoteAccounts(ctx, owner1)
+	accounts2 := k.GetRemoteAccounts(ctx, owner2)
+	if len(accounts1) != 1 {
+		t.Fatalf("owner1: expected 1 account, got %d", len(accounts1))
+	}
+	if len(accounts2) != 1 {
+		t.Fatalf("owner2: expected 1 account, got %d", len(accounts2))
+	}
+}
+
+func TestRegisterInterchainAccount_PortIDGeneration(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	owner := testAddr(1)
+	_, err := ms.RegisterAccount(ctx, &types.MsgRegisterAccount{
+		Owner:        owner,
+		ConnectionId: "connection-0",
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	accounts := k.GetRemoteAccounts(ctx, owner)
+	if len(accounts) != 1 {
+		t.Fatalf("expected 1 account, got %d", len(accounts))
+	}
+	expectedPort := "icacontroller-" + owner
+	if accounts[0].PortId != expectedPort {
+		t.Errorf("expected port %s, got %s", expectedPort, accounts[0].PortId)
+	}
+}
+
+// ============================================================
+// R15-4: Submit Interchain Tx Tests
+// ============================================================
+
+func TestSubmitInterchainTx_SendError(t *testing.T) {
+	k, ctx, mock := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	k.SetParams(ctx, &types.Params{
+		MaxRemoteAccountsPerOwner: 10,
+		AllowedHostMsgTypes:       []string{"/cosmos.bank.v1beta1.MsgSend"},
+		RegistrationCooldown:      0,
+		MaxMessagesPerTx:          5,
+	})
+
+	owner := testAddr(1)
+	setupActiveAccount(t, k, ctx, mock, owner, "connection-0")
+
+	// Configure send failure
+	mock.sendErr = fmt.Errorf("mock send failure")
+
+	msgs := []*anypb.Any{
+		{TypeUrl: "/cosmos.bank.v1beta1.MsgSend", Value: []byte{}},
+	}
+
+	// Note: in the test environment, the codec's interface registry has no
+	// registered implementations, so the error occurs at the unpack stage
+	// rather than at SendTx. Either way, SubmitTx must return an error.
+	_, err := ms.SubmitTx(ctx, &types.MsgSubmitTx{
+		Owner:        owner,
+		ConnectionId: "connection-0",
+		Msgs:         msgs,
+		TimeoutNs:    uint64(120 * time.Second),
+	})
+	if err == nil {
+		t.Fatal("expected error from ICA submit tx")
+	}
+}
+
+func TestSubmitInterchainTx_EmptyMsgs(t *testing.T) {
+	msg := &types.MsgSubmitTx{
+		Owner:        testAddr(1),
+		ConnectionId: "connection-0",
+		Msgs:         nil,
+		TimeoutNs:    uint64(120 * time.Second),
+	}
+	if err := msg.ValidateBasic(); err == nil {
+		t.Fatal("expected error for empty msgs")
+	}
+}
+
+func TestSubmitInterchainTx_EmptyOwner(t *testing.T) {
+	msgs := []*anypb.Any{
+		{TypeUrl: "/cosmos.bank.v1beta1.MsgSend", Value: []byte{}},
+	}
+	msg := &types.MsgSubmitTx{
+		Owner:        "",
+		ConnectionId: "connection-0",
+		Msgs:         msgs,
+		TimeoutNs:    uint64(120 * time.Second),
+	}
+	if err := msg.ValidateBasic(); err == nil {
+		t.Fatal("expected error for empty owner in SubmitTx")
+	}
+}
+
+// ============================================================
+// R15-4: ICA Tx Timeout Tests
+// ============================================================
+
+func TestICATxTimeout_Below60s(t *testing.T) {
+	msgs := []*anypb.Any{
+		{TypeUrl: "/cosmos.bank.v1beta1.MsgSend", Value: []byte{}},
+	}
+	msg := &types.MsgSubmitTx{
+		Owner:        testAddr(1),
+		ConnectionId: "connection-0",
+		Msgs:         msgs,
+		TimeoutNs:    uint64(59 * time.Second), // below 60s minimum
+	}
+	if err := msg.ValidateBasic(); err == nil {
+		t.Fatal("expected error for timeout below 60s")
+	}
+}
+
+func TestICATxTimeout_Exactly60s(t *testing.T) {
+	msgs := []*anypb.Any{
+		{TypeUrl: "/cosmos.bank.v1beta1.MsgSend", Value: []byte{}},
+	}
+	msg := &types.MsgSubmitTx{
+		Owner:        testAddr(1),
+		ConnectionId: "connection-0",
+		Msgs:         msgs,
+		TimeoutNs:    types.MinTimeout, // exactly 60s
+	}
+	if err := msg.ValidateBasic(); err != nil {
+		t.Fatalf("expected no error for exactly 60s timeout, got: %v", err)
+	}
+}
+
+func TestICATxTimeout_LargeTimeout(t *testing.T) {
+	msgs := []*anypb.Any{
+		{TypeUrl: "/cosmos.bank.v1beta1.MsgSend", Value: []byte{}},
+	}
+	msg := &types.MsgSubmitTx{
+		Owner:        testAddr(1),
+		ConnectionId: "connection-0",
+		Msgs:         msgs,
+		TimeoutNs:    uint64(24 * time.Hour), // 24 hours
+	}
+	if err := msg.ValidateBasic(); err != nil {
+		t.Fatalf("expected no error for 24h timeout, got: %v", err)
+	}
+}
+
+// ============================================================
+// R15-4: ICA Tx Unauthorized Tests
+// ============================================================
+
+func TestICATxUnauthorized_WrongOwner(t *testing.T) {
+	k, ctx, mock := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	k.SetParams(ctx, &types.Params{
+		MaxRemoteAccountsPerOwner: 10,
+		AllowedHostMsgTypes:       []string{"/cosmos.bank.v1beta1.MsgSend"},
+		RegistrationCooldown:      0,
+		MaxMessagesPerTx:          5,
+	})
+
+	// Register with owner1
+	owner1 := testAddr(1)
+	setupActiveAccount(t, k, ctx, mock, owner1, "connection-0")
+
+	// Try to submit with owner2 (different owner)
+	owner2 := testAddr(2)
+	msgs := []*anypb.Any{
+		{TypeUrl: "/cosmos.bank.v1beta1.MsgSend", Value: []byte{}},
+	}
+
+	_, err := ms.SubmitTx(ctx, &types.MsgSubmitTx{
+		Owner:        owner2,
+		ConnectionId: "connection-0",
+		Msgs:         msgs,
+		TimeoutNs:    uint64(120 * time.Second),
+	})
+	if err == nil {
+		t.Fatal("expected error when wrong owner submits tx")
+	}
+}
+
+func TestICATxUnauthorized_WrongConnection(t *testing.T) {
+	k, ctx, mock := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	k.SetParams(ctx, &types.Params{
+		MaxRemoteAccountsPerOwner: 10,
+		AllowedHostMsgTypes:       []string{"/cosmos.bank.v1beta1.MsgSend"},
+		RegistrationCooldown:      0,
+		MaxMessagesPerTx:          5,
+	})
+
+	owner := testAddr(1)
+	setupActiveAccount(t, k, ctx, mock, owner, "connection-0")
+
+	msgs := []*anypb.Any{
+		{TypeUrl: "/cosmos.bank.v1beta1.MsgSend", Value: []byte{}},
+	}
+
+	_, err := ms.SubmitTx(ctx, &types.MsgSubmitTx{
+		Owner:        owner,
+		ConnectionId: "connection-99", // wrong connection
+		Msgs:         msgs,
+		TimeoutNs:    uint64(120 * time.Second),
+	})
+	if err == nil {
+		t.Fatal("expected error for unregistered connection")
+	}
+}
+
+// ============================================================
+// R15-4: ICA Account Reuse Tests
+// ============================================================
+
+func TestICAAccountReuse_ReactivateAfterChannelClose(t *testing.T) {
+	k, ctx, mock := setupKeeper(t)
+
+	owner := testAddr(1)
+	portID := "icacontroller-" + owner
+
+	// Register and activate
+	acct := &types.RemoteAccount{
+		ConnectionId:    "connection-0",
+		PortId:          portID,
+		OwnerAddress:    owner,
+		Active:          true,
+		RegisteredBlock: uint64(ctx.BlockHeight()),
+		RemoteAddress:   "cosmos1remote...",
+	}
+	k.AddRemoteAccount(ctx, owner, acct)
+	// Do NOT open the channel — simulate channel close
+
+	// Account is active but channel is closed (not in mock.openChannels)
+	ms := keeper.NewMsgServerImpl(k)
+	k.SetParams(ctx, &types.Params{
+		MaxRemoteAccountsPerOwner: 10,
+		AllowedHostMsgTypes:       []string{"/cosmos.bank.v1beta1.MsgSend"},
+		RegistrationCooldown:      0,
+		MaxMessagesPerTx:          5,
+	})
+
+	msgs := []*anypb.Any{
+		{TypeUrl: "/cosmos.bank.v1beta1.MsgSend", Value: []byte{}},
+	}
+
+	// SubmitTx should fail and mark account inactive
+	_, err := ms.SubmitTx(ctx, &types.MsgSubmitTx{
+		Owner:        owner,
+		ConnectionId: "connection-0",
+		Msgs:         msgs,
+		TimeoutNs:    uint64(120 * time.Second),
+	})
+	if err == nil {
+		t.Fatal("expected error when channel is closed")
+	}
+
+	// Verify account was marked inactive
+	found, ok := k.GetRemoteAccountByConnection(ctx, owner, "connection-0")
+	if !ok {
+		t.Fatal("account record should still exist")
+	}
+	if found.Active {
+		t.Fatal("account should be marked inactive after channel close detection")
+	}
+
+	// Reactivate by updating address
+	k.UpdateRemoteAccountAddress(ctx, owner, "connection-0", "cosmos1newremote...")
+	found, ok = k.GetRemoteAccountByConnection(ctx, owner, "connection-0")
+	if !ok {
+		t.Fatal("account should still exist after reactivation")
+	}
+	if !found.Active {
+		t.Fatal("account should be active after UpdateRemoteAccountAddress")
+	}
+	if found.RemoteAddress != "cosmos1newremote..." {
+		t.Errorf("expected cosmos1newremote..., got %s", found.RemoteAddress)
+	}
+
+	_ = mock
+}
+
+func TestICAAccountReuse_UpdateNonexistentOwner(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Update on a non-existent owner — should be a no-op (no panic)
+	k.UpdateRemoteAccountAddress(ctx, testAddr(99), "connection-0", "cosmos1addr...")
+
+	// Verify nothing was created
+	accounts := k.GetRemoteAccounts(ctx, testAddr(99))
+	if len(accounts) != 0 {
+		t.Fatal("expected no accounts for non-existent owner")
+	}
+}
+
+// ============================================================
+// R15-4: ICA Channel Ordering Tests
+// ============================================================
+
+func TestICAChannelOrdering_MultipleConnectionsSameOwner(t *testing.T) {
+	k, ctx, mock := setupKeeper(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	k.SetParams(ctx, &types.Params{
+		MaxRemoteAccountsPerOwner: 10,
+		AllowedHostMsgTypes:       []string{"/cosmos.bank.v1beta1.MsgSend"},
+		RegistrationCooldown:      0, // disable for this test
+		MaxMessagesPerTx:          5,
+	})
+
+	owner := testAddr(1)
+
+	// Register on connection-0
+	_, err := ms.RegisterAccount(ctx, &types.MsgRegisterAccount{Owner: owner, ConnectionId: "connection-0"})
+	if err != nil {
+		t.Fatalf("connection-0 registration should succeed: %v", err)
+	}
+
+	// Register on connection-1
+	_, err = ms.RegisterAccount(ctx, &types.MsgRegisterAccount{Owner: owner, ConnectionId: "connection-1"})
+	if err != nil {
+		t.Fatalf("connection-1 registration should succeed: %v", err)
+	}
+
+	accounts := k.GetRemoteAccounts(ctx, owner)
+	if len(accounts) != 2 {
+		t.Fatalf("expected 2 accounts, got %d", len(accounts))
+	}
+
+	// Verify each can be independently found
+	acc0, ok := k.GetRemoteAccountByConnection(ctx, owner, "connection-0")
+	if !ok {
+		t.Fatal("expected connection-0 account to be found")
+	}
+	if acc0.ConnectionId != "connection-0" {
+		t.Errorf("expected connection-0, got %s", acc0.ConnectionId)
+	}
+
+	acc1, ok := k.GetRemoteAccountByConnection(ctx, owner, "connection-1")
+	if !ok {
+		t.Fatal("expected connection-1 account to be found")
+	}
+	if acc1.ConnectionId != "connection-1" {
+		t.Errorf("expected connection-1, got %s", acc1.ConnectionId)
+	}
+
+	_ = mock
+}
+
+// ============================================================
+// R15-4: Query Server Additional Tests
+// ============================================================
+
+func TestQueryAccountNotRegistered(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Account(ctx, &types.QueryAccountRequest{
+		Owner:        testAddr(99),
+		ConnectionId: "connection-0",
+	})
+	if err == nil {
+		t.Fatal("expected error for non-existent account")
+	}
+}
+
+func TestQueryAccountsForOwner(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	owner := testAddr(1)
+
+	// No accounts yet
+	resp, err := qs.Accounts(ctx, &types.QueryAccountsRequest{Owner: owner})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Accounts) != 0 {
+		t.Fatalf("expected 0 accounts, got %d", len(resp.Accounts))
+	}
+
+	// Add an account
+	k.AddRemoteAccount(ctx, owner, &types.RemoteAccount{
+		ConnectionId: "connection-0",
+		OwnerAddress: owner,
+		Active:       true,
+	})
+
+	resp, err = qs.Accounts(ctx, &types.QueryAccountsRequest{Owner: owner})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(resp.Accounts) != 1 {
+		t.Fatalf("expected 1 account, got %d", len(resp.Accounts))
+	}
+}
+
+func TestQueryParamsNilRequest(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Params(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil request")
+	}
+}
+
+func TestQueryAccountNilRequest(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Account(ctx, nil)
+	if err == nil {
+		t.Fatal("expected error for nil request")
+	}
+}
+
+func TestQueryAccountsMissingOwner(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	_, err := qs.Accounts(ctx, &types.QueryAccountsRequest{Owner: ""})
+	if err == nil {
+		t.Fatal("expected error for empty owner")
+	}
+}
+
+// ============================================================
+// R15-4: Genesis Edge Cases
+// ============================================================
+
+func TestGenesisNilParams(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	gs := &types.GenesisState{
+		Params:  nil,
+		Records: nil,
+	}
+	k.InitGenesis(ctx, gs)
+
+	// Should get default params
+	params := k.GetParams(ctx)
+	if params.MaxRemoteAccountsPerOwner != 5 {
+		t.Errorf("expected default max=5, got %d", params.MaxRemoteAccountsPerOwner)
+	}
+	if params.MaxMessagesPerTx != 5 {
+		t.Errorf("expected default MaxMessagesPerTx=5, got %d", params.MaxMessagesPerTx)
+	}
+}
+
+func TestGenesisMultipleRecords(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	gs := &types.GenesisState{
+		Params: types.DefaultParams(),
+		Records: []*types.InterchainAccountRecord{
+			{
+				Owner: testAddr(1),
+				Accounts: []*types.RemoteAccount{
+					{ConnectionId: "connection-0", OwnerAddress: testAddr(1), Active: true},
+					{ConnectionId: "connection-1", OwnerAddress: testAddr(1), Active: false},
+				},
+			},
+			{
+				Owner: testAddr(2),
+				Accounts: []*types.RemoteAccount{
+					{ConnectionId: "connection-0", OwnerAddress: testAddr(2), Active: true},
+				},
+			},
+		},
+	}
+	k.InitGenesis(ctx, gs)
+
+	exported := k.ExportGenesis(ctx)
+	if len(exported.Records) != 2 {
+		t.Fatalf("expected 2 records, got %d", len(exported.Records))
+	}
+
+	// Verify owner1 has 2 accounts
+	accounts1 := k.GetRemoteAccounts(ctx, testAddr(1))
+	if len(accounts1) != 2 {
+		t.Fatalf("owner1: expected 2 accounts, got %d", len(accounts1))
+	}
+
+	// Verify owner2 has 1 account
+	accounts2 := k.GetRemoteAccounts(ctx, testAddr(2))
+	if len(accounts2) != 1 {
+		t.Fatalf("owner2: expected 1 account, got %d", len(accounts2))
+	}
+}
+
+// ============================================================
+// R15-4: UpdateParams Validation Tests
+// ============================================================
+
+func TestMsgUpdateParamsValidation(t *testing.T) {
+	msg := &types.MsgUpdateParams{
+		Authority: "",
+		Params:    types.DefaultParams(),
+	}
+	if err := msg.ValidateBasic(); err == nil {
+		t.Fatal("expected error for empty authority")
+	}
+
+	msg2 := &types.MsgUpdateParams{
+		Authority: testAddr(1),
+		Params:    nil,
+	}
+	if err := msg2.ValidateBasic(); err == nil {
+		t.Fatal("expected error for nil params")
+	}
+
+	msg3 := &types.MsgUpdateParams{
+		Authority: testAddr(1),
+		Params: &types.Params{
+			MaxRemoteAccountsPerOwner: 0, // invalid
+			MaxMessagesPerTx:          5,
+		},
+	}
+	if err := msg3.ValidateBasic(); err == nil {
+		t.Fatal("expected error for zero max_remote_accounts_per_owner")
+	}
+
+	msg4 := &types.MsgUpdateParams{
+		Authority: testAddr(1),
+		Params: &types.Params{
+			MaxRemoteAccountsPerOwner: 5,
+			MaxMessagesPerTx:          0, // invalid
+		},
+	}
+	if err := msg4.ValidateBasic(); err == nil {
+		t.Fatal("expected error for zero max_messages_per_tx")
+	}
+}
+
+func TestDefaultParams_SecurityExclusions(t *testing.T) {
+	params := types.DefaultParams()
+
+	// Verify MsgTransfer is NOT included (P0-6 security)
+	for _, msgType := range params.AllowedHostMsgTypes {
+		if msgType == "/ibc.applications.transfer.v1.MsgTransfer" {
+			t.Fatal("SECURITY: MsgTransfer must not be in default AllowedHostMsgTypes")
+		}
+	}
+
+	// Verify expected governance/staking types ARE present
+	expected := map[string]bool{
+		"/cosmos.bank.v1beta1.MsgSend":                             false,
+		"/cosmos.staking.v1beta1.MsgDelegate":                      false,
+		"/cosmos.staking.v1beta1.MsgUndelegate":                    false,
+		"/cosmos.staking.v1beta1.MsgBeginRedelegate":               false,
+		"/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward":  false,
+	}
+	for _, msgType := range params.AllowedHostMsgTypes {
+		if _, ok := expected[msgType]; ok {
+			expected[msgType] = true
+		}
+	}
+	for msgType, found := range expected {
+		if !found {
+			t.Errorf("expected %s in AllowedHostMsgTypes", msgType)
+		}
+	}
+}

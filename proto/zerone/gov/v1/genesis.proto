@@ -22,7 +22,7 @@ message Params {
 // CategoryConfig defines per-category stake and review requirements.
 message CategoryConfig {
   string category          = 1; // "parameter", "upgrade", "text", "research_spend"
-  string required_stake_bps = 2; // uzrn required to advance from draft to review
+  string required_stake_uzrn = 2; // uzrn required to advance from draft to review
   uint64 review_blocks     = 3; // blocks required in review stage before last_call
 }
 
@@ -39,4 +39,8 @@ message GenesisState {
   repeated Vote   votes           = 3;
   uint64          next_lip_number = 4;
   repeated GenesisUpgradePlan upgrade_plans = 5;
+  ResearchFundGovernanceState research_fund_governance = 6;
+  repeated SeatElectionProposal seat_elections = 7;
+  repeated SeatElectionVote seat_election_votes = 8;
+  uint64 next_seat_election_number = 9;
 }

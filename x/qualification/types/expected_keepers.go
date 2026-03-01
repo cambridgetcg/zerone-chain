@@ -28,3 +28,8 @@ type DomainReputation struct {
 type CaptureDefenseKeeper interface {
 	GetDomainReputation(ctx context.Context, validator string, domain string) (*DomainReputation, bool)
 }
+
+// OntologyKeeper defines the expected ontology module interface for domain depth lookups.
+type OntologyKeeper interface {
+	GetDepthForDomain(ctx context.Context, domainName string) (uint32, error)
+}

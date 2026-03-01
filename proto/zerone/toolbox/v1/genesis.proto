@@ -41,7 +41,7 @@ message Params {
   uint64 tool_revenue_bps = 20;            // default: 550000 (55%)
   uint64 protocol_bps = 21;               // default: 220000 (22%)
   uint64 research_bps = 22;               // default: 130000 (13%)
-  uint64 burn_bps = 23;                   // default: 100000 (10%)
+  uint64 development_bps = 23;            // default: 196700 (19.67%)
 
   // Protocol sub-split (must sum to 1,000,000)
   uint64 protocol_citation_bps = 24;      // default: 500000 (50%)

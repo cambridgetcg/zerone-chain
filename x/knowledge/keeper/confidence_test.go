@@ -36,7 +36,7 @@ func TestAggregate_UnanimousAccept(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	require.Equal(t, uint64(1_000_000), result.Confidence) // 100% accept
+	require.Equal(t, uint64(880_000), result.Confidence) // 100% accept capped at MaxConfidence
 }
 
 func TestAggregate_UnanimousReject(t *testing.T) {
@@ -64,7 +64,7 @@ func TestAggregate_UnanimousReject(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_REJECT, result.Verdict)
-	require.Equal(t, uint64(1_000_000), result.Confidence)
+	require.Equal(t, uint64(880_000), result.Confidence) // 100% reject capped at MaxConfidence
 }
 
 func TestAggregate_SplitVote_Inconclusive(t *testing.T) {
@@ -125,7 +125,7 @@ func TestAggregate_StakeWeighted(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	require.Equal(t, uint64(900_000), result.Confidence) // 900k/1000k = 90%
+	require.Equal(t, uint64(880_000), result.Confidence) // 900k/1000k = 90% capped at MaxConfidence (880,000)
 }
 
 func TestAggregate_BelowMinVerifiers(t *testing.T) {
@@ -175,7 +175,7 @@ func TestAggregate_SingleVerifier_WithMinVerifiers1(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	require.Equal(t, uint64(1_000_000), result.Confidence)
+	require.Equal(t, uint64(880_000), result.Confidence) // 100% accept capped at MaxConfidence
 }
 
 func TestAggregate_ZeroStakeValidator(t *testing.T) {
@@ -305,10 +305,10 @@ func TestConfidence_CategoryBaseline(t *testing.T) {
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 
-	// All accept with known stakes → exact confidence = 1,000,000
+	// All accept with known stakes → raw ratio = 1,000,000, capped at MaxConfidence (880,000)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	require.Equal(t, uint64(1_000_000), result.Confidence,
-		"confidence must be exactly the stake-weighted accept ratio")
+	require.Equal(t, uint64(880_000), result.Confidence,
+		"confidence must be capped at MaxConfidence")
 }
 
 // ─── Security: Reward matches param exactly ─────────────────────────────────
@@ -464,4 +464,237 @@ func TestRewardsAndSlashes_InconclusiveNoRewardsOrSlashes(t *testing.T) {
 	require.Equal(t, types.Verdict_VERDICT_INCONCLUSIVE, result.Verdict)
 	require.Empty(t, result.Rewards, "inconclusive should have no rewards")
 	require.Empty(t, result.Slashes, "inconclusive should have no slashes")
+}
+
+// ─── Malformed Vote Tests ────────────────────────────────────────────────────
+
+func TestAggregate_UnanimousMalformed(t *testing.T) {
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+	sk.addValidator("zrn1v1", 100_000, "bonded")
+	sk.addValidator("zrn1v2", 100_000, "bonded")
+	sk.addValidator("zrn1v3", 100_000, "bonded")
+
+	claim := &types.Claim{Id: "c-umal", FactContent: "This statement is false — a paradox claim"}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-umal", "c-umal", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 50)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: "zrn1v1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: "zrn1v1", Vote: "malformed", Salt: []byte("s1"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v2", Vote: "malformed", Salt: []byte("s2"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v3", Vote: "malformed", Salt: []byte("s3"), RevealedAtBlock: 70},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_MALFORMED, result.Verdict)
+	require.Equal(t, uint64(880_000), result.Confidence) // 100% malformed capped at MaxConfidence
+}
+
+func TestAggregate_MalformedSupermajority(t *testing.T) {
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+	// 2 malformed + 1 accept: malformed stake = 200k, accept = 100k
+	// malformed ratio = 666,666 bps — need to lower threshold for this test
+	sk.addValidator("zrn1v1", 100_000, "bonded")
+	sk.addValidator("zrn1v2", 100_000, "bonded")
+	sk.addValidator("zrn1v3", 100_000, "bonded")
+
+	params, _ := k.GetParams(ctx)
+	params.ConfidenceThreshold = 600_000 // 60% threshold
+	require.NoError(t, k.SetParams(ctx, params))
+
+	claim := &types.Claim{Id: "c-malsup", FactContent: "Category error nonsense claim content"}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-malsup", "c-malsup", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 50)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: "zrn1v1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: "zrn1v1", Vote: "malformed", Salt: []byte("s1"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v2", Vote: "malformed", Salt: []byte("s2"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v3", Vote: "accept", Salt: []byte("s3"), RevealedAtBlock: 70},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_MALFORMED, result.Verdict)
+	require.Equal(t, uint64(666_666), result.Confidence) // 200k/300k ≈ 66.6%
+}
+
+func TestAggregate_MalformedBelowThreshold(t *testing.T) {
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+	// 1 malformed + 1 accept + 1 reject → no supermajority → INCONCLUSIVE
+	sk.addValidator("zrn1v1", 100_000, "bonded")
+	sk.addValidator("zrn1v2", 100_000, "bonded")
+	sk.addValidator("zrn1v3", 100_000, "bonded")
+
+	claim := &types.Claim{Id: "c-malbel", FactContent: "Split three ways claim content here"}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-malbel", "c-malbel", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 50)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: "zrn1v1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: "zrn1v1", Vote: "malformed", Salt: []byte("s1"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v2", Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v3", Vote: "reject", Salt: []byte("s3"), RevealedAtBlock: 70},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_INCONCLUSIVE, result.Verdict)
+}
+
+func TestAggregate_MalformedTrumpsAccept(t *testing.T) {
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+	// Both malformed and accept exceed threshold — malformed must win (checked first)
+	// 4 malformed (400k stake) + 1 accept (400k stake from whale) = 800k total
+	// malformed ratio = 400/800 = 50%, accept ratio = 400/800 = 50%
+	// With threshold at 50%, both would pass — but malformed is checked first
+	sk.addValidator("zrn1m1", 100_000, "bonded")
+	sk.addValidator("zrn1m2", 100_000, "bonded")
+	sk.addValidator("zrn1m3", 100_000, "bonded")
+	sk.addValidator("zrn1m4", 100_000, "bonded")
+	sk.addValidator("zrn1whale", 400_000, "guardian")
+
+	params, _ := k.GetParams(ctx)
+	params.ConfidenceThreshold = 500_000 // 50% threshold
+	params.MinVerifiers = 5
+	require.NoError(t, k.SetParams(ctx, params))
+
+	claim := &types.Claim{Id: "c-maltrump", FactContent: "Malformed trumps accept claim content"}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-maltrump", "c-maltrump", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 50)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: "zrn1m1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
+		{Verifier: "zrn1m2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
+		{Verifier: "zrn1m3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1m4", CommitHash: []byte("h4"), CommittedAtBlock: 60},
+		{Verifier: "zrn1whale", CommitHash: []byte("h5"), CommittedAtBlock: 60},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: "zrn1m1", Vote: "malformed", Salt: []byte("s1"), RevealedAtBlock: 70},
+		{Verifier: "zrn1m2", Vote: "malformed", Salt: []byte("s2"), RevealedAtBlock: 70},
+		{Verifier: "zrn1m3", Vote: "malformed", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1m4", Vote: "malformed", Salt: []byte("s4"), RevealedAtBlock: 70},
+		{Verifier: "zrn1whale", Vote: "accept", Salt: []byte("s5"), RevealedAtBlock: 70},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_MALFORMED, result.Verdict,
+		"malformed must win over accept when both exceed threshold")
+	require.Equal(t, uint64(500_000), result.Confidence) // 400k/800k = 50%
+}
+
+func TestMalformedSlash_SubmitterPenalized(t *testing.T) {
+	k, ctx, bk, _ := setupKnowledgeTestFull(t)
+
+	claim := &types.Claim{
+		Id:          "claim-mal-slash",
+		FactContent: "Malformed claim that wastes verifier time test content",
+		Domain:      "general",
+		Submitter:   "zrn1sub",
+		Stake:       "1000000", // 1 ZRN
+		Status:      types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
+	}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-mal-slash", "claim-mal-slash", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 80)
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result := &keeper.VerificationResult{
+		Verdict:    types.Verdict_VERDICT_MALFORMED,
+		Confidence: 900_000,
+	}
+	require.NoError(t, k.CompleteRound(ctx, round, result))
+
+	// Verify claim status is malformed
+	updatedClaim, found := k.GetClaim(ctx, "claim-mal-slash")
+	require.True(t, found)
+	require.Equal(t, types.ClaimStatus_CLAIM_STATUS_MALFORMED, updatedClaim.Status)
+
+	// Review fee is non-refundable (R19-6) — no slashing on malformed claims
+	_ = bk // bank keeper not used for malformed claim slashing anymore
+
+	// No fact should be created
+	var factFound bool
+	k.IterateFacts(ctx, func(fact *types.Fact) bool {
+		if fact.ClaimId == "claim-mal-slash" {
+			factFound = true
+		}
+		return false
+	})
+	require.False(t, factFound, "malformed claim must not create a fact")
+}
+
+func TestMalformedReward_RejectVotersGetPartial(t *testing.T) {
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+	sk.addValidator("zrn1mal1", 100_000, "bonded")
+	sk.addValidator("zrn1mal2", 100_000, "bonded")
+	sk.addValidator("zrn1rej1", 100_000, "bonded")
+	sk.addValidator("zrn1acc1", 100_000, "bonded")
+
+	params, _ := k.GetParams(ctx)
+	params.ConfidenceThreshold = 500_000 // 50% threshold
+	params.MinVerifiers = 4
+	require.NoError(t, k.SetParams(ctx, params))
+
+	claim := &types.Claim{Id: "c-mal-reward", FactContent: "Malformed reward test claim content here"}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-mal-reward", "c-mal-reward", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 50)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: "zrn1mal1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
+		{Verifier: "zrn1mal2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
+		{Verifier: "zrn1rej1", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1acc1", CommitHash: []byte("h4"), CommittedAtBlock: 60},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: "zrn1mal1", Vote: "malformed", Salt: []byte("s1"), RevealedAtBlock: 70},
+		{Verifier: "zrn1mal2", Vote: "malformed", Salt: []byte("s2"), RevealedAtBlock: 70},
+		{Verifier: "zrn1rej1", Vote: "reject", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1acc1", Vote: "accept", Salt: []byte("s4"), RevealedAtBlock: 70},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_MALFORMED, result.Verdict)
+
+	// Malformed voters get full reward (3,000,000)
+	// Reject voter gets partial reward (50% = 1,500,000)
+	// Accept voter gets slashed
+	rewardMap := make(map[string]uint64)
+	for _, r := range result.Rewards {
+		rewardMap[r.Verifier] = r.Amount
+	}
+	slashMap := make(map[string]uint64)
+	for _, s := range result.Slashes {
+		slashMap[s.Verifier] = s.SlashBps
+	}
+
+	require.Equal(t, uint64(3_000_000), rewardMap["zrn1mal1"],
+		"malformed voter must get full reward")
+	require.Equal(t, uint64(3_000_000), rewardMap["zrn1mal2"],
+		"malformed voter must get full reward")
+	require.Equal(t, uint64(1_500_000), rewardMap["zrn1rej1"],
+		"reject voter must get 50%% partial reward on malformed verdict")
+	require.Equal(t, params.WrongVerificationSlashBps, slashMap["zrn1acc1"],
+		"accept voter must be slashed on malformed verdict")
 }

@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	"cosmossdk.io/core/store"
@@ -21,7 +22,12 @@ type Keeper struct {
 	bankKeeper types.BankKeeper
 
 	// Cross-module keepers (set via setter to avoid circular deps)
-	homeKeeper types.HomeKeeper
+	homeKeeper           types.HomeKeeper
+	zeroneAuthKeeper     types.ZeroneAuthKeeper     // nil until R28-5
+	captureDefenseKeeper types.CaptureDefenseKeeper // nil until R29-5
+	pacingKeeper         types.PacingKeeper         // nil-safe, R29-6
+	ontologyKeeper       types.OntologyKeeper       // nil-safe, R31-4
+	knowledgeKeeper      types.KnowledgeKeeper      // nil-safe, R31-5
 
 	authority string
 }
@@ -67,6 +73,27 @@ func (k *Keeper) SetHomeKeeper(hk types.HomeKeeper) {
 	k.homeKeeper = hk
 }
 
+// SetZeroneAuthKeeper sets the zerone auth keeper (post-init, R28-5).
+func (k *Keeper) SetZeroneAuthKeeper(ak types.ZeroneAuthKeeper) {
+	k.zeroneAuthKeeper = ak
+}
+
+// SetCaptureDefenseKeeper sets the capture defense keeper (post-init, R29-5).
+func (k *Keeper) SetCaptureDefenseKeeper(ck types.CaptureDefenseKeeper) {
+	k.captureDefenseKeeper = ck
+}
+
+// SetPacingKeeper sets the pacing keeper for adaptive formation timing (post-init, R29-6).
+func (k *Keeper) SetPacingKeeper(pk types.PacingKeeper) {
+	k.pacingKeeper = pk
+}
+
+// SetOntologyKeeper sets the ontology keeper (post-init, R31-4).
+func (k *Keeper) SetOntologyKeeper(ok types.OntologyKeeper) { k.ontologyKeeper = ok }
+
+// SetKnowledgeKeeper sets the knowledge keeper for mentorship dividends (post-init, R31-5).
+func (k *Keeper) SetKnowledgeKeeper(kk types.KnowledgeKeeper) { k.knowledgeKeeper = kk }
+
 // GetAuthority returns the module authority address.
 func (k Keeper) GetAuthority() string {
 	return k.authority
@@ -82,6 +109,22 @@ func (k Keeper) SetParams(ctx sdk.Context, params *types.Params) {
 		panic(fmt.Sprintf("failed to marshal params: %v", err))
 	}
 	_ = kvStore.Set(types.ParamsKey, bz)
+
+	// R31-5: Record param update height for formation matching cycle reset.
+	height := uint64(ctx.BlockHeight())
+	heightBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightBz, height)
+	_ = kvStore.Set(types.LastParamUpdateHeightKey, heightBz)
+}
+
+// GetLastParamUpdateHeight returns the block height at which params were last updated (R31-5).
+func (k Keeper) GetLastParamUpdateHeight(ctx sdk.Context) uint64 {
+	kvStore := k.storeService.OpenKVStore(ctx)
+	bz, err := kvStore.Get(types.LastParamUpdateHeightKey)
+	if err != nil || bz == nil || len(bz) < 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
 }
 
 // GetParams returns module parameters.
@@ -172,6 +215,16 @@ func (k Keeper) InitGenesis(ctx sdk.Context, genState *types.GenesisState) {
 			k.SetPoolEntry(ctx, pe)
 		}
 	}
+	for _, m := range genState.Mentorships {
+		if m != nil {
+			k.SetMentorship(ctx, m)
+		}
+	}
+	for _, fm := range genState.FormationMatches {
+		if fm != nil {
+			k.SetFormationMatch(ctx, fm)
+		}
+	}
 }
 
 // ExportGenesis exports the module's state.
@@ -185,5 +238,7 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) *types.GenesisState {
 		CoercionSignals:     k.GetAllCoercionSignals(ctx),
 		SeedPartnerships:    k.GetAllSeedPartnerships(ctx),
 		PoolEntries:         k.GetAllPoolEntries(ctx),
+		Mentorships:         k.GetAllMentorships(ctx),
+		FormationMatches:    k.GetAllFormationMatches(ctx),
 	}
 }

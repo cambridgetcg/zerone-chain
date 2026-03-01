@@ -1,0 +1,16 @@
+services:
+  zeroned:
+    build: .
+    container_name: zerone-node
+    ports:
+      - "26656:26656"  # P2P
+      - "26657:26657"  # RPC
+      - "1317:1317"    # REST
+      - "9090:9090"    # gRPC
+    volumes:
+      - zeroned-data:/root/.zeroned
+    command: start --home /root/.zeroned
+    restart: unless-stopped
+
+volumes:
+  zeroned-data:

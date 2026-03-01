@@ -238,16 +238,52 @@ func (m msgServer) ResolveChallenge(goCtx context.Context, msg *types.MsgResolve
 			}
 		}
 
-	case types.ChallengeOutcome_CHALLENGE_OUTCOME_REJECTED:
-		// Burn challenger stake
-		if stakeAmt.Sign() > 0 {
-			burnCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(stakeAmt)))
-			if err := m.bankKeeper.BurnCoins(ctx, types.ModuleName, burnCoins); err != nil {
-				return nil, fmt.Errorf("failed to burn stake: %w", err)
+		// Apply capture consequences (R28-8)
+		expiryHeight := uint64(ctx.BlockHeight()) + 50000 // ~35 hours temporary
+
+		// Reduce qualification weight for accused validators
+		if m.qualificationKeeper != nil {
+			for _, accused := range challenge.AccusedValidators {
+				if err := m.qualificationKeeper.ReduceQualificationWeight(ctx, accused, challenge.Domain, 500000, expiryHeight); err != nil {
+					m.Logger(ctx).Error("failed to reduce qualification weight", "validator", accused, "err", err)
+				}
 			}
 		}
 
-		// Add burned stake to bounty pool
+		// Increase verification threshold for the domain temporarily
+		if m.knowledgeKeeper != nil {
+			if err := m.knowledgeKeeper.IncreaseVerificationThreshold(ctx, challenge.Domain, 2, expiryHeight); err != nil {
+				m.Logger(ctx).Error("failed to increase verification threshold", "domain", challenge.Domain, "err", err)
+			}
+
+			// Record role impact for domain elasticity (R29-3)
+			// NOTE: CaptureChallenge is domain-level (no FactId field), so challenge.Id
+			// won't resolve to a fact. This is a forward-compatible placeholder — role impact
+			// from capture challenges will activate when fact-level linking is added.
+			if err := m.knowledgeKeeper.RecordChallengeRoleImpact(ctx, challenge.Id, challenge.Domain, true); err != nil {
+				m.Logger(ctx).Error("failed to record challenge role impact", "domain", challenge.Domain, "err", err)
+			}
+		}
+
+		// Emit capture_confirmed event for alignment module
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				"zerone.capture_challenge.capture_confirmed",
+				sdk.NewAttribute("domain", challenge.Domain),
+				sdk.NewAttribute("challenge_id", challenge.Id),
+			),
+		)
+
+	case types.ChallengeOutcome_CHALLENGE_OUTCOME_REJECTED:
+		// Route rejected challenger stake to development fund
+		if stakeAmt.Sign() > 0 {
+			stakeCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(stakeAmt)))
+			if err := m.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, "development_fund", stakeCoins); err != nil {
+				return nil, fmt.Errorf("failed to route stake to development fund: %w", err)
+			}
+		}
+
+		// Add slashed stake to bounty pool
 		pool, poolFound := m.GetBountyPool(ctx, challenge.Domain)
 		if !poolFound {
 			pool = &types.DomainBountyPool{
@@ -264,8 +300,21 @@ func (m msgServer) ResolveChallenge(goCtx context.Context, msg *types.MsgResolve
 		rewardAmount = "0"
 		slashAmount = "0"
 
+		// Clear capture flag on rejected challenge (R28-8)
+		if m.captureDefenseKeeper != nil {
+			m.captureDefenseKeeper.ClearCaptureFlag(ctx, challenge.Domain)
+		}
+
+		// Record role impact — challenge rejected means original verifiers were right (R29-3)
+		// NOTE: See UPHELD note — challenge.Id is not a fact ID, so this is a no-op placeholder.
+		if m.knowledgeKeeper != nil {
+			if err := m.knowledgeKeeper.RecordChallengeRoleImpact(ctx, challenge.Id, challenge.Domain, false); err != nil {
+				m.Logger(ctx).Error("failed to record challenge role impact", "domain", challenge.Domain, "err", err)
+			}
+		}
+
 	case types.ChallengeOutcome_CHALLENGE_OUTCOME_PARTIAL:
-		// Return half the stake, burn the other half
+		// Return half the stake, route the other half to development fund
 		halfStake := new(big.Int).Div(stakeAmt, big.NewInt(2))
 		remainder := new(big.Int).Sub(stakeAmt, halfStake)
 
@@ -276,9 +325,9 @@ func (m msgServer) ResolveChallenge(goCtx context.Context, msg *types.MsgResolve
 			}
 		}
 		if remainder.Sign() > 0 {
-			burnCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(remainder)))
-			if err := m.bankKeeper.BurnCoins(ctx, types.ModuleName, burnCoins); err != nil {
-				return nil, fmt.Errorf("failed to burn partial stake: %w", err)
+			devCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(remainder)))
+			if err := m.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, "development_fund", devCoins); err != nil {
+				return nil, fmt.Errorf("failed to route partial stake to development fund: %w", err)
 			}
 		}
 

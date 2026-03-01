@@ -541,16 +541,15 @@ func (k Keeper) SlashValidator(ctx sdk.Context, validatorAddr string, amount *bi
 		slashInt.Add(slashInt, overflow)
 	}
 
-	// Burn slashed tokens
+	// Route slashed tokens to development fund
 	if slashInt.Sign() > 0 {
 		slashCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(slashInt)))
-		if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, slashCoins); err != nil {
-			// Abort slash on burn failure
+		if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, "development_fund", slashCoins); err != nil {
+			// Abort slash on routing failure
 			return
 		}
 
 		selfStake.Sub(selfStake, new(big.Int).Sub(slashInt, new(big.Int)))
-		// Recalculate after burn
 		if selfStake.Sign() < 0 {
 			selfStake.SetInt64(0)
 		}
@@ -608,6 +607,124 @@ func (k Keeper) SlashValidator(ctx sdk.Context, validatorAddr string, amount *bi
 		sdk.NewAttribute("amount", slashInt.String()),
 		sdk.NewAttribute("reason", reason),
 	))
+}
+
+// SlashValidatorToModule slashes a validator with progressive escalation and routes
+// slashed tokens to a specified module account (instead of hardcoded development_fund).
+// Returns the actual slashed amount.
+func (k Keeper) SlashValidatorToModule(ctx sdk.Context, validatorAddr string, amount *big.Int, destModule string, reason string) *big.Int {
+	val, found := k.GetValidator(ctx, validatorAddr)
+	if !found {
+		return new(big.Int)
+	}
+	params := k.GetParams(ctx)
+
+	// R2: per-epoch slash cap
+	if params.MaxSlashesPerEpoch > 0 && val.SlashesThisEpoch >= params.MaxSlashesPerEpoch {
+		return new(big.Int)
+	}
+
+	// Progressive escalation: adjusted = amount * (1M + slashCount * escalationBps) / 1M
+	escalationFactor := new(big.Int).SetUint64(types.BPSScale + val.SlashCount*params.SlashEscalationBps)
+	adjustedAmount := new(big.Int).Mul(amount, escalationFactor)
+	adjustedAmount.Div(adjustedAmount, new(big.Int).SetUint64(types.BPSScale))
+
+	// Autopoiesis SSI multiplier
+	if k.autopoiesisKeeper != nil {
+		sdkCtx := ctx
+		multiplier := k.autopoiesisKeeper.GetMultiplier(sdkCtx, "ssi")
+		if multiplier != 0 && multiplier != types.BPSScale {
+			adjustedAmount.Mul(adjustedAmount, new(big.Int).SetUint64(multiplier))
+			adjustedAmount.Div(adjustedAmount, new(big.Int).SetUint64(types.BPSScale))
+		}
+	}
+
+	// Slash from own stake first, delegated absorbs overflow.
+	selfStake, _ := new(big.Int).SetString(val.SelfDelegation, 10)
+	if selfStake == nil {
+		selfStake = new(big.Int)
+	}
+	slashInt := new(big.Int).Set(adjustedAmount)
+	if slashInt.Cmp(selfStake) > 0 {
+		slashInt.Set(selfStake)
+		// Overflow to delegated
+		overflow := new(big.Int).Sub(adjustedAmount, selfStake)
+		delegated, _ := new(big.Int).SetString(val.DelegatedStake, 10)
+		if delegated == nil {
+			delegated = new(big.Int)
+		}
+		if overflow.Cmp(delegated) > 0 {
+			overflow.Set(delegated)
+		}
+		delegated.Sub(delegated, overflow)
+		val.DelegatedStake = delegated.String()
+		slashInt.Add(slashInt, overflow)
+	}
+
+	// Route slashed tokens to the specified destination module
+	if slashInt.Sign() > 0 {
+		slashCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(slashInt)))
+		if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, destModule, slashCoins); err != nil {
+			// Abort slash on routing failure
+			return new(big.Int)
+		}
+	}
+
+	// R4: only increment slash count if actual slash > 0
+	if slashInt.Sign() > 0 {
+		val.SlashCount++
+		val.SlashesThisEpoch++
+		val.LastSlashHeight = uint64(ctx.BlockHeight())
+	}
+
+	// Update stake values
+	selfStakeNew, _ := new(big.Int).SetString(val.SelfDelegation, 10)
+	if selfStakeNew == nil {
+		selfStakeNew = new(big.Int)
+	}
+	selfStakeNew.Sub(selfStakeNew, slashInt)
+	if selfStakeNew.Sign() < 0 {
+		selfStakeNew.SetInt64(0)
+	}
+	val.SelfDelegation = selfStakeNew.String()
+
+	// Recalculate total
+	delegated, _ := new(big.Int).SetString(val.DelegatedStake, 10)
+	if delegated == nil {
+		delegated = new(big.Int)
+	}
+	total := new(big.Int).Add(selfStakeNew, delegated)
+	val.TotalStake = total.String()
+
+	// Reputation decrease
+	if val.ReputationScore >= params.ReputationSlashDelta {
+		val.ReputationScore -= params.ReputationSlashDelta
+	} else {
+		val.ReputationScore = 0
+	}
+
+	// Deactivate if excessive slashes
+	if params.MaxSlashCountDeactivate > 0 && val.SlashCount >= params.MaxSlashCountDeactivate {
+		val.IsActive = false
+	}
+
+	// Check tier transition
+	newTier, changed := k.CheckTierTransition(ctx, val)
+	if changed {
+		val.Tier = newTier
+	}
+
+	k.SetValidator(ctx, val)
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.staking.validator_slashed",
+		sdk.NewAttribute("validator", validatorAddr),
+		sdk.NewAttribute("amount", slashInt.String()),
+		sdk.NewAttribute("reason", reason),
+		sdk.NewAttribute("dest_module", destModule),
+	))
+
+	return slashInt
 }
 
 // ---------- Genesis ----------

@@ -126,8 +126,8 @@ func (k Keeper) HandleExit(ctx sdk.Context, partnershipId string, initiator stri
 	}
 	if burned.Sign() > 0 {
 		coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(burned)))
-		if err := k.bankKeeper.BurnCoins(ctx, types.ModuleName, coins); err != nil {
-			k.Logger(ctx).Error("failed to burn forfeited amount", "err", err)
+		if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, "development_fund", coins); err != nil {
+			k.Logger(ctx).Error("failed to route forfeited amount to development fund", "err", err)
 		}
 	}
 
@@ -157,9 +157,33 @@ func (k Keeper) HandleExit(ctx sdk.Context, partnershipId string, initiator stri
 }
 
 // SettleCoolingPartnerships dissolves partnerships that have completed their cooling period.
+// Emits social_benefit_lost/achieved events when dissolution changes domain status (R31-5).
 func (k Keeper) SettleCoolingPartnerships(ctx sdk.Context) {
 	currentBlock := uint64(ctx.BlockHeight())
 
+	// R31-5: Snapshot pre-dissolution social benefit status for affected domains.
+	affectedDomains := make(map[string]bool)
+
+	k.IteratePartnerships(ctx, func(p *types.Partnership) bool {
+		if p.Status == types.StatusCooling && p.ExitState != nil && p.ExitState.CooldownEnd <= currentBlock {
+			for _, addr := range []string{p.HumanAddr, p.AgentAddr} {
+				for _, m := range k.GetMentorshipsByMentor(ctx, addr) {
+					affectedDomains[m.Domain] = true
+				}
+				for _, m := range k.GetMentorshipsByMentee(ctx, addr) {
+					affectedDomains[m.Domain] = true
+				}
+			}
+		}
+		return false
+	})
+
+	preBenefitStatus := make(map[string]bool)
+	for domain := range affectedDomains {
+		preBenefitStatus[domain] = k.GetDomainSocialBenefitStatus(ctx, domain)
+	}
+
+	// Dissolve partnerships.
 	k.IteratePartnerships(ctx, func(p *types.Partnership) bool {
 		if p.Status == types.StatusCooling && p.ExitState != nil && p.ExitState.CooldownEnd <= currentBlock {
 			p.Status = types.StatusDissolved
@@ -167,4 +191,28 @@ func (k Keeper) SettleCoolingPartnerships(ctx sdk.Context) {
 		}
 		return false
 	})
+
+	// R31-5: Water → Fire — emit events when social benefit status changes.
+	for domain := range affectedDomains {
+		postBenefit := k.GetDomainSocialBenefitStatus(ctx, domain)
+		if preBenefitStatus[domain] && !postBenefit {
+			density := k.GetDomainPartnershipDensity(ctx, domain)
+			params := k.GetParams(ctx)
+			ctx.EventManager().EmitEvent(sdk.NewEvent(
+				"zerone.partnerships.social_benefit_lost",
+				sdk.NewAttribute("domain", domain),
+				sdk.NewAttribute("density", fmt.Sprintf("%d", density)),
+				sdk.NewAttribute("threshold", fmt.Sprintf("%d", params.SocialSaturationThreshold)),
+			))
+		} else if !preBenefitStatus[domain] && postBenefit {
+			density := k.GetDomainPartnershipDensity(ctx, domain)
+			params := k.GetParams(ctx)
+			ctx.EventManager().EmitEvent(sdk.NewEvent(
+				"zerone.partnerships.social_benefit_achieved",
+				sdk.NewAttribute("domain", domain),
+				sdk.NewAttribute("density", fmt.Sprintf("%d", density)),
+				sdk.NewAttribute("threshold", fmt.Sprintf("%d", params.SocialSaturationThreshold)),
+			))
+		}
+	}
 }

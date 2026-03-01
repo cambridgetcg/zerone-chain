@@ -102,7 +102,7 @@ type Params struct {
 	ToolRevenueBps uint64 `protobuf:"varint,20,opt,name=tool_revenue_bps,json=toolRevenueBps,proto3" json:"tool_revenue_bps,omitempty"` // default: 550000 (55%)
 	ProtocolBps    uint64 `protobuf:"varint,21,opt,name=protocol_bps,json=protocolBps,proto3" json:"protocol_bps,omitempty"`            // default: 220000 (22%)
 	ResearchBps    uint64 `protobuf:"varint,22,opt,name=research_bps,json=researchBps,proto3" json:"research_bps,omitempty"`            // default: 130000 (13%)
-	BurnBps        uint64 `protobuf:"varint,23,opt,name=burn_bps,json=burnBps,proto3" json:"burn_bps,omitempty"`                        // default: 100000 (10%)
+	DevelopmentBps uint64 `protobuf:"varint,23,opt,name=development_bps,json=developmentBps,proto3" json:"development_bps,omitempty"`   // default: 196700 (19.67%)
 	// Protocol sub-split (must sum to 1,000,000)
 	ProtocolCitationBps     uint64 `protobuf:"varint,24,opt,name=protocol_citation_bps,json=protocolCitationBps,proto3" json:"protocol_citation_bps,omitempty"`             // default: 500000 (50%)
 	ProtocolVerificationBps uint64 `protobuf:"varint,25,opt,name=protocol_verification_bps,json=protocolVerificationBps,proto3" json:"protocol_verification_bps,omitempty"` // default: 300000 (30%)
@@ -295,9 +295,9 @@ func (x *Params) GetResearchBps() uint64 {
 	return 0
 }
 
-func (x *Params) GetBurnBps() uint64 {
+func (x *Params) GetDevelopmentBps() uint64 {
 	if x != nil {
-		return x.BurnBps
+		return x.DevelopmentBps
 	}
 	return 0
 }
@@ -330,7 +330,8 @@ const file_zerone_toolbox_v1_genesis_proto_rawDesc = "" +
 	"\x1fzerone/toolbox/v1/genesis.proto\x12\x11zerone.toolbox.v1\x1a\x1dzerone/toolbox/v1/types.proto\"p\n" +
 	"\fGenesisState\x121\n" +
 	"\x06params\x18\x01 \x01(\v2\x19.zerone.toolbox.v1.ParamsR\x06params\x12-\n" +
-	"\x05tools\x18\x02 \x03(\v2\x17.zerone.toolbox.v1.ToolR\x05tools\"\xf9\t\n" +
+	"\x05tools\x18\x02 \x03(\v2\x17.zerone.toolbox.v1.ToolR\x05tools\"\x87\n" +
+	"\n" +
 	"\x06Params\x12)\n" +
 	"\x10max_contributors\x18\x01 \x01(\rR\x0fmaxContributors\x120\n" +
 	"\x14max_dependency_depth\x18\x02 \x01(\rR\x12maxDependencyDepth\x12)\n" +
@@ -354,8 +355,8 @@ const file_zerone_toolbox_v1_genesis_proto_rawDesc = "" +
 	"\x12free_calls_enabled\x18\x13 \x01(\bR\x10freeCallsEnabled\x12(\n" +
 	"\x10tool_revenue_bps\x18\x14 \x01(\x04R\x0etoolRevenueBps\x12!\n" +
 	"\fprotocol_bps\x18\x15 \x01(\x04R\vprotocolBps\x12!\n" +
-	"\fresearch_bps\x18\x16 \x01(\x04R\vresearchBps\x12\x19\n" +
-	"\bburn_bps\x18\x17 \x01(\x04R\aburnBps\x122\n" +
+	"\fresearch_bps\x18\x16 \x01(\x04R\vresearchBps\x12'\n" +
+	"\x0fdevelopment_bps\x18\x17 \x01(\x04R\x0edevelopmentBps\x122\n" +
 	"\x15protocol_citation_bps\x18\x18 \x01(\x04R\x13protocolCitationBps\x12:\n" +
 	"\x19protocol_verification_bps\x18\x19 \x01(\x04R\x17protocolVerificationBps\x122\n" +
 	"\x15protocol_treasury_bps\x18\x1a \x01(\x04R\x13protocolTreasuryBpsB0Z.github.com/zerone-chain/zerone/x/toolbox/typesb\x06proto3"

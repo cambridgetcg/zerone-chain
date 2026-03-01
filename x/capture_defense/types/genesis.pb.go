@@ -22,16 +22,18 @@ const (
 )
 
 type Params struct {
-	state                    protoimpl.MessageState `protogen:"open.v1"`
-	DecayEpochBlocks         uint64                 `protobuf:"varint,1,opt,name=decay_epoch_blocks,json=decayEpochBlocks,proto3" json:"decay_epoch_blocks,omitempty"`                           // half-life for reputation decay
-	MinVerificationsForScore uint64                 `protobuf:"varint,2,opt,name=min_verifications_for_score,json=minVerificationsForScore,proto3" json:"min_verifications_for_score,omitempty"` // min verifications before domain rep is used
-	HhiThreshold             uint64                 `protobuf:"varint,3,opt,name=hhi_threshold,json=hhiThreshold,proto3" json:"hhi_threshold,omitempty"`                                         // HHI above which domain is flagged
-	RiskAnalysisInterval     uint64                 `protobuf:"varint,4,opt,name=risk_analysis_interval,json=riskAnalysisInterval,proto3" json:"risk_analysis_interval,omitempty"`               // blocks between auto-analysis
-	HistoryRetentionBlocks   uint64                 `protobuf:"varint,5,opt,name=history_retention_blocks,json=historyRetentionBlocks,proto3" json:"history_retention_blocks,omitempty"`         // how long verification history is kept
-	BaseReputationScore      uint64                 `protobuf:"varint,6,opt,name=base_reputation_score,json=baseReputationScore,proto3" json:"base_reputation_score,omitempty"`                  // floor for decayed scores
-	MaxHistoryPerDomain      uint64                 `protobuf:"varint,7,opt,name=max_history_per_domain,json=maxHistoryPerDomain,proto3" json:"max_history_per_domain,omitempty"`                // max rounds kept per domain
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state                       protoimpl.MessageState `protogen:"open.v1"`
+	DecayEpochBlocks            uint64                 `protobuf:"varint,1,opt,name=decay_epoch_blocks,json=decayEpochBlocks,proto3" json:"decay_epoch_blocks,omitempty"`                                      // half-life for reputation decay
+	MinVerificationsForScore    uint64                 `protobuf:"varint,2,opt,name=min_verifications_for_score,json=minVerificationsForScore,proto3" json:"min_verifications_for_score,omitempty"`            // min verifications before domain rep is used
+	HhiThreshold                uint64                 `protobuf:"varint,3,opt,name=hhi_threshold,json=hhiThreshold,proto3" json:"hhi_threshold,omitempty"`                                                    // HHI above which domain is flagged
+	RiskAnalysisInterval        uint64                 `protobuf:"varint,4,opt,name=risk_analysis_interval,json=riskAnalysisInterval,proto3" json:"risk_analysis_interval,omitempty"`                          // blocks between auto-analysis
+	HistoryRetentionBlocks      uint64                 `protobuf:"varint,5,opt,name=history_retention_blocks,json=historyRetentionBlocks,proto3" json:"history_retention_blocks,omitempty"`                    // how long verification history is kept
+	BaseReputationScore         uint64                 `protobuf:"varint,6,opt,name=base_reputation_score,json=baseReputationScore,proto3" json:"base_reputation_score,omitempty"`                             // floor for decayed scores
+	MaxHistoryPerDomain         uint64                 `protobuf:"varint,7,opt,name=max_history_per_domain,json=maxHistoryPerDomain,proto3" json:"max_history_per_domain,omitempty"`                           // max rounds kept per domain
+	BaseReputationRecoveryBps   uint64                 `protobuf:"varint,8,opt,name=base_reputation_recovery_bps,json=baseReputationRecoveryBps,proto3" json:"base_reputation_recovery_bps,omitempty"`         // base recovery rate per decay epoch (default: 50,000 = 5%)
+	ActivityRecoveryBonusMaxBps uint64                 `protobuf:"varint,9,opt,name=activity_recovery_bonus_max_bps,json=activityRecoveryBonusMaxBps,proto3" json:"activity_recovery_bonus_max_bps,omitempty"` // max acceleration from verification activity (default: 500,000 = 50%)
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -109,6 +111,20 @@ func (x *Params) GetBaseReputationScore() uint64 {
 func (x *Params) GetMaxHistoryPerDomain() uint64 {
 	if x != nil {
 		return x.MaxHistoryPerDomain
+	}
+	return 0
+}
+
+func (x *Params) GetBaseReputationRecoveryBps() uint64 {
+	if x != nil {
+		return x.BaseReputationRecoveryBps
+	}
+	return 0
+}
+
+func (x *Params) GetActivityRecoveryBonusMaxBps() uint64 {
+	if x != nil {
+		return x.ActivityRecoveryBonusMaxBps
 	}
 	return 0
 }
@@ -201,7 +217,7 @@ var File_zerone_capture_defense_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_capture_defense_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"'zerone/capture_defense/v1/genesis.proto\x12\x19zerone.capture_defense.v1\x1a%zerone/capture_defense/v1/types.proto\"\xf3\x02\n" +
+	"'zerone/capture_defense/v1/genesis.proto\x12\x19zerone.capture_defense.v1\x1a%zerone/capture_defense/v1/types.proto\"\xfa\x03\n" +
 	"\x06Params\x12,\n" +
 	"\x12decay_epoch_blocks\x18\x01 \x01(\x04R\x10decayEpochBlocks\x12=\n" +
 	"\x1bmin_verifications_for_score\x18\x02 \x01(\x04R\x18minVerificationsForScore\x12#\n" +
@@ -209,7 +225,9 @@ const file_zerone_capture_defense_v1_genesis_proto_rawDesc = "" +
 	"\x16risk_analysis_interval\x18\x04 \x01(\x04R\x14riskAnalysisInterval\x128\n" +
 	"\x18history_retention_blocks\x18\x05 \x01(\x04R\x16historyRetentionBlocks\x122\n" +
 	"\x15base_reputation_score\x18\x06 \x01(\x04R\x13baseReputationScore\x123\n" +
-	"\x16max_history_per_domain\x18\a \x01(\x04R\x13maxHistoryPerDomain\"\xa6\x04\n" +
+	"\x16max_history_per_domain\x18\a \x01(\x04R\x13maxHistoryPerDomain\x12?\n" +
+	"\x1cbase_reputation_recovery_bps\x18\b \x01(\x04R\x19baseReputationRecoveryBps\x12D\n" +
+	"\x1factivity_recovery_bonus_max_bps\x18\t \x01(\x04R\x1bactivityRecoveryBonusMaxBps\"\xa6\x04\n" +
 	"\fGenesisState\x129\n" +
 	"\x06params\x18\x01 \x01(\v2!.zerone.capture_defense.v1.ParamsR\x06params\x12Z\n" +
 	"\x12global_reputations\x18\x02 \x03(\v2+.zerone.capture_defense.v1.GlobalReputationR\x11globalReputations\x12]\n" +

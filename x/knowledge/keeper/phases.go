@@ -10,9 +10,75 @@ import (
 )
 
 // BeginBlocker runs knowledge module begin-block logic.
-// Advances verification round phases by deadline.
+// Advances verification round phases by deadline and triggers fitness epoch updates.
 func (k Keeper) BeginBlocker(ctx context.Context) error {
-	return k.AdvanceRoundPhases(ctx)
+	if err := k.AdvanceRoundPhases(ctx); err != nil {
+		return err
+	}
+
+	// Check if we're at a fitness epoch boundary
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return nil // non-fatal: don't block consensus for param read failure
+	}
+	// Prune expired vindication entries every 1000 blocks
+	if height > 0 && height%1000 == 0 && params.VindicationRefundEnabled {
+		k.PruneExpiredVindications(ctx, height, params.VindicationWindowBlocks)
+	}
+
+	if params.FitnessEpochBlocks > 0 && height > 0 && height%params.FitnessEpochBlocks == 0 {
+		epoch := height / params.FitnessEpochBlocks
+
+		// Order matters:
+		// 1. Update fitness scores (current usage data)
+		if err := k.UpdateAllFitnessScores(ctx); err != nil {
+			k.Logger(ctx).Error("fitness update failed", "error", err)
+		}
+		// 2. Process competition (uses fitness to rank niches)
+		if err := k.ProcessCompetition(ctx, epoch); err != nil {
+			k.Logger(ctx).Error("competition processing failed", "epoch", epoch, "error", err)
+		}
+		// 3. Process symbiosis (adjusts fitness based on relationships)
+		k.ProcessSymbiosis(ctx, params)
+		// 4. Process metabolism (uses fitness + competition tax to drain/replenish energy)
+		if err := k.ProcessMetabolism(ctx, epoch); err != nil {
+			k.Logger(ctx).Error("metabolism processing failed", "epoch", epoch, "error", err)
+		}
+		// 5. Process agent demand bounties
+		if err := k.ProcessDemandBounties(ctx, epoch); err != nil {
+			k.Logger(ctx).Error("demand bounty processing failed", "epoch", epoch, "error", err)
+		}
+		// 6. Clean up expired bounties
+		k.ProcessExpiredBounties(ctx)
+		// 7. Clear query receipts (bound receipt storage to one epoch)
+		k.ClearQueryReceipts(ctx)
+		// 8. Aggregate diversity metrics and check conformity alerts (R28-2)
+		if err := k.ProcessDiversity(ctx, epoch); err != nil {
+			k.Logger(ctx).Error("diversity processing failed", "epoch", epoch, "error", err)
+		}
+		// 9. Update epistemic temperature for all domains (R29-2)
+		k.IterateDomains(ctx, func(domain *types.Domain) bool {
+			if dErr := k.UpdateEpistemicTemperature(ctx, domain.Name); dErr != nil {
+				k.Logger(ctx).Error("epistemic temperature update failed", "domain", domain.Name, "error", dErr)
+			}
+			return false
+		})
+		// 10. Decay domain role elasticity records (R29-3)
+		if params.RoleElasticityDecayEpochs > 0 && epoch%params.RoleElasticityDecayEpochs == 0 {
+			k.DecayRoleRecords(ctx)
+		}
+	}
+
+	// Advance fact confidence at ConfidenceGrowthEpoch intervals (R29-2)
+	if params.ConfidenceGrowthEpoch > 0 && height > 0 && height%params.ConfidenceGrowthEpoch == 0 {
+		if err := k.AdvanceConfidence(ctx); err != nil {
+			k.Logger(ctx).Error("confidence growth failed", "error", err)
+		}
+	}
+
+	return nil
 }
 
 // AdvanceRoundPhases iterates all active rounds and transitions phases by deadline.
@@ -88,12 +154,11 @@ func (k Keeper) AdvanceRoundPhases(ctx context.Context) error {
 				if err := k.SetVerificationRound(ctx, round); err != nil {
 					continue
 				}
-				// Return claim stake
+				// Review fee is non-refundable — mark claim as insufficient
 				claim, found := k.GetClaim(ctx, round.ClaimId)
 				if found {
 					claim.Status = types.ClaimStatus_CLAIM_STATUS_INSUFFICIENT
 					_ = k.SetClaim(ctx, claim)
-					_ = k.returnClaimStake(ctx, claim)
 				}
 				sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 					"zerone.knowledge.round_expired",

@@ -24,6 +24,9 @@ const (
 	Query_PendingOps_FullMethodName            = "/zerone.partnerships.v1.Query/PendingOps"
 	Query_FormationPool_FullMethodName         = "/zerone.partnerships.v1.Query/FormationPool"
 	Query_Params_FullMethodName                = "/zerone.partnerships.v1.Query/Params"
+	Query_Mentorship_FullMethodName            = "/zerone.partnerships.v1.Query/Mentorship"
+	Query_MentorshipsByAddress_FullMethodName  = "/zerone.partnerships.v1.Query/MentorshipsByAddress"
+	Query_FormationMatches_FullMethodName      = "/zerone.partnerships.v1.Query/FormationMatches"
 )
 
 // QueryClient is the client API for Query service.
@@ -35,6 +38,9 @@ type QueryClient interface {
 	PendingOps(ctx context.Context, in *QueryPendingOpsRequest, opts ...grpc.CallOption) (*QueryPendingOpsResponse, error)
 	FormationPool(ctx context.Context, in *QueryFormationPoolRequest, opts ...grpc.CallOption) (*QueryFormationPoolResponse, error)
 	Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error)
+	Mentorship(ctx context.Context, in *QueryMentorshipRequest, opts ...grpc.CallOption) (*QueryMentorshipResponse, error)
+	MentorshipsByAddress(ctx context.Context, in *QueryMentorshipsByAddressRequest, opts ...grpc.CallOption) (*QueryMentorshipsByAddressResponse, error)
+	FormationMatches(ctx context.Context, in *QueryFormationMatchesRequest, opts ...grpc.CallOption) (*QueryFormationMatchesResponse, error)
 }
 
 type queryClient struct {
@@ -95,6 +101,36 @@ func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts .
 	return out, nil
 }
 
+func (c *queryClient) Mentorship(ctx context.Context, in *QueryMentorshipRequest, opts ...grpc.CallOption) (*QueryMentorshipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMentorshipResponse)
+	err := c.cc.Invoke(ctx, Query_Mentorship_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) MentorshipsByAddress(ctx context.Context, in *QueryMentorshipsByAddressRequest, opts ...grpc.CallOption) (*QueryMentorshipsByAddressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMentorshipsByAddressResponse)
+	err := c.cc.Invoke(ctx, Query_MentorshipsByAddress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FormationMatches(ctx context.Context, in *QueryFormationMatchesRequest, opts ...grpc.CallOption) (*QueryFormationMatchesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFormationMatchesResponse)
+	err := c.cc.Invoke(ctx, Query_FormationMatches_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -104,6 +140,9 @@ type QueryServer interface {
 	PendingOps(context.Context, *QueryPendingOpsRequest) (*QueryPendingOpsResponse, error)
 	FormationPool(context.Context, *QueryFormationPoolRequest) (*QueryFormationPoolResponse, error)
 	Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error)
+	Mentorship(context.Context, *QueryMentorshipRequest) (*QueryMentorshipResponse, error)
+	MentorshipsByAddress(context.Context, *QueryMentorshipsByAddressRequest) (*QueryMentorshipsByAddressResponse, error)
+	FormationMatches(context.Context, *QueryFormationMatchesRequest) (*QueryFormationMatchesResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -128,6 +167,15 @@ func (UnimplementedQueryServer) FormationPool(context.Context, *QueryFormationPo
 }
 func (UnimplementedQueryServer) Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Params not implemented")
+}
+func (UnimplementedQueryServer) Mentorship(context.Context, *QueryMentorshipRequest) (*QueryMentorshipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Mentorship not implemented")
+}
+func (UnimplementedQueryServer) MentorshipsByAddress(context.Context, *QueryMentorshipsByAddressRequest) (*QueryMentorshipsByAddressResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MentorshipsByAddress not implemented")
+}
+func (UnimplementedQueryServer) FormationMatches(context.Context, *QueryFormationMatchesRequest) (*QueryFormationMatchesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FormationMatches not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -240,6 +288,60 @@ func _Query_Params_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_Mentorship_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMentorshipRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).Mentorship(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_Mentorship_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).Mentorship(ctx, req.(*QueryMentorshipRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_MentorshipsByAddress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMentorshipsByAddressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).MentorshipsByAddress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_MentorshipsByAddress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).MentorshipsByAddress(ctx, req.(*QueryMentorshipsByAddressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FormationMatches_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFormationMatchesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FormationMatches(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FormationMatches_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FormationMatches(ctx, req.(*QueryFormationMatchesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -266,6 +368,18 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Params",
 			Handler:    _Query_Params_Handler,
+		},
+		{
+			MethodName: "Mentorship",
+			Handler:    _Query_Mentorship_Handler,
+		},
+		{
+			MethodName: "MentorshipsByAddress",
+			Handler:    _Query_MentorshipsByAddress_Handler,
+		},
+		{
+			MethodName: "FormationMatches",
+			Handler:    _Query_FormationMatches_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

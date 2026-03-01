@@ -81,6 +81,11 @@ const (
 	GasKQuery  uint64 = 5000
 	GasKVerify uint64 = 3000
 	GasKCite   uint64 = 100
+
+	// Home bridge opcode costs
+	GasHQuery   uint64 = 5000
+	GasHMemory  uint64 = 5000
+	GasHPartner uint64 = 5000
 )
 
 // GasSchedule provides governance-adjustable gas cost overrides.

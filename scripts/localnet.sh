@@ -8,6 +8,8 @@
 #
 # Usage:
 #   scripts/localnet.sh start    # Build, init, start all 4 validators
+#   scripts/localnet.sh init     # Build + init only (for axiom injection before boot)
+#   scripts/localnet.sh boot     # Start validators from initialized state
 #   scripts/localnet.sh stop     # Stop all validators
 #   scripts/localnet.sh status   # Query each validator's height + power
 #   scripts/localnet.sh logs [N] # Tail validator N's logs (default: all)
@@ -70,19 +72,19 @@ zeroned_coord() {
   "${BINARY}" "$@" --home "${COORDINATOR_HOME}"
 }
 
-# ── cmd_start ────────────────────────────────────────────────────────────
+# ── cmd_init ─────────────────────────────────────────────────────────────
+# Initializes the localnet: builds binary, creates genesis, sets up all
+# validators, validates genesis, configures networking. Does NOT start
+# the validators. Use 'boot' after init (or 'start' for init+boot).
 
-cmd_start() {
+cmd_init() {
   echo "═══════════════════════════════════════════════════════════════"
-  echo "  Zerone — Local Testnet: START"
+  echo "  Zerone — Local Testnet: INIT"
   echo "  Chain: ${CHAIN_ID} | Validators: ${NUM_VALIDATORS} | Block: 2521ms"
   echo "═══════════════════════════════════════════════════════════════"
   echo ""
 
   check_deps
-
-  # Trap EXIT for cleanup on failure
-  trap 'echo ""; warn "Script interrupted — run: scripts/localnet.sh stop"' INT TERM
 
   # ── Step 1: Build ────────────────────────────────────────────────────
   info "Building zeroned binary..."
@@ -118,8 +120,28 @@ cmd_start() {
   patch_genesis '
     .app_state.staking.params.bond_denom = "uzrn" |
     .app_state.slashing.params.signed_blocks_window = "100" |
+    .app_state.slashing.params.min_signed_per_window = "0.500000000000000000" |
+    .app_state.slashing.params.downtime_jail_duration = "60s" |
     .app_state.slashing.params.slash_fraction_downtime = "0.010000000000000000" |
-    .app_state.gov.params.voting_period = "60s"
+    .app_state.gov.params.voting_period = "60s" |
+    .app_state.gov.params.expedited_voting_period = "30s"
+  '
+
+  # Zerone governance — fast params for local testing
+  patch_genesis '
+    .app_state.zerone_gov.params.voting_period_blocks = 10 |
+    .app_state.zerone_gov.params.discussion_period_blocks = 5 |
+    .app_state.zerone_gov.params.category_configs = [
+      {"category":"parameter","required_stake_bps":"1000000","review_blocks":5},
+      {"category":"upgrade","required_stake_bps":"1000000","review_blocks":5},
+      {"category":"text","required_stake_bps":"1000000","review_blocks":5},
+      {"category":"research_spend","required_stake_bps":"1000000","review_blocks":5},
+      {"category":"research_seat_election","required_stake_bps":"1000000","review_blocks":5},
+      {"category":"research_phase_transition","required_stake_bps":"1000000","review_blocks":5},
+      {"category":"research_phase_rollback","required_stake_bps":"1000000","review_blocks":5}
+    ] |
+    .app_state.zerone_gov.params.research_discussion_blocks = 5 |
+    .app_state.zerone_gov.params.research_voting_blocks = 10
   '
 
   # Knowledge module — fast params for local testing
@@ -134,6 +156,18 @@ cmd_start() {
     .app_state.knowledge.params.quorum_threshold = 660000 |
     .app_state.knowledge.params.max_validators_per_round = 22 |
     .app_state.knowledge.params.verification_reward = "3000000"
+  '
+
+  # Research module — fast params for local testing
+  patch_genesis '
+    .app_state.research.params.review_period_blocks = 20 |
+    .app_state.research.params.min_reviewer_count = 2
+  '
+
+  # Partnerships module — fast params for local testing
+  patch_genesis '
+    .app_state.partnerships.params.safety_freeze_duration_blocks = 10 |
+    .app_state.partnerships.params.coercion_review_blocks = 15
   '
 
   # Vesting rewards — lower min_validators for local testing
@@ -215,7 +249,7 @@ cmd_start() {
     cp -r "${COORDINATOR_HOME}/keyring-test" "${local_home}/"
 
     # Generate gentx
-    ${BINARY} gentx "${local_name}" "${local_stake}${DENOM}" \
+    ${BINARY} genesis gentx "${local_name}" "${local_stake}${DENOM}" \
       --chain-id "${CHAIN_ID}" \
       --keyring-backend ${KEYRING} \
       --home "${local_home}" \
@@ -228,14 +262,12 @@ cmd_start() {
 
   # ── Step 7: Collect gentxs ──────────────────────────────────────────
   info "Collecting gentxs..."
-  ${BINARY} collect-gentxs --home "${COORDINATOR_HOME}" 2>/dev/null
+  ${BINARY} genesis collect-gentxs --home "${COORDINATOR_HOME}" 2>/dev/null
   ok "Gentxs collected"
 
   # ── Step 8: Validate genesis ────────────────────────────────────────
   info "Validating genesis..."
-  if ${BINARY} validate --home "${COORDINATOR_HOME}" 2>&1; then
-    ok "Genesis valid"
-  elif ${BINARY} validate-genesis --home "${COORDINATOR_HOME}" 2>&1; then
+  if ${BINARY} genesis validate --home "${COORDINATOR_HOME}" 2>&1; then
     ok "Genesis valid"
   else
     die "Genesis validation FAILED"
@@ -307,7 +339,13 @@ cmd_start() {
     sed -i.bak "s|^address = \"tcp://0.0.0.0:1317\"|address = \"tcp://0.0.0.0:${local_api}\"|" "$app_toml"
     sed -i.bak 's/^enabled-unsafe-cors = false/enabled-unsafe-cors = true/' "$app_toml"
     # Min gas prices
-    sed -i.bak "s/^minimum-gas-prices = .*/minimum-gas-prices = \"0.025${DENOM}\"/" "$app_toml"
+    sed -i.bak "s/^minimum-gas-prices = .*/minimum-gas-prices = \"1${DENOM}\"/" "$app_toml"
+    # Disable IAVL fast nodes (prevents "version does not exist" query errors)
+    sed -i.bak 's/^iavl-disable-fastnode = false/iavl-disable-fastnode = true/' "$app_toml"
+    # Disable inter-block cache for query reliability
+    sed -i.bak 's/^inter-block-cache = true/inter-block-cache = false/' "$app_toml"
+    # Enable mempool (default is no-op mempool which drops all transactions)
+    sed -i.bak 's/^max-txs = -1/max-txs = 5000/' "$app_toml"
 
     # Cleanup sed backups
     rm -f "${config_toml}.bak" "${app_toml}.bak"
@@ -315,7 +353,25 @@ cmd_start() {
     info "  ${local_name}: P2P=${local_p2p} RPC=${local_rpc} gRPC=${local_grpc} API=${local_api}"
   done
 
-  # ── Step 11: Start all validators ───────────────────────────────────
+  ok "Localnet initialized — ready for 'boot' or 'start'"
+  echo ""
+  echo "  Genesis:   ${COORDINATOR_HOME}/config/genesis.json"
+  echo "  State dir: ${BASE_DIR}"
+  echo ""
+  echo "  Next steps:"
+  echo "    scripts/localnet.sh boot    # Start validators from initialized state"
+  echo "    scripts/localnet.sh start   # (or re-run start for init + boot)"
+}
+
+# ── _boot_validators (internal) ──────────────────────────────────────────
+# Starts all validator processes and waits for consensus.
+# Called by cmd_start and cmd_boot.
+
+_boot_validators() {
+  # Trap EXIT for cleanup on failure
+  trap 'echo ""; warn "Script interrupted — run: scripts/localnet.sh stop"' INT TERM
+
+  # ── Start all validators ───────────────────────────────────────────
   info "Starting ${NUM_VALIDATORS} validators..."
 
   for i in $(seq 0 $((NUM_VALIDATORS - 1))); do
@@ -325,7 +381,7 @@ cmd_start() {
 
     ${BINARY} start \
       --home "${local_home}" \
-      --minimum-gas-prices "0.025${DENOM}" \
+      --minimum-gas-prices "1${DENOM}" \
       > "${local_log}" 2>&1 &
 
     local_pid=$!
@@ -333,7 +389,7 @@ cmd_start() {
     info "  ${local_name} started (PID=${local_pid})"
   done
 
-  # ── Step 12: Wait for consensus ─────────────────────────────────────
+  # ── Wait for consensus ─────────────────────────────────────────────
   info "Waiting for consensus (target: block 3)..."
   local rpc_url="http://127.0.0.1:$(rpc_port 0)"
   local max_wait=60
@@ -357,8 +413,40 @@ cmd_start() {
     warn "Timed out waiting for block 3 after ${max_wait}s"
     warn "Check logs: scripts/localnet.sh logs"
   fi
+}
 
-  # ── Summary ─────────────────────────────────────────────────────────
+# ── cmd_boot ─────────────────────────────────────────────────────────────
+# Starts validators from an already-initialized localnet state.
+# Use after 'init' (e.g., to inject axioms between init and boot).
+
+cmd_boot() {
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "  Zerone — Local Testnet: BOOT (from initialized state)"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+
+  [ -d "${BASE_DIR}/val0" ] || die "No initialized localnet found. Run 'init' first."
+  [ -f "${BINARY}" ] || die "Binary not found: ${BINARY}. Run 'init' or 'make build' first."
+
+  _boot_validators
+
+  _print_summary
+}
+
+# ── cmd_start ────────────────────────────────────────────────────────────
+# Full pipeline: init + boot.
+
+cmd_start() {
+  cmd_init
+
+  _boot_validators
+
+  _print_summary
+}
+
+# ── _print_summary (internal) ───────────────────────────────────────────
+
+_print_summary() {
   echo ""
   echo "═══════════════════════════════════════════════════════════════"
   echo "  Zerone — Local Testnet RUNNING"
@@ -531,20 +619,99 @@ cmd_clean() {
   fi
 }
 
+# ── cmd_resume ──────────────────────────────────────────────────────────
+
+cmd_resume() {
+  echo "═══════════════════════════════════════════════════════════════"
+  echo "  Zerone — Local Testnet: RESUME (from existing state)"
+  echo "═══════════════════════════════════════════════════════════════"
+  echo ""
+
+  check_deps
+
+  # Verify state exists
+  if [ ! -d "${BASE_DIR}/val0" ]; then
+    die "No existing localnet state found at ${BASE_DIR}. Use 'start' first."
+  fi
+
+  # Build fresh binary
+  info "Building zeroned binary..."
+  mkdir -p "${PROJECT_ROOT}/build"
+  (cd "${PROJECT_ROOT}" && go build -ldflags "-X github.com/cosmos/cosmos-sdk/version.Name=zerone -X github.com/cosmos/cosmos-sdk/version.AppName=zeroned" -o build/zeroned ./cmd/zeroned) || die "Build failed"
+  ok "Binary built: ${BINARY}"
+
+  # Stop any running validators first
+  cmd_stop 2>/dev/null || true
+
+  # Start all validators from existing state
+  info "Starting ${NUM_VALIDATORS} validators from existing state..."
+
+  for i in $(seq 0 $((NUM_VALIDATORS - 1))); do
+    local_name="${VALIDATOR_NAMES[$i]}"
+    local_home="${BASE_DIR}/${local_name}"
+    local_log="${BASE_DIR}/${local_name}.log"
+
+    if [ ! -d "${local_home}" ]; then
+      warn "Validator home ${local_home} not found, skipping"
+      continue
+    fi
+
+    ${BINARY} start \
+      --home "${local_home}" \
+      --minimum-gas-prices "1${DENOM}" \
+      >> "${local_log}" 2>&1 &
+
+    local_pid=$!
+    echo "${local_pid}" > "${BASE_DIR}/${local_name}.pid"
+    info "  ${local_name} started (PID=${local_pid})"
+  done
+
+  # Wait for chain to resume producing blocks
+  info "Waiting for chain to resume..."
+  local rpc_url="http://127.0.0.1:$(rpc_port 0)"
+  local max_wait=90
+  local elapsed=0
+
+  while [ $elapsed -lt $max_wait ]; do
+    local height
+    height=$(curl -s "${rpc_url}/status" 2>/dev/null | jq -r '.result.sync_info.latest_block_height' 2>/dev/null || echo "0")
+    if [ "${height}" -ge 1 ] 2>/dev/null; then
+      ok "Chain resumed at block ${height}"
+      break
+    fi
+    sleep 2
+    elapsed=$((elapsed + 2))
+    if [ $((elapsed % 10)) -eq 0 ]; then
+      info "  still waiting... (${elapsed}s)"
+    fi
+  done
+
+  if [ $elapsed -ge $max_wait ]; then
+    warn "Timed out waiting for chain to resume after ${max_wait}s"
+    warn "Check logs: scripts/localnet.sh logs"
+  fi
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────
 
 case "${1:-help}" in
   start)   cmd_start ;;
+  init)    cmd_init ;;
+  boot)    cmd_boot ;;
   stop)    cmd_stop ;;
+  resume)  cmd_resume ;;
   status)  cmd_status ;;
   logs)    cmd_logs "${2:-}" ;;
   clean)   cmd_clean ;;
   help|--help|-h)
-    echo "Usage: $0 {start|stop|status|logs [N]|clean}"
+    echo "Usage: $0 {start|init|boot|stop|resume|status|logs [N]|clean}"
     echo ""
     echo "Commands:"
     echo "  start       Build, init, and start 4-validator local testnet"
+    echo "  init        Build and init only (no start — for axiom injection)"
+    echo "  boot        Start validators from already-initialized state"
     echo "  stop        Stop all validators"
+    echo "  resume      Rebuild and restart validators from existing state"
     echo "  status      Query each validator's block height and voting power"
     echo "  logs [N]    Tail logs (all validators, or validator N = 0-3)"
     echo "  clean       Stop and remove all localnet state"

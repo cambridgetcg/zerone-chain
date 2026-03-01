@@ -20,6 +20,12 @@ service Msg {
   rpc JoinFormationPool(MsgJoinFormationPool) returns (MsgJoinFormationPoolResponse);
   rpc LeaveFormationPool(MsgLeaveFormationPool) returns (MsgLeaveFormationPoolResponse);
   rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+  rpc ProposeMentorship(MsgProposeMentorship) returns (MsgProposeMentorshipResponse);
+  rpc AcceptMentorship(MsgAcceptMentorship) returns (MsgAcceptMentorshipResponse);
+  rpc GraduateMentee(MsgGraduateMentee) returns (MsgGraduateMenteeResponse);
+  rpc EndMentorship(MsgEndMentorship) returns (MsgEndMentorshipResponse);
+  rpc AcceptFormationMatch(MsgAcceptFormationMatch) returns (MsgAcceptFormationMatchResponse);
+  rpc DeclineFormationMatch(MsgDeclineFormationMatch) returns (MsgDeclineFormationMatchResponse);
 }
 
 message MsgProposePartnership {
@@ -28,6 +34,7 @@ message MsgProposePartnership {
   string partner = 2;
   string initial_deposit = 3;
   uint32 proposed_tier = 4;
+  string domain = 5;  // optional: domain context for formation freeze checks
 }
 message MsgProposePartnershipResponse { string partnership_id = 1; }
 
@@ -110,3 +117,47 @@ message MsgUpdateParams {
   Params params = 2;
 }
 message MsgUpdateParamsResponse {}
+
+message MsgProposeMentorship {
+  option (cosmos.msg.v1.signer) = "mentor";
+  string mentor = 1;
+  string mentee = 2;
+  string domain = 3;
+  uint64 duration_blocks = 4;
+}
+message MsgProposeMentorshipResponse { string mentorship_id = 1; }
+
+message MsgAcceptMentorship {
+  option (cosmos.msg.v1.signer) = "mentee";
+  string mentee = 1;
+  string mentorship_id = 2;
+}
+message MsgAcceptMentorshipResponse {}
+
+message MsgGraduateMentee {
+  option (cosmos.msg.v1.signer) = "mentor";
+  string mentor = 1;
+  string mentorship_id = 2;
+}
+message MsgGraduateMenteeResponse {}
+
+message MsgEndMentorship {
+  option (cosmos.msg.v1.signer) = "sender";
+  string sender = 1;
+  string mentorship_id = 2;
+}
+message MsgEndMentorshipResponse {}
+
+message MsgAcceptFormationMatch {
+  option (cosmos.msg.v1.signer) = "accepter";
+  string accepter = 1;
+  string match_id = 2;
+}
+message MsgAcceptFormationMatchResponse {}
+
+message MsgDeclineFormationMatch {
+  option (cosmos.msg.v1.signer) = "decliner";
+  string decliner = 1;
+  string match_id = 2;
+}
+message MsgDeclineFormationMatchResponse {}

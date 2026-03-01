@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"cosmossdk.io/errors"
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -28,6 +29,27 @@ func (k msgServer) ProposePartnership(goCtx context.Context, msg *types.MsgPropo
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	params := k.GetParams(ctx)
 	currentBlock := uint64(ctx.BlockHeight())
+
+	// R31-3: Check domain formation freeze.
+	if msg.Domain != "" {
+		if freeze := k.GetDomainFormationFreeze(ctx, msg.Domain); freeze != nil {
+			if currentBlock < freeze.ExpiryHeight {
+				ctx.EventManager().EmitEvent(
+					sdk.NewEvent("zerone.partnerships.formation_blocked",
+						sdk.NewAttribute("domain", msg.Domain),
+						sdk.NewAttribute("freeze_expiry", fmt.Sprintf("%d", freeze.ExpiryHeight)),
+						sdk.NewAttribute("freeze_reason", freeze.Reason),
+						sdk.NewAttribute("requester", msg.Proposer),
+					),
+				)
+				return nil, errors.Wrapf(types.ErrDomainFrozen,
+					"domain %s is under formation freeze until block %d: %s",
+					msg.Domain, freeze.ExpiryHeight, freeze.Reason)
+			}
+			// Freeze expired — clear it.
+			k.DeleteDomainFormationFreeze(ctx, msg.Domain)
+		}
+	}
 
 	// Check for existing non-dissolved partnership between these two
 	existingByHuman := k.GetPartnershipsByHuman(ctx, msg.Proposer)
@@ -654,4 +676,240 @@ func (k msgServer) UpdateParams(goCtx context.Context, msg *types.MsgUpdateParam
 	)
 
 	return &types.MsgUpdateParamsResponse{}, nil
+}
+
+// ProposeMentorship creates a new mentorship proposal.
+func (k msgServer) ProposeMentorship(goCtx context.Context, msg *types.MsgProposeMentorship) (*types.MsgProposeMentorshipResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	params := k.GetParams(ctx)
+
+	if msg.Mentor == msg.Mentee {
+		return nil, types.ErrSelfMentorship
+	}
+
+	if k.CountActiveMentorshipsForMentor(ctx, msg.Mentor) >= int(params.MaxMentorshipsPerMentor) {
+		return nil, types.ErrMaxMentorshipsReached
+	}
+
+	if _, found := k.GetActiveMentorshipForMentee(ctx, msg.Mentee); found {
+		return nil, types.ErrAlreadyMentored
+	}
+
+	seq := k.NextSequence(ctx)
+	mentorshipId := fmt.Sprintf("mentorship-%d", seq)
+
+	m := &types.Mentorship{
+		Id:                  mentorshipId,
+		MentorAddr:          msg.Mentor,
+		MenteeAddr:          msg.Mentee,
+		Domain:              msg.Domain,
+		Status:              "proposed",
+		DurationBlocks:      msg.DurationBlocks,
+		GraduationThreshold: params.GraduationVerifications,
+		GraduationClaimsReq: params.GraduationClaims,
+	}
+	k.SetMentorship(ctx, m)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.partnerships.mentorship_proposed",
+			sdk.NewAttribute("mentorship_id", mentorshipId),
+			sdk.NewAttribute("mentor", msg.Mentor),
+			sdk.NewAttribute("mentee", msg.Mentee),
+			sdk.NewAttribute("domain", msg.Domain),
+		),
+	)
+
+	return &types.MsgProposeMentorshipResponse{MentorshipId: mentorshipId}, nil
+}
+
+// AcceptMentorship accepts a pending mentorship proposal.
+func (k msgServer) AcceptMentorship(goCtx context.Context, msg *types.MsgAcceptMentorship) (*types.MsgAcceptMentorshipResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	m, found := k.GetMentorship(ctx, msg.MentorshipId)
+	if !found {
+		return nil, types.ErrMentorshipNotFound
+	}
+	if m.Status != "proposed" {
+		return nil, types.ErrMentorshipNotProposed
+	}
+	if m.MenteeAddr != msg.Mentee {
+		return nil, types.ErrNotMentorshipParticipant
+	}
+
+	m.Status = "active"
+	m.StartBlock = uint64(ctx.BlockHeight())
+	k.SetMentorship(ctx, m)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.partnerships.mentorship_accepted",
+			sdk.NewAttribute("mentorship_id", m.Id),
+			sdk.NewAttribute("mentor", m.MentorAddr),
+			sdk.NewAttribute("mentee", m.MenteeAddr),
+		),
+	)
+
+	return &types.MsgAcceptMentorshipResponse{}, nil
+}
+
+// GraduateMentee manually graduates a mentee from an active mentorship.
+func (k msgServer) GraduateMentee(goCtx context.Context, msg *types.MsgGraduateMentee) (*types.MsgGraduateMenteeResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	m, found := k.GetMentorship(ctx, msg.MentorshipId)
+	if !found {
+		return nil, types.ErrMentorshipNotFound
+	}
+	if m.Status != "active" {
+		return nil, types.ErrMentorshipNotActive
+	}
+	if m.MentorAddr != msg.Mentor {
+		return nil, types.ErrNotMentorshipParticipant
+	}
+
+	k.graduateMentorship(ctx, m)
+
+	return &types.MsgGraduateMenteeResponse{}, nil
+}
+
+// EndMentorship terminates a mentorship early.
+func (k msgServer) EndMentorship(goCtx context.Context, msg *types.MsgEndMentorship) (*types.MsgEndMentorshipResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	m, found := k.GetMentorship(ctx, msg.MentorshipId)
+	if !found {
+		return nil, types.ErrMentorshipNotFound
+	}
+	if m.Status != "proposed" && m.Status != "active" {
+		return nil, types.ErrMentorshipNotActive
+	}
+	if m.MentorAddr != msg.Sender && m.MenteeAddr != msg.Sender {
+		return nil, types.ErrNotMentorshipParticipant
+	}
+
+	m.Status = "terminated"
+	k.SetMentorship(ctx, m)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.partnerships.mentorship_terminated",
+			sdk.NewAttribute("mentorship_id", m.Id),
+			sdk.NewAttribute("terminated_by", msg.Sender),
+		),
+	)
+
+	return &types.MsgEndMentorshipResponse{}, nil
+}
+
+// AcceptFormationMatch accepts a proposed formation match.
+func (k msgServer) AcceptFormationMatch(goCtx context.Context, msg *types.MsgAcceptFormationMatch) (*types.MsgAcceptFormationMatchResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	params := k.GetParams(ctx)
+
+	fm, found := k.GetFormationMatch(ctx, msg.MatchId)
+	if !found {
+		return nil, types.ErrMatchNotFound
+	}
+	if fm.Status != "proposed" {
+		return nil, types.ErrMatchNotProposed
+	}
+	if msg.Accepter != fm.Addr1 && msg.Accepter != fm.Addr2 {
+		return nil, types.ErrNotMatchParticipant
+	}
+
+	if msg.Accepter == fm.Addr1 {
+		fm.Addr1Accepted = true
+	} else {
+		fm.Addr2Accepted = true
+	}
+
+	if fm.Addr1Accepted && fm.Addr2Accepted {
+		fm.Status = "accepted"
+		k.SetFormationMatch(ctx, fm)
+
+		k.DeletePoolEntry(ctx, fm.Addr1)
+		k.DeletePoolEntry(ctx, fm.Addr2)
+
+		currentBlock := uint64(ctx.BlockHeight())
+		seq := k.NextSequence(ctx)
+		partnershipId := fmt.Sprintf("partnership-%d", seq)
+
+		partnership := &types.Partnership{
+			Id:               partnershipId,
+			HumanAddr:        fm.Addr1,
+			AgentAddr:        fm.Addr2,
+			Status:           types.StatusPending,
+			Tier:             0,
+			LockTier:         0,
+			LockExpiresAt:    currentBlock + types.LockTiers[0].MinBlocks,
+			SplitHumanBps:    params.DefaultHumanSplitBps,
+			SplitAgentBps:    params.DefaultAgentSplitBps,
+			CommonPotBalance: "0",
+			TotalEarned:      "0",
+			CooperationScore: 500000,
+			FormedAtBlock:    currentBlock,
+		}
+		k.SetPartnership(ctx, partnership)
+
+		kvStore := k.storeService.OpenKVStore(ctx)
+		formationExpiry := currentBlock + params.FormationWindowBlocks
+		_ = kvStore.Set(
+			append(types.FormationKeyPrefix, []byte(partnershipId)...),
+			[]byte(fmt.Sprintf("%d", formationExpiry)),
+		)
+
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent("zerone.partnerships.formation_match_accepted",
+				sdk.NewAttribute("match_id", fm.Id),
+				sdk.NewAttribute("partnership_id", partnershipId),
+			),
+		)
+	} else {
+		k.SetFormationMatch(ctx, fm)
+
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent("zerone.partnerships.formation_match_partial_accept",
+				sdk.NewAttribute("match_id", fm.Id),
+				sdk.NewAttribute("accepter", msg.Accepter),
+			),
+		)
+	}
+
+	return &types.MsgAcceptFormationMatchResponse{}, nil
+}
+
+// DeclineFormationMatch declines a proposed formation match.
+func (k msgServer) DeclineFormationMatch(goCtx context.Context, msg *types.MsgDeclineFormationMatch) (*types.MsgDeclineFormationMatchResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	fm, found := k.GetFormationMatch(ctx, msg.MatchId)
+	if !found {
+		return nil, types.ErrMatchNotFound
+	}
+	if fm.Status != "proposed" {
+		return nil, types.ErrMatchNotProposed
+	}
+	if msg.Decliner != fm.Addr1 && msg.Decliner != fm.Addr2 {
+		return nil, types.ErrNotMatchParticipant
+	}
+
+	fm.Status = "declined"
+	k.SetFormationMatch(ctx, fm)
+
+	if pe, found := k.GetPoolEntry(ctx, fm.Addr1); found {
+		pe.MatchedWith = ""
+		k.SetPoolEntry(ctx, pe)
+	}
+	if pe, found := k.GetPoolEntry(ctx, fm.Addr2); found {
+		pe.MatchedWith = ""
+		k.SetPoolEntry(ctx, pe)
+	}
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.partnerships.formation_match_declined",
+			sdk.NewAttribute("match_id", fm.Id),
+			sdk.NewAttribute("declined_by", msg.Decliner),
+		),
+	)
+
+	return &types.MsgDeclineFormationMatchResponse{}, nil
 }

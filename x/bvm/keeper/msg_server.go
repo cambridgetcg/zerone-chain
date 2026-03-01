@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -150,6 +151,33 @@ func (m msgServer) CallContract(goCtx context.Context, msg *types.MsgCallContrac
 
 	contractBytes := []byte(msg.ContractAddress)
 
+	// Resolve caller DID and session capabilities
+	var callerDID string
+	var caps *vm.SessionCapabilities
+	if m.authKeeper != nil {
+		if did, found := m.authKeeper.GetAccountDID(ctx, msg.Caller); found {
+			callerDID = did
+		}
+	}
+	if m.authKeeper != nil && callerDID != "" {
+		if sc, found := m.authKeeper.GetSessionCapabilities(ctx, msg.Caller, uint64(ctx.BlockHeight())); found {
+			// Session key: use restricted capabilities
+			caps = &vm.SessionCapabilities{
+				CanTransfer:     sc.CanTransfer,
+				CanStake:        sc.CanStake,
+				CanSubmitClaims: sc.CanSubmitClaims,
+				CanVote:         sc.CanVote,
+			}
+		} else {
+			// Identity/operational key with no session key → full access
+			caps = &vm.SessionCapabilities{
+				CanTransfer: true, CanStake: true,
+				CanSubmitClaims: true, CanVote: true,
+			}
+		}
+	}
+	// Anonymous caller (no DID): caps stays nil → all agent ops denied (C-1 secure default)
+
 	// Execution mode
 	mode := vm.ModeCall
 	if msg.StaticCall {
@@ -170,6 +198,8 @@ func (m msgServer) CallContract(goCtx context.Context, msg *types.MsgCallContrac
 		Bytecode:           code.Bytecode,
 		ChainID:            big.NewInt(2521),
 		ContractBvmVersion: contract.BvmVersion,
+		CallerDID:          callerDID,
+		Capabilities:       caps,
 	}
 
 	stateDB := vm.NewMemoryStateDB()
@@ -185,8 +215,8 @@ func (m msgServer) CallContract(goCtx context.Context, msg *types.MsgCallContrac
 
 	// Build host functions
 	var host vm.HostFunctions
-	if m.knowledgeKeeper != nil {
-		host = &knowledgeBridgeHost{kk: m.knowledgeKeeper, ctx: ctx}
+	if m.knowledgeKeeper != nil || m.homeKeeper != nil {
+		host = &zeroneHost{kk: m.knowledgeKeeper, hk: m.homeKeeper, ctx: ctx}
 	}
 
 	// Execute with panic recovery
@@ -344,6 +374,27 @@ func (m msgServer) ScheduleContract(goCtx context.Context, msg *types.MsgSchedul
 	}
 	m.SetSchedule(ctx, schedule)
 
+	// Snapshot caller's capabilities at schedule creation time (P1-2).
+	if m.authKeeper != nil {
+		var callerDID string
+		if did, didFound := m.authKeeper.GetAccountDID(ctx, msg.Caller); didFound {
+			callerDID = did
+		}
+		if callerDID != "" {
+			var caps types.SessionCapabilities
+			if sc, scFound := m.authKeeper.GetSessionCapabilities(ctx, msg.Caller, currentBlock); scFound {
+				caps = sc
+			} else {
+				// Identity/operational key → full access
+				caps = types.SessionCapabilities{
+					CanTransfer: true, CanStake: true,
+					CanSubmitClaims: true, CanVote: true,
+				}
+			}
+			m.SetScheduleCapabilities(ctx, scheduleId, caps)
+		}
+	}
+
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.bvm.contract_scheduled",
 		sdk.NewAttribute("schedule_id", scheduleId),
@@ -459,6 +510,32 @@ func (k Keeper) ExecutePendingSchedules(ctx sdk.Context) {
 				callerBytes := make([]byte, 20)
 				copy(callerBytes, callerAddr)
 
+				// Resolve scheduler's DID and use stored capabilities (P1-2).
+				// Stored caps take priority (snapshot at creation time).
+				// Fallback to full access for backwards compat (pre-P1-2 schedules).
+				var schedCallerDID string
+				var schedCaps *vm.SessionCapabilities
+				if k.authKeeper != nil {
+					if did, found := k.authKeeper.GetAccountDID(ctx, schedule.Caller); found {
+						schedCallerDID = did
+					}
+				}
+				if storedCaps, hasCaps := k.GetScheduleCapabilities(ctx, schedule.ScheduleId); hasCaps {
+					// Use capabilities stored at schedule creation time
+					schedCaps = &vm.SessionCapabilities{
+						CanTransfer:     storedCaps.CanTransfer,
+						CanStake:        storedCaps.CanStake,
+						CanSubmitClaims: storedCaps.CanSubmitClaims,
+						CanVote:         storedCaps.CanVote,
+					}
+				} else if k.authKeeper != nil && schedCallerDID != "" {
+					// Backwards compat: no stored caps → full access (pre-P1-2 schedule)
+					schedCaps = &vm.SessionCapabilities{
+						CanTransfer: true, CanStake: true,
+						CanSubmitClaims: true, CanVote: true,
+					}
+				}
+
 				execCtx := &vm.ExecutionContext{
 					Caller:             callerBytes,
 					Origin:             callerBytes,
@@ -473,12 +550,14 @@ func (k Keeper) ExecutePendingSchedules(ctx sdk.Context) {
 					Bytecode:           code.Bytecode,
 					ChainID:            big.NewInt(2521),
 					ContractBvmVersion: contract.BvmVersion,
+					CallerDID:          schedCallerDID,
+					Capabilities:       schedCaps,
 				}
 
 				stateDB := vm.NewMemoryStateDB()
 				var host vm.HostFunctions
-				if k.knowledgeKeeper != nil {
-					host = &knowledgeBridgeHost{kk: k.knowledgeKeeper, ctx: ctx}
+				if k.knowledgeKeeper != nil || k.homeKeeper != nil {
+					host = &zeroneHost{kk: k.knowledgeKeeper, hk: k.homeKeeper, ctx: ctx}
 				}
 
 				interp := vm.NewInterpreter()
@@ -524,13 +603,17 @@ func (k Keeper) ExecutePendingSchedules(ctx sdk.Context) {
 	}
 }
 
-// knowledgeBridgeHost implements vm.HostFunctions by delegating to the knowledge keeper.
-type knowledgeBridgeHost struct {
+// zeroneHost implements vm.HostFunctions by delegating to knowledge and home keepers.
+type zeroneHost struct {
 	kk  types.KnowledgeKeeper
+	hk  types.HomeKeeper
 	ctx sdk.Context
 }
 
-func (h *knowledgeBridgeHost) KQuery(factId []byte) (bool, uint64, []byte) {
+func (h *zeroneHost) KQuery(factId []byte) (bool, uint64, []byte) {
+	if h.kk == nil {
+		return false, 0, nil
+	}
 	factIdStr := hex.EncodeToString(factId)
 	confidence, found := h.kk.GetFactConfidence(h.ctx, factIdStr)
 	if !found {
@@ -539,10 +622,40 @@ func (h *knowledgeBridgeHost) KQuery(factId []byte) (bool, uint64, []byte) {
 	return true, confidence, []byte(factIdStr)
 }
 
-func (h *knowledgeBridgeHost) KVerify(_ string, _ []byte, _ []byte) bool {
+func (h *zeroneHost) KVerify(_ string, _ []byte, _ []byte) bool {
 	return false // Stub: verification voting requires full round integration
 }
 
-func (h *knowledgeBridgeHost) KCite(_ string, _ []byte) bool {
+func (h *zeroneHost) KCite(_ string, _ []byte) bool {
 	return true // Citation recording is fire-and-forget
+}
+
+func (h *zeroneHost) HQuery(callerAddr []byte) (bool, []byte, []byte) {
+	if h.hk == nil {
+		return false, nil, nil
+	}
+	addr := sdk.AccAddress(callerAddr).String()
+	homeIDs := h.hk.GetHomesByOwner(h.ctx, addr)
+	if len(homeIDs) == 0 {
+		return false, nil, nil
+	}
+	homeID := homeIDs[0]
+	status := h.hk.GetHomeStatus(h.ctx, homeID)
+	return true, []byte(homeID), []byte(status)
+}
+
+func (h *zeroneHost) HMemory(homeId []byte) []byte {
+	if h.hk == nil {
+		return nil
+	}
+	homeIDStr := string(bytes.TrimRight(homeId, "\x00"))
+	return []byte(h.hk.GetMemoryCID(h.ctx, homeIDStr))
+}
+
+func (h *zeroneHost) HPartner(homeId []byte) []byte {
+	if h.hk == nil {
+		return nil
+	}
+	homeIDStr := string(bytes.TrimRight(homeId, "\x00"))
+	return []byte(h.hk.GetPartnershipID(h.ctx, homeIDStr))
 }

@@ -1,5 +1,7 @@
 package types
 
+import "fmt"
+
 // BPS is the basis-point denominator (1,000,000 = 100%).
 const BPS = uint64(1_000_000)
 
@@ -16,6 +18,12 @@ func DefaultParams() Params {
 		DegradedThreshold:            400_000, // 40%
 		HealthyThreshold:             700_000, // 70%
 		Enabled:                      true,
+		MaxAutoApplyMagnitudeBps:             500_000,   // 50% — conservative testnet default
+		CorrectionConfidenceWindowSize:       50,
+		CorrectionConfidenceMinSamples:       5,
+		MinConfidenceForAutoApply:            200_000,   // 20%
+		CorrectionBoundsMinMultiplierBps:     300_000,   // 30%
+		CorrectionBoundsMaxMultiplierBps:     2_000_000, // 200%
 	}
 }
 
@@ -61,6 +69,19 @@ func (p *Params) Validate() error {
 
 	if p.CriticalThreshold >= p.DegradedThreshold || p.DegradedThreshold >= p.HealthyThreshold {
 		return ErrThresholdOrder
+	}
+
+	if p.MaxAutoApplyMagnitudeBps > BPS {
+		return ErrInvalidMaxAutoApply
+	}
+
+	if p.CorrectionBoundsMinMultiplierBps > p.CorrectionBoundsMaxMultiplierBps {
+		return ErrInvalidConfidenceBounds
+	}
+
+	// Cross-parameter safety (R30-2): max correction bounds × max magnitude must not exceed 100%.
+	if p.CorrectionBoundsMaxMultiplierBps*p.MaxAutoApplyMagnitudeBps/BPS > BPS {
+		return fmt.Errorf("max correction bounds multiplier * max_magnitude would exceed 100%%")
 	}
 
 	return nil

@@ -36,6 +36,18 @@ service Query {
   rpc ResearchVoters(QueryResearchVotersRequest) returns (QueryResearchVotersResponse) {
     option (google.api.http).get = "/zerone/gov/v1/research_voters";
   }
+  rpc ResearchFundGovernance(QueryResearchFundGovernanceRequest) returns (QueryResearchFundGovernanceResponse) {
+    option (google.api.http).get = "/zerone/gov/v1/research_fund_governance";
+  }
+  rpc SeatElection(QuerySeatElectionRequest) returns (QuerySeatElectionResponse) {
+    option (google.api.http).get = "/zerone/gov/v1/seat_election/{proposal_id}";
+  }
+  rpc SeatElections(QuerySeatElectionsRequest) returns (QuerySeatElectionsResponse) {
+    option (google.api.http).get = "/zerone/gov/v1/seat_elections";
+  }
+  rpc ResearchFundSeats(QueryResearchFundSeatsRequest) returns (QueryResearchFundSeatsResponse) {
+    option (google.api.http).get = "/zerone/gov/v1/research_fund_seats";
+  }
 }
 
 message QueryLIPRequest {
@@ -117,4 +129,39 @@ message QueryResearchVotersRequest {}
 
 message QueryResearchVotersResponse {
   ResearchFundVoters voters = 1;
+}
+
+message QueryResearchFundGovernanceRequest {}
+
+message QueryResearchFundGovernanceResponse {
+  ResearchFundGovernanceState state = 1;
+  PhaseTransitionConditions current_conditions = 2;  // live snapshot of exit condition metrics
+}
+
+message QuerySeatElectionRequest {
+  uint64 proposal_id = 1;
+}
+
+message QuerySeatElectionResponse {
+  SeatElectionProposal proposal = 1;
+  repeated SeatElectionVote votes = 2;
+}
+
+message QuerySeatElectionsRequest {
+  string stage  = 1;
+  uint64 limit  = 2;
+  uint64 offset = 3;
+}
+
+message QuerySeatElectionsResponse {
+  repeated SeatElectionProposal proposals = 1;
+  uint64 total = 2;
+}
+
+message QueryResearchFundSeatsRequest {}
+
+message QueryResearchFundSeatsResponse {
+  repeated string community_seats = 1;
+  repeated uint64 seat_term_end_blocks = 2;
+  uint32 active_seat_count = 3;
 }

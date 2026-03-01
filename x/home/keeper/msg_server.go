@@ -4,12 +4,55 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/home/types"
 )
+
+const (
+	MaxNameLength    = 128
+	MaxKeyHashLength = 128
+	MaxCIDLength     = 256
+)
+
+// validateName rejects empty, too-long, or null-byte-containing names.
+func validateName(name string) error {
+	if name == "" {
+		return fmt.Errorf("%w: name cannot be empty", types.ErrInvalidInput)
+	}
+	if len(name) > MaxNameLength {
+		return fmt.Errorf("%w: name exceeds max length %d", types.ErrInvalidInput, MaxNameLength)
+	}
+	if strings.ContainsRune(name, '\x00') {
+		return fmt.Errorf("%w: name contains null bytes", types.ErrInvalidInput)
+	}
+	return nil
+}
+
+// validateKeyHash rejects empty or too-long key hashes.
+func validateKeyHash(keyHash string) error {
+	if keyHash == "" {
+		return fmt.Errorf("%w: key_hash cannot be empty", types.ErrInvalidInput)
+	}
+	if len(keyHash) > MaxKeyHashLength {
+		return fmt.Errorf("%w: key_hash exceeds max length %d", types.ErrInvalidInput, MaxKeyHashLength)
+	}
+	return nil
+}
+
+// validateCID rejects empty or too-long CIDs.
+func validateCID(cid string) error {
+	if cid == "" {
+		return fmt.Errorf("%w: cid cannot be empty", types.ErrInvalidInput)
+	}
+	if len(cid) > MaxCIDLength {
+		return fmt.Errorf("%w: cid exceeds max length %d", types.ErrInvalidInput, MaxCIDLength)
+	}
+	return nil
+}
 
 type msgServer struct {
 	types.UnimplementedMsgServer
@@ -26,6 +69,10 @@ var _ types.MsgServer = msgServer{}
 // CreateHome creates a new agent home.
 func (k msgServer) CreateHome(goCtx context.Context, msg *types.MsgCreateHome) (*types.MsgCreateHomeResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := validateName(msg.Name); err != nil {
+		return nil, err
+	}
 
 	ownerAddr, err := sdk.AccAddressFromBech32(msg.Owner)
 	if err != nil {
@@ -93,6 +140,9 @@ func (k msgServer) UpdateHome(goCtx context.Context, msg *types.MsgUpdateHome) (
 	}
 
 	if msg.Name != "" {
+		if err := validateName(msg.Name); err != nil {
+			return nil, err
+		}
 		home.Name = msg.Name
 	}
 	if msg.Status != "" {
@@ -148,6 +198,10 @@ func isValidStatusTransition(from, to string) bool {
 // UpdateMemoryCID updates the IPFS memory CID for a home.
 func (k msgServer) UpdateMemoryCID(goCtx context.Context, msg *types.MsgUpdateMemoryCID) (*types.MsgUpdateMemoryCIDResponse, error) {
 	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	if err := validateCID(msg.Cid); err != nil {
+		return nil, err
+	}
 
 	home, found := k.GetHome(ctx, msg.HomeId)
 	if !found {
@@ -278,6 +332,10 @@ func (k msgServer) RegisterKey(goCtx context.Context, msg *types.MsgRegisterKey)
 	ctx := sdk.UnwrapSDKContext(goCtx)
 	height := uint64(ctx.BlockHeight())
 
+	if err := validateKeyHash(msg.KeyHash); err != nil {
+		return nil, err
+	}
+
 	home, found := k.GetHome(ctx, msg.HomeId)
 	if !found {
 		return nil, fmt.Errorf("%w: %s", types.ErrHomeNotFound, msg.HomeId)
@@ -352,7 +410,7 @@ func (k msgServer) RevokeKey(goCtx context.Context, msg *types.MsgRevokeKey) (*t
 		return false
 	})
 
-	// Create alert.
+	// Create alert (silently skip if limit reached — revocation must not be blocked).
 	alertID := fmt.Sprintf("key-revoked-%s-%d", msg.KeyHash[:min(8, len(msg.KeyHash))], height)
 	alert := &types.Alert{
 		AlertId:   alertID,
@@ -362,7 +420,7 @@ func (k msgServer) RevokeKey(goCtx context.Context, msg *types.MsgRevokeKey) (*t
 		Message:   fmt.Sprintf("Key %s has been revoked", msg.KeyHash),
 		CreatedAt: height,
 	}
-	k.SetAlert(ctx, alert)
+	k.SetAlertWithLimit(ctx, alert)
 
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.home.key_revoked",
@@ -393,8 +451,18 @@ func (k msgServer) ConfigureGuardian(goCtx context.Context, msg *types.MsgConfig
 	if uint64(len(msg.RecoveryAddresses)) > params.MaxRecoveryAddresses {
 		return nil, fmt.Errorf("%w: too many recovery addresses (max %d)", types.ErrInvalidGuardianConfig, params.MaxRecoveryAddresses)
 	}
+	for _, addr := range msg.RecoveryAddresses {
+		if _, err := sdk.AccAddressFromBech32(addr); err != nil {
+			return nil, fmt.Errorf("%w: invalid recovery address %q: %v", types.ErrInvalidInput, addr, err)
+		}
+	}
 	if msg.RecoveryThreshold > uint32(len(msg.RecoveryAddresses)) {
 		return nil, fmt.Errorf("%w: recovery_threshold exceeds number of recovery_addresses", types.ErrInvalidGuardianConfig)
+	}
+	if msg.GuardianAddress != "" {
+		if _, err := sdk.AccAddressFromBech32(msg.GuardianAddress); err != nil {
+			return nil, fmt.Errorf("%w: invalid guardian address %q: %v", types.ErrInvalidInput, msg.GuardianAddress, err)
+		}
 	}
 
 	// Validate deadman config.

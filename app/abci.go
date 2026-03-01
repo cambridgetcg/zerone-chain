@@ -194,9 +194,19 @@ func (app *ZeroneApp) prepareProposal(ctx sdk.Context, req *abci.RequestPrepareP
 		totalGas += estimatedGas
 	}
 
+	// Set block tx count for reward calculation in BeginBlock.
+	// Count only user txs — the injection pseudo-tx is consensus overhead, not user activity.
+	// PoT alignment: empty blocks (no user txs) should not earn rewards.
+	userTxCount := len(txs)
+	if len(txs) > 0 && IsVoteExtInjectionTx(txs[0]) {
+		userTxCount = len(txs) - 1
+	}
+	app.VestingRewardsKeeper.SetBlockTxCount(userTxCount)
+
 	logger.Debug("prepared proposal",
 		"height", req.Height,
 		"txs", len(txs),
+		"user_txs", userTxCount,
 		"vote_extensions", len(req.LocalLastCommit.Votes),
 	)
 
@@ -265,9 +275,20 @@ func (app *ZeroneApp) processProposal(ctx sdk.Context, req *abci.RequestProcessP
 		}
 	}
 
+	// Set block tx count for reward calculation in BeginBlock.
+	// Count only user txs (exclude injection pseudo-txs).
+	userTxCount := 0
+	for _, txBytes := range req.Txs {
+		if !IsVoteExtInjectionTx(txBytes) {
+			userTxCount++
+		}
+	}
+	app.VestingRewardsKeeper.SetBlockTxCount(userTxCount)
+
 	logger.Debug("accepted proposal",
 		"height", req.Height,
 		"txs", len(req.Txs),
+		"user_txs", userTxCount,
 	)
 
 	return &abci.ResponseProcessProposal{
@@ -282,6 +303,20 @@ func (app *ZeroneApp) PotPreBlocker(ctx sdk.Context, req *abci.RequestFinalizeBl
 	if len(req.Txs) > 0 && IsVoteExtInjectionTx(req.Txs[0]) {
 		app.ProcessVoteExtInjection(ctx, req.Txs[0])
 	}
+
+	// Authoritative tx count for block rewards.
+	// This MUST be set here (not only in PrepareProposal/ProcessProposal) because
+	// during fast sync and block replay, FinalizeBlock runs without those handlers.
+	// Without this, replaying nodes would compute hasTransactions=false → 0 rewards
+	// → AppHash divergence.
+	userTxCount := 0
+	for _, txBytes := range req.Txs {
+		if !IsVoteExtInjectionTx(txBytes) {
+			userTxCount++
+		}
+	}
+	app.VestingRewardsKeeper.SetBlockTxCount(userTxCount)
+
 	return &sdk.ResponsePreBlock{}, nil
 }
 

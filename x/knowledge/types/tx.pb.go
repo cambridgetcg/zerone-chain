@@ -31,6 +31,13 @@ type MsgSubmitClaim struct {
 	Stake         string                 `protobuf:"bytes,5,opt,name=stake,proto3" json:"stake,omitempty"`           // uzrn amount
 	References    []string               `protobuf:"bytes,6,rep,name=references,proto3" json:"references,omitempty"` // fact IDs cited
 	PartnershipId string                 `protobuf:"bytes,7,opt,name=partnership_id,json=partnershipId,proto3" json:"partnership_id,omitempty"`
+	ClaimType     ClaimType              `protobuf:"varint,8,opt,name=claim_type,json=claimType,proto3,enum=zerone.knowledge.v1.ClaimType" json:"claim_type,omitempty"` // Optional — defaults to ASSERTION if unset
+	// Typed relationships to existing facts.
+	// Replaces untyped `references` for new claims (references kept for backward compat).
+	Relations     []*ClaimRelation `protobuf:"bytes,9,rep,name=relations,proto3" json:"relations,omitempty"`
+	Structure     *ClaimStructure  `protobuf:"bytes,10,opt,name=structure,proto3" json:"structure,omitempty"`                              // Optional structured decomposition
+	CanonicalForm string           `protobuf:"bytes,11,opt,name=canonical_form,json=canonicalForm,proto3" json:"canonical_form,omitempty"` // Optional — auto-derived from structure if omitted
+	Sponsored     bool             `protobuf:"varint,12,opt,name=sponsored,proto3" json:"sponsored,omitempty"`                             // Request bootstrap fund sponsorship for review fee
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -112,6 +119,41 @@ func (x *MsgSubmitClaim) GetPartnershipId() string {
 		return x.PartnershipId
 	}
 	return ""
+}
+
+func (x *MsgSubmitClaim) GetClaimType() ClaimType {
+	if x != nil {
+		return x.ClaimType
+	}
+	return ClaimType_CLAIM_TYPE_UNSPECIFIED
+}
+
+func (x *MsgSubmitClaim) GetRelations() []*ClaimRelation {
+	if x != nil {
+		return x.Relations
+	}
+	return nil
+}
+
+func (x *MsgSubmitClaim) GetStructure() *ClaimStructure {
+	if x != nil {
+		return x.Structure
+	}
+	return nil
+}
+
+func (x *MsgSubmitClaim) GetCanonicalForm() string {
+	if x != nil {
+		return x.CanonicalForm
+	}
+	return ""
+}
+
+func (x *MsgSubmitClaim) GetSponsored() bool {
+	if x != nil {
+		return x.Sponsored
+	}
+	return false
 }
 
 type MsgSubmitClaimResponse struct {
@@ -1894,11 +1936,489 @@ func (*MsgExecuteResearchProposalResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{33}
 }
 
+type MsgAddCommonKnowledge struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Authority     string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	Domain        string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	Subject       string                 `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	PenaltyBps    uint64                 `protobuf:"varint,5,opt,name=penalty_bps,json=penaltyBps,proto3" json:"penalty_bps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAddCommonKnowledge) Reset() {
+	*x = MsgAddCommonKnowledge{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAddCommonKnowledge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAddCommonKnowledge) ProtoMessage() {}
+
+func (x *MsgAddCommonKnowledge) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAddCommonKnowledge.ProtoReflect.Descriptor instead.
+func (*MsgAddCommonKnowledge) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *MsgAddCommonKnowledge) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
+func (x *MsgAddCommonKnowledge) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *MsgAddCommonKnowledge) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *MsgAddCommonKnowledge) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *MsgAddCommonKnowledge) GetPenaltyBps() uint64 {
+	if x != nil {
+		return x.PenaltyBps
+	}
+	return 0
+}
+
+type MsgAddCommonKnowledgeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAddCommonKnowledgeResponse) Reset() {
+	*x = MsgAddCommonKnowledgeResponse{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAddCommonKnowledgeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAddCommonKnowledgeResponse) ProtoMessage() {}
+
+func (x *MsgAddCommonKnowledgeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAddCommonKnowledgeResponse.ProtoReflect.Descriptor instead.
+func (*MsgAddCommonKnowledgeResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *MsgAddCommonKnowledgeResponse) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type MsgRemoveCommonKnowledge struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Authority     string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"` // Common knowledge entry ID
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgRemoveCommonKnowledge) Reset() {
+	*x = MsgRemoveCommonKnowledge{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgRemoveCommonKnowledge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgRemoveCommonKnowledge) ProtoMessage() {}
+
+func (x *MsgRemoveCommonKnowledge) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgRemoveCommonKnowledge.ProtoReflect.Descriptor instead.
+func (*MsgRemoveCommonKnowledge) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *MsgRemoveCommonKnowledge) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
+func (x *MsgRemoveCommonKnowledge) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type MsgRemoveCommonKnowledgeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgRemoveCommonKnowledgeResponse) Reset() {
+	*x = MsgRemoveCommonKnowledgeResponse{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgRemoveCommonKnowledgeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgRemoveCommonKnowledgeResponse) ProtoMessage() {}
+
+func (x *MsgRemoveCommonKnowledgeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgRemoveCommonKnowledgeResponse.ProtoReflect.Descriptor instead.
+func (*MsgRemoveCommonKnowledgeResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{37}
+}
+
+type MsgReportDemand struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reporter      string                 `protobuf:"bytes,1,opt,name=reporter,proto3" json:"reporter,omitempty"` // Context server address (whitelisted)
+	Reports       []*DemandReport        `protobuf:"bytes,2,rep,name=reports,proto3" json:"reports,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgReportDemand) Reset() {
+	*x = MsgReportDemand{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgReportDemand) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgReportDemand) ProtoMessage() {}
+
+func (x *MsgReportDemand) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgReportDemand.ProtoReflect.Descriptor instead.
+func (*MsgReportDemand) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *MsgReportDemand) GetReporter() string {
+	if x != nil {
+		return x.Reporter
+	}
+	return ""
+}
+
+func (x *MsgReportDemand) GetReports() []*DemandReport {
+	if x != nil {
+		return x.Reports
+	}
+	return nil
+}
+
+type DemandReport struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Domain        string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	Subject       string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`
+	Queries       uint64                 `protobuf:"varint,3,opt,name=queries,proto3" json:"queries,omitempty"`     // Total queries in this batch
+	Fulfilled     uint64                 `protobuf:"varint,4,opt,name=fulfilled,proto3" json:"fulfilled,omitempty"` // How many returned results
+	Unfulfilled   uint64                 `protobuf:"varint,5,opt,name=unfulfilled,proto3" json:"unfulfilled,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DemandReport) Reset() {
+	*x = DemandReport{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DemandReport) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DemandReport) ProtoMessage() {}
+
+func (x *DemandReport) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DemandReport.ProtoReflect.Descriptor instead.
+func (*DemandReport) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *DemandReport) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *DemandReport) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *DemandReport) GetQueries() uint64 {
+	if x != nil {
+		return x.Queries
+	}
+	return 0
+}
+
+func (x *DemandReport) GetFulfilled() uint64 {
+	if x != nil {
+		return x.Fulfilled
+	}
+	return 0
+}
+
+func (x *DemandReport) GetUnfulfilled() uint64 {
+	if x != nil {
+		return x.Unfulfilled
+	}
+	return 0
+}
+
+type MsgReportDemandResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgReportDemandResponse) Reset() {
+	*x = MsgReportDemandResponse{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgReportDemandResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgReportDemandResponse) ProtoMessage() {}
+
+func (x *MsgReportDemandResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgReportDemandResponse.ProtoReflect.Descriptor instead.
+func (*MsgReportDemandResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{40}
+}
+
+// MsgRateFact allows a querier to provide relevance feedback on a fact.
+// The querier must have previously queried this fact (enforced by query receipt).
+type MsgRateFact struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rater         string                 `protobuf:"bytes,1,opt,name=rater,proto3" json:"rater,omitempty"`                 // Address of the rating agent
+	FactId        string                 `protobuf:"bytes,2,opt,name=fact_id,json=factId,proto3" json:"fact_id,omitempty"` // Fact being rated
+	Useful        bool                   `protobuf:"varint,3,opt,name=useful,proto3" json:"useful,omitempty"`              // true = satisfied, false = dissatisfied
+	Memo          string                 `protobuf:"bytes,4,opt,name=memo,proto3" json:"memo,omitempty"`                   // Optional: brief reason (max 256 chars)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgRateFact) Reset() {
+	*x = MsgRateFact{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgRateFact) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgRateFact) ProtoMessage() {}
+
+func (x *MsgRateFact) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgRateFact.ProtoReflect.Descriptor instead.
+func (*MsgRateFact) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *MsgRateFact) GetRater() string {
+	if x != nil {
+		return x.Rater
+	}
+	return ""
+}
+
+func (x *MsgRateFact) GetFactId() string {
+	if x != nil {
+		return x.FactId
+	}
+	return ""
+}
+
+func (x *MsgRateFact) GetUseful() bool {
+	if x != nil {
+		return x.Useful
+	}
+	return false
+}
+
+func (x *MsgRateFact) GetMemo() string {
+	if x != nil {
+		return x.Memo
+	}
+	return ""
+}
+
+type MsgRateFactResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgRateFactResponse) Reset() {
+	*x = MsgRateFactResponse{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgRateFactResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgRateFactResponse) ProtoMessage() {}
+
+func (x *MsgRateFactResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgRateFactResponse.ProtoReflect.Descriptor instead.
+func (*MsgRateFactResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{42}
+}
+
 var File_zerone_knowledge_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\x1czerone/knowledge/v1/tx.proto\x12\x13zerone.knowledge.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a!zerone/knowledge/v1/genesis.proto\"\xf2\x01\n" +
+	"\x1czerone/knowledge/v1/tx.proto\x12\x13zerone.knowledge.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\x1fzerone/knowledge/v1/types.proto\x1a!zerone/knowledge/v1/genesis.proto\"\xfb\x03\n" +
 	"\x0eMsgSubmitClaim\x12\x1c\n" +
 	"\tsubmitter\x18\x01 \x01(\tR\tsubmitter\x12!\n" +
 	"\ffact_content\x18\x02 \x01(\tR\vfactContent\x12\x16\n" +
@@ -1908,7 +2428,14 @@ const file_zerone_knowledge_v1_tx_proto_rawDesc = "" +
 	"\n" +
 	"references\x18\x06 \x03(\tR\n" +
 	"references\x12%\n" +
-	"\x0epartnership_id\x18\a \x01(\tR\rpartnershipId:\x0e\x82\xe7\xb0*\tsubmitter\"3\n" +
+	"\x0epartnership_id\x18\a \x01(\tR\rpartnershipId\x12=\n" +
+	"\n" +
+	"claim_type\x18\b \x01(\x0e2\x1e.zerone.knowledge.v1.ClaimTypeR\tclaimType\x12@\n" +
+	"\trelations\x18\t \x03(\v2\".zerone.knowledge.v1.ClaimRelationR\trelations\x12A\n" +
+	"\tstructure\x18\n" +
+	" \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\x12%\n" +
+	"\x0ecanonical_form\x18\v \x01(\tR\rcanonicalForm\x12\x1c\n" +
+	"\tsponsored\x18\f \x01(\bR\tsponsored:\x0e\x82\xe7\xb0*\tsubmitter\"3\n" +
 	"\x16MsgSubmitClaimResponse\x12\x19\n" +
 	"\bclaim_id\x18\x01 \x01(\tR\aclaimId\"|\n" +
 	"\x13MsgSubmitCommitment\x12\x1a\n" +
@@ -2038,7 +2565,37 @@ const file_zerone_knowledge_v1_tx_proto_rawDesc = "" +
 	"\tauthority\x18\x01 \x01(\tR\tauthority\x12\x1f\n" +
 	"\vproposal_id\x18\x02 \x01(\tR\n" +
 	"proposalId:\x0e\x82\xe7\xb0*\tauthority\"$\n" +
-	"\"MsgExecuteResearchProposalResponse2\x9a\x0f\n" +
+	"\"MsgExecuteResearchProposalResponse\"\xba\x01\n" +
+	"\x15MsgAddCommonKnowledge\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x12\x16\n" +
+	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x18\n" +
+	"\asubject\x18\x03 \x01(\tR\asubject\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vpenalty_bps\x18\x05 \x01(\x04R\n" +
+	"penaltyBps:\x0e\x82\xe7\xb0*\tauthority\"/\n" +
+	"\x1dMsgAddCommonKnowledgeResponse\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"X\n" +
+	"\x18MsgRemoveCommonKnowledge\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id:\x0e\x82\xe7\xb0*\tauthority\"\"\n" +
+	" MsgRemoveCommonKnowledgeResponse\"y\n" +
+	"\x0fMsgReportDemand\x12\x1a\n" +
+	"\breporter\x18\x01 \x01(\tR\breporter\x12;\n" +
+	"\areports\x18\x02 \x03(\v2!.zerone.knowledge.v1.DemandReportR\areports:\r\x82\xe7\xb0*\breporter\"\x9a\x01\n" +
+	"\fDemandReport\x12\x16\n" +
+	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x18\n" +
+	"\asubject\x18\x02 \x01(\tR\asubject\x12\x18\n" +
+	"\aqueries\x18\x03 \x01(\x04R\aqueries\x12\x1c\n" +
+	"\tfulfilled\x18\x04 \x01(\x04R\tfulfilled\x12 \n" +
+	"\vunfulfilled\x18\x05 \x01(\x04R\vunfulfilled\"\x19\n" +
+	"\x17MsgReportDemandResponse\"t\n" +
+	"\vMsgRateFact\x12\x14\n" +
+	"\x05rater\x18\x01 \x01(\tR\x05rater\x12\x17\n" +
+	"\afact_id\x18\x02 \x01(\tR\x06factId\x12\x16\n" +
+	"\x06useful\x18\x03 \x01(\bR\x06useful\x12\x12\n" +
+	"\x04memo\x18\x04 \x01(\tR\x04memo:\n" +
+	"\x82\xe7\xb0*\x05rater\"\x15\n" +
+	"\x13MsgRateFactResponse2\xcb\x12\n" +
 	"\x03Msg\x12_\n" +
 	"\vSubmitClaim\x12#.zerone.knowledge.v1.MsgSubmitClaim\x1a+.zerone.knowledge.v1.MsgSubmitClaimResponse\x12n\n" +
 	"\x10SubmitCommitment\x12(.zerone.knowledge.v1.MsgSubmitCommitment\x1a0.zerone.knowledge.v1.MsgSubmitCommitmentResponse\x12b\n" +
@@ -2056,7 +2613,11 @@ const file_zerone_knowledge_v1_tx_proto_rawDesc = "" +
 	"\x14UpdateExtendedParams\x12,.zerone.knowledge.v1.MsgUpdateExtendedParams\x1a4.zerone.knowledge.v1.MsgUpdateExtendedParamsResponse\x12w\n" +
 	"\x13ProposeResearchFund\x12+.zerone.knowledge.v1.MsgProposeResearchFund\x1a3.zerone.knowledge.v1.MsgProposeResearchFundResponse\x12z\n" +
 	"\x14VoteResearchProposal\x12,.zerone.knowledge.v1.MsgVoteResearchProposal\x1a4.zerone.knowledge.v1.MsgVoteResearchProposalResponse\x12\x83\x01\n" +
-	"\x17ExecuteResearchProposal\x12/.zerone.knowledge.v1.MsgExecuteResearchProposal\x1a7.zerone.knowledge.v1.MsgExecuteResearchProposalResponse\x1a\x05\x80\xe7\xb0*\x01B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
+	"\x17ExecuteResearchProposal\x12/.zerone.knowledge.v1.MsgExecuteResearchProposal\x1a7.zerone.knowledge.v1.MsgExecuteResearchProposalResponse\x12t\n" +
+	"\x12AddCommonKnowledge\x12*.zerone.knowledge.v1.MsgAddCommonKnowledge\x1a2.zerone.knowledge.v1.MsgAddCommonKnowledgeResponse\x12}\n" +
+	"\x15RemoveCommonKnowledge\x12-.zerone.knowledge.v1.MsgRemoveCommonKnowledge\x1a5.zerone.knowledge.v1.MsgRemoveCommonKnowledgeResponse\x12b\n" +
+	"\fReportDemand\x12$.zerone.knowledge.v1.MsgReportDemand\x1a,.zerone.knowledge.v1.MsgReportDemandResponse\x12V\n" +
+	"\bRateFact\x12 .zerone.knowledge.v1.MsgRateFact\x1a(.zerone.knowledge.v1.MsgRateFactResponse\x1a\x05\x80\xe7\xb0*\x01B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
 	file_zerone_knowledge_v1_tx_proto_rawDescOnce sync.Once
@@ -2070,7 +2631,7 @@ func file_zerone_knowledge_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_knowledge_v1_tx_proto_rawDescData
 }
 
-var file_zerone_knowledge_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_zerone_knowledge_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
 var file_zerone_knowledge_v1_tx_proto_goTypes = []any{
 	(*MsgSubmitClaim)(nil),                      // 0: zerone.knowledge.v1.MsgSubmitClaim
 	(*MsgSubmitClaimResponse)(nil),              // 1: zerone.knowledge.v1.MsgSubmitClaimResponse
@@ -2106,49 +2667,73 @@ var file_zerone_knowledge_v1_tx_proto_goTypes = []any{
 	(*MsgVoteResearchProposalResponse)(nil),     // 31: zerone.knowledge.v1.MsgVoteResearchProposalResponse
 	(*MsgExecuteResearchProposal)(nil),          // 32: zerone.knowledge.v1.MsgExecuteResearchProposal
 	(*MsgExecuteResearchProposalResponse)(nil),  // 33: zerone.knowledge.v1.MsgExecuteResearchProposalResponse
-	(*Params)(nil),                              // 34: zerone.knowledge.v1.Params
+	(*MsgAddCommonKnowledge)(nil),               // 34: zerone.knowledge.v1.MsgAddCommonKnowledge
+	(*MsgAddCommonKnowledgeResponse)(nil),       // 35: zerone.knowledge.v1.MsgAddCommonKnowledgeResponse
+	(*MsgRemoveCommonKnowledge)(nil),            // 36: zerone.knowledge.v1.MsgRemoveCommonKnowledge
+	(*MsgRemoveCommonKnowledgeResponse)(nil),    // 37: zerone.knowledge.v1.MsgRemoveCommonKnowledgeResponse
+	(*MsgReportDemand)(nil),                     // 38: zerone.knowledge.v1.MsgReportDemand
+	(*DemandReport)(nil),                        // 39: zerone.knowledge.v1.DemandReport
+	(*MsgReportDemandResponse)(nil),             // 40: zerone.knowledge.v1.MsgReportDemandResponse
+	(*MsgRateFact)(nil),                         // 41: zerone.knowledge.v1.MsgRateFact
+	(*MsgRateFactResponse)(nil),                 // 42: zerone.knowledge.v1.MsgRateFactResponse
+	(ClaimType)(0),                              // 43: zerone.knowledge.v1.ClaimType
+	(*ClaimRelation)(nil),                       // 44: zerone.knowledge.v1.ClaimRelation
+	(*ClaimStructure)(nil),                      // 45: zerone.knowledge.v1.ClaimStructure
+	(*Params)(nil),                              // 46: zerone.knowledge.v1.Params
 }
 var file_zerone_knowledge_v1_tx_proto_depIdxs = []int32{
-	34, // 0: zerone.knowledge.v1.MsgUpdateParams.params:type_name -> zerone.knowledge.v1.Params
-	0,  // 1: zerone.knowledge.v1.Msg.SubmitClaim:input_type -> zerone.knowledge.v1.MsgSubmitClaim
-	2,  // 2: zerone.knowledge.v1.Msg.SubmitCommitment:input_type -> zerone.knowledge.v1.MsgSubmitCommitment
-	4,  // 3: zerone.knowledge.v1.Msg.SubmitReveal:input_type -> zerone.knowledge.v1.MsgSubmitReveal
-	6,  // 4: zerone.knowledge.v1.Msg.ChallengeFact:input_type -> zerone.knowledge.v1.MsgChallengeFact
-	8,  // 5: zerone.knowledge.v1.Msg.AddFact:input_type -> zerone.knowledge.v1.MsgAddFact
-	10, // 6: zerone.knowledge.v1.Msg.SubmitContradiction:input_type -> zerone.knowledge.v1.MsgSubmitContradiction
-	12, // 7: zerone.knowledge.v1.Msg.PatronizeFact:input_type -> zerone.knowledge.v1.MsgPatronizeFact
-	14, // 8: zerone.knowledge.v1.Msg.ProposeDomain:input_type -> zerone.knowledge.v1.MsgProposeDomain
-	16, // 9: zerone.knowledge.v1.Msg.EndorseDomainProposal:input_type -> zerone.knowledge.v1.MsgEndorseDomainProposal
-	18, // 10: zerone.knowledge.v1.Msg.ChallengeDomainProposal:input_type -> zerone.knowledge.v1.MsgChallengeDomainProposal
-	20, // 11: zerone.knowledge.v1.Msg.RegisterStratum:input_type -> zerone.knowledge.v1.MsgRegisterStratum
-	22, // 12: zerone.knowledge.v1.Msg.ChallengeProvisionalFact:input_type -> zerone.knowledge.v1.MsgChallengeProvisionalFact
-	24, // 13: zerone.knowledge.v1.Msg.UpdateParams:input_type -> zerone.knowledge.v1.MsgUpdateParams
-	26, // 14: zerone.knowledge.v1.Msg.UpdateExtendedParams:input_type -> zerone.knowledge.v1.MsgUpdateExtendedParams
-	28, // 15: zerone.knowledge.v1.Msg.ProposeResearchFund:input_type -> zerone.knowledge.v1.MsgProposeResearchFund
-	30, // 16: zerone.knowledge.v1.Msg.VoteResearchProposal:input_type -> zerone.knowledge.v1.MsgVoteResearchProposal
-	32, // 17: zerone.knowledge.v1.Msg.ExecuteResearchProposal:input_type -> zerone.knowledge.v1.MsgExecuteResearchProposal
-	1,  // 18: zerone.knowledge.v1.Msg.SubmitClaim:output_type -> zerone.knowledge.v1.MsgSubmitClaimResponse
-	3,  // 19: zerone.knowledge.v1.Msg.SubmitCommitment:output_type -> zerone.knowledge.v1.MsgSubmitCommitmentResponse
-	5,  // 20: zerone.knowledge.v1.Msg.SubmitReveal:output_type -> zerone.knowledge.v1.MsgSubmitRevealResponse
-	7,  // 21: zerone.knowledge.v1.Msg.ChallengeFact:output_type -> zerone.knowledge.v1.MsgChallengeFactResponse
-	9,  // 22: zerone.knowledge.v1.Msg.AddFact:output_type -> zerone.knowledge.v1.MsgAddFactResponse
-	11, // 23: zerone.knowledge.v1.Msg.SubmitContradiction:output_type -> zerone.knowledge.v1.MsgSubmitContradictionResponse
-	13, // 24: zerone.knowledge.v1.Msg.PatronizeFact:output_type -> zerone.knowledge.v1.MsgPatronizeFactResponse
-	15, // 25: zerone.knowledge.v1.Msg.ProposeDomain:output_type -> zerone.knowledge.v1.MsgProposeDomainResponse
-	17, // 26: zerone.knowledge.v1.Msg.EndorseDomainProposal:output_type -> zerone.knowledge.v1.MsgEndorseDomainProposalResponse
-	19, // 27: zerone.knowledge.v1.Msg.ChallengeDomainProposal:output_type -> zerone.knowledge.v1.MsgChallengeDomainProposalResponse
-	21, // 28: zerone.knowledge.v1.Msg.RegisterStratum:output_type -> zerone.knowledge.v1.MsgRegisterStratumResponse
-	23, // 29: zerone.knowledge.v1.Msg.ChallengeProvisionalFact:output_type -> zerone.knowledge.v1.MsgChallengeProvisionalFactResponse
-	25, // 30: zerone.knowledge.v1.Msg.UpdateParams:output_type -> zerone.knowledge.v1.MsgUpdateParamsResponse
-	27, // 31: zerone.knowledge.v1.Msg.UpdateExtendedParams:output_type -> zerone.knowledge.v1.MsgUpdateExtendedParamsResponse
-	29, // 32: zerone.knowledge.v1.Msg.ProposeResearchFund:output_type -> zerone.knowledge.v1.MsgProposeResearchFundResponse
-	31, // 33: zerone.knowledge.v1.Msg.VoteResearchProposal:output_type -> zerone.knowledge.v1.MsgVoteResearchProposalResponse
-	33, // 34: zerone.knowledge.v1.Msg.ExecuteResearchProposal:output_type -> zerone.knowledge.v1.MsgExecuteResearchProposalResponse
-	18, // [18:35] is the sub-list for method output_type
-	1,  // [1:18] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	43, // 0: zerone.knowledge.v1.MsgSubmitClaim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
+	44, // 1: zerone.knowledge.v1.MsgSubmitClaim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
+	45, // 2: zerone.knowledge.v1.MsgSubmitClaim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	46, // 3: zerone.knowledge.v1.MsgUpdateParams.params:type_name -> zerone.knowledge.v1.Params
+	39, // 4: zerone.knowledge.v1.MsgReportDemand.reports:type_name -> zerone.knowledge.v1.DemandReport
+	0,  // 5: zerone.knowledge.v1.Msg.SubmitClaim:input_type -> zerone.knowledge.v1.MsgSubmitClaim
+	2,  // 6: zerone.knowledge.v1.Msg.SubmitCommitment:input_type -> zerone.knowledge.v1.MsgSubmitCommitment
+	4,  // 7: zerone.knowledge.v1.Msg.SubmitReveal:input_type -> zerone.knowledge.v1.MsgSubmitReveal
+	6,  // 8: zerone.knowledge.v1.Msg.ChallengeFact:input_type -> zerone.knowledge.v1.MsgChallengeFact
+	8,  // 9: zerone.knowledge.v1.Msg.AddFact:input_type -> zerone.knowledge.v1.MsgAddFact
+	10, // 10: zerone.knowledge.v1.Msg.SubmitContradiction:input_type -> zerone.knowledge.v1.MsgSubmitContradiction
+	12, // 11: zerone.knowledge.v1.Msg.PatronizeFact:input_type -> zerone.knowledge.v1.MsgPatronizeFact
+	14, // 12: zerone.knowledge.v1.Msg.ProposeDomain:input_type -> zerone.knowledge.v1.MsgProposeDomain
+	16, // 13: zerone.knowledge.v1.Msg.EndorseDomainProposal:input_type -> zerone.knowledge.v1.MsgEndorseDomainProposal
+	18, // 14: zerone.knowledge.v1.Msg.ChallengeDomainProposal:input_type -> zerone.knowledge.v1.MsgChallengeDomainProposal
+	20, // 15: zerone.knowledge.v1.Msg.RegisterStratum:input_type -> zerone.knowledge.v1.MsgRegisterStratum
+	22, // 16: zerone.knowledge.v1.Msg.ChallengeProvisionalFact:input_type -> zerone.knowledge.v1.MsgChallengeProvisionalFact
+	24, // 17: zerone.knowledge.v1.Msg.UpdateParams:input_type -> zerone.knowledge.v1.MsgUpdateParams
+	26, // 18: zerone.knowledge.v1.Msg.UpdateExtendedParams:input_type -> zerone.knowledge.v1.MsgUpdateExtendedParams
+	28, // 19: zerone.knowledge.v1.Msg.ProposeResearchFund:input_type -> zerone.knowledge.v1.MsgProposeResearchFund
+	30, // 20: zerone.knowledge.v1.Msg.VoteResearchProposal:input_type -> zerone.knowledge.v1.MsgVoteResearchProposal
+	32, // 21: zerone.knowledge.v1.Msg.ExecuteResearchProposal:input_type -> zerone.knowledge.v1.MsgExecuteResearchProposal
+	34, // 22: zerone.knowledge.v1.Msg.AddCommonKnowledge:input_type -> zerone.knowledge.v1.MsgAddCommonKnowledge
+	36, // 23: zerone.knowledge.v1.Msg.RemoveCommonKnowledge:input_type -> zerone.knowledge.v1.MsgRemoveCommonKnowledge
+	38, // 24: zerone.knowledge.v1.Msg.ReportDemand:input_type -> zerone.knowledge.v1.MsgReportDemand
+	41, // 25: zerone.knowledge.v1.Msg.RateFact:input_type -> zerone.knowledge.v1.MsgRateFact
+	1,  // 26: zerone.knowledge.v1.Msg.SubmitClaim:output_type -> zerone.knowledge.v1.MsgSubmitClaimResponse
+	3,  // 27: zerone.knowledge.v1.Msg.SubmitCommitment:output_type -> zerone.knowledge.v1.MsgSubmitCommitmentResponse
+	5,  // 28: zerone.knowledge.v1.Msg.SubmitReveal:output_type -> zerone.knowledge.v1.MsgSubmitRevealResponse
+	7,  // 29: zerone.knowledge.v1.Msg.ChallengeFact:output_type -> zerone.knowledge.v1.MsgChallengeFactResponse
+	9,  // 30: zerone.knowledge.v1.Msg.AddFact:output_type -> zerone.knowledge.v1.MsgAddFactResponse
+	11, // 31: zerone.knowledge.v1.Msg.SubmitContradiction:output_type -> zerone.knowledge.v1.MsgSubmitContradictionResponse
+	13, // 32: zerone.knowledge.v1.Msg.PatronizeFact:output_type -> zerone.knowledge.v1.MsgPatronizeFactResponse
+	15, // 33: zerone.knowledge.v1.Msg.ProposeDomain:output_type -> zerone.knowledge.v1.MsgProposeDomainResponse
+	17, // 34: zerone.knowledge.v1.Msg.EndorseDomainProposal:output_type -> zerone.knowledge.v1.MsgEndorseDomainProposalResponse
+	19, // 35: zerone.knowledge.v1.Msg.ChallengeDomainProposal:output_type -> zerone.knowledge.v1.MsgChallengeDomainProposalResponse
+	21, // 36: zerone.knowledge.v1.Msg.RegisterStratum:output_type -> zerone.knowledge.v1.MsgRegisterStratumResponse
+	23, // 37: zerone.knowledge.v1.Msg.ChallengeProvisionalFact:output_type -> zerone.knowledge.v1.MsgChallengeProvisionalFactResponse
+	25, // 38: zerone.knowledge.v1.Msg.UpdateParams:output_type -> zerone.knowledge.v1.MsgUpdateParamsResponse
+	27, // 39: zerone.knowledge.v1.Msg.UpdateExtendedParams:output_type -> zerone.knowledge.v1.MsgUpdateExtendedParamsResponse
+	29, // 40: zerone.knowledge.v1.Msg.ProposeResearchFund:output_type -> zerone.knowledge.v1.MsgProposeResearchFundResponse
+	31, // 41: zerone.knowledge.v1.Msg.VoteResearchProposal:output_type -> zerone.knowledge.v1.MsgVoteResearchProposalResponse
+	33, // 42: zerone.knowledge.v1.Msg.ExecuteResearchProposal:output_type -> zerone.knowledge.v1.MsgExecuteResearchProposalResponse
+	35, // 43: zerone.knowledge.v1.Msg.AddCommonKnowledge:output_type -> zerone.knowledge.v1.MsgAddCommonKnowledgeResponse
+	37, // 44: zerone.knowledge.v1.Msg.RemoveCommonKnowledge:output_type -> zerone.knowledge.v1.MsgRemoveCommonKnowledgeResponse
+	40, // 45: zerone.knowledge.v1.Msg.ReportDemand:output_type -> zerone.knowledge.v1.MsgReportDemandResponse
+	42, // 46: zerone.knowledge.v1.Msg.RateFact:output_type -> zerone.knowledge.v1.MsgRateFactResponse
+	26, // [26:47] is the sub-list for method output_type
+	5,  // [5:26] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_tx_proto_init() }
@@ -2156,6 +2741,7 @@ func file_zerone_knowledge_v1_tx_proto_init() {
 	if File_zerone_knowledge_v1_tx_proto != nil {
 		return
 	}
+	file_zerone_knowledge_v1_types_proto_init()
 	file_zerone_knowledge_v1_genesis_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2163,7 +2749,7 @@ func file_zerone_knowledge_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_tx_proto_rawDesc), len(file_zerone_knowledge_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   34,
+			NumMessages:   43,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

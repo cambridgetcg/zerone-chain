@@ -34,8 +34,8 @@ func (m msgServer) CreatePool(goCtx context.Context, msg *types.MsgCreatePool) (
 		return nil, types.ErrUnauthorized
 	}
 
-	// Max pools check
-	if m.Keeper.CountPools(ctx) >= params.MaxPools {
+	// Max pools check (0 = unlimited)
+	if params.MaxPools > 0 && m.Keeper.CountPools(ctx) >= params.MaxPools {
 		return nil, types.ErrMaxPoolsReached
 	}
 

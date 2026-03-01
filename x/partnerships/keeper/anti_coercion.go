@@ -99,7 +99,7 @@ func (k Keeper) HandleCoercionSignal(ctx sdk.Context, partnershipId string, rais
 		PartnershipId: partnershipId,
 		RaisedBy:      raiser,
 		RaisedAt:      currentBlock,
-		ExpiresAt:     currentBlock + params.CoercionReviewBlocks,
+		ExpiresAt:     currentBlock + k.coercionFreezeBlocks(ctx, raiser, params),
 		Resolved:      false,
 	}
 	k.SetCoercionSignal(ctx, cs)
@@ -119,6 +119,18 @@ func (k Keeper) HandleCoercionSignal(ctx sdk.Context, partnershipId string, rais
 	)
 
 	return cs, nil
+}
+
+// coercionFreezeBlocks returns the freeze duration, applying human multiplier if applicable (R28-5).
+func (k Keeper) coercionFreezeBlocks(ctx sdk.Context, raiser string, params *types.Params) uint64 {
+	base := params.CoercionReviewBlocks
+	if params.HumanCoercionFreezeMultiplierBps > 0 && k.zeroneAuthKeeper != nil {
+		accountType, found := k.zeroneAuthKeeper.GetAccountType(ctx, raiser)
+		if found && accountType == "human" {
+			return base * params.HumanCoercionFreezeMultiplierBps / 1_000_000
+		}
+	}
+	return base
 }
 
 // LiftExpiredFreezes clears freezes that have expired and restores partnership status.

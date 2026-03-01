@@ -29,6 +29,9 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryScoresCmd(),
 		NewQueryHealthIndexCmd(),
 		NewQueryCorrectionHistoryCmd(),
+		NewQueryHealthHistoryCmd(),
+		NewQueryCorrectionConfidenceCmd(),
+		NewQueryGlobalPacingCmd(),
 	)
 
 	return queryCmd
@@ -181,6 +184,74 @@ func NewQueryCorrectionHistoryCmd() *cobra.Command {
 	}
 	cmd.Flags().Uint32("limit", 20, "Maximum number of entries to return")
 	cmd.Flags().Uint32("offset", 0, "Number of entries to skip")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryHealthHistoryCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "history",
+		Short: "Query alignment health history (most recent observations)",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			limit, _ := cmd.Flags().GetUint32("limit")
+			req := &types.QueryHealthHistoryRequest{Limit: limit}
+			resp := &types.QueryHealthHistoryResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.alignment.v1.Query/HealthHistory", req, resp); err != nil {
+				return fmt.Errorf("failed to query health history: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	cmd.Flags().Uint32("limit", 20, "Maximum number of entries to return (max 100)")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryGlobalPacingCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "global-pacing",
+		Short: "Query the global adaptive pacing state",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryGlobalPacingRequest{}
+			resp := &types.QueryGlobalPacingResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.alignment.v1.Query/GlobalPacing", req, resp); err != nil {
+				return fmt.Errorf("failed to query global pacing: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryCorrectionConfidenceCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "correction-confidence",
+		Short: "Query correction confidence score and effective bounds",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryCorrectionConfidenceRequest{}
+			resp := &types.QueryCorrectionConfidenceResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.alignment.v1.Query/CorrectionConfidence", req, resp); err != nil {
+				return fmt.Errorf("failed to query correction confidence: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }

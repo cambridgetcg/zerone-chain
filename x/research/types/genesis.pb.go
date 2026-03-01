@@ -100,17 +100,18 @@ func (x *GenesisState) GetTreasuryBalance() *TreasuryBalance {
 
 // Params defines the research module parameters.
 type Params struct {
-	state                    protoimpl.MessageState `protogen:"open.v1"`
-	MinResearchStake         string                 `protobuf:"bytes,1,opt,name=min_research_stake,json=minResearchStake,proto3" json:"min_research_stake,omitempty"`                          // minimum stake for research submission (bigint as string)
-	MinChallengeStake        string                 `protobuf:"bytes,2,opt,name=min_challenge_stake,json=minChallengeStake,proto3" json:"min_challenge_stake,omitempty"`                       // minimum stake for challenge (bigint as string)
-	ReviewPeriodBlocks       uint64                 `protobuf:"varint,3,opt,name=review_period_blocks,json=reviewPeriodBlocks,proto3" json:"review_period_blocks,omitempty"`                   // blocks for review period
-	MinReviewerCount         uint32                 `protobuf:"varint,4,opt,name=min_reviewer_count,json=minReviewerCount,proto3" json:"min_reviewer_count,omitempty"`                         // minimum reviewers required
-	AcceptanceScoreThreshold uint32                 `protobuf:"varint,5,opt,name=acceptance_score_threshold,json=acceptanceScoreThreshold,proto3" json:"acceptance_score_threshold,omitempty"` // score threshold for acceptance (0-100)
-	RejectionSlashBps        uint64                 `protobuf:"varint,6,opt,name=rejection_slash_bps,json=rejectionSlashBps,proto3" json:"rejection_slash_bps,omitempty"`                      // slash rate on rejection (basis points)
-	MaxBountyReward          string                 `protobuf:"bytes,7,opt,name=max_bounty_reward,json=maxBountyReward,proto3" json:"max_bounty_reward,omitempty"`                             // maximum bounty reward (bigint as string)
-	BountyMinDeadlineBlocks  uint64                 `protobuf:"varint,8,opt,name=bounty_min_deadline_blocks,json=bountyMinDeadlineBlocks,proto3" json:"bounty_min_deadline_blocks,omitempty"`  // minimum bounty deadline in blocks
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state                         protoimpl.MessageState `protogen:"open.v1"`
+	MinResearchStake              string                 `protobuf:"bytes,1,opt,name=min_research_stake,json=minResearchStake,proto3" json:"min_research_stake,omitempty"`                                           // minimum stake for research submission (bigint as string)
+	MinChallengeStake             string                 `protobuf:"bytes,2,opt,name=min_challenge_stake,json=minChallengeStake,proto3" json:"min_challenge_stake,omitempty"`                                        // minimum stake for challenge (bigint as string)
+	ReviewPeriodBlocks            uint64                 `protobuf:"varint,3,opt,name=review_period_blocks,json=reviewPeriodBlocks,proto3" json:"review_period_blocks,omitempty"`                                    // blocks for review period
+	MinReviewerCount              uint32                 `protobuf:"varint,4,opt,name=min_reviewer_count,json=minReviewerCount,proto3" json:"min_reviewer_count,omitempty"`                                          // minimum reviewers required
+	AcceptanceScoreThreshold      uint32                 `protobuf:"varint,5,opt,name=acceptance_score_threshold,json=acceptanceScoreThreshold,proto3" json:"acceptance_score_threshold,omitempty"`                  // score threshold for acceptance (0-100)
+	RejectionSlashBps             uint64                 `protobuf:"varint,6,opt,name=rejection_slash_bps,json=rejectionSlashBps,proto3" json:"rejection_slash_bps,omitempty"`                                       // slash rate on rejection (basis points)
+	MaxBountyReward               string                 `protobuf:"bytes,7,opt,name=max_bounty_reward,json=maxBountyReward,proto3" json:"max_bounty_reward,omitempty"`                                              // maximum bounty reward (bigint as string)
+	BountyMinDeadlineBlocks       uint64                 `protobuf:"varint,8,opt,name=bounty_min_deadline_blocks,json=bountyMinDeadlineBlocks,proto3" json:"bounty_min_deadline_blocks,omitempty"`                   // minimum bounty deadline in blocks
+	BountyFulfillmentPeriodBlocks uint64                 `protobuf:"varint,9,opt,name=bounty_fulfillment_period_blocks,json=bountyFulfillmentPeriodBlocks,proto3" json:"bounty_fulfillment_period_blocks,omitempty"` // blocks after claim before auto-fulfillment
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -199,6 +200,13 @@ func (x *Params) GetBountyMinDeadlineBlocks() uint64 {
 	return 0
 }
 
+func (x *Params) GetBountyFulfillmentPeriodBlocks() uint64 {
+	if x != nil {
+		return x.BountyFulfillmentPeriodBlocks
+	}
+	return 0
+}
+
 var File_zerone_research_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_research_v1_genesis_proto_rawDesc = "" +
@@ -211,7 +219,7 @@ const file_zerone_research_v1_genesis_proto_rawDesc = "" +
 	"researches\x126\n" +
 	"\bbounties\x18\x03 \x03(\v2\x1a.zerone.research.v1.BountyR\bbounties\x12A\n" +
 	"\fpeer_reviews\x18\x04 \x03(\v2\x1e.zerone.research.v1.PeerReviewR\vpeerReviews\x12N\n" +
-	"\x10treasury_balance\x18\x05 \x01(\v2#.zerone.research.v1.TreasuryBalanceR\x0ftreasuryBalance\"\x9d\x03\n" +
+	"\x10treasury_balance\x18\x05 \x01(\v2#.zerone.research.v1.TreasuryBalanceR\x0ftreasuryBalance\"\xe6\x03\n" +
 	"\x06Params\x12,\n" +
 	"\x12min_research_stake\x18\x01 \x01(\tR\x10minResearchStake\x12.\n" +
 	"\x13min_challenge_stake\x18\x02 \x01(\tR\x11minChallengeStake\x120\n" +
@@ -220,7 +228,8 @@ const file_zerone_research_v1_genesis_proto_rawDesc = "" +
 	"\x1aacceptance_score_threshold\x18\x05 \x01(\rR\x18acceptanceScoreThreshold\x12.\n" +
 	"\x13rejection_slash_bps\x18\x06 \x01(\x04R\x11rejectionSlashBps\x12*\n" +
 	"\x11max_bounty_reward\x18\a \x01(\tR\x0fmaxBountyReward\x12;\n" +
-	"\x1abounty_min_deadline_blocks\x18\b \x01(\x04R\x17bountyMinDeadlineBlocksB1Z/github.com/zerone-chain/zerone/x/research/typesb\x06proto3"
+	"\x1abounty_min_deadline_blocks\x18\b \x01(\x04R\x17bountyMinDeadlineBlocks\x12G\n" +
+	" bounty_fulfillment_period_blocks\x18\t \x01(\x04R\x1dbountyFulfillmentPeriodBlocksB1Z/github.com/zerone-chain/zerone/x/research/typesb\x06proto3"
 
 var (
 	file_zerone_research_v1_genesis_proto_rawDescOnce sync.Once

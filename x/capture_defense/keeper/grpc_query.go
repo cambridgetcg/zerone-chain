@@ -87,3 +87,58 @@ func (q queryServer) CrossStratumRequirements(goCtx context.Context, req *types.
 	reqs := q.GetAllCrossStratumRequirements(ctx)
 	return &types.QueryCrossStratumRequirementsResponse{Requirements: reqs}, nil
 }
+
+// FlaggedDomains returns all domains with active capture flags.
+func (q queryServer) FlaggedDomains(goCtx context.Context, _ *types.QueryFlaggedDomainsRequest) (*types.QueryFlaggedDomainsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	var flagged []*types.CaptureMetrics
+	q.IterateCaptureMetrics(ctx, func(m *types.CaptureMetrics) bool {
+		if m.Flagged {
+			flagged = append(flagged, m)
+		}
+		return false
+	})
+	return &types.QueryFlaggedDomainsResponse{Metrics: flagged}, nil
+}
+
+// StructuralImmunityResponse holds the structural immunity data for a domain (R29-5).
+type StructuralImmunityResponse struct {
+	Domain               string `json:"domain"`
+	PartnershipDensity   uint64 `json:"partnership_density"`
+	RawHHI               uint64 `json:"raw_hhi"`
+	AdjustedHHI          uint64 `json:"adjusted_hhi"`
+	HHIReductionBps      uint64 `json:"hhi_reduction_bps"`
+	FormationBonusActive bool   `json:"formation_bonus_active"`
+	FormationBonusBps    uint64 `json:"formation_bonus_bps"`
+	Flagged              bool   `json:"flagged"`
+}
+
+// QueryStructuralImmunity returns the structural immunity status for a domain (R29-5).
+func (q queryServer) QueryStructuralImmunity(goCtx context.Context, domain string) (*StructuralImmunityResponse, error) {
+	if domain == "" {
+		return nil, fmt.Errorf("domain is required")
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	resp := &StructuralImmunityResponse{Domain: domain}
+
+	// Get raw metrics.
+	metrics, found := q.GetCaptureMetrics(ctx, domain)
+	if found {
+		resp.RawHHI = metrics.HerfindahlIndex
+		resp.Flagged = metrics.Flagged
+	}
+
+	// Calculate adjusted HHI.
+	resp.AdjustedHHI = q.CalculateAdjustedHHI(ctx, domain, resp.RawHHI)
+	if resp.RawHHI > resp.AdjustedHHI {
+		resp.HHIReductionBps = (resp.RawHHI - resp.AdjustedHHI) * types.BPSScale / resp.RawHHI
+	}
+
+	// Get partnership density.
+	if q.partnershipsKeeper != nil {
+		resp.PartnershipDensity = q.partnershipsKeeper.GetDomainPartnershipDensity(ctx, domain)
+	}
+
+	return resp, nil
+}

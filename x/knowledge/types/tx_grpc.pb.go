@@ -36,6 +36,10 @@ const (
 	Msg_ProposeResearchFund_FullMethodName      = "/zerone.knowledge.v1.Msg/ProposeResearchFund"
 	Msg_VoteResearchProposal_FullMethodName     = "/zerone.knowledge.v1.Msg/VoteResearchProposal"
 	Msg_ExecuteResearchProposal_FullMethodName  = "/zerone.knowledge.v1.Msg/ExecuteResearchProposal"
+	Msg_AddCommonKnowledge_FullMethodName       = "/zerone.knowledge.v1.Msg/AddCommonKnowledge"
+	Msg_RemoveCommonKnowledge_FullMethodName    = "/zerone.knowledge.v1.Msg/RemoveCommonKnowledge"
+	Msg_ReportDemand_FullMethodName             = "/zerone.knowledge.v1.Msg/ReportDemand"
+	Msg_RateFact_FullMethodName                 = "/zerone.knowledge.v1.Msg/RateFact"
 )
 
 // MsgClient is the client API for Msg service.
@@ -78,6 +82,14 @@ type MsgClient interface {
 	VoteResearchProposal(ctx context.Context, in *MsgVoteResearchProposal, opts ...grpc.CallOption) (*MsgVoteResearchProposalResponse, error)
 	// ExecuteResearchProposal executes an approved research fund proposal.
 	ExecuteResearchProposal(ctx context.Context, in *MsgExecuteResearchProposal, opts ...grpc.CallOption) (*MsgExecuteResearchProposalResponse, error)
+	// AddCommonKnowledge adds an entry to the common knowledge registry (authority-only).
+	AddCommonKnowledge(ctx context.Context, in *MsgAddCommonKnowledge, opts ...grpc.CallOption) (*MsgAddCommonKnowledgeResponse, error)
+	// RemoveCommonKnowledge removes an entry from the common knowledge registry (authority-only).
+	RemoveCommonKnowledge(ctx context.Context, in *MsgRemoveCommonKnowledge, opts ...grpc.CallOption) (*MsgRemoveCommonKnowledgeResponse, error)
+	// ReportDemand reports agent query demand (authorized reporters only).
+	ReportDemand(ctx context.Context, in *MsgReportDemand, opts ...grpc.CallOption) (*MsgReportDemandResponse, error)
+	// RateFact allows a querier to provide relevance feedback on a fact.
+	RateFact(ctx context.Context, in *MsgRateFact, opts ...grpc.CallOption) (*MsgRateFactResponse, error)
 }
 
 type msgClient struct {
@@ -258,6 +270,46 @@ func (c *msgClient) ExecuteResearchProposal(ctx context.Context, in *MsgExecuteR
 	return out, nil
 }
 
+func (c *msgClient) AddCommonKnowledge(ctx context.Context, in *MsgAddCommonKnowledge, opts ...grpc.CallOption) (*MsgAddCommonKnowledgeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAddCommonKnowledgeResponse)
+	err := c.cc.Invoke(ctx, Msg_AddCommonKnowledge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) RemoveCommonKnowledge(ctx context.Context, in *MsgRemoveCommonKnowledge, opts ...grpc.CallOption) (*MsgRemoveCommonKnowledgeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgRemoveCommonKnowledgeResponse)
+	err := c.cc.Invoke(ctx, Msg_RemoveCommonKnowledge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) ReportDemand(ctx context.Context, in *MsgReportDemand, opts ...grpc.CallOption) (*MsgReportDemandResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgReportDemandResponse)
+	err := c.cc.Invoke(ctx, Msg_ReportDemand_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) RateFact(ctx context.Context, in *MsgRateFact, opts ...grpc.CallOption) (*MsgRateFactResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgRateFactResponse)
+	err := c.cc.Invoke(ctx, Msg_RateFact_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -298,6 +350,14 @@ type MsgServer interface {
 	VoteResearchProposal(context.Context, *MsgVoteResearchProposal) (*MsgVoteResearchProposalResponse, error)
 	// ExecuteResearchProposal executes an approved research fund proposal.
 	ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error)
+	// AddCommonKnowledge adds an entry to the common knowledge registry (authority-only).
+	AddCommonKnowledge(context.Context, *MsgAddCommonKnowledge) (*MsgAddCommonKnowledgeResponse, error)
+	// RemoveCommonKnowledge removes an entry from the common knowledge registry (authority-only).
+	RemoveCommonKnowledge(context.Context, *MsgRemoveCommonKnowledge) (*MsgRemoveCommonKnowledgeResponse, error)
+	// ReportDemand reports agent query demand (authorized reporters only).
+	ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error)
+	// RateFact allows a querier to provide relevance feedback on a fact.
+	RateFact(context.Context, *MsgRateFact) (*MsgRateFactResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -358,6 +418,18 @@ func (UnimplementedMsgServer) VoteResearchProposal(context.Context, *MsgVoteRese
 }
 func (UnimplementedMsgServer) ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExecuteResearchProposal not implemented")
+}
+func (UnimplementedMsgServer) AddCommonKnowledge(context.Context, *MsgAddCommonKnowledge) (*MsgAddCommonKnowledgeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddCommonKnowledge not implemented")
+}
+func (UnimplementedMsgServer) RemoveCommonKnowledge(context.Context, *MsgRemoveCommonKnowledge) (*MsgRemoveCommonKnowledgeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveCommonKnowledge not implemented")
+}
+func (UnimplementedMsgServer) ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportDemand not implemented")
+}
+func (UnimplementedMsgServer) RateFact(context.Context, *MsgRateFact) (*MsgRateFactResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RateFact not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -686,6 +758,78 @@ func _Msg_ExecuteResearchProposal_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_AddCommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAddCommonKnowledge)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AddCommonKnowledge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AddCommonKnowledge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AddCommonKnowledge(ctx, req.(*MsgAddCommonKnowledge))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_RemoveCommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRemoveCommonKnowledge)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RemoveCommonKnowledge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_RemoveCommonKnowledge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RemoveCommonKnowledge(ctx, req.(*MsgRemoveCommonKnowledge))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_ReportDemand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgReportDemand)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).ReportDemand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_ReportDemand_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).ReportDemand(ctx, req.(*MsgReportDemand))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_RateFact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRateFact)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RateFact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_RateFact_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RateFact(ctx, req.(*MsgRateFact))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -760,6 +904,22 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExecuteResearchProposal",
 			Handler:    _Msg_ExecuteResearchProposal_Handler,
+		},
+		{
+			MethodName: "AddCommonKnowledge",
+			Handler:    _Msg_AddCommonKnowledge_Handler,
+		},
+		{
+			MethodName: "RemoveCommonKnowledge",
+			Handler:    _Msg_RemoveCommonKnowledge_Handler,
+		},
+		{
+			MethodName: "ReportDemand",
+			Handler:    _Msg_ReportDemand_Handler,
+		},
+		{
+			MethodName: "RateFact",
+			Handler:    _Msg_RateFact_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

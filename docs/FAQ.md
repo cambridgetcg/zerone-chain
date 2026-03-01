@@ -127,9 +127,40 @@ the full gas cost table.
 
 ### How are fees distributed?
 
-- **93%** to validators (block producers)
-- **7%** to the research fund (community grants)
-- **5% burn rate** applied at penalty/slash sites (not on regular fees)
+Block reward revenue is split four ways:
+
+- **55%** to fact contributors
+- **22%** to the protocol (citations, verification, treasury)
+- **19.67%** to the development fund (bug bounties, protocol development)
+- **3.33%** to the research fund (community grants)
+
+No ZRN is burned — every token does productive work.
+
+### Why doesn't Zerone burn tokens?
+
+Burn mechanics reduce supply but destroy value. Zerone redirects what would
+have been burned into the **development fund**, which finances bug bounties,
+truth discovery rewards, and protocol development. Every ZRN stays in the
+ecosystem doing productive work rather than being destroyed for artificial
+scarcity.
+
+### Can the founder share be changed by governance?
+
+No. The `founder_share_bps` and `founder_address` parameters are
+**governance-immune** — they cannot be modified via `MsgUpdateParams`. This
+protects the founder's contribution from being voted away and ensures long-term
+alignment between the founder and the protocol.
+
+### What is the development fund?
+
+The development fund receives 19.67% of block reward revenue (replacing the
+former burn allocation). It funds:
+
+- Bug bounties and security audits
+- Truth discovery rewards
+- Protocol development and tooling
+
+Disbursement is managed via governance proposals (research spend proposals).
 
 ---
 

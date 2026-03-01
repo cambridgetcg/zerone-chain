@@ -96,6 +96,18 @@ func (k Keeper) GetValidatorsByDomain(ctx context.Context, domain string) []stri
 	return validators
 }
 
+// GetQualifiedDomains returns all domains where the given account holds an active qualification (R31-4).
+func (k Keeper) GetQualifiedDomains(ctx context.Context, account string) []string {
+	var domains []string
+	k.IterateQualifications(ctx, func(q *types.DomainQualification) bool {
+		if q.Validator == account && q.Status == types.QualificationStatus_QUALIFICATION_STATUS_ACTIVE {
+			domains = append(domains, q.Domain)
+		}
+		return false
+	})
+	return domains
+}
+
 // ---------- Endorsement CRUD ----------
 
 // SetEndorsement stores an endorsement and updates indexes.

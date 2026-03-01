@@ -43,7 +43,7 @@ func (k Keeper) CheckDeadmanSwitches(ctx context.Context) {
 
 // triggerDeadman executes the deadman switch action.
 func (k Keeper) triggerDeadman(ctx context.Context, home *types.AgentHome, height uint64) {
-	// Create critical alert.
+	// Create critical alert (silently skip if limit reached — status change still proceeds).
 	alertID := fmt.Sprintf("deadman-%s-%d", home.HomeId, height)
 	alert := &types.Alert{
 		AlertId:   alertID,
@@ -57,7 +57,7 @@ func (k Keeper) triggerDeadman(ctx context.Context, home *types.AgentHome, heigh
 		),
 		CreatedAt: height,
 	}
-	k.SetAlert(ctx, alert)
+	k.SetAlertWithLimit(ctx, alert)
 
 	// Set home status to guarded.
 	home.Status = "guarded"
@@ -86,7 +86,7 @@ func (k Keeper) CleanupExpiredSessions(ctx context.Context) {
 		for _, sid := range expired {
 			k.DeleteSession(ctx, home.HomeId, sid)
 
-			// Create low-priority alert.
+			// Create low-priority alert (silently skip if limit reached — cleanup must not be blocked).
 			alertID := fmt.Sprintf("session-expired-%s-%d", sid, height)
 			alert := &types.Alert{
 				AlertId:   alertID,
@@ -96,7 +96,7 @@ func (k Keeper) CleanupExpiredSessions(ctx context.Context) {
 				Message:   fmt.Sprintf("Session %s expired", sid),
 				CreatedAt: height,
 			}
-			k.SetAlert(ctx, alert)
+			k.SetAlertWithLimit(ctx, alert)
 		}
 		return false
 	})

@@ -27,6 +27,15 @@ service Query {
   rpc CorrectionHistory(QueryCorrectionHistoryRequest) returns (QueryCorrectionHistoryResponse) {
     option (google.api.http).get = "/zerone/alignment/v1/corrections";
   }
+  rpc HealthHistory(QueryHealthHistoryRequest) returns (QueryHealthHistoryResponse) {
+    option (google.api.http).get = "/zerone/alignment/v1/health-history";
+  }
+  rpc CorrectionConfidence(QueryCorrectionConfidenceRequest) returns (QueryCorrectionConfidenceResponse) {
+    option (google.api.http).get = "/zerone/alignment/v1/correction-confidence";
+  }
+  rpc GlobalPacing(QueryGlobalPacingRequest) returns (QueryGlobalPacingResponse) {
+    option (google.api.http).get = "/zerone/alignment/v1/global-pacing";
+  }
 }
 
 message QueryParamsRequest {}
@@ -70,4 +79,46 @@ message QueryCorrectionHistoryRequest {
 message QueryCorrectionHistoryResponse {
   repeated CorrectionRecord corrections = 1;
   uint64 total = 2;
+}
+
+message QueryHealthHistoryRequest {
+  uint32 limit = 1;
+}
+message QueryHealthHistoryResponse {
+  repeated AlignmentHealthIndex entries = 1;
+}
+
+message CorrectionOutcome {
+  uint64 height = 1;
+  string dimension = 2;
+  uint64 magnitude = 3;
+  string direction = 4;
+  uint64 score_before = 5;
+  uint64 score_after = 6;
+  bool successful = 7;
+}
+
+message QueryCorrectionConfidenceRequest {}
+message QueryCorrectionConfidenceResponse {
+  uint64 confidence_bps = 1;
+  uint64 total_corrections = 2;
+  uint64 successful_corrections = 3;
+  uint64 effective_max_magnitude = 4;
+  uint64 effective_observation_interval = 5;
+  repeated CorrectionOutcome recent_outcomes = 6;
+}
+
+message ModulePacingEffect {
+  string module = 1;
+  string parameter = 2;
+  uint64 base_value = 3;
+  uint64 effective_value = 4;
+}
+
+message QueryGlobalPacingRequest {}
+message QueryGlobalPacingResponse {
+  string health_category = 1;
+  uint64 creation_multiplier_bps = 2;
+  uint64 analysis_multiplier_bps = 3;
+  repeated ModulePacingEffect affected_modules = 4;
 }

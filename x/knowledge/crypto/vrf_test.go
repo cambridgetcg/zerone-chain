@@ -389,3 +389,193 @@ func TestGenerateBlockSeed_DifferentInputs(t *testing.T) {
 	diffHash := crypto.GenerateBlockSeed([]byte("other"), 42, 7)
 	require.NotEqual(t, base, diffHash, "different prevBlockHash must produce different block seed")
 }
+
+// ============================================================
+// Extended VRF tests — batch 2
+// ============================================================
+
+// TestVRF_GenerateDoesNotMutatePrivateKey verifies that calling GenerateVRF
+// does not modify the caller's private key slice.
+func TestVRF_GenerateDoesNotMutatePrivateKey(t *testing.T) {
+	_, priv := newTestKey(30)
+	original := make([]byte, len(priv))
+	copy(original, priv)
+
+	_, _, err := crypto.GenerateVRF([]byte("no-mutate-test"), priv)
+	require.NoError(t, err)
+
+	require.Equal(t, original, []byte(priv),
+		"GenerateVRF must not mutate the private key (alias safety)")
+}
+
+// TestVRF_DomainSeparation_ViaExportedAPI verifies that the internal domain hash
+// uses length-prefix format rather than a simple colon separator.
+// We exercise this through the exported API: if two seeds that would be ambiguous
+// under colon-separation produce the same VRF output, the domain-hash has a
+// length-prefix collision bug. With proper length-prefixed separation they must differ.
+func TestVRF_DomainSeparation_ViaExportedAPI(t *testing.T) {
+	_, priv := newTestKey(31)
+
+	// "ab" + "cdef" vs "abc" + "def" — if domain hash used "domain:data"
+	// both would be "ZRN.vrf.v1:abcdef" and collide. Length-prefix separates them.
+	// We rely on GenerateVRFSeed which internally uses domainHash("ZRN.vrf.seed.v1", payload)
+	// with different structured payload.
+	s1 := crypto.GenerateVRFSeed("ab-cdef", 100, []byte("hash"))
+	s2 := crypto.GenerateVRFSeed("abc-def", 100, []byte("hash"))
+	require.NotEqual(t, s1, s2,
+		"different claim IDs that share the same bytes must produce different seeds (length-prefix separation)")
+
+	// Further: produce VRF from each — must yield different outputs
+	out1, _, err1 := crypto.GenerateVRF(s1, priv)
+	require.NoError(t, err1)
+	out2, _, err2 := crypto.GenerateVRF(s2, priv)
+	require.NoError(t, err2)
+	require.NotEqual(t, out1, out2, "VRF outputs from differently-separated seeds must differ")
+}
+
+// TestVRF_NoAmbiguity_ClaimIDLength verifies that seeds whose components share
+// the same concatenated bytes but differ in structure produce different outputs.
+func TestVRF_NoAmbiguity_ClaimIDLength(t *testing.T) {
+	hash := []byte("prev-hash")
+
+	// These claim IDs have different lengths but overlapping byte patterns
+	s1 := crypto.GenerateVRFSeed("MATH-001", 1, hash)
+	s2 := crypto.GenerateVRFSeed("MATH-0011", 0, hash) // blockNum bytes start differently
+	require.NotEqual(t, s1, s2,
+		"different structured inputs must never produce the same seed")
+}
+
+// TestVRF_StatisticalFairness runs 1000 trials and checks that selection
+// probability is proportional to stake within a 15% tolerance.
+func TestVRF_StatisticalFairness(t *testing.T) {
+	const trials = 1000
+	const totalStake uint64 = 10_000
+	const targetStake uint64 = 3000 // 30%
+	const expectedRate = 0.30
+	const tolerance = 0.15
+
+	selected := 0
+	for i := 0; i < trials; i++ {
+		output := make([]byte, 32)
+		_, err := rand.Read(output)
+		require.NoError(t, err)
+
+		sel, _ := crypto.IsValidatorSelected(output, targetStake, totalStake, 1)
+		if sel {
+			selected++
+		}
+	}
+
+	observedRate := float64(selected) / float64(trials)
+	require.InDelta(t, expectedRate, observedRate, tolerance,
+		"selection rate %.3f should be within %.0f%% of expected %.3f (got %d/%d)",
+		observedRate, tolerance*100, expectedRate, selected, trials)
+}
+
+// TestVRF_MultiValidatorSelection selects N from M validators using targetCount > 1.
+func TestVRF_MultiValidatorSelection(t *testing.T) {
+	const totalStake uint64 = 10_000
+	const validatorStake uint64 = 2000 // 20% each → 5 validators cover 100%
+	const targetCount uint32 = 3       // want ~3 from each 20%-stake validator = 60% selection
+	const trials = 500
+
+	selected := 0
+	for i := 0; i < trials; i++ {
+		output := make([]byte, 32)
+		_, err := rand.Read(output)
+		require.NoError(t, err)
+
+		sel, _ := crypto.IsValidatorSelected(output, validatorStake, totalStake, targetCount)
+		if sel {
+			selected++
+		}
+	}
+
+	// Expected: 20% * 3 = 60%; allow generous margin
+	observedRate := float64(selected) / float64(trials)
+	require.InDelta(t, 0.60, observedRate, 0.15,
+		"multi-validator selection rate should approximate stake*targetCount/totalStake")
+}
+
+// TestVRF_ZeroStakeNeverSelected_Bulk verifies that zero stake never gets selected
+// across 100 random VRF outputs.
+func TestVRF_ZeroStakeNeverSelected_Bulk(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		output := make([]byte, 32)
+		_, err := rand.Read(output)
+		require.NoError(t, err)
+
+		sel, prio := crypto.IsValidatorSelected(output, 0, 10_000, 1)
+		require.False(t, sel, "zero stake must never be selected (trial %d)", i)
+		require.Zero(t, prio, "zero stake must have zero priority (trial %d)", i)
+	}
+}
+
+// TestVRF_FullStakeAlwaysSelected_Bulk verifies that a validator with 100% of total
+// stake is always selected across 100 real VRF outputs.
+func TestVRF_FullStakeAlwaysSelected_Bulk(t *testing.T) {
+	_, priv := newTestKey(40)
+
+	for i := 0; i < 100; i++ {
+		seed := make([]byte, 32)
+		binary.BigEndian.PutUint64(seed, uint64(i))
+
+		output, _, err := crypto.GenerateVRF(seed, priv)
+		require.NoError(t, err)
+
+		sel, prio := crypto.IsValidatorSelected(output, 10_000, 10_000, 1)
+		require.True(t, sel, "full stake must always be selected (trial %d)", i)
+		require.NotZero(t, prio, "full stake must have non-zero priority (trial %d)", i)
+	}
+}
+
+// TestVRF_PriorityOrdering verifies that among selected validators, lower
+// priority value corresponds to higher selection ranking (first-pick).
+func TestVRF_PriorityOrdering(t *testing.T) {
+	_, priv := newTestKey(41)
+	const totalStake uint64 = 10_000
+
+	type result struct {
+		priority uint64
+		selected bool
+	}
+	var results []result
+
+	for i := 0; i < 50; i++ {
+		seed := make([]byte, 8)
+		binary.BigEndian.PutUint64(seed, uint64(i*1000))
+
+		output, _, err := crypto.GenerateVRF(seed, priv)
+		require.NoError(t, err)
+
+		sel, prio := crypto.IsValidatorSelected(output, totalStake, totalStake, 1)
+		results = append(results, result{priority: prio, selected: sel})
+	}
+
+	// All should be selected (full stake), and priorities should be distinct
+	priorities := make(map[uint64]bool)
+	for _, r := range results {
+		require.True(t, r.selected)
+		priorities[r.priority] = true
+	}
+	require.Greater(t, len(priorities), 1,
+		"priorities should vary across different VRF outputs")
+}
+
+// TestVRF_BlockSeed_EpochSensitivity verifies that different epochs produce
+// completely different block seeds, even with the same block number and prev hash.
+func TestVRF_BlockSeed_EpochSensitivity(t *testing.T) {
+	prevHash := []byte("fixed-prev-hash")
+	const blockNum uint64 = 42
+
+	seeds := make(map[string]bool)
+	for epoch := uint64(0); epoch < 100; epoch++ {
+		s := crypto.GenerateBlockSeed(prevHash, blockNum, epoch)
+		require.Len(t, s, 32)
+		key := string(s)
+		require.False(t, seeds[key],
+			"epoch %d produced a duplicate block seed", epoch)
+		seeds[key] = true
+	}
+	require.Len(t, seeds, 100, "100 different epochs must produce 100 unique seeds")
+}

@@ -117,6 +117,7 @@ const (
 	ClaimStatus_CLAIM_STATUS_EXPIRED            ClaimStatus = 9
 	ClaimStatus_CLAIM_STATUS_INSUFFICIENT       ClaimStatus = 10
 	ClaimStatus_CLAIM_STATUS_CONTESTED          ClaimStatus = 11
+	ClaimStatus_CLAIM_STATUS_MALFORMED          ClaimStatus = 12 // Rejected as not truth-apt
 )
 
 // Enum value maps for ClaimStatus.
@@ -134,6 +135,7 @@ var (
 		9:  "CLAIM_STATUS_EXPIRED",
 		10: "CLAIM_STATUS_INSUFFICIENT",
 		11: "CLAIM_STATUS_CONTESTED",
+		12: "CLAIM_STATUS_MALFORMED",
 	}
 	ClaimStatus_value = map[string]int32{
 		"CLAIM_STATUS_UNSPECIFIED":        0,
@@ -148,6 +150,7 @@ var (
 		"CLAIM_STATUS_EXPIRED":            9,
 		"CLAIM_STATUS_INSUFFICIENT":       10,
 		"CLAIM_STATUS_CONTESTED":          11,
+		"CLAIM_STATUS_MALFORMED":          12,
 	}
 )
 
@@ -245,6 +248,7 @@ const (
 	Verdict_VERDICT_ACCEPT       Verdict = 1
 	Verdict_VERDICT_REJECT       Verdict = 2
 	Verdict_VERDICT_INCONCLUSIVE Verdict = 3
+	Verdict_VERDICT_MALFORMED    Verdict = 4 // Claim is not truth-apt (paradox, category error, nonsense)
 )
 
 // Enum value maps for Verdict.
@@ -254,12 +258,14 @@ var (
 		1: "VERDICT_ACCEPT",
 		2: "VERDICT_REJECT",
 		3: "VERDICT_INCONCLUSIVE",
+		4: "VERDICT_MALFORMED",
 	}
 	Verdict_value = map[string]int32{
 		"VERDICT_UNSPECIFIED":  0,
 		"VERDICT_ACCEPT":       1,
 		"VERDICT_REJECT":       2,
 		"VERDICT_INCONCLUSIVE": 3,
+		"VERDICT_MALFORMED":    4,
 	}
 )
 
@@ -288,6 +294,134 @@ func (x Verdict) Number() protoreflect.EnumNumber {
 // Deprecated: Use Verdict.Descriptor instead.
 func (Verdict) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
+}
+
+// ClaimType classifies the epistemic shape of a knowledge claim.
+// Agents use this to filter and prioritize facts for prompt injection.
+type ClaimType int32
+
+const (
+	ClaimType_CLAIM_TYPE_UNSPECIFIED   ClaimType = 0 // Legacy/untyped — treated as assertion
+	ClaimType_CLAIM_TYPE_ASSERTION     ClaimType = 1 // "X is true" — direct factual statement
+	ClaimType_CLAIM_TYPE_RELATION      ClaimType = 2 // "X relates to Y via Z" — graph edge
+	ClaimType_CLAIM_TYPE_DEFINITION    ClaimType = 3 // "X means Y" — term/concept definition
+	ClaimType_CLAIM_TYPE_CONSTRAINT    ClaimType = 4 // "X must/cannot Y" — rule or boundary
+	ClaimType_CLAIM_TYPE_NEGATION      ClaimType = 5 // "X is NOT true" — explicit falsity marker
+	ClaimType_CLAIM_TYPE_OBSERVATION   ClaimType = 6 // "X was observed at time/place" — empirical data point
+	ClaimType_CLAIM_TYPE_COMPUTATIONAL ClaimType = 7 // Derived from computation/inference — agent specialty
+)
+
+// Enum value maps for ClaimType.
+var (
+	ClaimType_name = map[int32]string{
+		0: "CLAIM_TYPE_UNSPECIFIED",
+		1: "CLAIM_TYPE_ASSERTION",
+		2: "CLAIM_TYPE_RELATION",
+		3: "CLAIM_TYPE_DEFINITION",
+		4: "CLAIM_TYPE_CONSTRAINT",
+		5: "CLAIM_TYPE_NEGATION",
+		6: "CLAIM_TYPE_OBSERVATION",
+		7: "CLAIM_TYPE_COMPUTATIONAL",
+	}
+	ClaimType_value = map[string]int32{
+		"CLAIM_TYPE_UNSPECIFIED":   0,
+		"CLAIM_TYPE_ASSERTION":     1,
+		"CLAIM_TYPE_RELATION":      2,
+		"CLAIM_TYPE_DEFINITION":    3,
+		"CLAIM_TYPE_CONSTRAINT":    4,
+		"CLAIM_TYPE_NEGATION":      5,
+		"CLAIM_TYPE_OBSERVATION":   6,
+		"CLAIM_TYPE_COMPUTATIONAL": 7,
+	}
+)
+
+func (x ClaimType) Enum() *ClaimType {
+	p := new(ClaimType)
+	*p = x
+	return p
+}
+
+func (x ClaimType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ClaimType) Descriptor() protoreflect.EnumDescriptor {
+	return file_zerone_knowledge_v1_types_proto_enumTypes[4].Descriptor()
+}
+
+func (ClaimType) Type() protoreflect.EnumType {
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[4]
+}
+
+func (x ClaimType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ClaimType.Descriptor instead.
+func (ClaimType) EnumDescriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
+}
+
+// RelationType defines how one fact relates to another.
+type RelationType int32
+
+const (
+	RelationType_RELATION_TYPE_UNSPECIFIED RelationType = 0
+	RelationType_RELATION_TYPE_SUPPORTS    RelationType = 1 // This fact provides evidence for the target
+	RelationType_RELATION_TYPE_CONTRADICTS RelationType = 2 // This fact conflicts with the target
+	RelationType_RELATION_TYPE_REQUIRES    RelationType = 3 // This fact depends on the target being true
+	RelationType_RELATION_TYPE_REFINES     RelationType = 4 // This fact is a more precise version of the target
+	RelationType_RELATION_TYPE_GENERALIZES RelationType = 5 // This fact is a broader version of the target
+	RelationType_RELATION_TYPE_SUPERSEDES  RelationType = 6 // This fact replaces the target (newer/better)
+)
+
+// Enum value maps for RelationType.
+var (
+	RelationType_name = map[int32]string{
+		0: "RELATION_TYPE_UNSPECIFIED",
+		1: "RELATION_TYPE_SUPPORTS",
+		2: "RELATION_TYPE_CONTRADICTS",
+		3: "RELATION_TYPE_REQUIRES",
+		4: "RELATION_TYPE_REFINES",
+		5: "RELATION_TYPE_GENERALIZES",
+		6: "RELATION_TYPE_SUPERSEDES",
+	}
+	RelationType_value = map[string]int32{
+		"RELATION_TYPE_UNSPECIFIED": 0,
+		"RELATION_TYPE_SUPPORTS":    1,
+		"RELATION_TYPE_CONTRADICTS": 2,
+		"RELATION_TYPE_REQUIRES":    3,
+		"RELATION_TYPE_REFINES":     4,
+		"RELATION_TYPE_GENERALIZES": 5,
+		"RELATION_TYPE_SUPERSEDES":  6,
+	}
+)
+
+func (x RelationType) Enum() *RelationType {
+	p := new(RelationType)
+	*p = x
+	return p
+}
+
+func (x RelationType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (RelationType) Descriptor() protoreflect.EnumDescriptor {
+	return file_zerone_knowledge_v1_types_proto_enumTypes[5].Descriptor()
+}
+
+func (RelationType) Type() protoreflect.EnumType {
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[5]
+}
+
+func (x RelationType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use RelationType.Descriptor instead.
+func (RelationType) EnumDescriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
 // DomainStatus tracks whether an epistemic domain is active or proposed.
@@ -327,11 +461,11 @@ func (x DomainStatus) String() string {
 }
 
 func (DomainStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_zerone_knowledge_v1_types_proto_enumTypes[4].Descriptor()
+	return file_zerone_knowledge_v1_types_proto_enumTypes[6].Descriptor()
 }
 
 func (DomainStatus) Type() protoreflect.EnumType {
-	return &file_zerone_knowledge_v1_types_proto_enumTypes[4]
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[6]
 }
 
 func (x DomainStatus) Number() protoreflect.EnumNumber {
@@ -340,7 +474,232 @@ func (x DomainStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use DomainStatus.Descriptor instead.
 func (DomainStatus) EnumDescriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
+}
+
+// FactRelation is a typed, directional edge in the knowledge graph.
+type FactRelation struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	SourceFactId   string                 `protobuf:"bytes,1,opt,name=source_fact_id,json=sourceFactId,proto3" json:"source_fact_id,omitempty"`          // The fact declaring the relationship
+	TargetFactId   string                 `protobuf:"bytes,2,opt,name=target_fact_id,json=targetFactId,proto3" json:"target_fact_id,omitempty"`          // The fact being referenced
+	Relation       RelationType           `protobuf:"varint,3,opt,name=relation,proto3,enum=zerone.knowledge.v1.RelationType" json:"relation,omitempty"` // How source relates to target
+	CreatedAtBlock uint64                 `protobuf:"varint,4,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	Creator        string                 `protobuf:"bytes,5,opt,name=creator,proto3" json:"creator,omitempty"` // Address that declared this relation
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *FactRelation) Reset() {
+	*x = FactRelation{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FactRelation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FactRelation) ProtoMessage() {}
+
+func (x *FactRelation) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FactRelation.ProtoReflect.Descriptor instead.
+func (*FactRelation) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *FactRelation) GetSourceFactId() string {
+	if x != nil {
+		return x.SourceFactId
+	}
+	return ""
+}
+
+func (x *FactRelation) GetTargetFactId() string {
+	if x != nil {
+		return x.TargetFactId
+	}
+	return ""
+}
+
+func (x *FactRelation) GetRelation() RelationType {
+	if x != nil {
+		return x.Relation
+	}
+	return RelationType_RELATION_TYPE_UNSPECIFIED
+}
+
+func (x *FactRelation) GetCreatedAtBlock() uint64 {
+	if x != nil {
+		return x.CreatedAtBlock
+	}
+	return 0
+}
+
+func (x *FactRelation) GetCreator() string {
+	if x != nil {
+		return x.Creator
+	}
+	return ""
+}
+
+// ClaimRelation declares a typed relationship from a claim to an existing fact.
+type ClaimRelation struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TargetFactId  string                 `protobuf:"bytes,1,opt,name=target_fact_id,json=targetFactId,proto3" json:"target_fact_id,omitempty"`
+	Relation      RelationType           `protobuf:"varint,2,opt,name=relation,proto3,enum=zerone.knowledge.v1.RelationType" json:"relation,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimRelation) Reset() {
+	*x = ClaimRelation{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimRelation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimRelation) ProtoMessage() {}
+
+func (x *ClaimRelation) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimRelation.ProtoReflect.Descriptor instead.
+func (*ClaimRelation) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ClaimRelation) GetTargetFactId() string {
+	if x != nil {
+		return x.TargetFactId
+	}
+	return ""
+}
+
+func (x *ClaimRelation) GetRelation() RelationType {
+	if x != nil {
+		return x.Relation
+	}
+	return RelationType_RELATION_TYPE_UNSPECIFIED
+}
+
+// ClaimStructure provides machine-readable decomposition of a claim.
+// The full claim text (fact_content) remains the canonical human-readable form.
+// Structure is optional but strongly encouraged — agents prioritize structured facts.
+type ClaimStructure struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subject       string                 `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`                                  // What the claim is about: "entropy of a closed system"
+	Predicate     string                 `protobuf:"bytes,2,opt,name=predicate,proto3" json:"predicate,omitempty"`                              // What is being asserted: "cannot decrease spontaneously"
+	Object        string                 `protobuf:"bytes,3,opt,name=object,proto3" json:"object,omitempty"`                                    // Optional target: "second law of thermodynamics"
+	Scope         string                 `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`                                      // Conditions/context: "classical thermodynamics, isolated systems"
+	TemporalScope string                 `protobuf:"bytes,5,opt,name=temporal_scope,json=temporalScope,proto3" json:"temporal_scope,omitempty"` // Time bounds if any: "post-Big-Bang", "since 2024", "" for timeless
+	Negatable     bool                   `protobuf:"varint,6,opt,name=negatable,proto3" json:"negatable,omitempty"`                             // Can this claim be meaningfully negated? (false for definitions)
+	Tags          []string               `protobuf:"bytes,7,rep,name=tags,proto3" json:"tags,omitempty"`                                        // Free-form searchable tags: ["thermodynamics", "entropy", "physics"]
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ClaimStructure) Reset() {
+	*x = ClaimStructure{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ClaimStructure) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ClaimStructure) ProtoMessage() {}
+
+func (x *ClaimStructure) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ClaimStructure.ProtoReflect.Descriptor instead.
+func (*ClaimStructure) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *ClaimStructure) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetPredicate() string {
+	if x != nil {
+		return x.Predicate
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetObject() string {
+	if x != nil {
+		return x.Object
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetScope() string {
+	if x != nil {
+		return x.Scope
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetTemporalScope() string {
+	if x != nil {
+		return x.TemporalScope
+	}
+	return ""
+}
+
+func (x *ClaimStructure) GetNegatable() bool {
+	if x != nil {
+		return x.Negatable
+	}
+	return false
+}
+
+func (x *ClaimStructure) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
 }
 
 // Fact represents a piece of verified knowledge in the protocol.
@@ -353,33 +712,69 @@ type Fact struct {
 	// Epistemic category: "axiomatic", "empirical", "derived", "contested",
 	// "analytic", "formal", "protocol", "computational", "predictive",
 	// "historical", "replicated", "social", "protocol_observation"
-	Category              string     `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
-	Confidence            uint64     `protobuf:"varint,5,opt,name=confidence,proto3" json:"confidence,omitempty"` // 0-1,000,000 BPS
-	Submitter             string     `protobuf:"bytes,6,opt,name=submitter,proto3" json:"submitter,omitempty"`
-	SubmittedAtBlock      uint64     `protobuf:"varint,7,opt,name=submitted_at_block,json=submittedAtBlock,proto3" json:"submitted_at_block,omitempty"`
-	VerifiedAtBlock       uint64     `protobuf:"varint,8,opt,name=verified_at_block,json=verifiedAtBlock,proto3" json:"verified_at_block,omitempty"`
-	CitationCount         uint64     `protobuf:"varint,9,opt,name=citation_count,json=citationCount,proto3" json:"citation_count,omitempty"`
-	Fundamentality        uint64     `protobuf:"varint,10,opt,name=fundamentality,proto3" json:"fundamentality,omitempty"` // 0-1,000,000 (how foundational this fact is)
-	References            []string   `protobuf:"bytes,11,rep,name=references,proto3" json:"references,omitempty"`          // fact IDs this fact cites
-	Status                FactStatus `protobuf:"varint,12,opt,name=status,proto3,enum=zerone.knowledge.v1.FactStatus" json:"status,omitempty"`
-	ClaimId               string     `protobuf:"bytes,13,opt,name=claim_id,json=claimId,proto3" json:"claim_id,omitempty"`
-	ReverificationBlock   uint64     `protobuf:"varint,14,opt,name=reverification_block,json=reverificationBlock,proto3" json:"reverification_block,omitempty"`
-	LastVerifiedBlock     uint64     `protobuf:"varint,15,opt,name=last_verified_block,json=lastVerifiedBlock,proto3" json:"last_verified_block,omitempty"`
-	ChallengeWindowEnd    uint64     `protobuf:"varint,16,opt,name=challenge_window_end,json=challengeWindowEnd,proto3" json:"challenge_window_end,omitempty"`
-	BridgeScore           uint64     `protobuf:"varint,17,opt,name=bridge_score,json=bridgeScore,proto3" json:"bridge_score,omitempty"`            // 0-1,000,000 cross-domain bridge value
-	NoveltyScore          uint64     `protobuf:"varint,18,opt,name=novelty_score,json=noveltyScore,proto3" json:"novelty_score,omitempty"`         // 0-1,000,000
-	PatronageAmount       string     `protobuf:"bytes,19,opt,name=patronage_amount,json=patronageAmount,proto3" json:"patronage_amount,omitempty"` // coin amount as string (uzrn)
-	PatronageExpiryBlock  uint64     `protobuf:"varint,20,opt,name=patronage_expiry_block,json=patronageExpiryBlock,proto3" json:"patronage_expiry_block,omitempty"`
-	Stratum               string     `protobuf:"bytes,21,opt,name=stratum,proto3" json:"stratum,omitempty"`
-	Maturity              string     `protobuf:"bytes,22,opt,name=maturity,proto3" json:"maturity,omitempty"` // "emerging", "established", "canonical"
-	IncomingCitationCount uint64     `protobuf:"varint,23,opt,name=incoming_citation_count,json=incomingCitationCount,proto3" json:"incoming_citation_count,omitempty"`
+	Category              string          `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
+	Confidence            uint64          `protobuf:"varint,5,opt,name=confidence,proto3" json:"confidence,omitempty"` // 0-1,000,000 BPS
+	Submitter             string          `protobuf:"bytes,6,opt,name=submitter,proto3" json:"submitter,omitempty"`
+	SubmittedAtBlock      uint64          `protobuf:"varint,7,opt,name=submitted_at_block,json=submittedAtBlock,proto3" json:"submitted_at_block,omitempty"`
+	VerifiedAtBlock       uint64          `protobuf:"varint,8,opt,name=verified_at_block,json=verifiedAtBlock,proto3" json:"verified_at_block,omitempty"`
+	CitationCount         uint64          `protobuf:"varint,9,opt,name=citation_count,json=citationCount,proto3" json:"citation_count,omitempty"`
+	Fundamentality        uint64          `protobuf:"varint,10,opt,name=fundamentality,proto3" json:"fundamentality,omitempty"` // 0-1,000,000 (how foundational this fact is)
+	References            []string        `protobuf:"bytes,11,rep,name=references,proto3" json:"references,omitempty"`          // fact IDs this fact cites
+	Status                FactStatus      `protobuf:"varint,12,opt,name=status,proto3,enum=zerone.knowledge.v1.FactStatus" json:"status,omitempty"`
+	ClaimId               string          `protobuf:"bytes,13,opt,name=claim_id,json=claimId,proto3" json:"claim_id,omitempty"`
+	ReverificationBlock   uint64          `protobuf:"varint,14,opt,name=reverification_block,json=reverificationBlock,proto3" json:"reverification_block,omitempty"`
+	LastVerifiedBlock     uint64          `protobuf:"varint,15,opt,name=last_verified_block,json=lastVerifiedBlock,proto3" json:"last_verified_block,omitempty"`
+	ChallengeWindowEnd    uint64          `protobuf:"varint,16,opt,name=challenge_window_end,json=challengeWindowEnd,proto3" json:"challenge_window_end,omitempty"`
+	BridgeScore           uint64          `protobuf:"varint,17,opt,name=bridge_score,json=bridgeScore,proto3" json:"bridge_score,omitempty"`            // 0-1,000,000 cross-domain bridge value
+	NoveltyScore          uint64          `protobuf:"varint,18,opt,name=novelty_score,json=noveltyScore,proto3" json:"novelty_score,omitempty"`         // 0-1,000,000
+	PatronageAmount       string          `protobuf:"bytes,19,opt,name=patronage_amount,json=patronageAmount,proto3" json:"patronage_amount,omitempty"` // coin amount as string (uzrn)
+	PatronageExpiryBlock  uint64          `protobuf:"varint,20,opt,name=patronage_expiry_block,json=patronageExpiryBlock,proto3" json:"patronage_expiry_block,omitempty"`
+	Stratum               string          `protobuf:"bytes,21,opt,name=stratum,proto3" json:"stratum,omitempty"`
+	Maturity              string          `protobuf:"bytes,22,opt,name=maturity,proto3" json:"maturity,omitempty"` // "emerging", "established", "canonical"
+	IncomingCitationCount uint64          `protobuf:"varint,23,opt,name=incoming_citation_count,json=incomingCitationCount,proto3" json:"incoming_citation_count,omitempty"`
+	ClaimType             ClaimType       `protobuf:"varint,24,opt,name=claim_type,json=claimType,proto3,enum=zerone.knowledge.v1.ClaimType" json:"claim_type,omitempty"`
+	OutgoingRelations     []*FactRelation `protobuf:"bytes,25,rep,name=outgoing_relations,json=outgoingRelations,proto3" json:"outgoing_relations,omitempty"` // Relations this fact declares
+	IncomingRelations     []*FactRelation `protobuf:"bytes,26,rep,name=incoming_relations,json=incomingRelations,proto3" json:"incoming_relations,omitempty"` // Relations pointing to this fact
+	Structure             *ClaimStructure `protobuf:"bytes,27,opt,name=structure,proto3" json:"structure,omitempty"`                                          // Machine-readable decomposition (optional)
+	CanonicalForm         string          `protobuf:"bytes,28,opt,name=canonical_form,json=canonicalForm,proto3" json:"canonical_form,omitempty"`             // Machine-readable normalized form
+	CanonicalHash         string          `protobuf:"bytes,29,opt,name=canonical_hash,json=canonicalHash,proto3" json:"canonical_hash,omitempty"`             // SHA-256 of canonical_form for dedup
+	// ─── Fitness scoring ──────────────────────────────────────────────────────
+	FitnessScore        uint64 `protobuf:"varint,30,opt,name=fitness_score,json=fitnessScore,proto3" json:"fitness_score,omitempty"`                        // 0-1,000,000 composite fitness
+	FitnessUpdatedBlock uint64 `protobuf:"varint,31,opt,name=fitness_updated_block,json=fitnessUpdatedBlock,proto3" json:"fitness_updated_block,omitempty"` // Last block fitness was recalculated
+	QueryCount          uint64 `protobuf:"varint,32,opt,name=query_count,json=queryCount,proto3" json:"query_count,omitempty"`                              // Lifetime query count
+	QueryCountEpoch     uint64 `protobuf:"varint,33,opt,name=query_count_epoch,json=queryCountEpoch,proto3" json:"query_count_epoch,omitempty"`             // Queries in current epoch
+	EpochBorn           uint64 `protobuf:"varint,34,opt,name=epoch_born,json=epochBorn,proto3" json:"epoch_born,omitempty"`                                 // Epoch when fact was created
+	// ─── Metabolism (energy budget) ─────────────────────────────────────────
+	Energy            uint64 `protobuf:"varint,35,opt,name=energy,proto3" json:"energy,omitempty"`                                                  // Current energy budget (0-10,000)
+	EnergyCap         uint64 `protobuf:"varint,36,opt,name=energy_cap,json=energyCap,proto3" json:"energy_cap,omitempty"`                           // Maximum energy (governance-adjustable per domain)
+	EnergyLastUpdated uint64 `protobuf:"varint,37,opt,name=energy_last_updated,json=energyLastUpdated,proto3" json:"energy_last_updated,omitempty"` // Block height of last energy update
+	AtRiskSinceEpoch  uint64 `protobuf:"varint,38,opt,name=at_risk_since_epoch,json=atRiskSinceEpoch,proto3" json:"at_risk_since_epoch,omitempty"`  // Epoch when energy first hit 0 (0 = not at risk)
+	// ─── Competition (niche dynamics) ────────────────────────────────────
+	NicheKey       string `protobuf:"bytes,39,opt,name=niche_key,json=nicheKey,proto3" json:"niche_key,omitempty"`                    // Computed: hash(domain + subject + claim_type)
+	NicheLeader    bool   `protobuf:"varint,40,opt,name=niche_leader,json=nicheLeader,proto3" json:"niche_leader,omitempty"`          // Is this the top-ranked fact in its niche?
+	NicheRank      uint64 `protobuf:"varint,41,opt,name=niche_rank,json=nicheRank,proto3" json:"niche_rank,omitempty"`                // Rank within niche (1 = leader)
+	NicheSize      uint64 `protobuf:"varint,42,opt,name=niche_size,json=nicheSize,proto3" json:"niche_size,omitempty"`                // How many facts in this niche
+	CompetitionTax uint64 `protobuf:"varint,43,opt,name=competition_tax,json=competitionTax,proto3" json:"competition_tax,omitempty"` // Extra maintenance from competition (energy units)
+	// ─── Reproduction (lineage tracking) ──────────────────────────────────
+	ParentFactId  string   `protobuf:"bytes,44,opt,name=parent_fact_id,json=parentFactId,proto3" json:"parent_fact_id,omitempty"`    // Direct parent (empty if original)
+	ChildFactIds  []string `protobuf:"bytes,45,rep,name=child_fact_ids,json=childFactIds,proto3" json:"child_fact_ids,omitempty"`    // Direct children
+	LineageDepth  uint64   `protobuf:"varint,46,opt,name=lineage_depth,json=lineageDepth,proto3" json:"lineage_depth,omitempty"`     // 0 = original, 1 = child, 2 = grandchild...
+	ProgenyCount  uint64   `protobuf:"varint,47,opt,name=progeny_count,json=progenyCount,proto3" json:"progeny_count,omitempty"`     // Total descendants (recursively)
+	LineageRootId string   `protobuf:"bytes,48,opt,name=lineage_root_id,json=lineageRootId,proto3" json:"lineage_root_id,omitempty"` // ID of the original ancestor
+	// ─── Novelty detection ──────────────────────────────────────────────────
+	CommonKnowledgeMatch bool `protobuf:"varint,49,opt,name=common_knowledge_match,json=commonKnowledgeMatch,proto3" json:"common_knowledge_match,omitempty"` // True if subject matches common knowledge registry
+	// ─── Satisfaction feedback ──────────────────────────────────────────────
+	SatisfactionUp        uint64 `protobuf:"varint,60,opt,name=satisfaction_up,json=satisfactionUp,proto3" json:"satisfaction_up,omitempty"`                        // Lifetime positive ratings
+	SatisfactionDown      uint64 `protobuf:"varint,61,opt,name=satisfaction_down,json=satisfactionDown,proto3" json:"satisfaction_down,omitempty"`                  // Lifetime negative ratings
+	SatisfactionUpEpoch   uint64 `protobuf:"varint,62,opt,name=satisfaction_up_epoch,json=satisfactionUpEpoch,proto3" json:"satisfaction_up_epoch,omitempty"`       // Positive ratings this epoch (resets)
+	SatisfactionDownEpoch uint64 `protobuf:"varint,63,opt,name=satisfaction_down_epoch,json=satisfactionDownEpoch,proto3" json:"satisfaction_down_epoch,omitempty"` // Negative ratings this epoch (resets)
 	unknownFields         protoimpl.UnknownFields
 	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Fact) Reset() {
 	*x = Fact{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[0]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -391,7 +786,7 @@ func (x *Fact) String() string {
 func (*Fact) ProtoMessage() {}
 
 func (x *Fact) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[0]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -404,7 +799,7 @@ func (x *Fact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Fact.ProtoReflect.Descriptor instead.
 func (*Fact) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{0}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *Fact) GetId() string {
@@ -568,6 +963,302 @@ func (x *Fact) GetIncomingCitationCount() uint64 {
 	return 0
 }
 
+func (x *Fact) GetClaimType() ClaimType {
+	if x != nil {
+		return x.ClaimType
+	}
+	return ClaimType_CLAIM_TYPE_UNSPECIFIED
+}
+
+func (x *Fact) GetOutgoingRelations() []*FactRelation {
+	if x != nil {
+		return x.OutgoingRelations
+	}
+	return nil
+}
+
+func (x *Fact) GetIncomingRelations() []*FactRelation {
+	if x != nil {
+		return x.IncomingRelations
+	}
+	return nil
+}
+
+func (x *Fact) GetStructure() *ClaimStructure {
+	if x != nil {
+		return x.Structure
+	}
+	return nil
+}
+
+func (x *Fact) GetCanonicalForm() string {
+	if x != nil {
+		return x.CanonicalForm
+	}
+	return ""
+}
+
+func (x *Fact) GetCanonicalHash() string {
+	if x != nil {
+		return x.CanonicalHash
+	}
+	return ""
+}
+
+func (x *Fact) GetFitnessScore() uint64 {
+	if x != nil {
+		return x.FitnessScore
+	}
+	return 0
+}
+
+func (x *Fact) GetFitnessUpdatedBlock() uint64 {
+	if x != nil {
+		return x.FitnessUpdatedBlock
+	}
+	return 0
+}
+
+func (x *Fact) GetQueryCount() uint64 {
+	if x != nil {
+		return x.QueryCount
+	}
+	return 0
+}
+
+func (x *Fact) GetQueryCountEpoch() uint64 {
+	if x != nil {
+		return x.QueryCountEpoch
+	}
+	return 0
+}
+
+func (x *Fact) GetEpochBorn() uint64 {
+	if x != nil {
+		return x.EpochBorn
+	}
+	return 0
+}
+
+func (x *Fact) GetEnergy() uint64 {
+	if x != nil {
+		return x.Energy
+	}
+	return 0
+}
+
+func (x *Fact) GetEnergyCap() uint64 {
+	if x != nil {
+		return x.EnergyCap
+	}
+	return 0
+}
+
+func (x *Fact) GetEnergyLastUpdated() uint64 {
+	if x != nil {
+		return x.EnergyLastUpdated
+	}
+	return 0
+}
+
+func (x *Fact) GetAtRiskSinceEpoch() uint64 {
+	if x != nil {
+		return x.AtRiskSinceEpoch
+	}
+	return 0
+}
+
+func (x *Fact) GetNicheKey() string {
+	if x != nil {
+		return x.NicheKey
+	}
+	return ""
+}
+
+func (x *Fact) GetNicheLeader() bool {
+	if x != nil {
+		return x.NicheLeader
+	}
+	return false
+}
+
+func (x *Fact) GetNicheRank() uint64 {
+	if x != nil {
+		return x.NicheRank
+	}
+	return 0
+}
+
+func (x *Fact) GetNicheSize() uint64 {
+	if x != nil {
+		return x.NicheSize
+	}
+	return 0
+}
+
+func (x *Fact) GetCompetitionTax() uint64 {
+	if x != nil {
+		return x.CompetitionTax
+	}
+	return 0
+}
+
+func (x *Fact) GetParentFactId() string {
+	if x != nil {
+		return x.ParentFactId
+	}
+	return ""
+}
+
+func (x *Fact) GetChildFactIds() []string {
+	if x != nil {
+		return x.ChildFactIds
+	}
+	return nil
+}
+
+func (x *Fact) GetLineageDepth() uint64 {
+	if x != nil {
+		return x.LineageDepth
+	}
+	return 0
+}
+
+func (x *Fact) GetProgenyCount() uint64 {
+	if x != nil {
+		return x.ProgenyCount
+	}
+	return 0
+}
+
+func (x *Fact) GetLineageRootId() string {
+	if x != nil {
+		return x.LineageRootId
+	}
+	return ""
+}
+
+func (x *Fact) GetCommonKnowledgeMatch() bool {
+	if x != nil {
+		return x.CommonKnowledgeMatch
+	}
+	return false
+}
+
+func (x *Fact) GetSatisfactionUp() uint64 {
+	if x != nil {
+		return x.SatisfactionUp
+	}
+	return 0
+}
+
+func (x *Fact) GetSatisfactionDown() uint64 {
+	if x != nil {
+		return x.SatisfactionDown
+	}
+	return 0
+}
+
+func (x *Fact) GetSatisfactionUpEpoch() uint64 {
+	if x != nil {
+		return x.SatisfactionUpEpoch
+	}
+	return 0
+}
+
+func (x *Fact) GetSatisfactionDownEpoch() uint64 {
+	if x != nil {
+		return x.SatisfactionDownEpoch
+	}
+	return 0
+}
+
+// CommonKnowledgeEntry represents a subject that LLMs already know.
+// Claims matching these subjects receive a novelty penalty.
+type CommonKnowledgeEntry struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Domain        string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	Subject       string                 `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`                          // Normalized subject string
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`                  // Human-readable explanation
+	PenaltyBps    uint64                 `protobuf:"varint,5,opt,name=penalty_bps,json=penaltyBps,proto3" json:"penalty_bps,omitempty"` // Novelty penalty (0-1,000,000)
+	AddedBlock    uint64                 `protobuf:"varint,6,opt,name=added_block,json=addedBlock,proto3" json:"added_block,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommonKnowledgeEntry) Reset() {
+	*x = CommonKnowledgeEntry{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommonKnowledgeEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommonKnowledgeEntry) ProtoMessage() {}
+
+func (x *CommonKnowledgeEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommonKnowledgeEntry.ProtoReflect.Descriptor instead.
+func (*CommonKnowledgeEntry) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CommonKnowledgeEntry) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CommonKnowledgeEntry) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *CommonKnowledgeEntry) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *CommonKnowledgeEntry) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CommonKnowledgeEntry) GetPenaltyBps() uint64 {
+	if x != nil {
+		return x.PenaltyBps
+	}
+	return 0
+}
+
+func (x *CommonKnowledgeEntry) GetAddedBlock() uint64 {
+	if x != nil {
+		return x.AddedBlock
+	}
+	return 0
+}
+
 // Claim is an unverified submission awaiting or undergoing verification.
 type Claim struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
@@ -585,13 +1276,18 @@ type Claim struct {
 	ChallengeWindowEnd  uint64                 `protobuf:"varint,12,opt,name=challenge_window_end,json=challengeWindowEnd,proto3" json:"challenge_window_end,omitempty"`
 	ProvisionalFactId   string                 `protobuf:"bytes,13,opt,name=provisional_fact_id,json=provisionalFactId,proto3" json:"provisional_fact_id,omitempty"`
 	ContentHash         string                 `protobuf:"bytes,14,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"` // SHA-256 of fact_content for duplicate detection
+	ClaimType           ClaimType              `protobuf:"varint,15,opt,name=claim_type,json=claimType,proto3,enum=zerone.knowledge.v1.ClaimType" json:"claim_type,omitempty"`
+	Relations           []*ClaimRelation       `protobuf:"bytes,16,rep,name=relations,proto3" json:"relations,omitempty"`                              // Typed relationships to existing facts
+	Structure           *ClaimStructure        `protobuf:"bytes,17,opt,name=structure,proto3" json:"structure,omitempty"`                              // Machine-readable decomposition (optional)
+	CanonicalForm       string                 `protobuf:"bytes,18,opt,name=canonical_form,json=canonicalForm,proto3" json:"canonical_form,omitempty"` // Machine-readable normalized form
+	CanonicalHash       string                 `protobuf:"bytes,19,opt,name=canonical_hash,json=canonicalHash,proto3" json:"canonical_hash,omitempty"` // SHA-256 of canonical_form for dedup
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
 
 func (x *Claim) Reset() {
 	*x = Claim{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[1]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -603,7 +1299,7 @@ func (x *Claim) String() string {
 func (*Claim) ProtoMessage() {}
 
 func (x *Claim) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[1]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -616,7 +1312,7 @@ func (x *Claim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Claim.ProtoReflect.Descriptor instead.
 func (*Claim) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{1}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Claim) GetId() string {
@@ -717,6 +1413,41 @@ func (x *Claim) GetContentHash() string {
 	return ""
 }
 
+func (x *Claim) GetClaimType() ClaimType {
+	if x != nil {
+		return x.ClaimType
+	}
+	return ClaimType_CLAIM_TYPE_UNSPECIFIED
+}
+
+func (x *Claim) GetRelations() []*ClaimRelation {
+	if x != nil {
+		return x.Relations
+	}
+	return nil
+}
+
+func (x *Claim) GetStructure() *ClaimStructure {
+	if x != nil {
+		return x.Structure
+	}
+	return nil
+}
+
+func (x *Claim) GetCanonicalForm() string {
+	if x != nil {
+		return x.CanonicalForm
+	}
+	return ""
+}
+
+func (x *Claim) GetCanonicalHash() string {
+	if x != nil {
+		return x.CanonicalHash
+	}
+	return ""
+}
+
 // VerificationRound tracks one commit-reveal verification cycle.
 type VerificationRound struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
@@ -738,7 +1469,7 @@ type VerificationRound struct {
 
 func (x *VerificationRound) Reset() {
 	*x = VerificationRound{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -750,7 +1481,7 @@ func (x *VerificationRound) String() string {
 func (*VerificationRound) ProtoMessage() {}
 
 func (x *VerificationRound) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -763,7 +1494,7 @@ func (x *VerificationRound) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerificationRound.ProtoReflect.Descriptor instead.
 func (*VerificationRound) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *VerificationRound) GetId() string {
@@ -862,7 +1593,7 @@ type CommitEntry struct {
 
 func (x *CommitEntry) Reset() {
 	*x = CommitEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -874,7 +1605,7 @@ func (x *CommitEntry) String() string {
 func (*CommitEntry) ProtoMessage() {}
 
 func (x *CommitEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -887,7 +1618,7 @@ func (x *CommitEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitEntry.ProtoReflect.Descriptor instead.
 func (*CommitEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CommitEntry) GetVerifier() string {
@@ -915,7 +1646,7 @@ func (x *CommitEntry) GetCommittedAtBlock() uint64 {
 type RevealEntry struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Verifier        string                 `protobuf:"bytes,1,opt,name=verifier,proto3" json:"verifier,omitempty"`
-	Vote            string                 `protobuf:"bytes,2,opt,name=vote,proto3" json:"vote,omitempty"` // "accept" or "reject"
+	Vote            string                 `protobuf:"bytes,2,opt,name=vote,proto3" json:"vote,omitempty"` // "accept", "reject", or "malformed"
 	Salt            []byte                 `protobuf:"bytes,3,opt,name=salt,proto3" json:"salt,omitempty"`
 	RevealedAtBlock uint64                 `protobuf:"varint,4,opt,name=revealed_at_block,json=revealedAtBlock,proto3" json:"revealed_at_block,omitempty"`
 	unknownFields   protoimpl.UnknownFields
@@ -924,7 +1655,7 @@ type RevealEntry struct {
 
 func (x *RevealEntry) Reset() {
 	*x = RevealEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +1667,7 @@ func (x *RevealEntry) String() string {
 func (*RevealEntry) ProtoMessage() {}
 
 func (x *RevealEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +1680,7 @@ func (x *RevealEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevealEntry.ProtoReflect.Descriptor instead.
 func (*RevealEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RevealEntry) GetVerifier() string {
@@ -993,7 +1724,7 @@ type VRFProof struct {
 
 func (x *VRFProof) Reset() {
 	*x = VRFProof{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1005,7 +1736,7 @@ func (x *VRFProof) String() string {
 func (*VRFProof) ProtoMessage() {}
 
 func (x *VRFProof) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1018,7 +1749,7 @@ func (x *VRFProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VRFProof.ProtoReflect.Descriptor instead.
 func (*VRFProof) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *VRFProof) GetProof() []byte {
@@ -1060,13 +1791,15 @@ type Domain struct {
 	Proposer       string                 `protobuf:"bytes,6,opt,name=proposer,proto3" json:"proposer,omitempty"`
 	Endorsers      []string               `protobuf:"bytes,7,rep,name=endorsers,proto3" json:"endorsers,omitempty"`
 	Stratum        string                 `protobuf:"bytes,8,opt,name=stratum,proto3" json:"stratum,omitempty"`
+	ParentDomain   string                 `protobuf:"bytes,9,opt,name=parent_domain,json=parentDomain,proto3" json:"parent_domain,omitempty"` // empty = root domain
+	Depth          uint32                 `protobuf:"varint,10,opt,name=depth,proto3" json:"depth,omitempty"`                                 // tree depth: root=1, child=parent.depth+1, max=5
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Domain) Reset() {
 	*x = Domain{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1078,7 +1811,7 @@ func (x *Domain) String() string {
 func (*Domain) ProtoMessage() {}
 
 func (x *Domain) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1091,7 +1824,7 @@ func (x *Domain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Domain.ProtoReflect.Descriptor instead.
 func (*Domain) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *Domain) GetName() string {
@@ -1150,6 +1883,20 @@ func (x *Domain) GetStratum() string {
 	return ""
 }
 
+func (x *Domain) GetParentDomain() string {
+	if x != nil {
+		return x.ParentDomain
+	}
+	return ""
+}
+
+func (x *Domain) GetDepth() uint32 {
+	if x != nil {
+		return x.Depth
+	}
+	return 0
+}
+
 // ValidatorInfo caches a validator's tier and verification stats for round selection.
 type ValidatorInfo struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
@@ -1164,7 +1911,7 @@ type ValidatorInfo struct {
 
 func (x *ValidatorInfo) Reset() {
 	*x = ValidatorInfo{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1176,7 +1923,7 @@ func (x *ValidatorInfo) String() string {
 func (*ValidatorInfo) ProtoMessage() {}
 
 func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1189,7 +1936,7 @@ func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatorInfo.ProtoReflect.Descriptor instead.
 func (*ValidatorInfo) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *ValidatorInfo) GetAddress() string {
@@ -1254,7 +2001,7 @@ type ProvisionalChallenge struct {
 
 func (x *ProvisionalChallenge) Reset() {
 	*x = ProvisionalChallenge{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1266,7 +2013,7 @@ func (x *ProvisionalChallenge) String() string {
 func (*ProvisionalChallenge) ProtoMessage() {}
 
 func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1279,7 +2026,7 @@ func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProvisionalChallenge.ProtoReflect.Descriptor instead.
 func (*ProvisionalChallenge) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ProvisionalChallenge) GetId() string {
@@ -1387,11 +2134,300 @@ func (x *ProvisionalChallenge) GetAttemptNumber() uint32 {
 	return 0
 }
 
+// DemandSignal tracks aggregate query demand for a domain/subject pair.
+type DemandSignal struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Domain           string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	Subject          string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`                                            // Normalized query subject
+	QueryCount       uint64                 `protobuf:"varint,3,opt,name=query_count,json=queryCount,proto3" json:"query_count,omitempty"`                   // Total queries (lifetime)
+	FulfilledCount   uint64                 `protobuf:"varint,4,opt,name=fulfilled_count,json=fulfilledCount,proto3" json:"fulfilled_count,omitempty"`       // Queries that returned results
+	UnfulfilledCount uint64                 `protobuf:"varint,5,opt,name=unfulfilled_count,json=unfulfilledCount,proto3" json:"unfulfilled_count,omitempty"` // Queries that returned nothing
+	LastQueryBlock   uint64                 `protobuf:"varint,6,opt,name=last_query_block,json=lastQueryBlock,proto3" json:"last_query_block,omitempty"`
+	EpochQueryCount  uint64                 `protobuf:"varint,7,opt,name=epoch_query_count,json=epochQueryCount,proto3" json:"epoch_query_count,omitempty"`  // Queries this epoch (resets)
+	EpochUnfulfilled uint64                 `protobuf:"varint,8,opt,name=epoch_unfulfilled,json=epochUnfulfilled,proto3" json:"epoch_unfulfilled,omitempty"` // Unfulfilled this epoch (resets)
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *DemandSignal) Reset() {
+	*x = DemandSignal{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DemandSignal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DemandSignal) ProtoMessage() {}
+
+func (x *DemandSignal) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DemandSignal.ProtoReflect.Descriptor instead.
+func (*DemandSignal) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *DemandSignal) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *DemandSignal) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *DemandSignal) GetQueryCount() uint64 {
+	if x != nil {
+		return x.QueryCount
+	}
+	return 0
+}
+
+func (x *DemandSignal) GetFulfilledCount() uint64 {
+	if x != nil {
+		return x.FulfilledCount
+	}
+	return 0
+}
+
+func (x *DemandSignal) GetUnfulfilledCount() uint64 {
+	if x != nil {
+		return x.UnfulfilledCount
+	}
+	return 0
+}
+
+func (x *DemandSignal) GetLastQueryBlock() uint64 {
+	if x != nil {
+		return x.LastQueryBlock
+	}
+	return 0
+}
+
+func (x *DemandSignal) GetEpochQueryCount() uint64 {
+	if x != nil {
+		return x.EpochQueryCount
+	}
+	return 0
+}
+
+func (x *DemandSignal) GetEpochUnfulfilled() uint64 {
+	if x != nil {
+		return x.EpochUnfulfilled
+	}
+	return 0
+}
+
+// KnowledgeBounty is an auto-generated reward for filling a knowledge gap.
+type KnowledgeBounty struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Domain          string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	Subject         string                 `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`
+	RewardAmount    string                 `protobuf:"bytes,4,opt,name=reward_amount,json=rewardAmount,proto3" json:"reward_amount,omitempty"` // uzrn
+	CreatedAtBlock  uint64                 `protobuf:"varint,5,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	ExpiresAtBlock  uint64                 `protobuf:"varint,6,opt,name=expires_at_block,json=expiresAtBlock,proto3" json:"expires_at_block,omitempty"`
+	Claimed         bool                   `protobuf:"varint,7,opt,name=claimed,proto3" json:"claimed,omitempty"`
+	ClaimedByFactId string                 `protobuf:"bytes,8,opt,name=claimed_by_fact_id,json=claimedByFactId,proto3" json:"claimed_by_fact_id,omitempty"`
+	DemandCount     uint64                 `protobuf:"varint,9,opt,name=demand_count,json=demandCount,proto3" json:"demand_count,omitempty"` // Demand that triggered this bounty
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *KnowledgeBounty) Reset() {
+	*x = KnowledgeBounty{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *KnowledgeBounty) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*KnowledgeBounty) ProtoMessage() {}
+
+func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use KnowledgeBounty.ProtoReflect.Descriptor instead.
+func (*KnowledgeBounty) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *KnowledgeBounty) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *KnowledgeBounty) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *KnowledgeBounty) GetSubject() string {
+	if x != nil {
+		return x.Subject
+	}
+	return ""
+}
+
+func (x *KnowledgeBounty) GetRewardAmount() string {
+	if x != nil {
+		return x.RewardAmount
+	}
+	return ""
+}
+
+func (x *KnowledgeBounty) GetCreatedAtBlock() uint64 {
+	if x != nil {
+		return x.CreatedAtBlock
+	}
+	return 0
+}
+
+func (x *KnowledgeBounty) GetExpiresAtBlock() uint64 {
+	if x != nil {
+		return x.ExpiresAtBlock
+	}
+	return 0
+}
+
+func (x *KnowledgeBounty) GetClaimed() bool {
+	if x != nil {
+		return x.Claimed
+	}
+	return false
+}
+
+func (x *KnowledgeBounty) GetClaimedByFactId() string {
+	if x != nil {
+		return x.ClaimedByFactId
+	}
+	return ""
+}
+
+func (x *KnowledgeBounty) GetDemandCount() uint64 {
+	if x != nil {
+		return x.DemandCount
+	}
+	return 0
+}
+
+// CompletedRoundMeta stores metadata for completed verification rounds,
+// indexed by verdict block height for efficient window-based queries (R31-2).
+type CompletedRoundMeta struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Domain         string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	HasDissent     bool                   `protobuf:"varint,2,opt,name=has_dissent,json=hasDissent,proto3" json:"has_dissent,omitempty"`             // true if any verifier dissented from majority
+	DurationBlocks uint64                 `protobuf:"varint,3,opt,name=duration_blocks,json=durationBlocks,proto3" json:"duration_blocks,omitempty"` // verdict_block - started_at_block
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CompletedRoundMeta) Reset() {
+	*x = CompletedRoundMeta{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompletedRoundMeta) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompletedRoundMeta) ProtoMessage() {}
+
+func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompletedRoundMeta.ProtoReflect.Descriptor instead.
+func (*CompletedRoundMeta) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *CompletedRoundMeta) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *CompletedRoundMeta) GetHasDissent() bool {
+	if x != nil {
+		return x.HasDissent
+	}
+	return false
+}
+
+func (x *CompletedRoundMeta) GetDurationBlocks() uint64 {
+	if x != nil {
+		return x.DurationBlocks
+	}
+	return 0
+}
+
 var File_zerone_knowledge_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x1fzerone/knowledge/v1/types.proto\x12\x13zerone.knowledge.v1\"\xeb\x06\n" +
+	"\x1fzerone/knowledge/v1/types.proto\x12\x13zerone.knowledge.v1\"\xdd\x01\n" +
+	"\fFactRelation\x12$\n" +
+	"\x0esource_fact_id\x18\x01 \x01(\tR\fsourceFactId\x12$\n" +
+	"\x0etarget_fact_id\x18\x02 \x01(\tR\ftargetFactId\x12=\n" +
+	"\brelation\x18\x03 \x01(\x0e2!.zerone.knowledge.v1.RelationTypeR\brelation\x12(\n" +
+	"\x10created_at_block\x18\x04 \x01(\x04R\x0ecreatedAtBlock\x12\x18\n" +
+	"\acreator\x18\x05 \x01(\tR\acreator\"t\n" +
+	"\rClaimRelation\x12$\n" +
+	"\x0etarget_fact_id\x18\x01 \x01(\tR\ftargetFactId\x12=\n" +
+	"\brelation\x18\x02 \x01(\x0e2!.zerone.knowledge.v1.RelationTypeR\brelation\"\xcf\x01\n" +
+	"\x0eClaimStructure\x12\x18\n" +
+	"\asubject\x18\x01 \x01(\tR\asubject\x12\x1c\n" +
+	"\tpredicate\x18\x02 \x01(\tR\tpredicate\x12\x16\n" +
+	"\x06object\x18\x03 \x01(\tR\x06object\x12\x14\n" +
+	"\x05scope\x18\x04 \x01(\tR\x05scope\x12%\n" +
+	"\x0etemporal_scope\x18\x05 \x01(\tR\rtemporalScope\x12\x1c\n" +
+	"\tnegatable\x18\x06 \x01(\bR\tnegatable\x12\x12\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\"\x97\x11\n" +
 	"\x04Fact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
@@ -1420,7 +2456,52 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x16patronage_expiry_block\x18\x14 \x01(\x04R\x14patronageExpiryBlock\x12\x18\n" +
 	"\astratum\x18\x15 \x01(\tR\astratum\x12\x1a\n" +
 	"\bmaturity\x18\x16 \x01(\tR\bmaturity\x126\n" +
-	"\x17incoming_citation_count\x18\x17 \x01(\x04R\x15incomingCitationCount\"\x8a\x04\n" +
+	"\x17incoming_citation_count\x18\x17 \x01(\x04R\x15incomingCitationCount\x12=\n" +
+	"\n" +
+	"claim_type\x18\x18 \x01(\x0e2\x1e.zerone.knowledge.v1.ClaimTypeR\tclaimType\x12P\n" +
+	"\x12outgoing_relations\x18\x19 \x03(\v2!.zerone.knowledge.v1.FactRelationR\x11outgoingRelations\x12P\n" +
+	"\x12incoming_relations\x18\x1a \x03(\v2!.zerone.knowledge.v1.FactRelationR\x11incomingRelations\x12A\n" +
+	"\tstructure\x18\x1b \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\x12%\n" +
+	"\x0ecanonical_form\x18\x1c \x01(\tR\rcanonicalForm\x12%\n" +
+	"\x0ecanonical_hash\x18\x1d \x01(\tR\rcanonicalHash\x12#\n" +
+	"\rfitness_score\x18\x1e \x01(\x04R\ffitnessScore\x122\n" +
+	"\x15fitness_updated_block\x18\x1f \x01(\x04R\x13fitnessUpdatedBlock\x12\x1f\n" +
+	"\vquery_count\x18  \x01(\x04R\n" +
+	"queryCount\x12*\n" +
+	"\x11query_count_epoch\x18! \x01(\x04R\x0fqueryCountEpoch\x12\x1d\n" +
+	"\n" +
+	"epoch_born\x18\" \x01(\x04R\tepochBorn\x12\x16\n" +
+	"\x06energy\x18# \x01(\x04R\x06energy\x12\x1d\n" +
+	"\n" +
+	"energy_cap\x18$ \x01(\x04R\tenergyCap\x12.\n" +
+	"\x13energy_last_updated\x18% \x01(\x04R\x11energyLastUpdated\x12-\n" +
+	"\x13at_risk_since_epoch\x18& \x01(\x04R\x10atRiskSinceEpoch\x12\x1b\n" +
+	"\tniche_key\x18' \x01(\tR\bnicheKey\x12!\n" +
+	"\fniche_leader\x18( \x01(\bR\vnicheLeader\x12\x1d\n" +
+	"\n" +
+	"niche_rank\x18) \x01(\x04R\tnicheRank\x12\x1d\n" +
+	"\n" +
+	"niche_size\x18* \x01(\x04R\tnicheSize\x12'\n" +
+	"\x0fcompetition_tax\x18+ \x01(\x04R\x0ecompetitionTax\x12$\n" +
+	"\x0eparent_fact_id\x18, \x01(\tR\fparentFactId\x12$\n" +
+	"\x0echild_fact_ids\x18- \x03(\tR\fchildFactIds\x12#\n" +
+	"\rlineage_depth\x18. \x01(\x04R\flineageDepth\x12#\n" +
+	"\rprogeny_count\x18/ \x01(\x04R\fprogenyCount\x12&\n" +
+	"\x0flineage_root_id\x180 \x01(\tR\rlineageRootId\x124\n" +
+	"\x16common_knowledge_match\x181 \x01(\bR\x14commonKnowledgeMatch\x12'\n" +
+	"\x0fsatisfaction_up\x18< \x01(\x04R\x0esatisfactionUp\x12+\n" +
+	"\x11satisfaction_down\x18= \x01(\x04R\x10satisfactionDown\x122\n" +
+	"\x15satisfaction_up_epoch\x18> \x01(\x04R\x13satisfactionUpEpoch\x126\n" +
+	"\x17satisfaction_down_epoch\x18? \x01(\x04R\x15satisfactionDownEpoch\"\xbc\x01\n" +
+	"\x14CommonKnowledgeEntry\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x18\n" +
+	"\asubject\x18\x03 \x01(\tR\asubject\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1f\n" +
+	"\vpenalty_bps\x18\x05 \x01(\x04R\n" +
+	"penaltyBps\x12\x1f\n" +
+	"\vadded_block\x18\x06 \x01(\x04R\n" +
+	"addedBlock\"\x9c\x06\n" +
 	"\x05Claim\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\ffact_content\x18\x02 \x01(\tR\vfactContent\x12\x16\n" +
@@ -1438,7 +2519,13 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x0epartnership_id\x18\v \x01(\tR\rpartnershipId\x120\n" +
 	"\x14challenge_window_end\x18\f \x01(\x04R\x12challengeWindowEnd\x12.\n" +
 	"\x13provisional_fact_id\x18\r \x01(\tR\x11provisionalFactId\x12!\n" +
-	"\fcontent_hash\x18\x0e \x01(\tR\vcontentHash\"\xaf\x04\n" +
+	"\fcontent_hash\x18\x0e \x01(\tR\vcontentHash\x12=\n" +
+	"\n" +
+	"claim_type\x18\x0f \x01(\x0e2\x1e.zerone.knowledge.v1.ClaimTypeR\tclaimType\x12@\n" +
+	"\trelations\x18\x10 \x03(\v2\".zerone.knowledge.v1.ClaimRelationR\trelations\x12A\n" +
+	"\tstructure\x18\x11 \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\x12%\n" +
+	"\x0ecanonical_form\x18\x12 \x01(\tR\rcanonicalForm\x12%\n" +
+	"\x0ecanonical_hash\x18\x13 \x01(\tR\rcanonicalHash\"\xaf\x04\n" +
 	"\x11VerificationRound\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bclaim_id\x18\x02 \x01(\tR\aclaimId\x12(\n" +
@@ -1467,7 +2554,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x05proof\x18\x01 \x01(\fR\x05proof\x12\x16\n" +
 	"\x06output\x18\x02 \x01(\fR\x06output\x12\x1a\n" +
 	"\bproposer\x18\x03 \x01(\tR\bproposer\x12!\n" +
-	"\fblock_height\x18\x04 \x01(\x04R\vblockHeight\"\x96\x02\n" +
+	"\fblock_height\x18\x04 \x01(\x04R\vblockHeight\"\xd1\x02\n" +
 	"\x06Domain\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x02 \x01(\tR\vdescription\x129\n" +
@@ -1477,7 +2564,10 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"fact_count\x18\x05 \x01(\x04R\tfactCount\x12\x1a\n" +
 	"\bproposer\x18\x06 \x01(\tR\bproposer\x12\x1c\n" +
 	"\tendorsers\x18\a \x03(\tR\tendorsers\x12\x18\n" +
-	"\astratum\x18\b \x01(\tR\astratum\"\xa5\x01\n" +
+	"\astratum\x18\b \x01(\tR\astratum\x12#\n" +
+	"\rparent_domain\x18\t \x01(\tR\fparentDomain\x12\x14\n" +
+	"\x05depth\x18\n" +
+	" \x01(\rR\x05depth\"\xa5\x01\n" +
 	"\rValidatorInfo\x12\x18\n" +
 	"\aaddress\x18\x01 \x01(\tR\aaddress\x12\x14\n" +
 	"\x05stake\x18\x02 \x01(\x04R\x05stake\x12\x12\n" +
@@ -1503,7 +2593,32 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x11created_at_height\x18\f \x01(\x04R\x0fcreatedAtHeight\x12,\n" +
 	"\x12resolved_at_height\x18\r \x01(\x04R\x10resolvedAtHeight\x12\x18\n" +
 	"\aoutcome\x18\x0e \x01(\tR\aoutcome\x12%\n" +
-	"\x0eattempt_number\x18\x0f \x01(\rR\rattemptNumber*\xe2\x02\n" +
+	"\x0eattempt_number\x18\x0f \x01(\rR\rattemptNumber\"\xba\x02\n" +
+	"\fDemandSignal\x12\x16\n" +
+	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x18\n" +
+	"\asubject\x18\x02 \x01(\tR\asubject\x12\x1f\n" +
+	"\vquery_count\x18\x03 \x01(\x04R\n" +
+	"queryCount\x12'\n" +
+	"\x0ffulfilled_count\x18\x04 \x01(\x04R\x0efulfilledCount\x12+\n" +
+	"\x11unfulfilled_count\x18\x05 \x01(\x04R\x10unfulfilledCount\x12(\n" +
+	"\x10last_query_block\x18\x06 \x01(\x04R\x0elastQueryBlock\x12*\n" +
+	"\x11epoch_query_count\x18\a \x01(\x04R\x0fepochQueryCount\x12+\n" +
+	"\x11epoch_unfulfilled\x18\b \x01(\x04R\x10epochUnfulfilled\"\xb6\x02\n" +
+	"\x0fKnowledgeBounty\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
+	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x18\n" +
+	"\asubject\x18\x03 \x01(\tR\asubject\x12#\n" +
+	"\rreward_amount\x18\x04 \x01(\tR\frewardAmount\x12(\n" +
+	"\x10created_at_block\x18\x05 \x01(\x04R\x0ecreatedAtBlock\x12(\n" +
+	"\x10expires_at_block\x18\x06 \x01(\x04R\x0eexpiresAtBlock\x12\x18\n" +
+	"\aclaimed\x18\a \x01(\bR\aclaimed\x12+\n" +
+	"\x12claimed_by_fact_id\x18\b \x01(\tR\x0fclaimedByFactId\x12!\n" +
+	"\fdemand_count\x18\t \x01(\x04R\vdemandCount\"v\n" +
+	"\x12CompletedRoundMeta\x12\x16\n" +
+	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x1f\n" +
+	"\vhas_dissent\x18\x02 \x01(\bR\n" +
+	"hasDissent\x12'\n" +
+	"\x0fduration_blocks\x18\x03 \x01(\x04R\x0edurationBlocks*\xe2\x02\n" +
 	"\n" +
 	"FactStatus\x12\x1b\n" +
 	"\x17FACT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -1519,7 +2634,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x13FACT_STATUS_REVOKED\x10\n" +
 	"\x12\x17\n" +
 	"\x13FACT_STATUS_AT_RISK\x10\v\x12\x16\n" +
-	"\x12FACT_STATUS_PRUNED\x10\f*\xee\x02\n" +
+	"\x12FACT_STATUS_PRUNED\x10\f*\x8a\x03\n" +
 	"\vClaimStatus\x12\x1c\n" +
 	"\x18CLAIM_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14CLAIM_STATUS_PENDING\x10\x01\x12#\n" +
@@ -1533,19 +2648,38 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x14CLAIM_STATUS_EXPIRED\x10\t\x12\x1d\n" +
 	"\x19CLAIM_STATUS_INSUFFICIENT\x10\n" +
 	"\x12\x1a\n" +
-	"\x16CLAIM_STATUS_CONTESTED\x10\v*\xda\x01\n" +
+	"\x16CLAIM_STATUS_CONTESTED\x10\v\x12\x1a\n" +
+	"\x16CLAIM_STATUS_MALFORMED\x10\f*\xda\x01\n" +
 	"\x11VerificationPhase\x12\"\n" +
 	"\x1eVERIFICATION_PHASE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19VERIFICATION_PHASE_COMMIT\x10\x01\x12\x1d\n" +
 	"\x19VERIFICATION_PHASE_REVEAL\x10\x02\x12\"\n" +
 	"\x1eVERIFICATION_PHASE_AGGREGATION\x10\x03\x12\x1f\n" +
 	"\x1bVERIFICATION_PHASE_COMPLETE\x10\x04\x12\x1e\n" +
-	"\x1aVERIFICATION_PHASE_EXPIRED\x10\x05*d\n" +
+	"\x1aVERIFICATION_PHASE_EXPIRED\x10\x05*{\n" +
 	"\aVerdict\x12\x17\n" +
 	"\x13VERDICT_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eVERDICT_ACCEPT\x10\x01\x12\x12\n" +
 	"\x0eVERDICT_REJECT\x10\x02\x12\x18\n" +
-	"\x14VERDICT_INCONCLUSIVE\x10\x03*\x81\x01\n" +
+	"\x14VERDICT_INCONCLUSIVE\x10\x03\x12\x15\n" +
+	"\x11VERDICT_MALFORMED\x10\x04*\xe3\x01\n" +
+	"\tClaimType\x12\x1a\n" +
+	"\x16CLAIM_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14CLAIM_TYPE_ASSERTION\x10\x01\x12\x17\n" +
+	"\x13CLAIM_TYPE_RELATION\x10\x02\x12\x19\n" +
+	"\x15CLAIM_TYPE_DEFINITION\x10\x03\x12\x19\n" +
+	"\x15CLAIM_TYPE_CONSTRAINT\x10\x04\x12\x17\n" +
+	"\x13CLAIM_TYPE_NEGATION\x10\x05\x12\x1a\n" +
+	"\x16CLAIM_TYPE_OBSERVATION\x10\x06\x12\x1c\n" +
+	"\x18CLAIM_TYPE_COMPUTATIONAL\x10\a*\xdc\x01\n" +
+	"\fRelationType\x12\x1d\n" +
+	"\x19RELATION_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16RELATION_TYPE_SUPPORTS\x10\x01\x12\x1d\n" +
+	"\x19RELATION_TYPE_CONTRADICTS\x10\x02\x12\x1a\n" +
+	"\x16RELATION_TYPE_REQUIRES\x10\x03\x12\x19\n" +
+	"\x15RELATION_TYPE_REFINES\x10\x04\x12\x1d\n" +
+	"\x19RELATION_TYPE_GENERALIZES\x10\x05\x12\x1c\n" +
+	"\x18RELATION_TYPE_SUPERSEDES\x10\x06*\x81\x01\n" +
 	"\fDomainStatus\x12\x1d\n" +
 	"\x19DOMAIN_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14DOMAIN_STATUS_ACTIVE\x10\x01\x12\x1c\n" +
@@ -1564,37 +2698,55 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_knowledge_v1_types_proto_rawDescData
 }
 
-var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),              // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),             // 1: zerone.knowledge.v1.ClaimStatus
 	(VerificationPhase)(0),       // 2: zerone.knowledge.v1.VerificationPhase
 	(Verdict)(0),                 // 3: zerone.knowledge.v1.Verdict
-	(DomainStatus)(0),            // 4: zerone.knowledge.v1.DomainStatus
-	(*Fact)(nil),                 // 5: zerone.knowledge.v1.Fact
-	(*Claim)(nil),                // 6: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),    // 7: zerone.knowledge.v1.VerificationRound
-	(*CommitEntry)(nil),          // 8: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),          // 9: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),             // 10: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),               // 11: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),        // 12: zerone.knowledge.v1.ValidatorInfo
-	(*ProvisionalChallenge)(nil), // 13: zerone.knowledge.v1.ProvisionalChallenge
+	(ClaimType)(0),               // 4: zerone.knowledge.v1.ClaimType
+	(RelationType)(0),            // 5: zerone.knowledge.v1.RelationType
+	(DomainStatus)(0),            // 6: zerone.knowledge.v1.DomainStatus
+	(*FactRelation)(nil),         // 7: zerone.knowledge.v1.FactRelation
+	(*ClaimRelation)(nil),        // 8: zerone.knowledge.v1.ClaimRelation
+	(*ClaimStructure)(nil),       // 9: zerone.knowledge.v1.ClaimStructure
+	(*Fact)(nil),                 // 10: zerone.knowledge.v1.Fact
+	(*CommonKnowledgeEntry)(nil), // 11: zerone.knowledge.v1.CommonKnowledgeEntry
+	(*Claim)(nil),                // 12: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),    // 13: zerone.knowledge.v1.VerificationRound
+	(*CommitEntry)(nil),          // 14: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),          // 15: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),             // 16: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),               // 17: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),        // 18: zerone.knowledge.v1.ValidatorInfo
+	(*ProvisionalChallenge)(nil), // 19: zerone.knowledge.v1.ProvisionalChallenge
+	(*DemandSignal)(nil),         // 20: zerone.knowledge.v1.DemandSignal
+	(*KnowledgeBounty)(nil),      // 21: zerone.knowledge.v1.KnowledgeBounty
+	(*CompletedRoundMeta)(nil),   // 22: zerone.knowledge.v1.CompletedRoundMeta
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
-	0, // 0: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
-	1, // 1: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
-	2, // 2: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	8, // 3: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	9, // 4: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
-	3, // 5: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
-	4, // 6: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
+	5,  // 1: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
+	0,  // 2: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
+	4,  // 3: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
+	7,  // 4: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
+	7,  // 5: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
+	9,  // 6: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	1,  // 7: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
+	4,  // 8: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
+	8,  // 9: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
+	9,  // 10: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	2,  // 11: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
+	14, // 12: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	15, // 13: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	3,  // 14: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
+	6,  // 15: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
+	16, // [16:16] is the sub-list for method output_type
+	16, // [16:16] is the sub-list for method input_type
+	16, // [16:16] is the sub-list for extension type_name
+	16, // [16:16] is the sub-list for extension extendee
+	0,  // [0:16] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_types_proto_init() }
@@ -1607,8 +2759,8 @@ func file_zerone_knowledge_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
-			NumEnums:      5,
-			NumMessages:   9,
+			NumEnums:      7,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

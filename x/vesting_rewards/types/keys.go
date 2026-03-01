@@ -19,6 +19,10 @@ const (
 	// ResearchFundModuleName is the module account for the research fund.
 	ResearchFundModuleName = "research_fund"
 
+	// DevelopmentFundModuleName is the module account for bug bounties,
+	// truth discovery, and protocol development.
+	DevelopmentFundModuleName = "development_fund"
+
 	// MaxSupplyUzrn is the hard supply cap: 222,222,222 ZRN in uzrn.
 	MaxSupplyUzrn = "222222222000000"
 

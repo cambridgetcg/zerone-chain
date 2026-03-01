@@ -981,6 +981,298 @@ func (x *MentorshipConfig) GetSponsorVerifications() uint64 {
 	return 0
 }
 
+type Mentorship struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	MentorAddr            string                 `protobuf:"bytes,2,opt,name=mentor_addr,json=mentorAddr,proto3" json:"mentor_addr,omitempty"`
+	MenteeAddr            string                 `protobuf:"bytes,3,opt,name=mentee_addr,json=menteeAddr,proto3" json:"mentee_addr,omitempty"`
+	Domain                string                 `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`
+	Status                string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	StartBlock            uint64                 `protobuf:"varint,6,opt,name=start_block,json=startBlock,proto3" json:"start_block,omitempty"`
+	DurationBlocks        uint64                 `protobuf:"varint,7,opt,name=duration_blocks,json=durationBlocks,proto3" json:"duration_blocks,omitempty"`
+	MenteeVerifications   uint64                 `protobuf:"varint,8,opt,name=mentee_verifications,json=menteeVerifications,proto3" json:"mentee_verifications,omitempty"`
+	MenteeClaimsSubmitted uint64                 `protobuf:"varint,9,opt,name=mentee_claims_submitted,json=menteeClaimsSubmitted,proto3" json:"mentee_claims_submitted,omitempty"`
+	GraduationThreshold   uint64                 `protobuf:"varint,10,opt,name=graduation_threshold,json=graduationThreshold,proto3" json:"graduation_threshold,omitempty"`
+	GraduationClaimsReq   uint64                 `protobuf:"varint,11,opt,name=graduation_claims_req,json=graduationClaimsReq,proto3" json:"graduation_claims_req,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *Mentorship) Reset() {
+	*x = Mentorship{}
+	mi := &file_zerone_partnerships_v1_types_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Mentorship) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Mentorship) ProtoMessage() {}
+
+func (x *Mentorship) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_types_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Mentorship.ProtoReflect.Descriptor instead.
+func (*Mentorship) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_types_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *Mentorship) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Mentorship) GetMentorAddr() string {
+	if x != nil {
+		return x.MentorAddr
+	}
+	return ""
+}
+
+func (x *Mentorship) GetMenteeAddr() string {
+	if x != nil {
+		return x.MenteeAddr
+	}
+	return ""
+}
+
+func (x *Mentorship) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *Mentorship) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *Mentorship) GetStartBlock() uint64 {
+	if x != nil {
+		return x.StartBlock
+	}
+	return 0
+}
+
+func (x *Mentorship) GetDurationBlocks() uint64 {
+	if x != nil {
+		return x.DurationBlocks
+	}
+	return 0
+}
+
+func (x *Mentorship) GetMenteeVerifications() uint64 {
+	if x != nil {
+		return x.MenteeVerifications
+	}
+	return 0
+}
+
+func (x *Mentorship) GetMenteeClaimsSubmitted() uint64 {
+	if x != nil {
+		return x.MenteeClaimsSubmitted
+	}
+	return 0
+}
+
+func (x *Mentorship) GetGraduationThreshold() uint64 {
+	if x != nil {
+		return x.GraduationThreshold
+	}
+	return 0
+}
+
+func (x *Mentorship) GetGraduationClaimsReq() uint64 {
+	if x != nil {
+		return x.GraduationClaimsReq
+	}
+	return 0
+}
+
+type FormationMatch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Addr1         string                 `protobuf:"bytes,2,opt,name=addr1,proto3" json:"addr1,omitempty"`
+	Addr2         string                 `protobuf:"bytes,3,opt,name=addr2,proto3" json:"addr2,omitempty"`
+	Score         uint64                 `protobuf:"varint,4,opt,name=score,proto3" json:"score,omitempty"`
+	ProposedAt    uint64                 `protobuf:"varint,5,opt,name=proposed_at,json=proposedAt,proto3" json:"proposed_at,omitempty"`
+	ExpiresAt     uint64                 `protobuf:"varint,6,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	Status        string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
+	Addr1Accepted bool                   `protobuf:"varint,8,opt,name=addr1_accepted,json=addr1Accepted,proto3" json:"addr1_accepted,omitempty"`
+	Addr2Accepted bool                   `protobuf:"varint,9,opt,name=addr2_accepted,json=addr2Accepted,proto3" json:"addr2_accepted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FormationMatch) Reset() {
+	*x = FormationMatch{}
+	mi := &file_zerone_partnerships_v1_types_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FormationMatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FormationMatch) ProtoMessage() {}
+
+func (x *FormationMatch) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_types_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FormationMatch.ProtoReflect.Descriptor instead.
+func (*FormationMatch) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_types_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *FormationMatch) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *FormationMatch) GetAddr1() string {
+	if x != nil {
+		return x.Addr1
+	}
+	return ""
+}
+
+func (x *FormationMatch) GetAddr2() string {
+	if x != nil {
+		return x.Addr2
+	}
+	return ""
+}
+
+func (x *FormationMatch) GetScore() uint64 {
+	if x != nil {
+		return x.Score
+	}
+	return 0
+}
+
+func (x *FormationMatch) GetProposedAt() uint64 {
+	if x != nil {
+		return x.ProposedAt
+	}
+	return 0
+}
+
+func (x *FormationMatch) GetExpiresAt() uint64 {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return 0
+}
+
+func (x *FormationMatch) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *FormationMatch) GetAddr1Accepted() bool {
+	if x != nil {
+		return x.Addr1Accepted
+	}
+	return false
+}
+
+func (x *FormationMatch) GetAddr2Accepted() bool {
+	if x != nil {
+		return x.Addr2Accepted
+	}
+	return false
+}
+
+type DomainFormationFreeze struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Domain        string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	ExpiryHeight  uint64                 `protobuf:"varint,2,opt,name=expiry_height,json=expiryHeight,proto3" json:"expiry_height,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DomainFormationFreeze) Reset() {
+	*x = DomainFormationFreeze{}
+	mi := &file_zerone_partnerships_v1_types_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DomainFormationFreeze) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DomainFormationFreeze) ProtoMessage() {}
+
+func (x *DomainFormationFreeze) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_types_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DomainFormationFreeze.ProtoReflect.Descriptor instead.
+func (*DomainFormationFreeze) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_types_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *DomainFormationFreeze) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *DomainFormationFreeze) GetExpiryHeight() uint64 {
+	if x != nil {
+		return x.ExpiryHeight
+	}
+	return 0
+}
+
+func (x *DomainFormationFreeze) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 var File_zerone_partnerships_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_types_proto_rawDesc = "" +
@@ -1089,7 +1381,40 @@ const file_zerone_partnerships_v1_types_proto_rawDesc = "" +
 	"\x10graduation_block\x18\b \x01(\x04R\x0fgraduationBlock\x12\x1c\n" +
 	"\tgraduated\x18\t \x01(\bR\tgraduated\x123\n" +
 	"\x15sponsor_verifications\x18\n" +
-	" \x01(\x04R\x14sponsorVerificationsB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
+	" \x01(\x04R\x14sponsorVerifications\"\xaa\x03\n" +
+	"\n" +
+	"Mentorship\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
+	"\vmentor_addr\x18\x02 \x01(\tR\n" +
+	"mentorAddr\x12\x1f\n" +
+	"\vmentee_addr\x18\x03 \x01(\tR\n" +
+	"menteeAddr\x12\x16\n" +
+	"\x06domain\x18\x04 \x01(\tR\x06domain\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1f\n" +
+	"\vstart_block\x18\x06 \x01(\x04R\n" +
+	"startBlock\x12'\n" +
+	"\x0fduration_blocks\x18\a \x01(\x04R\x0edurationBlocks\x121\n" +
+	"\x14mentee_verifications\x18\b \x01(\x04R\x13menteeVerifications\x126\n" +
+	"\x17mentee_claims_submitted\x18\t \x01(\x04R\x15menteeClaimsSubmitted\x121\n" +
+	"\x14graduation_threshold\x18\n" +
+	" \x01(\x04R\x13graduationThreshold\x122\n" +
+	"\x15graduation_claims_req\x18\v \x01(\x04R\x13graduationClaimsReq\"\x88\x02\n" +
+	"\x0eFormationMatch\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05addr1\x18\x02 \x01(\tR\x05addr1\x12\x14\n" +
+	"\x05addr2\x18\x03 \x01(\tR\x05addr2\x12\x14\n" +
+	"\x05score\x18\x04 \x01(\x04R\x05score\x12\x1f\n" +
+	"\vproposed_at\x18\x05 \x01(\x04R\n" +
+	"proposedAt\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x06 \x01(\x04R\texpiresAt\x12\x16\n" +
+	"\x06status\x18\a \x01(\tR\x06status\x12%\n" +
+	"\x0eaddr1_accepted\x18\b \x01(\bR\raddr1Accepted\x12%\n" +
+	"\x0eaddr2_accepted\x18\t \x01(\bR\raddr2Accepted\"l\n" +
+	"\x15DomainFormationFreeze\x12\x16\n" +
+	"\x06domain\x18\x01 \x01(\tR\x06domain\x12#\n" +
+	"\rexpiry_height\x18\x02 \x01(\x04R\fexpiryHeight\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reasonB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
 
 var (
 	file_zerone_partnerships_v1_types_proto_rawDescOnce sync.Once
@@ -1103,18 +1428,21 @@ func file_zerone_partnerships_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_partnerships_v1_types_proto_rawDescData
 }
 
-var file_zerone_partnerships_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_zerone_partnerships_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_zerone_partnerships_v1_types_proto_goTypes = []any{
-	(*ExitState)(nil),          // 0: zerone.partnerships.v1.ExitState
-	(*Partnership)(nil),        // 1: zerone.partnerships.v1.Partnership
-	(*DeliberationState)(nil),  // 2: zerone.partnerships.v1.DeliberationState
-	(*ConsensusOperation)(nil), // 3: zerone.partnerships.v1.ConsensusOperation
-	(*SafetyFreeze)(nil),       // 4: zerone.partnerships.v1.SafetyFreeze
-	(*CoercionSignal)(nil),     // 5: zerone.partnerships.v1.CoercionSignal
-	(*RejectionCooldown)(nil),  // 6: zerone.partnerships.v1.RejectionCooldown
-	(*SeedPartnership)(nil),    // 7: zerone.partnerships.v1.SeedPartnership
-	(*PoolEntry)(nil),          // 8: zerone.partnerships.v1.PoolEntry
-	(*MentorshipConfig)(nil),   // 9: zerone.partnerships.v1.MentorshipConfig
+	(*ExitState)(nil),             // 0: zerone.partnerships.v1.ExitState
+	(*Partnership)(nil),           // 1: zerone.partnerships.v1.Partnership
+	(*DeliberationState)(nil),     // 2: zerone.partnerships.v1.DeliberationState
+	(*ConsensusOperation)(nil),    // 3: zerone.partnerships.v1.ConsensusOperation
+	(*SafetyFreeze)(nil),          // 4: zerone.partnerships.v1.SafetyFreeze
+	(*CoercionSignal)(nil),        // 5: zerone.partnerships.v1.CoercionSignal
+	(*RejectionCooldown)(nil),     // 6: zerone.partnerships.v1.RejectionCooldown
+	(*SeedPartnership)(nil),       // 7: zerone.partnerships.v1.SeedPartnership
+	(*PoolEntry)(nil),             // 8: zerone.partnerships.v1.PoolEntry
+	(*MentorshipConfig)(nil),      // 9: zerone.partnerships.v1.MentorshipConfig
+	(*Mentorship)(nil),            // 10: zerone.partnerships.v1.Mentorship
+	(*FormationMatch)(nil),        // 11: zerone.partnerships.v1.FormationMatch
+	(*DomainFormationFreeze)(nil), // 12: zerone.partnerships.v1.DomainFormationFreeze
 }
 var file_zerone_partnerships_v1_types_proto_depIdxs = []int32{
 	0, // 0: zerone.partnerships.v1.Partnership.exit_state:type_name -> zerone.partnerships.v1.ExitState
@@ -1137,7 +1465,7 @@ func file_zerone_partnerships_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_partnerships_v1_types_proto_rawDesc), len(file_zerone_partnerships_v1_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

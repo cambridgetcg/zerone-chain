@@ -25,4 +25,5 @@ var (
 	ErrNotValidator             = errors.Register(ModuleName, 21, "address is not a validator")
 	ErrStakeLocked              = errors.Register(ModuleName, 22, "stake is still locked")
 	ErrUnauthorized             = errors.Register(ModuleName, 23, "unauthorized")
+	ErrDepthDistanceTooLarge    = errors.Register(ModuleName, 24, "depth distance exceeds maximum for inheritance")
 )

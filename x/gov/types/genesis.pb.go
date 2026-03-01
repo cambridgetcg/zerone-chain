@@ -140,12 +140,12 @@ func (x *Params) GetResearchVotingBlocks() uint64 {
 
 // CategoryConfig defines per-category stake and review requirements.
 type CategoryConfig struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Category         string                 `protobuf:"bytes,1,opt,name=category,proto3" json:"category,omitempty"`                                           // "parameter", "upgrade", "text", "research_spend"
-	RequiredStakeBps string                 `protobuf:"bytes,2,opt,name=required_stake_bps,json=requiredStakeBps,proto3" json:"required_stake_bps,omitempty"` // uzrn required to advance from draft to review
-	ReviewBlocks     uint64                 `protobuf:"varint,3,opt,name=review_blocks,json=reviewBlocks,proto3" json:"review_blocks,omitempty"`              // blocks required in review stage before last_call
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Category          string                 `protobuf:"bytes,1,opt,name=category,proto3" json:"category,omitempty"`                                              // "parameter", "upgrade", "text", "research_spend"
+	RequiredStakeUzrn string                 `protobuf:"bytes,2,opt,name=required_stake_uzrn,json=requiredStakeUzrn,proto3" json:"required_stake_uzrn,omitempty"` // uzrn required to advance from draft to review
+	ReviewBlocks      uint64                 `protobuf:"varint,3,opt,name=review_blocks,json=reviewBlocks,proto3" json:"review_blocks,omitempty"`                 // blocks required in review stage before last_call
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *CategoryConfig) Reset() {
@@ -185,9 +185,9 @@ func (x *CategoryConfig) GetCategory() string {
 	return ""
 }
 
-func (x *CategoryConfig) GetRequiredStakeBps() string {
+func (x *CategoryConfig) GetRequiredStakeUzrn() string {
 	if x != nil {
-		return x.RequiredStakeBps
+		return x.RequiredStakeUzrn
 	}
 	return ""
 }
@@ -254,14 +254,18 @@ func (x *GenesisUpgradePlan) GetPlan() *UpgradePlan {
 
 // GenesisState defines the governance module's genesis state.
 type GenesisState struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Params        *Params                `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
-	Lips          []*LIP                 `protobuf:"bytes,2,rep,name=lips,proto3" json:"lips,omitempty"`
-	Votes         []*Vote                `protobuf:"bytes,3,rep,name=votes,proto3" json:"votes,omitempty"`
-	NextLipNumber uint64                 `protobuf:"varint,4,opt,name=next_lip_number,json=nextLipNumber,proto3" json:"next_lip_number,omitempty"`
-	UpgradePlans  []*GenesisUpgradePlan  `protobuf:"bytes,5,rep,name=upgrade_plans,json=upgradePlans,proto3" json:"upgrade_plans,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                  protoimpl.MessageState       `protogen:"open.v1"`
+	Params                 *Params                      `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
+	Lips                   []*LIP                       `protobuf:"bytes,2,rep,name=lips,proto3" json:"lips,omitempty"`
+	Votes                  []*Vote                      `protobuf:"bytes,3,rep,name=votes,proto3" json:"votes,omitempty"`
+	NextLipNumber          uint64                       `protobuf:"varint,4,opt,name=next_lip_number,json=nextLipNumber,proto3" json:"next_lip_number,omitempty"`
+	UpgradePlans           []*GenesisUpgradePlan        `protobuf:"bytes,5,rep,name=upgrade_plans,json=upgradePlans,proto3" json:"upgrade_plans,omitempty"`
+	ResearchFundGovernance *ResearchFundGovernanceState `protobuf:"bytes,6,opt,name=research_fund_governance,json=researchFundGovernance,proto3" json:"research_fund_governance,omitempty"`
+	SeatElections          []*SeatElectionProposal      `protobuf:"bytes,7,rep,name=seat_elections,json=seatElections,proto3" json:"seat_elections,omitempty"`
+	SeatElectionVotes      []*SeatElectionVote          `protobuf:"bytes,8,rep,name=seat_election_votes,json=seatElectionVotes,proto3" json:"seat_election_votes,omitempty"`
+	NextSeatElectionNumber uint64                       `protobuf:"varint,9,opt,name=next_seat_election_number,json=nextSeatElectionNumber,proto3" json:"next_seat_election_number,omitempty"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *GenesisState) Reset() {
@@ -329,6 +333,34 @@ func (x *GenesisState) GetUpgradePlans() []*GenesisUpgradePlan {
 	return nil
 }
 
+func (x *GenesisState) GetResearchFundGovernance() *ResearchFundGovernanceState {
+	if x != nil {
+		return x.ResearchFundGovernance
+	}
+	return nil
+}
+
+func (x *GenesisState) GetSeatElections() []*SeatElectionProposal {
+	if x != nil {
+		return x.SeatElections
+	}
+	return nil
+}
+
+func (x *GenesisState) GetSeatElectionVotes() []*SeatElectionVote {
+	if x != nil {
+		return x.SeatElectionVotes
+	}
+	return nil
+}
+
+func (x *GenesisState) GetNextSeatElectionNumber() uint64 {
+	if x != nil {
+		return x.NextSeatElectionNumber
+	}
+	return 0
+}
+
 var File_zerone_gov_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_gov_v1_genesis_proto_rawDesc = "" +
@@ -345,20 +377,24 @@ const file_zerone_gov_v1_genesis_proto_rawDesc = "" +
 	"\x14research_fund_voters\x18\b \x01(\v2!.zerone.gov.v1.ResearchFundVotersR\x12researchFundVoters\x12<\n" +
 	"\x1aresearch_discussion_blocks\x18\t \x01(\x04R\x18researchDiscussionBlocks\x124\n" +
 	"\x16research_voting_blocks\x18\n" +
-	" \x01(\x04R\x14researchVotingBlocks\"\x7f\n" +
+	" \x01(\x04R\x14researchVotingBlocks\"\x81\x01\n" +
 	"\x0eCategoryConfig\x12\x1a\n" +
-	"\bcategory\x18\x01 \x01(\tR\bcategory\x12,\n" +
-	"\x12required_stake_bps\x18\x02 \x01(\tR\x10requiredStakeBps\x12#\n" +
+	"\bcategory\x18\x01 \x01(\tR\bcategory\x12.\n" +
+	"\x13required_stake_uzrn\x18\x02 \x01(\tR\x11requiredStakeUzrn\x12#\n" +
 	"\rreview_blocks\x18\x03 \x01(\x04R\freviewBlocks\"[\n" +
 	"\x12GenesisUpgradePlan\x12\x15\n" +
 	"\x06lip_id\x18\x01 \x01(\tR\x05lipId\x12.\n" +
-	"\x04plan\x18\x02 \x01(\v2\x1a.zerone.gov.v1.UpgradePlanR\x04plan\"\x80\x02\n" +
+	"\x04plan\x18\x02 \x01(\v2\x1a.zerone.gov.v1.UpgradePlanR\x04plan\"\xbe\x04\n" +
 	"\fGenesisState\x12-\n" +
 	"\x06params\x18\x01 \x01(\v2\x15.zerone.gov.v1.ParamsR\x06params\x12&\n" +
 	"\x04lips\x18\x02 \x03(\v2\x12.zerone.gov.v1.LIPR\x04lips\x12)\n" +
 	"\x05votes\x18\x03 \x03(\v2\x13.zerone.gov.v1.VoteR\x05votes\x12&\n" +
 	"\x0fnext_lip_number\x18\x04 \x01(\x04R\rnextLipNumber\x12F\n" +
-	"\rupgrade_plans\x18\x05 \x03(\v2!.zerone.gov.v1.GenesisUpgradePlanR\fupgradePlansB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
+	"\rupgrade_plans\x18\x05 \x03(\v2!.zerone.gov.v1.GenesisUpgradePlanR\fupgradePlans\x12d\n" +
+	"\x18research_fund_governance\x18\x06 \x01(\v2*.zerone.gov.v1.ResearchFundGovernanceStateR\x16researchFundGovernance\x12J\n" +
+	"\x0eseat_elections\x18\a \x03(\v2#.zerone.gov.v1.SeatElectionProposalR\rseatElections\x12O\n" +
+	"\x13seat_election_votes\x18\b \x03(\v2\x1f.zerone.gov.v1.SeatElectionVoteR\x11seatElectionVotes\x129\n" +
+	"\x19next_seat_election_number\x18\t \x01(\x04R\x16nextSeatElectionNumberB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
 
 var (
 	file_zerone_gov_v1_genesis_proto_rawDescOnce sync.Once
@@ -374,28 +410,34 @@ func file_zerone_gov_v1_genesis_proto_rawDescGZIP() []byte {
 
 var file_zerone_gov_v1_genesis_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_zerone_gov_v1_genesis_proto_goTypes = []any{
-	(*Params)(nil),             // 0: zerone.gov.v1.Params
-	(*CategoryConfig)(nil),     // 1: zerone.gov.v1.CategoryConfig
-	(*GenesisUpgradePlan)(nil), // 2: zerone.gov.v1.GenesisUpgradePlan
-	(*GenesisState)(nil),       // 3: zerone.gov.v1.GenesisState
-	(*ResearchFundVoters)(nil), // 4: zerone.gov.v1.ResearchFundVoters
-	(*UpgradePlan)(nil),        // 5: zerone.gov.v1.UpgradePlan
-	(*LIP)(nil),                // 6: zerone.gov.v1.LIP
-	(*Vote)(nil),               // 7: zerone.gov.v1.Vote
+	(*Params)(nil),                      // 0: zerone.gov.v1.Params
+	(*CategoryConfig)(nil),              // 1: zerone.gov.v1.CategoryConfig
+	(*GenesisUpgradePlan)(nil),          // 2: zerone.gov.v1.GenesisUpgradePlan
+	(*GenesisState)(nil),                // 3: zerone.gov.v1.GenesisState
+	(*ResearchFundVoters)(nil),          // 4: zerone.gov.v1.ResearchFundVoters
+	(*UpgradePlan)(nil),                 // 5: zerone.gov.v1.UpgradePlan
+	(*LIP)(nil),                         // 6: zerone.gov.v1.LIP
+	(*Vote)(nil),                        // 7: zerone.gov.v1.Vote
+	(*ResearchFundGovernanceState)(nil), // 8: zerone.gov.v1.ResearchFundGovernanceState
+	(*SeatElectionProposal)(nil),        // 9: zerone.gov.v1.SeatElectionProposal
+	(*SeatElectionVote)(nil),            // 10: zerone.gov.v1.SeatElectionVote
 }
 var file_zerone_gov_v1_genesis_proto_depIdxs = []int32{
-	1, // 0: zerone.gov.v1.Params.category_configs:type_name -> zerone.gov.v1.CategoryConfig
-	4, // 1: zerone.gov.v1.Params.research_fund_voters:type_name -> zerone.gov.v1.ResearchFundVoters
-	5, // 2: zerone.gov.v1.GenesisUpgradePlan.plan:type_name -> zerone.gov.v1.UpgradePlan
-	0, // 3: zerone.gov.v1.GenesisState.params:type_name -> zerone.gov.v1.Params
-	6, // 4: zerone.gov.v1.GenesisState.lips:type_name -> zerone.gov.v1.LIP
-	7, // 5: zerone.gov.v1.GenesisState.votes:type_name -> zerone.gov.v1.Vote
-	2, // 6: zerone.gov.v1.GenesisState.upgrade_plans:type_name -> zerone.gov.v1.GenesisUpgradePlan
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	1,  // 0: zerone.gov.v1.Params.category_configs:type_name -> zerone.gov.v1.CategoryConfig
+	4,  // 1: zerone.gov.v1.Params.research_fund_voters:type_name -> zerone.gov.v1.ResearchFundVoters
+	5,  // 2: zerone.gov.v1.GenesisUpgradePlan.plan:type_name -> zerone.gov.v1.UpgradePlan
+	0,  // 3: zerone.gov.v1.GenesisState.params:type_name -> zerone.gov.v1.Params
+	6,  // 4: zerone.gov.v1.GenesisState.lips:type_name -> zerone.gov.v1.LIP
+	7,  // 5: zerone.gov.v1.GenesisState.votes:type_name -> zerone.gov.v1.Vote
+	2,  // 6: zerone.gov.v1.GenesisState.upgrade_plans:type_name -> zerone.gov.v1.GenesisUpgradePlan
+	8,  // 7: zerone.gov.v1.GenesisState.research_fund_governance:type_name -> zerone.gov.v1.ResearchFundGovernanceState
+	9,  // 8: zerone.gov.v1.GenesisState.seat_elections:type_name -> zerone.gov.v1.SeatElectionProposal
+	10, // 9: zerone.gov.v1.GenesisState.seat_election_votes:type_name -> zerone.gov.v1.SeatElectionVote
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_zerone_gov_v1_genesis_proto_init() }

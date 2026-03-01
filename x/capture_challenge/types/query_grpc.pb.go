@@ -23,6 +23,7 @@ const (
 	Query_Challenge_FullMethodName          = "/zerone.capture_challenge.v1.Query/Challenge"
 	Query_BountyPool_FullMethodName         = "/zerone.capture_challenge.v1.Query/BountyPool"
 	Query_ChallengesByDomain_FullMethodName = "/zerone.capture_challenge.v1.Query/ChallengesByDomain"
+	Query_ActiveChallenges_FullMethodName   = "/zerone.capture_challenge.v1.Query/ActiveChallenges"
 )
 
 // QueryClient is the client API for Query service.
@@ -35,6 +36,7 @@ type QueryClient interface {
 	Challenge(ctx context.Context, in *QueryChallengeRequest, opts ...grpc.CallOption) (*QueryChallengeResponse, error)
 	BountyPool(ctx context.Context, in *QueryBountyPoolRequest, opts ...grpc.CallOption) (*QueryBountyPoolResponse, error)
 	ChallengesByDomain(ctx context.Context, in *QueryChallengesByDomainRequest, opts ...grpc.CallOption) (*QueryChallengesByDomainResponse, error)
+	ActiveChallenges(ctx context.Context, in *QueryActiveChallengesRequest, opts ...grpc.CallOption) (*QueryActiveChallengesResponse, error)
 }
 
 type queryClient struct {
@@ -85,6 +87,16 @@ func (c *queryClient) ChallengesByDomain(ctx context.Context, in *QueryChallenge
 	return out, nil
 }
 
+func (c *queryClient) ActiveChallenges(ctx context.Context, in *QueryActiveChallengesRequest, opts ...grpc.CallOption) (*QueryActiveChallengesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryActiveChallengesResponse)
+	err := c.cc.Invoke(ctx, Query_ActiveChallenges_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -95,6 +107,7 @@ type QueryServer interface {
 	Challenge(context.Context, *QueryChallengeRequest) (*QueryChallengeResponse, error)
 	BountyPool(context.Context, *QueryBountyPoolRequest) (*QueryBountyPoolResponse, error)
 	ChallengesByDomain(context.Context, *QueryChallengesByDomainRequest) (*QueryChallengesByDomainResponse, error)
+	ActiveChallenges(context.Context, *QueryActiveChallengesRequest) (*QueryActiveChallengesResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -116,6 +129,9 @@ func (UnimplementedQueryServer) BountyPool(context.Context, *QueryBountyPoolRequ
 }
 func (UnimplementedQueryServer) ChallengesByDomain(context.Context, *QueryChallengesByDomainRequest) (*QueryChallengesByDomainResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ChallengesByDomain not implemented")
+}
+func (UnimplementedQueryServer) ActiveChallenges(context.Context, *QueryActiveChallengesRequest) (*QueryActiveChallengesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ActiveChallenges not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -210,6 +226,24 @@ func _Query_ChallengesByDomain_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_ActiveChallenges_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryActiveChallengesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ActiveChallenges(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ActiveChallenges_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ActiveChallenges(ctx, req.(*QueryActiveChallengesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -232,6 +266,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ChallengesByDomain",
 			Handler:    _Query_ChallengesByDomain_Handler,
+		},
+		{
+			MethodName: "ActiveChallenges",
+			Handler:    _Query_ActiveChallenges_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

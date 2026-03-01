@@ -18,7 +18,15 @@ var (
 	ResearchSpendCounterKey = []byte{0x08}
 	FundingRecordKeyPrefix  = []byte{0x0A}
 	SybilParamsKey          = []byte{0x0B}
-	UpgradePlanKeyPrefix    = []byte{0x0C}
+	UpgradePlanKeyPrefix           = []byte{0x0C}
+	ResearchFundGovernanceKey      = []byte{0x0D}
+	DistinctVoterKeyPrefix         = []byte{0x0E}
+	ResearchCommunityVotePrefix    = []byte{0x0F}
+	SeatElectionKeyPrefix          = []byte{0x10}
+	SeatElectionVoteKeyPrefix      = []byte{0x11}
+	SeatElectionCounterKey         = []byte{0x12}
+	SeatElectionVoteDedupePrefix       = []byte{0x13}
+	PhaseTransitionKeyPrefix = []byte{0x14} // lip_id -> PhaseTransitionProposal
 )
 
 // LIPKey returns the store key for a LIP by id.
@@ -71,4 +79,111 @@ func ResearchSpendKey(proposalID uint64) []byte {
 // ResearchSpendIterPrefix returns the prefix for iterating all research spend proposals.
 func ResearchSpendIterPrefix() []byte {
 	return ResearchSpendKeyPrefix
+}
+
+// DistinctVoterKey returns the store key for a distinct voter record.
+func DistinctVoterKey(voter string) []byte {
+	return append(DistinctVoterKeyPrefix, []byte(voter)...)
+}
+
+// ResearchCommunityVoteKey returns the key for a community seat vote on a research proposal.
+func ResearchCommunityVoteKey(proposalID uint64, voter string) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	key := append(ResearchCommunityVotePrefix, bz...)
+	key = append(key, 0x00) // separator
+	key = append(key, []byte(voter)...)
+	return key
+}
+
+// ResearchCommunityVotePrefixForProposal returns the prefix for iterating all community votes on a proposal.
+func ResearchCommunityVotePrefixForProposal(proposalID uint64) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	key := append(ResearchCommunityVotePrefix, bz...)
+	key = append(key, 0x00)
+	return key
+}
+
+// SeatElectionKey returns the store key for a seat election proposal by ID.
+func SeatElectionKey(proposalID uint64) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	return append(SeatElectionKeyPrefix, bz...)
+}
+
+// SeatElectionVoteKey returns the store key for a seat election vote.
+func SeatElectionVoteKey(proposalID uint64, voter string) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	key := append(SeatElectionVoteKeyPrefix, bz...)
+	key = append(key, 0x00)
+	key = append(key, []byte(voter)...)
+	return key
+}
+
+// SeatElectionVoteDedupeKey returns the dedupe key for a seat election vote.
+func SeatElectionVoteDedupeKey(proposalID uint64, voter string) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	key := append(SeatElectionVoteDedupePrefix, bz...)
+	key = append(key, 0x00)
+	key = append(key, []byte(voter)...)
+	return key
+}
+
+// SeatElectionVotePrefixForProposal returns the prefix for iterating all votes on a seat election.
+func SeatElectionVotePrefixForProposal(proposalID uint64) []byte {
+	bz := make([]byte, 8)
+	bz[0] = byte(proposalID >> 56)
+	bz[1] = byte(proposalID >> 48)
+	bz[2] = byte(proposalID >> 40)
+	bz[3] = byte(proposalID >> 32)
+	bz[4] = byte(proposalID >> 24)
+	bz[5] = byte(proposalID >> 16)
+	bz[6] = byte(proposalID >> 8)
+	bz[7] = byte(proposalID)
+	key := append(SeatElectionVoteKeyPrefix, bz...)
+	key = append(key, 0x00)
+	return key
+}
+
+// PhaseTransitionKey returns the store key for phase transition metadata by LIP ID.
+func PhaseTransitionKey(lipID string) []byte {
+	return append(PhaseTransitionKeyPrefix, []byte(lipID)...)
 }

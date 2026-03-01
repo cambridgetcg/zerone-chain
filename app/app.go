@@ -8,6 +8,7 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +18,7 @@ import (
 
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/cosmos/gogoproto/proto"
+	gwv2runtime "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/gorilla/mux"
 	"github.com/spf13/cast"
 
@@ -75,6 +77,7 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	// IBC modules
+	capability "github.com/cosmos/ibc-go/modules/capability"
 	capabilitykeeper "github.com/cosmos/ibc-go/modules/capability/keeper"
 	capabilitytypes "github.com/cosmos/ibc-go/modules/capability/types"
 	ibctransfer "github.com/cosmos/ibc-go/v8/modules/apps/transfer"
@@ -301,12 +304,15 @@ var (
 		// ===== Zerone custom module accounts — added by batch =====
 		zeroneauthtypes.ModuleName:    {authtypes.Minter}, // Minter for bootstrap fund
 		zeronestakingtypes.ModuleName: {authtypes.Burner, authtypes.Staking},
-		vestingrewardstypes.ModuleName:        {authtypes.Minter, authtypes.Burner}, // Minter for block rewards, Burner for burn split
-		vestingrewardstypes.ResearchFundModuleName: nil,                              // research_fund: receive-only
+		vestingrewardstypes.ModuleName:        {authtypes.Minter, authtypes.Burner}, // Minter for block rewards, Burner retained for interface compat
+		vestingrewardstypes.ResearchFundModuleName:    nil,                           // research_fund: receive-only
+		vestingrewardstypes.DevelopmentFundModuleName: nil,                           // development_fund: receive-only
 		zeroneontologytypes.ModuleName:             nil,                              // ontology: receive proposal stake
 		zeroneknowledgetypes.ModuleName:            {authtypes.Burner},               // knowledge: burn slashed claim stakes
+		zeroneknowledgetypes.BootstrapFundModuleName:    {authtypes.Minter},              // knowledge_bootstrap_fund: genesis mint
+		zeroneknowledgetypes.VindicationEscrowModuleName: nil,                           // vindication_escrow: holds minority slashes until vindication or expiry
 		zeronetokenstypes.ModuleName:               {authtypes.Minter, authtypes.Burner}, // tokens: mint/burn for wrap/unwrap + emissions
-		zeronebillingtypes.ModuleName:              {authtypes.Burner},                        // billing: burn split
+		zeronebillingtypes.ModuleName:              {authtypes.Burner},                        // billing: revenue split
 		zeronelptypes.ModuleName:                   {authtypes.Minter, authtypes.Burner}, // liquiditypool: mint/burn LP tokens
 		zeronegovtypes.ModuleName:                  nil,                                  // gov: receive stake deposits
 		zeronechannelstypes.ModuleName:             nil,                                  // channels: escrow deposits
@@ -314,11 +320,12 @@ var (
 		zeronescheduletypes.ModuleName:             nil,                                  // schedule: fee escrow
 		zeronecptypes.ModuleName:                   {authtypes.Burner, authtypes.Staking}, // compute_pool: stake escrow
 		zeronediscoverytypes.ModuleName:            nil,                                  // discovery: stake escrow
+		"protocol_treasury":                        nil,                                  // protocol_treasury: receive revenue split
 		zeronebvmtypes.ModuleName:                  {authtypes.Burner},                   // bvm: burn deploy fees
 		zeronedisputestypes.ModuleName:             {authtypes.Burner},                   // disputes: bond escrow + burn
 		zeronequalificationtypes.ModuleName:        nil,                                  // qualification: stake escrow
 		zeroneemergencytypes.ModuleName:            nil,                                  // emergency: no mint/burn — signal-only module
-		zeronecctypes.ModuleName:                   {authtypes.Burner},                   // capture_challenge: burn rejected stakes
+		zeronecctypes.ModuleName:                   {authtypes.Burner},                   // capture_challenge: rejected stakes to dev fund
 		zeronecdtypes.ModuleName:                   nil,                                  // capture_defense: no mint/burn
 		zeroneibcrltypes.ModuleName:                nil,                                  // ibcratelimit: no mint/burn — middleware only
 		zeroneicaauthtypes.ModuleName:              nil,                                  // icaauth: no mint/burn — auth wrapper only
@@ -327,9 +334,9 @@ var (
 		zeroneaptypes.ModuleName:                   nil,                                  // autopoiesis: no mint/burn — signal-only module
 		zeroneemtypes.ModuleName:                   {authtypes.Burner},                   // evidence_mgmt: burn challenged bonds
 		zeronecpottypes.ModuleName:                 nil,                                  // claiming_pot: receive-only, bank sends from module
-		zeronettreetypes.ModuleName:                {authtypes.Burner},                   // tree: burn revenue split
-		zeronepartnershipstypes.ModuleName:         {authtypes.Burner},                   // partnerships: burn dissolved stakes
-		zeronetoolboxtypes.ModuleName:              {authtypes.Burner},                   // toolbox: burn deregistration fees
+		zeronettreetypes.ModuleName:                {authtypes.Burner},                   // tree: revenue split
+		zeronepartnershipstypes.ModuleName:         {authtypes.Burner},                   // partnerships: dissolved stakes to dev fund
+		zeronetoolboxtypes.ModuleName:              {authtypes.Burner},                   // toolbox: deregistration fees
 		"treasury_protocol":                        nil,                                  // treasury_protocol: receive-only
 	}
 )
@@ -468,6 +475,10 @@ type ZeroneApp struct {
 	// ABCI++ vote extension config (nil until validator is configured)
 	VoteExtConfig *VoteExtensionConfig
 
+	// Oracle client for querying the evaluation sidecar (nil if disabled).
+	// Stored here so it can be attached to VoteExtConfig when the validator is configured.
+	oracleClient OracleClient
+
 	// Module manager
 	ModuleManager *module.Manager
 
@@ -476,6 +487,16 @@ type ZeroneApp struct {
 
 	// Configurator for module msg/query registration
 	configurator module.Configurator
+}
+
+// SetVoteExtConfig configures the validator's vote extension settings.
+// If an oracle client was initialized from app.toml, it is automatically
+// attached to the config so the vote extension handler can query it.
+func (app *ZeroneApp) SetVoteExtConfig(config *VoteExtensionConfig) {
+	if app.oracleClient != nil && config != nil {
+		config.OracleClient = app.oracleClient
+	}
+	app.VoteExtConfig = config
 }
 
 // NewZeroneApp creates and initializes a new ZeroneApp instance.
@@ -893,6 +914,9 @@ func NewZeroneApp(
 	)
 	bvmKnowledgeAdapter := zeroneknowledgekeeper.NewBVMKnowledgeAdapter(app.KnowledgeKeeper)
 	app.BVMKeeper.SetKnowledgeKeeper(bvmKnowledgeAdapter)
+	bvmAuthAdapter := zeroneauthkeeper.NewBVMAuthAdapter(app.ZeroneAuthKeeper)
+	app.BVMKeeper.SetAuthKeeper(bvmAuthAdapter)
+	app.BVMKeeper.SetHomeKeeper(zeronehomekeeper.NewBVMHomeAdapter(app.HomeKeeper))
 
 	disputesStakingAdapter := zeronestakingkeeper.NewDisputesStakingKeeperAdapter(app.ZeroneStakingKeeper)
 	disputesKnowledgeAdapter := zeroneknowledgekeeper.NewDisputesKnowledgeAdapter(app.KnowledgeKeeper)
@@ -915,6 +939,12 @@ func NewZeroneApp(
 	)
 	// TODO: wire CaptureDefenseKeeper when x/capture_defense is available:
 	// app.QualificationKeeper.SetCaptureDefenseKeeper(captureDefenseAdapter)
+	app.QualificationKeeper.SetOntologyKeeper(&app.ZeroneOntologyKeeper)
+
+	// Wire domain qualification into knowledge verification flow (R26-3).
+	app.KnowledgeKeeper.SetDomainQualificationKeeper(
+		zeronequalificationkeeper.NewKnowledgeDomainQualificationAdapter(app.QualificationKeeper),
+	)
 
 	emergencyStakingAdapter := zeronestakingkeeper.NewEmergencyStakingAdapter(app.ZeroneStakingKeeper)
 	app.EmergencyKeeper = zeroneemergencykeeper.NewKeeper(
@@ -923,6 +953,7 @@ func NewZeroneApp(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		emergencyStakingAdapter,
 	)
+	app.ZeroneGovKeeper.SetEmergencyKeeper(zeroneemergencykeeper.NewGovEmergencyAdapter(app.EmergencyKeeper))
 
 	// ---- Capture Defense + Capture Challenge keepers (R6-4) ----
 	// capture_defense first (capture_challenge depends on it)
@@ -931,12 +962,46 @@ func NewZeroneApp(
 		appCodec,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
+	app.CaptureDefenseKeeper.SetOntologyKeeper(&app.ZeroneOntologyKeeper)
 
 	app.CaptureChallengeKeeper = zeronecckeeper.NewKeeper(
 		sdkruntime.NewKVStoreService(keys[zeronecctypes.StoreKey]),
 		appCodec,
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		app.BankKeeper,
+	)
+
+	// R28-8: Wire capture defense immune system cross-module dependencies.
+
+	// capture_defense → capture_challenge (auto-submit challenges when flagged)
+	app.CaptureDefenseKeeper.SetChallengeKeeper(
+		zeronecckeeper.NewCaptureDefenseAutoChallenger(app.CaptureChallengeKeeper),
+	)
+
+	// capture_challenge → capture_defense (read metrics, clear flags)
+	app.CaptureChallengeKeeper.SetCaptureDefenseKeeper(
+		zeronecdkeeper.NewChallengeCaptureDefenseAdapter(app.CaptureDefenseKeeper),
+	)
+
+	// capture_challenge → qualification (reduce weight on upheld challenge)
+	app.CaptureChallengeKeeper.SetQualificationKeeper(app.QualificationKeeper)
+
+	// capture_challenge → knowledge (increase threshold on upheld challenge)
+	app.CaptureChallengeKeeper.SetKnowledgeKeeper(app.KnowledgeKeeper)
+
+	// knowledge → capture_defense (feed verification history + reputation)
+	app.KnowledgeKeeper.SetCaptureDefenseKeeper(
+		zeronecdkeeper.NewKnowledgeCaptureDefenseAdapter(app.CaptureDefenseKeeper),
+	)
+
+	// R31-4: capture_defense → knowledge (verification activity for HHI threshold relaxation)
+	app.CaptureDefenseKeeper.SetKnowledgeKeeper(
+		zeroneknowledgekeeper.NewCaptureDefenseKnowledgeAdapter(app.KnowledgeKeeper),
+	)
+
+	// alignment → capture_defense (read flagged domain count for security sensor)
+	app.AlignmentKeeper.SetCaptureDefenseKeeper(
+		zeronecdkeeper.NewAlignmentCaptureDefenseAdapter(app.CaptureDefenseKeeper),
 	)
 
 	// IBCRateLimitKeeper already created above (before TransferKeeper).
@@ -971,6 +1036,12 @@ func NewZeroneApp(
 		alignmentEmergencyAdapter,
 		alignmentVestingRewardsAdapter,
 	)
+	// R29-6: Wire global pacing from alignment to consuming modules.
+	alignmentPacingAdapter := zeronealignmentkeeper.NewAlignmentPacingAdapter(app.AlignmentKeeper)
+	app.KnowledgeKeeper.SetPacingKeeper(alignmentPacingAdapter)
+	app.CaptureDefenseKeeper.SetPacingKeeper(alignmentPacingAdapter)
+	app.PartnershipsKeeper.SetPacingKeeper(alignmentPacingAdapter)
+	app.DiscoveryKeeper.SetPacingKeeper(alignmentPacingAdapter)
 	// ---- Autopoiesis keeper (R7-1) ----
 	apStakingAdapter := zeronestakingkeeper.NewStakingForAutopoiesisAdapter(app.ZeroneStakingKeeper)
 	app.AutopoiesisKeeper = zeroneapkeeper.NewKeeper(
@@ -1046,6 +1117,44 @@ func NewZeroneApp(
 	// Break home↔partnerships circular dependency via setter.
 	app.PartnershipsKeeper.SetHomeKeeper(app.HomeKeeper)
 
+	// Wire partnership reward routing into knowledge verification flow (R26-4).
+	app.KnowledgeKeeper.SetPartnershipKeeper(
+		zeronepartnershipskeeper.NewKnowledgePartnershipAdapter(app.PartnershipsKeeper),
+	)
+
+	// Wire zerone auth into knowledge and partnerships for role bonuses (R28-5).
+	knowledgeAuthAdapter := zeroneauthkeeper.NewKnowledgeAuthAdapter(app.ZeroneAuthKeeper)
+	app.KnowledgeKeeper.SetZeroneAuthKeeper(knowledgeAuthAdapter)
+	app.PartnershipsKeeper.SetZeroneAuthKeeper(knowledgeAuthAdapter)
+
+	// R29-5: Wire structural immunity cross-module dependencies.
+	// capture_defense → partnerships (read density, set formation bonus)
+	app.CaptureDefenseKeeper.SetPartnershipsKeeper(
+		zeronepartnershipskeeper.NewCaptureDefensePartnershipsAdapter(app.PartnershipsKeeper),
+	)
+	// partnerships → capture_defense (read flagged status)
+	app.PartnershipsKeeper.SetCaptureDefenseKeeper(
+		zeronecdkeeper.NewPartnershipsCaptureDefenseAdapter(app.CaptureDefenseKeeper),
+	)
+
+	// R31-4: Wire Metal→Water cross-module dependencies.
+	// discovery → qualification (qualified domains for match scoring)
+	app.DiscoveryKeeper.SetQualificationKeeper(app.QualificationKeeper)
+	// partnerships → ontology (related strata for cross-stratum matching)
+	app.PartnershipsKeeper.SetOntologyKeeper(&app.ZeroneOntologyKeeper)
+
+	// R31-5: Wire Water → Wood — mentorship dividends flow to knowledge.
+	app.PartnershipsKeeper.SetKnowledgeKeeper(
+		zeronepartnershipskeeper.NewKnowledgeDividendAdapter(app.KnowledgeKeeper),
+	)
+
+	// R31-3: Wire alignment health signal into governance for expedited voting.
+	app.ZeroneGovKeeper.SetAlignmentKeeper(&app.AlignmentKeeper)
+	// R31-3: Wire partnerships keeper into governance for domain formation freezes.
+	app.ZeroneGovKeeper.SetPartnershipsKeeper(
+		zeronepartnershipskeeper.NewGovPartnershipsAdapter(app.PartnershipsKeeper),
+	)
+
 	// ---- Toolbox keeper (R8-1) ----
 	toolboxRFDAdapter := vestingrewardskeeper.NewResearchFundDepositorAdapter(app.VestingRewardsKeeper)
 	app.ToolboxKeeper = zeronetoolboxkeeper.NewKeeper(
@@ -1096,6 +1205,7 @@ func NewZeroneApp(
 		upgrade.NewAppModule(app.UpgradeKeeper, addresscodec.NewBech32Codec(AccountAddressPrefix)),
 		evidence.NewAppModule(app.EvidenceKeeper),
 		consensus.NewAppModule(appCodec, app.ConsensusKeeper),
+		capability.NewAppModule(appCodec, *app.CapabilityKeeper, false),
 		ibc.NewAppModule(app.IBCKeeper),
 		ibctransfer.NewAppModule(app.TransferKeeper),
 		ibcfee.NewAppModule(app.IBCFeeKeeper),
@@ -1315,12 +1425,29 @@ func NewZeroneApp(
 	app.SetExtendVoteHandler(app.ExtendVoteHandler())
 	app.SetVerifyVoteExtensionHandler(app.VerifyVoteExtensionHandler())
 
+	// Wire oracle client if configured via app.toml [oracle] section.
+	oracleEnabled := cast.ToBool(appOpts.Get("oracle.enabled"))
+	if oracleEnabled {
+		oracleEndpoint := cast.ToString(appOpts.Get("oracle.endpoint"))
+		oracleTimeout := cast.ToDuration(appOpts.Get("oracle.timeout"))
+		oracleMinConf := cast.ToFloat64(appOpts.Get("oracle.min-confidence"))
+		if oracleEndpoint != "" {
+			logger.Info("oracle sidecar enabled",
+				"endpoint", oracleEndpoint,
+				"timeout", oracleTimeout,
+				"min_confidence", oracleMinConf,
+			)
+			app.oracleClient = NewHTTPOracleClient(oracleEndpoint, oracleTimeout, oracleMinConf)
+		}
+	}
+
 	if loadLatest {
 		if err := app.LoadLatestVersion(); err != nil {
 			logger.Error("error loading latest version", "err", err)
 			os.Exit(1)
 		}
-	}
+
+		}
 
 	return app
 }
@@ -1345,7 +1472,22 @@ func (app *ZeroneApp) InitChainer(ctx sdk.Context, req *abci.RequestInitChain) (
 	}
 
 	app.UpgradeKeeper.SetModuleVersionMap(ctx, app.ModuleManager.GetVersionMap())
-	return app.ModuleManager.InitGenesis(ctx, app.appCodec, genesisState)
+	resp, err := app.ModuleManager.InitGenesis(ctx, app.appCodec, genesisState)
+	if err != nil {
+		return nil, err
+	}
+
+	// Write a sentinel key to every IAVL store so that none remain empty.
+	// Empty IAVL stores cause CacheMultiStoreWithVersion to fail because
+	// GetImmutable returns ErrVersionDoesNotExist for trees with a nil root.
+	for _, key := range app.keys {
+		store := ctx.KVStore(key)
+		if !store.Has([]byte("_iavl_init")) {
+			store.Set([]byte("_iavl_init"), []byte{0x01})
+		}
+	}
+
+	return resp, nil
 }
 
 // zrnDenomMetadata returns the canonical ZRN token denomination metadata.
@@ -1424,6 +1566,49 @@ func (app *ZeroneApp) RegisterAPIRoutes(apiSvr *api.Server, apiConfig config.API
 	clientCtx := apiSvr.ClientCtx
 	authtypes.RegisterInterfaces(clientCtx.InterfaceRegistry)
 	ModuleBasics.RegisterGRPCGatewayRoutes(clientCtx, apiSvr.GRPCGatewayRouter)
+
+	// Register gRPC-gateway v2 routes for all Zerone custom modules.
+	// The generated query.pb.gw.go files use grpc-gateway/v2, while the SDK's
+	// GRPCGatewayRouter uses v1 — incompatible types. We create a separate v2
+	// mux and mount it for /zerone/ paths.
+	gwmux := gwv2runtime.NewServeMux()
+	ctx := context.Background()
+	must := func(err error) {
+		if err != nil {
+			panic(err)
+		}
+	}
+	must(zeroneauthtypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneauthtypes.NewQueryClient(clientCtx)))
+	must(zeroneknowledgetypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneknowledgetypes.NewQueryClient(clientCtx)))
+	must(zeroneontologytypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneontologytypes.NewQueryClient(clientCtx)))
+	must(zeronestakingtypes.RegisterQueryHandlerClient(ctx, gwmux, zeronestakingtypes.NewQueryClient(clientCtx)))
+	must(zeronebillingtypes.RegisterQueryHandlerClient(ctx, gwmux, zeronebillingtypes.NewQueryClient(clientCtx)))
+	must(zeronelptypes.RegisterQueryHandlerClient(ctx, gwmux, zeronelptypes.NewQueryClient(clientCtx)))
+	must(zeronetokenstypes.RegisterQueryHandlerClient(ctx, gwmux, zeronetokenstypes.NewQueryClient(clientCtx)))
+	must(zeronechannelstypes.RegisterQueryHandlerClient(ctx, gwmux, zeronechannelstypes.NewQueryClient(clientCtx)))
+	must(zeronegovtypes.RegisterQueryHandlerClient(ctx, gwmux, zeronegovtypes.NewQueryClient(clientCtx)))
+	must(zeronehometypes.RegisterQueryHandlerClient(ctx, gwmux, zeronehometypes.NewQueryClient(clientCtx)))
+	must(zeronepartnershipstypes.RegisterQueryHandlerClient(ctx, gwmux, zeronepartnershipstypes.NewQueryClient(clientCtx)))
+	must(zeronescheduletypes.RegisterQueryHandlerClient(ctx, gwmux, zeronescheduletypes.NewQueryClient(clientCtx)))
+	must(zeronecptypes.RegisterQueryHandlerClient(ctx, gwmux, zeronecptypes.NewQueryClient(clientCtx)))
+	must(zeronediscoverytypes.RegisterQueryHandlerClient(ctx, gwmux, zeronediscoverytypes.NewQueryClient(clientCtx)))
+	must(zeronebvmtypes.RegisterQueryHandlerClient(ctx, gwmux, zeronebvmtypes.NewQueryClient(clientCtx)))
+	must(vestingrewardstypes.RegisterQueryHandlerClient(ctx, gwmux, vestingrewardstypes.NewQueryClient(clientCtx)))
+	must(zeronedisputestypes.RegisterQueryHandlerClient(ctx, gwmux, zeronedisputestypes.NewQueryClient(clientCtx)))
+	must(zeronequalificationtypes.RegisterQueryHandlerClient(ctx, gwmux, zeronequalificationtypes.NewQueryClient(clientCtx)))
+	must(zeroneemergencytypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneemergencytypes.NewQueryClient(clientCtx)))
+	must(zeroneibcrltypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneibcrltypes.NewQueryClient(clientCtx)))
+	must(zeroneicaauthtypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneicaauthtypes.NewQueryClient(clientCtx)))
+	must(zeronecdtypes.RegisterQueryHandlerClient(ctx, gwmux, zeronecdtypes.NewQueryClient(clientCtx)))
+	must(zeronecctypes.RegisterQueryHandlerClient(ctx, gwmux, zeronecctypes.NewQueryClient(clientCtx)))
+	must(zeronealignmenttypes.RegisterQueryHandlerClient(ctx, gwmux, zeronealignmenttypes.NewQueryClient(clientCtx)))
+	must(zeroneresearchtypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneresearchtypes.NewQueryClient(clientCtx)))
+	must(zeroneaptypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneaptypes.NewQueryClient(clientCtx)))
+	must(zeroneemtypes.RegisterQueryHandlerClient(ctx, gwmux, zeroneemtypes.NewQueryClient(clientCtx)))
+	must(zeronecpottypes.RegisterQueryHandlerClient(ctx, gwmux, zeronecpottypes.NewQueryClient(clientCtx)))
+	must(zeronetoolboxtypes.RegisterQueryHandlerClient(ctx, gwmux, zeronetoolboxtypes.NewQueryClient(clientCtx)))
+	must(zeronettreetypes.RegisterQueryHandlerClient(ctx, gwmux, zeronettreetypes.NewQueryClient(clientCtx)))
+	apiSvr.Router.PathPrefix("/zerone/").Handler(gwmux)
 
 	// Swagger UI placeholder — full OpenAPI served from proto-generated spec (R10-2)
 	if apiConfig.Swagger {

@@ -265,6 +265,28 @@ func (k Keeper) GetLink(ctx sdk.Context, source, target string) (*types.CrossStr
 	return &link, true
 }
 
+// GetLinksBySource returns all cross-stratum links originating from the given source domain.
+// Used by partnerships module for cross-stratum matching (R31-4).
+func (k Keeper) GetLinksBySource(ctx sdk.Context, sourceDomain string) []*types.CrossStratumLink {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := append(types.LinkKeyPrefix, []byte(sourceDomain+"/")...)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+
+	var links []*types.CrossStratumLink
+	for ; iter.Valid(); iter.Next() {
+		var link types.CrossStratumLink
+		if err := proto.Unmarshal(iter.Value(), &link); err != nil {
+			continue
+		}
+		links = append(links, &link)
+	}
+	return links
+}
+
 // GetAllLinks returns all cross-stratum links.
 func (k Keeper) GetAllLinks(ctx sdk.Context) []*types.CrossStratumLink {
 	store := k.storeService.OpenKVStore(ctx)

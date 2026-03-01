@@ -8,6 +8,10 @@ message AlignmentState {
   bool enabled = 1;
   uint64 last_observation_height = 2;
   uint64 observation_count = 3;
+  // Whether degraded-frequency mode is active (2x observation rate).
+  bool degraded_frequency_active = 4;
+  // Previous health category for transition detection.
+  string previous_category = 5;
 }
 
 // AlignmentObservation records sensor readings at a given height.

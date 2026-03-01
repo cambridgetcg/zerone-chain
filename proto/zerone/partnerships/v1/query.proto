@@ -22,6 +22,15 @@ service Query {
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
     option (google.api.http).get = "/zerone/partnerships/v1/params";
   }
+  rpc Mentorship(QueryMentorshipRequest) returns (QueryMentorshipResponse) {
+    option (google.api.http).get = "/zerone/partnerships/v1/mentorship/{id}";
+  }
+  rpc MentorshipsByAddress(QueryMentorshipsByAddressRequest) returns (QueryMentorshipsByAddressResponse) {
+    option (google.api.http).get = "/zerone/partnerships/v1/mentorships/{address}";
+  }
+  rpc FormationMatches(QueryFormationMatchesRequest) returns (QueryFormationMatchesResponse) {
+    option (google.api.http).get = "/zerone/partnerships/v1/matches";
+  }
 }
 
 message QueryPartnershipRequest { string id = 1; }
@@ -34,3 +43,9 @@ message QueryFormationPoolRequest {}
 message QueryFormationPoolResponse { repeated PoolEntry entries = 1; }
 message QueryParamsRequest {}
 message QueryParamsResponse { Params params = 1; }
+message QueryMentorshipRequest { string id = 1; }
+message QueryMentorshipResponse { Mentorship mentorship = 1; }
+message QueryMentorshipsByAddressRequest { string address = 1; }
+message QueryMentorshipsByAddressResponse { repeated Mentorship mentorships = 1; }
+message QueryFormationMatchesRequest {}
+message QueryFormationMatchesResponse { repeated FormationMatch matches = 1; }

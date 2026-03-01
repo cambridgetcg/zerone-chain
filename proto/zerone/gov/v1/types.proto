@@ -51,6 +51,37 @@ message UpgradePlan {
   string info   = 3; // release notes URL, binary hash, etc.
 }
 
+// ResearchFundPhase tracks the current governance phase of the research fund.
+enum ResearchFundPhase {
+  RESEARCH_FUND_PHASE_UNSPECIFIED = 0;
+  RESEARCH_FUND_PHASE_GENESIS_PAIR = 1;   // 2-of-2: founder + AI
+  RESEARCH_FUND_PHASE_OBSERVER = 2;        // 2-of-3: founder + AI + 1 community
+  RESEARCH_FUND_PHASE_BALANCED = 3;        // 3-of-5: founder + AI + 3 community
+  RESEARCH_FUND_PHASE_FULL_GOVERNANCE = 4; // standard LIP process
+}
+
+// ResearchFundGovernanceState tracks the research fund governance lifecycle.
+message ResearchFundGovernanceState {
+  ResearchFundPhase current_phase = 1;
+  uint64 phase_started_at_block = 2;
+  uint64 proposals_executed_in_phase = 3;
+  uint64 last_transition_block = 4;
+  repeated string community_seats = 5;        // bech32 addresses of current community seat holders
+  repeated uint64 seat_term_end_blocks = 6;   // term expiry per community seat
+  uint64 rollback_cooldown_until = 7;          // block height; 0 = no cooldown
+}
+
+// PhaseTransitionConditions records the metrics at time of transition proposal.
+message PhaseTransitionConditions {
+  uint64 distinct_lip_voters = 1;
+  uint64 active_guardians = 2;
+  string research_fund_balance = 3;            // uzrn bigint string
+  uint64 chain_age_blocks = 4;
+  uint64 proposals_executed_in_phase = 5;
+  uint64 community_seat_participation = 6;
+  uint64 emergency_halts_from_misuse = 7;
+}
+
 // ResearchSpendProposal represents a 2-of-2 research fund spending proposal.
 message ResearchSpendProposal {
   uint64 proposal_id     = 1;
@@ -72,4 +103,33 @@ message ResearchSpendProposal {
   uint64 voter2_voted_at = 17;
   uint64 executed_at     = 18;
   string execution_err   = 19;
+}
+
+// SeatElectionProposal nominates a candidate for a research fund community seat.
+message SeatElectionProposal {
+  uint64 proposal_id         = 1;
+  string proposer            = 2;   // bech32 — nominator
+  string candidate           = 3;   // bech32 — must be Guardian-tier
+  uint32 seat_index          = 4;   // 0 in Phase 1; 0-2 in Phase 2
+  string statement           = 5;   // candidate's governance statement (max 2000 chars)
+  string stage               = 6;   // nominated/accepted/discussion/voting/runoff/passed/failed/expired
+  string yes_stake           = 7;
+  string no_stake            = 8;
+  string abstain_stake       = 9;
+  uint64 acceptance_deadline = 10;
+  uint64 discussion_end_block = 11;
+  uint64 voting_end_block    = 12;
+  uint64 created_at_block    = 13;
+  bool   candidate_accepted  = 14;
+  bool   is_runoff           = 15;
+  repeated uint64 runoff_parent_ids = 16;
+}
+
+// SeatElectionVote records a single vote on a seat election proposal.
+message SeatElectionVote {
+  uint64 proposal_id = 1;
+  string voter       = 2;  // bech32 address
+  string option      = 3;  // "yes", "no", "abstain"
+  string stake       = 4;  // uzrn weight at time of vote
+  uint64 block       = 5;
 }

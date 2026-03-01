@@ -21,8 +21,9 @@ type Keeper struct {
 	stakingKeeper       types.StakingKeeper
 	ontologyKeeper      types.OntologyKeeper
 	autopoiesisKeeper   types.AutopoiesisKeeper
-	emergencyKeeper     types.EmergencyKeeper
+	emergencyKeeper      types.EmergencyKeeper
 	vestingRewardsKeeper types.VestingRewardsKeeper
+	captureDefenseKeeper types.CaptureDefenseKeeper // nil-safe, set post-init
 }
 
 // NewKeeper creates a new alignment module Keeper.
@@ -52,6 +53,11 @@ func NewKeeper(
 // This allows breaking circular dependencies during module wiring.
 func (k *Keeper) SetAutopoiesisKeeper(ak types.AutopoiesisKeeper) {
 	k.autopoiesisKeeper = ak
+}
+
+// SetCaptureDefenseKeeper sets the capture defense keeper post-initialization.
+func (k *Keeper) SetCaptureDefenseKeeper(cdk types.CaptureDefenseKeeper) {
+	k.captureDefenseKeeper = cdk
 }
 
 // prefixEndBytes returns the end key for prefix iteration (exclusive).

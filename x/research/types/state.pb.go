@@ -200,6 +200,7 @@ type Bounty struct {
 	ClaimedBy      string                 `protobuf:"bytes,9,opt,name=claimed_by,json=claimedBy,proto3" json:"claimed_by,omitempty"`                 // bech32 claimer address
 	FulfilledBy    string                 `protobuf:"bytes,10,opt,name=fulfilled_by,json=fulfilledBy,proto3" json:"fulfilled_by,omitempty"`          // bech32 fulfiller address
 	CreatedAt      uint64                 `protobuf:"varint,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`               // block height when created
+	ClaimedAt      uint64                 `protobuf:"varint,12,opt,name=claimed_at,json=claimedAt,proto3" json:"claimed_at,omitempty"`               // block height when claimed
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -307,6 +308,13 @@ func (x *Bounty) GetFulfilledBy() string {
 func (x *Bounty) GetCreatedAt() uint64 {
 	if x != nil {
 		return x.CreatedAt
+	}
+	return 0
+}
+
+func (x *Bounty) GetClaimedAt() uint64 {
+	if x != nil {
+		return x.ClaimedAt
 	}
 	return 0
 }
@@ -473,7 +481,7 @@ const file_zerone_research_v1_state_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x0f \x01(\x04R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\x10 \x01(\x04R\tupdatedAt\"\xbc\x02\n" +
+	"updated_at\x18\x10 \x01(\x04R\tupdatedAt\"\xdb\x02\n" +
 	"\x06Bounty\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acreator\x18\x02 \x01(\tR\acreator\x12\x14\n" +
@@ -488,7 +496,9 @@ const file_zerone_research_v1_state_proto_rawDesc = "" +
 	"\ffulfilled_by\x18\n" +
 	" \x01(\tR\vfulfilledBy\x12\x1d\n" +
 	"\n" +
-	"created_at\x18\v \x01(\x04R\tcreatedAt\"\xc8\x01\n" +
+	"created_at\x18\v \x01(\x04R\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"claimed_at\x18\f \x01(\x04R\tclaimedAt\"\xc8\x01\n" +
 	"\n" +
 	"PeerReview\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +

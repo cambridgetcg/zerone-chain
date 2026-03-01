@@ -23,6 +23,7 @@ type Keeper struct {
 	knowledgeKeeper types.KnowledgeKeeper
 	billingKeeper   types.BillingKeeper
 	homeKeeper      types.HomeKeeper
+	authKeeper      types.AuthKeeper
 }
 
 // NewKeeper creates a new bvm module Keeper.
@@ -65,6 +66,8 @@ func (k Keeper) GetAuthority() string { return k.authority }
 func (k *Keeper) SetKnowledgeKeeper(kk types.KnowledgeKeeper) { k.knowledgeKeeper = kk }
 func (k *Keeper) SetBillingKeeper(bk types.BillingKeeper)     { k.billingKeeper = bk }
 func (k *Keeper) SetHomeKeeper(hk types.HomeKeeper)           { k.homeKeeper = hk }
+func (k *Keeper) SetAuthKeeper(ak types.AuthKeeper)           { k.authKeeper = ak }
+func (k Keeper) GetAuthKeeper() types.AuthKeeper              { return k.authKeeper }
 
 // InitGenesis initializes the module's state from genesis.
 func (k Keeper) InitGenesis(ctx sdk.Context, gs *types.GenesisState) {

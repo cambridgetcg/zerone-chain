@@ -1110,3 +1110,1102 @@ func TestUpdateParamsGovernance(t *testing.T) {
 		t.Error("expected invalid params error")
 	}
 }
+
+// =======================================================================
+// Ported from legible-money prototype: Discovery module test coverage
+// =======================================================================
+
+// -----------------------------------------------------------------------
+// 16. TestDiscoveryRegistration
+// Full registration lifecycle: register with all fields, verify every
+// stored field including block height, default reputation, and indexes.
+// Ported from: OC-DISC-1 / TestRegisterAgentHandler
+// -----------------------------------------------------------------------
+
+func TestDiscoveryRegistration(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	addr := testAddr(200)
+	accAddr, _ := sdk.AccAddressFromBech32(addr)
+	bk.setBalance(accAddr, "uzrn", sdkmath.NewInt(500000000))
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:      addr,
+		DisplayName: "DiscoveryAgent",
+		Capabilities: []*types.AgentCapability{
+			{CapabilityType: "verification", Domains: []string{"mathematics"}, ConfidenceBps: 8000},
+			{CapabilityType: "research", Domains: []string{"physics"}, ConfidenceBps: 7000},
+		},
+		Domains:     []string{"mathematics", "physics"},
+		Stake:       "5000000",
+		Description: "Full registration test agent",
+		Metadata:    `{"tier":"premium"}`,
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	profile, found := k.GetProfile(ctx, addr)
+	if !found {
+		t.Fatal("registered profile not found")
+	}
+	if profile.Status != "active" {
+		t.Errorf("expected status active, got %s", profile.Status)
+	}
+	if profile.ReputationScore != 500000 {
+		t.Errorf("expected initial reputation 500000, got %d", profile.ReputationScore)
+	}
+	if profile.DisplayName != "DiscoveryAgent" {
+		t.Errorf("expected display_name DiscoveryAgent, got %s", profile.DisplayName)
+	}
+	if profile.Description != "Full registration test agent" {
+		t.Errorf("expected description preserved, got %s", profile.Description)
+	}
+	if profile.Metadata != `{"tier":"premium"}` {
+		t.Errorf("expected metadata preserved, got %s", profile.Metadata)
+	}
+	if profile.RegisteredAtBlock != 100 {
+		t.Errorf("expected registered_at_block 100, got %d", profile.RegisteredAtBlock)
+	}
+	if profile.LastActiveBlock != 100 {
+		t.Errorf("expected last_active_block 100, got %d", profile.LastActiveBlock)
+	}
+	if len(profile.Capabilities) != 2 {
+		t.Errorf("expected 2 capabilities, got %d", len(profile.Capabilities))
+	}
+	if len(profile.Domains) != 2 {
+		t.Errorf("expected 2 domains, got %d", len(profile.Domains))
+	}
+	if profile.Stake != "5000000" {
+		t.Errorf("expected stake 5000000, got %s", profile.Stake)
+	}
+
+	// Verify capability confidence was stored.
+	for _, cap := range profile.Capabilities {
+		if cap.CapabilityType == "verification" && cap.ConfidenceBps != 8000 {
+			t.Errorf("expected verification confidence_bps 8000, got %d", cap.ConfidenceBps)
+		}
+		if cap.CapabilityType == "research" && cap.ConfidenceBps != 7000 {
+			t.Errorf("expected research confidence_bps 7000, got %d", cap.ConfidenceBps)
+		}
+	}
+
+	// Verify both domain indexes were populated.
+	mathProfiles := k.GetProfilesByDomain(ctx, "mathematics")
+	if len(mathProfiles) != 1 {
+		t.Errorf("expected 1 math profile, got %d", len(mathProfiles))
+	}
+	physicsProfiles := k.GetProfilesByDomain(ctx, "physics")
+	if len(physicsProfiles) != 1 {
+		t.Errorf("expected 1 physics profile, got %d", len(physicsProfiles))
+	}
+
+	// Verify both capability indexes were populated.
+	verProfiles := k.GetProfilesByCapability(ctx, "verification")
+	if len(verProfiles) != 1 {
+		t.Errorf("expected 1 verification profile, got %d", len(verProfiles))
+	}
+	resProfiles := k.GetProfilesByCapability(ctx, "research")
+	if len(resProfiles) != 1 {
+		t.Errorf("expected 1 research profile, got %d", len(resProfiles))
+	}
+}
+
+// -----------------------------------------------------------------------
+// 17. TestDiscoveryRegistrationStakeBoundary
+// Boundary test: register at exactly min stake, just below, and above.
+// Ported from: OC-DISC-1 (InsufficientStakeRegistration boundary)
+// -----------------------------------------------------------------------
+
+func TestDiscoveryRegistrationStakeBoundary(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	// Default MinRegistrationStake is "1000000".
+	srv := keeper.NewMsgServerImpl(k)
+
+	// Test: stake 1 unit below minimum should fail.
+	addr1 := testAddr(201)
+	accAddr1, _ := sdk.AccAddressFromBech32(addr1)
+	bk.setBalance(accAddr1, "uzrn", sdkmath.NewInt(500000000))
+
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:  addr1,
+		Domains: []string{"math"},
+		Stake:   "999999", // 1 below 1000000
+	})
+	if err == nil {
+		t.Error("expected error for stake 1 unit below minimum")
+	}
+
+	// Verify no profile stored.
+	_, found := k.GetProfile(ctx, addr1)
+	if found {
+		t.Error("profile persisted despite insufficient stake rejection")
+	}
+
+	// Test: exactly at minimum should succeed.
+	_, err = srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:  addr1,
+		Domains: []string{"math"},
+		Stake:   "1000000", // exactly minimum
+	})
+	if err != nil {
+		t.Fatalf("registration at exact minimum should succeed: %v", err)
+	}
+
+	_, found = k.GetProfile(ctx, addr1)
+	if !found {
+		t.Error("profile not found after valid registration at exact minimum")
+	}
+
+	// Test: above minimum should succeed.
+	addr2 := testAddr(202)
+	accAddr2, _ := sdk.AccAddressFromBech32(addr2)
+	bk.setBalance(accAddr2, "uzrn", sdkmath.NewInt(500000000))
+
+	_, err = srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:  addr2,
+		Domains: []string{"math"},
+		Stake:   "2000000",
+	})
+	if err != nil {
+		t.Fatalf("registration above minimum should succeed: %v", err)
+	}
+}
+
+// -----------------------------------------------------------------------
+// 18. TestDiscoveryUpdate
+// Update preserves capabilities and domains when only mutable fields change.
+// Ported from: OC-DISC-7 (ProfileUpdatePreservation)
+// -----------------------------------------------------------------------
+
+func TestDiscoveryUpdate(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	addr := testAddr(203)
+	accAddr, _ := sdk.AccAddressFromBech32(addr)
+	bk.setBalance(accAddr, "uzrn", sdkmath.NewInt(500000000))
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	// Register with capabilities and multiple domains.
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:      addr,
+		DisplayName: "Original Name",
+		Capabilities: []*types.AgentCapability{
+			{CapabilityType: "verification", ConfidenceBps: 8000},
+			{CapabilityType: "research", ConfidenceBps: 7000},
+		},
+		Domains:     []string{"mathematics", "physics"},
+		Stake:       "1000000",
+		Description: "Original description",
+		Metadata:    `{"v":"1"}`,
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	// Update ONLY display name.
+	_, err = srv.UpdateProfile(ctx, &types.MsgUpdateProfile{
+		Sender:      addr,
+		DisplayName: "Updated Name",
+	})
+	if err != nil {
+		t.Fatalf("update failed: %v", err)
+	}
+
+	profile, _ := k.GetProfile(ctx, addr)
+	if profile.DisplayName != "Updated Name" {
+		t.Errorf("expected 'Updated Name', got '%s'", profile.DisplayName)
+	}
+
+	// Verify domains NOT clobbered.
+	if len(profile.Domains) != 2 {
+		t.Errorf("domains clobbered by display name update; expected 2, got %d", len(profile.Domains))
+	}
+
+	// Verify capabilities NOT clobbered.
+	if len(profile.Capabilities) != 2 {
+		t.Errorf("capabilities clobbered by display name update; expected 2, got %d", len(profile.Capabilities))
+	}
+
+	// Verify description NOT clobbered.
+	if profile.Description != "Original description" {
+		t.Errorf("description clobbered; expected 'Original description', got '%s'", profile.Description)
+	}
+
+	// Verify metadata NOT clobbered.
+	if profile.Metadata != `{"v":"1"}` {
+		t.Errorf("metadata clobbered; expected {\"v\":\"1\"}, got '%s'", profile.Metadata)
+	}
+
+	// Verify stake and reputation unchanged.
+	if profile.Stake != "1000000" {
+		t.Errorf("stake changed after update; expected 1000000, got %s", profile.Stake)
+	}
+	if profile.ReputationScore != 500000 {
+		t.Errorf("reputation changed after update; expected 500000, got %d", profile.ReputationScore)
+	}
+}
+
+// -----------------------------------------------------------------------
+// 19. TestDiscoveryDeregistration
+// Full deregistration lifecycle: register, verify indexes, deregister,
+// verify profile deleted, indexes cleaned, stake refunded.
+// Ported from: OC-DISC-4 (DeregisterStakeRefund)
+// -----------------------------------------------------------------------
+
+func TestDiscoveryDeregistration(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	addr := testAddr(204)
+	accAddr, _ := sdk.AccAddressFromBech32(addr)
+	bk.setBalance(accAddr, "uzrn", sdkmath.NewInt(500000000))
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:      addr,
+		DisplayName: "Deregister Test",
+		Capabilities: []*types.AgentCapability{
+			{CapabilityType: "verification"},
+			{CapabilityType: "research"},
+		},
+		Domains: []string{"mathematics", "physics", "chemistry"},
+		Stake:   "10000000",
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	// Verify indexes populated before deregistration.
+	if len(k.GetProfilesByDomain(ctx, "mathematics")) != 1 {
+		t.Fatal("expected 1 profile in mathematics domain before deregister")
+	}
+	if len(k.GetProfilesByDomain(ctx, "chemistry")) != 1 {
+		t.Fatal("expected 1 profile in chemistry domain before deregister")
+	}
+	if len(k.GetProfilesByCapability(ctx, "verification")) != 1 {
+		t.Fatal("expected 1 profile with verification capability before deregister")
+	}
+
+	// Deregister.
+	resp, err := srv.DeregisterProfile(ctx, &types.MsgDeregisterProfile{
+		Sender: addr,
+	})
+	if err != nil {
+		t.Fatalf("deregistration failed: %v", err)
+	}
+	if resp.RefundedAmount != "10000000" {
+		t.Errorf("expected refund 10000000, got %s", resp.RefundedAmount)
+	}
+
+	// Verify profile deleted.
+	_, found := k.GetProfile(ctx, addr)
+	if found {
+		t.Error("profile still exists after deregistration")
+	}
+
+	// Verify all domain indexes cleaned.
+	for _, domain := range []string{"mathematics", "physics", "chemistry"} {
+		profiles := k.GetProfilesByDomain(ctx, domain)
+		for _, p := range profiles {
+			if p.Address == addr {
+				t.Errorf("deregistered agent still appears in %s domain index", domain)
+			}
+		}
+	}
+
+	// Verify all capability indexes cleaned.
+	for _, capType := range []string{"verification", "research"} {
+		profiles := k.GetProfilesByCapability(ctx, capType)
+		for _, p := range profiles {
+			if p.Address == addr {
+				t.Errorf("deregistered agent still appears in %s capability index", capType)
+			}
+		}
+	}
+
+	// Verify stake refunded to sender.
+	expectedBal := sdkmath.NewInt(500000000)
+	actualBal := bk.balances[accAddr.String()+"/uzrn"]
+	if !actualBal.Equal(expectedBal) {
+		t.Errorf("expected sender balance %s after refund, got %s", expectedBal, actualBal)
+	}
+}
+
+// -----------------------------------------------------------------------
+// 20. TestDiscoveryDeregistrationNonExistent
+// Deregistering a never-registered address must fail gracefully.
+// Ported from: OC-DISC-10 (DeregisterNonExistent)
+// -----------------------------------------------------------------------
+
+func TestDiscoveryDeregistrationNonExistent(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	_, err := srv.DeregisterProfile(ctx, &types.MsgDeregisterProfile{
+		Sender: testAddr(999),
+	})
+	if err == nil {
+		t.Error("expected error for deregistering non-existent agent")
+	}
+
+	// Verify no profile was created as a side effect.
+	_, found := k.GetProfile(ctx, testAddr(999))
+	if found {
+		t.Error("profile appeared after failed deregister")
+	}
+
+	_ = k // suppress unused
+}
+
+// -----------------------------------------------------------------------
+// 21. TestDiscoverySearch
+// Combined domain+capability search with multiple agents.
+// Ported from: TestGetProfilesByDomain / TestGetProfilesByCapability
+// -----------------------------------------------------------------------
+
+func TestDiscoverySearch(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Create a diverse set of agents.
+	k.SetProfile(ctx, &types.AgentProfile{
+		Address:      testAddr(300),
+		Domains:      []string{"mathematics"},
+		Capabilities: []*types.AgentCapability{{CapabilityType: "inference"}},
+		Status:       "active",
+		Stake:        "1000000",
+	})
+	k.SetProfile(ctx, &types.AgentProfile{
+		Address:      testAddr(301),
+		Domains:      []string{"mathematics", "physics"},
+		Capabilities: []*types.AgentCapability{{CapabilityType: "inference"}, {CapabilityType: "verification"}},
+		Status:       "active",
+		Stake:        "1000000",
+	})
+	k.SetProfile(ctx, &types.AgentProfile{
+		Address:      testAddr(302),
+		Domains:      []string{"physics"},
+		Capabilities: []*types.AgentCapability{{CapabilityType: "verification"}},
+		Status:       "active",
+		Stake:        "1000000",
+	})
+
+	// domain=mathematics, capability=inference => addr 300 and 301
+	results := k.SearchProfiles(ctx, "mathematics", "inference", 0)
+	if len(results) != 2 {
+		t.Errorf("expected 2 for math+inference, got %d", len(results))
+	}
+
+	// domain=physics, capability=verification => addr 301 and 302
+	results = k.SearchProfiles(ctx, "physics", "verification", 0)
+	if len(results) != 2 {
+		t.Errorf("expected 2 for physics+verification, got %d", len(results))
+	}
+
+	// domain=mathematics, capability=verification => only addr 301
+	results = k.SearchProfiles(ctx, "mathematics", "verification", 0)
+	if len(results) != 1 {
+		t.Errorf("expected 1 for math+verification, got %d", len(results))
+	}
+
+	// domain=physics, capability=inference => only addr 301
+	results = k.SearchProfiles(ctx, "physics", "inference", 0)
+	if len(results) != 1 {
+		t.Errorf("expected 1 for physics+inference, got %d", len(results))
+	}
+}
+
+// -----------------------------------------------------------------------
+// 22. TestDiscoverySearchByCategory
+// Search profiles across multiple distinct categories/domains.
+// Ported from: TestGetProfilesByDomain multi-domain
+// -----------------------------------------------------------------------
+
+func TestDiscoverySearchByCategory(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	categories := []string{"mathematics", "physics", "biology", "chemistry", "economics"}
+	for i, cat := range categories {
+		k.SetProfile(ctx, &types.AgentProfile{
+			Address: testAddr(400 + i),
+			Domains: []string{cat},
+			Status:  "active",
+			Stake:   "1000000",
+		})
+	}
+	// One agent covers multiple categories.
+	k.SetProfile(ctx, &types.AgentProfile{
+		Address: testAddr(410),
+		Domains: categories,
+		Status:  "active",
+		Stake:   "1000000",
+	})
+
+	for _, cat := range categories {
+		results := k.SearchProfiles(ctx, cat, "", 0)
+		if len(results) != 2 {
+			t.Errorf("expected 2 profiles in %s (dedicated + multi), got %d", cat, len(results))
+		}
+	}
+
+	// All active profiles via empty search.
+	all := k.SearchProfiles(ctx, "", "", 0)
+	if len(all) != 6 {
+		t.Errorf("expected 6 total active profiles, got %d", len(all))
+	}
+}
+
+// -----------------------------------------------------------------------
+// 23. TestDiscoverySearchPagination
+// Search with a large result set to verify iteration correctness.
+// -----------------------------------------------------------------------
+
+func TestDiscoverySearchPagination(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Create 20 profiles in the "ai" domain.
+	for i := 0; i < 20; i++ {
+		k.SetProfile(ctx, &types.AgentProfile{
+			Address:         testAddr(500 + i),
+			Domains:         []string{"ai"},
+			Capabilities:    []*types.AgentCapability{{CapabilityType: "inference"}},
+			Status:          "active",
+			ReputationScore: uint64(100000 + i*10000),
+			Stake:           "1000000",
+		})
+	}
+
+	// Search all "ai" domain profiles.
+	results := k.SearchProfiles(ctx, "ai", "", 0)
+	if len(results) != 20 {
+		t.Errorf("expected 20 ai profiles, got %d", len(results))
+	}
+
+	// Search with capability filter.
+	results = k.SearchProfiles(ctx, "ai", "inference", 0)
+	if len(results) != 20 {
+		t.Errorf("expected 20 ai+inference profiles, got %d", len(results))
+	}
+
+	// Search with min reputation filter (only some pass).
+	// Scores range from 100000 to 290000.
+	results = k.SearchProfiles(ctx, "ai", "", 200000)
+	if len(results) != 10 {
+		t.Errorf("expected 10 profiles with reputation >= 200000, got %d", len(results))
+	}
+
+	// Verify GetAllProfiles returns all 20.
+	all := k.GetAllProfiles(ctx)
+	if len(all) != 20 {
+		t.Errorf("expected 20 total profiles, got %d", len(all))
+	}
+}
+
+// -----------------------------------------------------------------------
+// 24. TestDiscoverySearchEmpty
+// Ghost domain/capability queries: no panic on empty results.
+// Ported from: OC-DISC-6 (GhostDomainQuery)
+// -----------------------------------------------------------------------
+
+func TestDiscoverySearchEmpty(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Query on empty store must return nil/empty, not panic.
+	profiles := k.GetProfilesByDomain(ctx, "nonexistent_domain_xyz")
+	if len(profiles) != 0 {
+		t.Errorf("expected 0 profiles for nonexistent domain, got %d", len(profiles))
+	}
+
+	profiles = k.GetProfilesByCapability(ctx, "nonexistent_capability")
+	if len(profiles) != 0 {
+		t.Errorf("expected 0 profiles for nonexistent capability, got %d", len(profiles))
+	}
+
+	results := k.SearchProfiles(ctx, "ghost_domain", "ghost_capability", 0)
+	if len(results) != 0 {
+		t.Errorf("expected 0 profiles for ghost combined search, got %d", len(results))
+	}
+
+	results = k.SearchProfiles(ctx, "", "", 999999)
+	if len(results) != 0 {
+		t.Errorf("expected 0 profiles for high min reputation on empty store, got %d", len(results))
+	}
+}
+
+// -----------------------------------------------------------------------
+// 25. TestDiscoveryRanking
+// Reputation-based filtering across diverse reputation scores.
+// Ported from: reputation filtering in prototype queries
+// -----------------------------------------------------------------------
+
+func TestDiscoveryRanking(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Create agents with distinct reputation scores.
+	scores := []uint64{900000, 700000, 500000, 300000, 100000}
+	for i, score := range scores {
+		k.SetProfile(ctx, &types.AgentProfile{
+			Address:         testAddr(600 + i),
+			Domains:         []string{"ranking"},
+			Capabilities:    []*types.AgentCapability{{CapabilityType: "inference"}},
+			Status:          "active",
+			ReputationScore: score,
+			Stake:           "1000000",
+		})
+	}
+
+	// All agents returned with no reputation filter.
+	results := k.SearchProfiles(ctx, "ranking", "", 0)
+	if len(results) != 5 {
+		t.Errorf("expected 5 ranking profiles, got %d", len(results))
+	}
+
+	// Progressive reputation thresholds.
+	thresholds := []struct {
+		minRep   uint64
+		expected int
+	}{
+		{100000, 5},
+		{300000, 4},
+		{500000, 3},
+		{700000, 2},
+		{900000, 1},
+		{1000000, 0},
+	}
+	for _, tc := range thresholds {
+		results = k.SearchProfiles(ctx, "ranking", "", tc.minRep)
+		if len(results) != tc.expected {
+			t.Errorf("minRep %d: expected %d profiles, got %d", tc.minRep, tc.expected, len(results))
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+// 26. TestDiscoveryRankingDecay
+// Expired profiles should not appear in reputation-filtered searches.
+// Ported from: OC-DISC-9 (ExpiredAgentNotInQueries)
+// -----------------------------------------------------------------------
+
+func TestDiscoveryRankingDecay(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	// Create two agents: one active with high reputation, one expired with high reputation.
+	k.SetProfile(ctx, &types.AgentProfile{
+		Address:         testAddr(700),
+		Domains:         []string{"decay"},
+		Capabilities:    []*types.AgentCapability{{CapabilityType: "inference"}},
+		Status:          "active",
+		ReputationScore: 800000,
+		Stake:           "1000000",
+	})
+	k.SetProfile(ctx, &types.AgentProfile{
+		Address:         testAddr(701),
+		Domains:         []string{"decay"},
+		Capabilities:    []*types.AgentCapability{{CapabilityType: "inference"}},
+		Status:          "expired",
+		ReputationScore: 900000, // higher reputation but expired
+		Stake:           "1000000",
+	})
+
+	// Domain search should only return the active agent.
+	results := k.GetProfilesByDomain(ctx, "decay")
+	if len(results) != 1 {
+		t.Errorf("expected 1 active profile in decay domain, got %d", len(results))
+	}
+	if len(results) > 0 && results[0].Address != testAddr(700) {
+		t.Errorf("expected active agent %s, got %s", testAddr(700), results[0].Address)
+	}
+
+	// Capability search should only return the active agent.
+	results = k.GetProfilesByCapability(ctx, "inference")
+	if len(results) != 1 {
+		t.Errorf("expected 1 active inference profile, got %d", len(results))
+	}
+
+	// SearchProfiles (combined) should only return the active agent.
+	results = k.SearchProfiles(ctx, "decay", "inference", 0)
+	if len(results) != 1 {
+		t.Errorf("expected 1 active profile in combined search, got %d", len(results))
+	}
+
+	// Even with low reputation threshold, expired agent should not appear.
+	results = k.SearchProfiles(ctx, "decay", "", 100000)
+	if len(results) != 1 {
+		t.Errorf("expected 1 active profile with min reputation, got %d", len(results))
+	}
+	for _, p := range results {
+		if p.Status == "expired" {
+			t.Error("expired agent appeared in search results despite status filtering")
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+// 27. TestDiscoveryMetadata
+// Full metadata round-trip: store JSON metadata, update it, verify
+// persistence and no corruption of other fields.
+// Ported from: TestUpdateProfile_EmptyFieldsPreserved / OC-DISC-7
+// -----------------------------------------------------------------------
+
+func TestDiscoveryMetadata(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	addr := testAddr(800)
+	accAddr, _ := sdk.AccAddressFromBech32(addr)
+	bk.setBalance(accAddr, "uzrn", sdkmath.NewInt(500000000))
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	// Register with rich metadata.
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:      addr,
+		DisplayName: "MetadataAgent",
+		Domains:     []string{"metadata"},
+		Stake:       "1000000",
+		Description: "Tests metadata round-trip",
+		Metadata:    `{"version":"1","endpoints":["https://api.example.com"],"tags":["ai","ml"]}`,
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	// Verify metadata stored correctly.
+	profile, _ := k.GetProfile(ctx, addr)
+	if profile.Metadata != `{"version":"1","endpoints":["https://api.example.com"],"tags":["ai","ml"]}` {
+		t.Errorf("metadata not preserved after registration: %s", profile.Metadata)
+	}
+
+	// Update only metadata.
+	_, err = srv.UpdateProfile(ctx, &types.MsgUpdateProfile{
+		Sender:   addr,
+		Metadata: `{"version":"2","endpoints":["https://api-v2.example.com"],"tags":["ai","ml","nlp"]}`,
+	})
+	if err != nil {
+		t.Fatalf("metadata update failed: %v", err)
+	}
+
+	profile, _ = k.GetProfile(ctx, addr)
+	if profile.Metadata != `{"version":"2","endpoints":["https://api-v2.example.com"],"tags":["ai","ml","nlp"]}` {
+		t.Errorf("metadata not updated correctly: %s", profile.Metadata)
+	}
+
+	// Verify other fields unchanged.
+	if profile.DisplayName != "MetadataAgent" {
+		t.Errorf("display_name changed after metadata update: %s", profile.DisplayName)
+	}
+	if profile.Description != "Tests metadata round-trip" {
+		t.Errorf("description changed after metadata update: %s", profile.Description)
+	}
+	if profile.Status != "active" {
+		t.Errorf("status changed after metadata update: %s", profile.Status)
+	}
+
+	// Update only description, verify metadata unchanged.
+	_, err = srv.UpdateProfile(ctx, &types.MsgUpdateProfile{
+		Sender:      addr,
+		Description: "Updated description",
+	})
+	if err != nil {
+		t.Fatalf("description update failed: %v", err)
+	}
+
+	profile, _ = k.GetProfile(ctx, addr)
+	if profile.Metadata != `{"version":"2","endpoints":["https://api-v2.example.com"],"tags":["ai","ml","nlp"]}` {
+		t.Errorf("metadata changed after description-only update: %s", profile.Metadata)
+	}
+	if profile.Description != "Updated description" {
+		t.Errorf("description not updated: %s", profile.Description)
+	}
+}
+
+// -----------------------------------------------------------------------
+// 28. TestDiscoveryVerification
+// Capability verified_by_count field is preserved through storage.
+// Ported from: capability confidence/verification fields in prototype
+// -----------------------------------------------------------------------
+
+func TestDiscoveryVerification(t *testing.T) {
+	k, ctx, _ := setupKeeper(t)
+
+	addr := testAddr(900)
+
+	// Store profile with verified capabilities.
+	k.SetProfile(ctx, &types.AgentProfile{
+		Address:     addr,
+		DisplayName: "VerifiedAgent",
+		Capabilities: []*types.AgentCapability{
+			{CapabilityType: "inference", Domains: []string{"math"}, ConfidenceBps: 9500, VerifiedByCount: 10},
+			{CapabilityType: "verification", Domains: []string{"physics"}, ConfidenceBps: 8000, VerifiedByCount: 5},
+			{CapabilityType: "research", Domains: []string{"biology"}, ConfidenceBps: 6000, VerifiedByCount: 0},
+		},
+		Domains:         []string{"math", "physics", "biology"},
+		Status:          "active",
+		ReputationScore: 750000,
+		Stake:           "1000000",
+	})
+
+	profile, found := k.GetProfile(ctx, addr)
+	if !found {
+		t.Fatal("verified profile not found")
+	}
+
+	if len(profile.Capabilities) != 3 {
+		t.Fatalf("expected 3 capabilities, got %d", len(profile.Capabilities))
+	}
+
+	// Verify each capability's fields are preserved.
+	for _, cap := range profile.Capabilities {
+		switch cap.CapabilityType {
+		case "inference":
+			if cap.ConfidenceBps != 9500 {
+				t.Errorf("inference: expected confidence_bps 9500, got %d", cap.ConfidenceBps)
+			}
+			if cap.VerifiedByCount != 10 {
+				t.Errorf("inference: expected verified_by_count 10, got %d", cap.VerifiedByCount)
+			}
+			if len(cap.Domains) != 1 || cap.Domains[0] != "math" {
+				t.Errorf("inference: expected domains [math], got %v", cap.Domains)
+			}
+		case "verification":
+			if cap.ConfidenceBps != 8000 {
+				t.Errorf("verification: expected confidence_bps 8000, got %d", cap.ConfidenceBps)
+			}
+			if cap.VerifiedByCount != 5 {
+				t.Errorf("verification: expected verified_by_count 5, got %d", cap.VerifiedByCount)
+			}
+		case "research":
+			if cap.ConfidenceBps != 6000 {
+				t.Errorf("research: expected confidence_bps 6000, got %d", cap.ConfidenceBps)
+			}
+			if cap.VerifiedByCount != 0 {
+				t.Errorf("research: expected verified_by_count 0, got %d", cap.VerifiedByCount)
+			}
+		default:
+			t.Errorf("unexpected capability type: %s", cap.CapabilityType)
+		}
+	}
+
+	// Update a verified capability's count by replacing the profile.
+	profile.Capabilities[0].VerifiedByCount = 15
+	profile.Capabilities[0].ConfidenceBps = 9800
+	k.SetProfile(ctx, profile)
+
+	updated, _ := k.GetProfile(ctx, addr)
+	for _, cap := range updated.Capabilities {
+		if cap.CapabilityType == "inference" {
+			if cap.VerifiedByCount != 15 {
+				t.Errorf("expected updated verified_by_count 15, got %d", cap.VerifiedByCount)
+			}
+			if cap.ConfidenceBps != 9800 {
+				t.Errorf("expected updated confidence_bps 9800, got %d", cap.ConfidenceBps)
+			}
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+// 29. TestDiscoveryExpiry
+// Full expiry lifecycle via BeginBlocker.
+// Ported from: OC-DISC-5 / TestExpireStaleProfiles
+// -----------------------------------------------------------------------
+
+func TestDiscoveryExpiry(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	// Use short expiry for testing.
+	params := types.DefaultParams()
+	params.ProfileExpiryBlocks = 200
+	k.SetParams(ctx, params)
+
+	addr := testAddr(1000)
+	accAddr, _ := sdk.AccAddressFromBech32(addr)
+	bk.setBalance(accAddr, "uzrn", sdkmath.NewInt(500000000))
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	// Register at block 100 (ctx default).
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:  addr,
+		Domains: []string{"expiry"},
+		Stake:   "1000000",
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	// At block 200 (200 % 100 == 0, but 100 + 200 = 300 > 200): not expired yet.
+	ctx200 := ctx.WithBlockHeight(200)
+	if err := k.BeginBlocker(ctx200); err != nil {
+		t.Fatalf("BeginBlocker at 200 failed: %v", err)
+	}
+	profile, _ := k.GetProfile(ctx200, addr)
+	if profile.Status != "active" {
+		t.Errorf("expected active at block 200, got %s", profile.Status)
+	}
+
+	// At block 400 (400 % 100 == 0, and 100 + 200 = 300 < 400): should expire.
+	ctx400 := ctx.WithBlockHeight(400)
+	if err := k.BeginBlocker(ctx400); err != nil {
+		t.Fatalf("BeginBlocker at 400 failed: %v", err)
+	}
+	profile, _ = k.GetProfile(ctx400, addr)
+	if profile.Status != "expired" {
+		t.Errorf("expected expired at block 400, got %s", profile.Status)
+	}
+
+	// Expired agent should NOT appear in domain search.
+	results := k.GetProfilesByDomain(ctx400, "expiry")
+	if len(results) != 0 {
+		t.Errorf("expected 0 active profiles in expiry domain after expiration, got %d", len(results))
+	}
+
+	// At a non-100 block (401): no expiry processing.
+	// Re-activate the profile and verify it stays active.
+	profile.Status = "active"
+	profile.LastActiveBlock = 100 // still old
+	k.SetProfile(ctx400, profile)
+
+	ctx401 := ctx.WithBlockHeight(401)
+	if err := k.BeginBlocker(ctx401); err != nil {
+		t.Fatalf("BeginBlocker at 401 failed: %v", err)
+	}
+	check, _ := k.GetProfile(ctx401, addr)
+	if check.Status != "active" {
+		t.Errorf("expected no expiry at non-100 block, but profile was %s", check.Status)
+	}
+}
+
+// -----------------------------------------------------------------------
+// 30. TestDiscoveryReactivation
+// Heartbeat reactivation from expired state with full verification.
+// Ported from: OC-DISC-5 (HeartbeatReactivation)
+// -----------------------------------------------------------------------
+
+func TestDiscoveryReactivation(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	// Short expiry.
+	params := types.DefaultParams()
+	params.ProfileExpiryBlocks = 200
+	k.SetParams(ctx, params)
+
+	addr := testAddr(1100)
+	accAddr, _ := sdk.AccAddressFromBech32(addr)
+	bk.setBalance(accAddr, "uzrn", sdkmath.NewInt(500000000))
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	// Register at block 100.
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:  addr,
+		Domains: []string{"reactivation"},
+		Capabilities: []*types.AgentCapability{
+			{CapabilityType: "inference"},
+		},
+		Stake: "1000000",
+	})
+	if err != nil {
+		t.Fatalf("registration failed: %v", err)
+	}
+
+	// Expire at block 400.
+	ctx400 := ctx.WithBlockHeight(400)
+	if err := k.BeginBlocker(ctx400); err != nil {
+		t.Fatalf("BeginBlocker failed: %v", err)
+	}
+	profile, _ := k.GetProfile(ctx400, addr)
+	if profile.Status != "expired" {
+		t.Fatalf("expected expired at block 400, got %s", profile.Status)
+	}
+
+	// Expired profile should not appear in searches.
+	results := k.SearchProfiles(ctx400, "reactivation", "", 0)
+	if len(results) != 0 {
+		t.Errorf("expected 0 active profiles when expired, got %d", len(results))
+	}
+
+	// Send heartbeat to reactivate at block 500.
+	ctx500 := ctx.WithBlockHeight(500)
+	_, err = srv.Heartbeat(ctx500, &types.MsgHeartbeat{
+		Sender: addr,
+	})
+	if err != nil {
+		t.Fatalf("heartbeat reactivation failed: %v", err)
+	}
+
+	profile, _ = k.GetProfile(ctx500, addr)
+	if profile.Status != "active" {
+		t.Errorf("expected active after heartbeat, got %s", profile.Status)
+	}
+	if profile.LastActiveBlock != 500 {
+		t.Errorf("expected last_active_block 500, got %d", profile.LastActiveBlock)
+	}
+
+	// Reactivated profile should now appear in searches.
+	results = k.SearchProfiles(ctx500, "reactivation", "", 0)
+	if len(results) != 1 {
+		t.Errorf("expected 1 active profile after reactivation, got %d", len(results))
+	}
+
+	// Verify capability index still works after reactivation.
+	capResults := k.GetProfilesByCapability(ctx500, "inference")
+	if len(capResults) != 1 {
+		t.Errorf("expected 1 inference profile after reactivation, got %d", len(capResults))
+	}
+}
+
+// -----------------------------------------------------------------------
+// 31. TestDiscoveryExpiryNotInSearch
+// Verify expired profiles are excluded from all search pathways.
+// Ported from: OC-DISC-9 (ExpiredAgentNotInQueries)
+// -----------------------------------------------------------------------
+
+func TestDiscoveryExpiryNotInSearch(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	// Register two agents in same domain.
+	addr1 := testAddr(1200)
+	accAddr1, _ := sdk.AccAddressFromBech32(addr1)
+	bk.setBalance(accAddr1, "uzrn", sdkmath.NewInt(500000000))
+
+	addr2 := testAddr(1201)
+	accAddr2, _ := sdk.AccAddressFromBech32(addr2)
+	bk.setBalance(accAddr2, "uzrn", sdkmath.NewInt(500000000))
+
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:       addr1,
+		Domains:      []string{"shared"},
+		Capabilities: []*types.AgentCapability{{CapabilityType: "inference"}},
+		Stake:        "1000000",
+	})
+	if err != nil {
+		t.Fatalf("registration 1 failed: %v", err)
+	}
+
+	_, err = srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:       addr2,
+		Domains:      []string{"shared"},
+		Capabilities: []*types.AgentCapability{{CapabilityType: "inference"}},
+		Stake:        "1000000",
+	})
+	if err != nil {
+		t.Fatalf("registration 2 failed: %v", err)
+	}
+
+	// Both should appear in search.
+	results := k.SearchProfiles(ctx, "shared", "", 0)
+	if len(results) != 2 {
+		t.Errorf("expected 2 active profiles, got %d", len(results))
+	}
+
+	// Manually expire agent 1.
+	profile1, _ := k.GetProfile(ctx, addr1)
+	profile1.Status = "expired"
+	k.SetProfile(ctx, profile1)
+
+	// Domain search: only agent 2 should appear.
+	results = k.GetProfilesByDomain(ctx, "shared")
+	if len(results) != 1 {
+		t.Errorf("expected 1 active domain profile, got %d", len(results))
+	}
+	for _, p := range results {
+		if p.Address == addr1 {
+			t.Error("expired agent1 appears in domain query results")
+		}
+	}
+
+	// Capability search: only agent 2 should appear.
+	results = k.GetProfilesByCapability(ctx, "inference")
+	if len(results) != 1 {
+		t.Errorf("expected 1 active capability profile, got %d", len(results))
+	}
+	for _, p := range results {
+		if p.Address == addr1 {
+			t.Error("expired agent1 appears in capability query results")
+		}
+	}
+
+	// SearchProfiles (combined): only agent 2 should appear.
+	results = k.SearchProfiles(ctx, "shared", "inference", 0)
+	if len(results) != 1 {
+		t.Errorf("expected 1 active combined search profile, got %d", len(results))
+	}
+
+	// SearchProfiles (no filter): only agent 2 should appear.
+	results = k.SearchProfiles(ctx, "", "", 0)
+	if len(results) != 1 {
+		t.Errorf("expected 1 active profile in unfiltered search, got %d", len(results))
+	}
+}
+
+// -----------------------------------------------------------------------
+// 32. TestDiscoveryDoubleRegistration
+// Double registration must fail and preserve original profile data.
+// Ported from: OC-DISC-8 (DoubleRegistration)
+// -----------------------------------------------------------------------
+
+func TestDiscoveryDoubleRegistration(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+
+	addr := testAddr(1300)
+	accAddr, _ := sdk.AccAddressFromBech32(addr)
+	bk.setBalance(accAddr, "uzrn", sdkmath.NewInt(500000000))
+
+	srv := keeper.NewMsgServerImpl(k)
+
+	// First registration.
+	_, err := srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:      addr,
+		DisplayName: "Original",
+		Domains:     []string{"math"},
+		Stake:       "5000000",
+		Description: "First registration",
+	})
+	if err != nil {
+		t.Fatalf("first registration failed: %v", err)
+	}
+
+	// Second registration must fail.
+	_, err = srv.RegisterProfile(ctx, &types.MsgRegisterProfile{
+		Sender:      addr,
+		DisplayName: "Duplicate",
+		Domains:     []string{"physics"},
+		Stake:       "10000000",
+		Description: "Second registration attempt",
+	})
+	if err == nil {
+		t.Error("double registration accepted; allows overwriting existing profile")
+	}
+
+	// Verify original profile data is intact.
+	profile, found := k.GetProfile(ctx, addr)
+	if !found {
+		t.Fatal("original profile disappeared after failed second registration")
+	}
+	if profile.DisplayName != "Original" {
+		t.Errorf("expected display_name 'Original', got '%s'", profile.DisplayName)
+	}
+	if profile.Description != "First registration" {
+		t.Errorf("expected description 'First registration', got '%s'", profile.Description)
+	}
+	if profile.ReputationScore != 500000 {
+		t.Errorf("expected initial reputation 500000, got %d; profile may have been overwritten", profile.ReputationScore)
+	}
+	if profile.Stake != "5000000" {
+		t.Errorf("expected stake 5000000, got %s; stake may have been overwritten", profile.Stake)
+	}
+
+	// Verify only the first registration's stake was deducted.
+	expectedBal := sdkmath.NewInt(495000000) // 500000000 - 5000000
+	actualBal := bk.balances[accAddr.String()+"/uzrn"]
+	if !actualBal.Equal(expectedBal) {
+		t.Errorf("expected balance %s, got %s; second registration may have deducted stake", expectedBal, actualBal)
+	}
+}

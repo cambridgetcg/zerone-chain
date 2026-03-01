@@ -21,6 +21,62 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ResearchFundPhase tracks the current governance phase of the research fund.
+type ResearchFundPhase int32
+
+const (
+	ResearchFundPhase_RESEARCH_FUND_PHASE_UNSPECIFIED     ResearchFundPhase = 0
+	ResearchFundPhase_RESEARCH_FUND_PHASE_GENESIS_PAIR    ResearchFundPhase = 1 // 2-of-2: founder + AI
+	ResearchFundPhase_RESEARCH_FUND_PHASE_OBSERVER        ResearchFundPhase = 2 // 2-of-3: founder + AI + 1 community
+	ResearchFundPhase_RESEARCH_FUND_PHASE_BALANCED        ResearchFundPhase = 3 // 3-of-5: founder + AI + 3 community
+	ResearchFundPhase_RESEARCH_FUND_PHASE_FULL_GOVERNANCE ResearchFundPhase = 4 // standard LIP process
+)
+
+// Enum value maps for ResearchFundPhase.
+var (
+	ResearchFundPhase_name = map[int32]string{
+		0: "RESEARCH_FUND_PHASE_UNSPECIFIED",
+		1: "RESEARCH_FUND_PHASE_GENESIS_PAIR",
+		2: "RESEARCH_FUND_PHASE_OBSERVER",
+		3: "RESEARCH_FUND_PHASE_BALANCED",
+		4: "RESEARCH_FUND_PHASE_FULL_GOVERNANCE",
+	}
+	ResearchFundPhase_value = map[string]int32{
+		"RESEARCH_FUND_PHASE_UNSPECIFIED":     0,
+		"RESEARCH_FUND_PHASE_GENESIS_PAIR":    1,
+		"RESEARCH_FUND_PHASE_OBSERVER":        2,
+		"RESEARCH_FUND_PHASE_BALANCED":        3,
+		"RESEARCH_FUND_PHASE_FULL_GOVERNANCE": 4,
+	}
+)
+
+func (x ResearchFundPhase) Enum() *ResearchFundPhase {
+	p := new(ResearchFundPhase)
+	*p = x
+	return p
+}
+
+func (x ResearchFundPhase) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ResearchFundPhase) Descriptor() protoreflect.EnumDescriptor {
+	return file_zerone_gov_v1_types_proto_enumTypes[0].Descriptor()
+}
+
+func (ResearchFundPhase) Type() protoreflect.EnumType {
+	return &file_zerone_gov_v1_types_proto_enumTypes[0]
+}
+
+func (x ResearchFundPhase) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ResearchFundPhase.Descriptor instead.
+func (ResearchFundPhase) EnumDescriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{0}
+}
+
 // LIP represents a Legible Improvement Proposal.
 type LIP struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
@@ -430,6 +486,192 @@ func (x *UpgradePlan) GetInfo() string {
 	return ""
 }
 
+// ResearchFundGovernanceState tracks the research fund governance lifecycle.
+type ResearchFundGovernanceState struct {
+	state                    protoimpl.MessageState `protogen:"open.v1"`
+	CurrentPhase             ResearchFundPhase      `protobuf:"varint,1,opt,name=current_phase,json=currentPhase,proto3,enum=zerone.gov.v1.ResearchFundPhase" json:"current_phase,omitempty"`
+	PhaseStartedAtBlock      uint64                 `protobuf:"varint,2,opt,name=phase_started_at_block,json=phaseStartedAtBlock,proto3" json:"phase_started_at_block,omitempty"`
+	ProposalsExecutedInPhase uint64                 `protobuf:"varint,3,opt,name=proposals_executed_in_phase,json=proposalsExecutedInPhase,proto3" json:"proposals_executed_in_phase,omitempty"`
+	LastTransitionBlock      uint64                 `protobuf:"varint,4,opt,name=last_transition_block,json=lastTransitionBlock,proto3" json:"last_transition_block,omitempty"`
+	CommunitySeats           []string               `protobuf:"bytes,5,rep,name=community_seats,json=communitySeats,proto3" json:"community_seats,omitempty"`                         // bech32 addresses of current community seat holders
+	SeatTermEndBlocks        []uint64               `protobuf:"varint,6,rep,packed,name=seat_term_end_blocks,json=seatTermEndBlocks,proto3" json:"seat_term_end_blocks,omitempty"`    // term expiry per community seat
+	RollbackCooldownUntil    uint64                 `protobuf:"varint,7,opt,name=rollback_cooldown_until,json=rollbackCooldownUntil,proto3" json:"rollback_cooldown_until,omitempty"` // block height; 0 = no cooldown
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
+}
+
+func (x *ResearchFundGovernanceState) Reset() {
+	*x = ResearchFundGovernanceState{}
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResearchFundGovernanceState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResearchFundGovernanceState) ProtoMessage() {}
+
+func (x *ResearchFundGovernanceState) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResearchFundGovernanceState.ProtoReflect.Descriptor instead.
+func (*ResearchFundGovernanceState) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ResearchFundGovernanceState) GetCurrentPhase() ResearchFundPhase {
+	if x != nil {
+		return x.CurrentPhase
+	}
+	return ResearchFundPhase_RESEARCH_FUND_PHASE_UNSPECIFIED
+}
+
+func (x *ResearchFundGovernanceState) GetPhaseStartedAtBlock() uint64 {
+	if x != nil {
+		return x.PhaseStartedAtBlock
+	}
+	return 0
+}
+
+func (x *ResearchFundGovernanceState) GetProposalsExecutedInPhase() uint64 {
+	if x != nil {
+		return x.ProposalsExecutedInPhase
+	}
+	return 0
+}
+
+func (x *ResearchFundGovernanceState) GetLastTransitionBlock() uint64 {
+	if x != nil {
+		return x.LastTransitionBlock
+	}
+	return 0
+}
+
+func (x *ResearchFundGovernanceState) GetCommunitySeats() []string {
+	if x != nil {
+		return x.CommunitySeats
+	}
+	return nil
+}
+
+func (x *ResearchFundGovernanceState) GetSeatTermEndBlocks() []uint64 {
+	if x != nil {
+		return x.SeatTermEndBlocks
+	}
+	return nil
+}
+
+func (x *ResearchFundGovernanceState) GetRollbackCooldownUntil() uint64 {
+	if x != nil {
+		return x.RollbackCooldownUntil
+	}
+	return 0
+}
+
+// PhaseTransitionConditions records the metrics at time of transition proposal.
+type PhaseTransitionConditions struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	DistinctLipVoters          uint64                 `protobuf:"varint,1,opt,name=distinct_lip_voters,json=distinctLipVoters,proto3" json:"distinct_lip_voters,omitempty"`
+	ActiveGuardians            uint64                 `protobuf:"varint,2,opt,name=active_guardians,json=activeGuardians,proto3" json:"active_guardians,omitempty"`
+	ResearchFundBalance        string                 `protobuf:"bytes,3,opt,name=research_fund_balance,json=researchFundBalance,proto3" json:"research_fund_balance,omitempty"` // uzrn bigint string
+	ChainAgeBlocks             uint64                 `protobuf:"varint,4,opt,name=chain_age_blocks,json=chainAgeBlocks,proto3" json:"chain_age_blocks,omitempty"`
+	ProposalsExecutedInPhase   uint64                 `protobuf:"varint,5,opt,name=proposals_executed_in_phase,json=proposalsExecutedInPhase,proto3" json:"proposals_executed_in_phase,omitempty"`
+	CommunitySeatParticipation uint64                 `protobuf:"varint,6,opt,name=community_seat_participation,json=communitySeatParticipation,proto3" json:"community_seat_participation,omitempty"`
+	EmergencyHaltsFromMisuse   uint64                 `protobuf:"varint,7,opt,name=emergency_halts_from_misuse,json=emergencyHaltsFromMisuse,proto3" json:"emergency_halts_from_misuse,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *PhaseTransitionConditions) Reset() {
+	*x = PhaseTransitionConditions{}
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PhaseTransitionConditions) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PhaseTransitionConditions) ProtoMessage() {}
+
+func (x *PhaseTransitionConditions) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PhaseTransitionConditions.ProtoReflect.Descriptor instead.
+func (*PhaseTransitionConditions) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *PhaseTransitionConditions) GetDistinctLipVoters() uint64 {
+	if x != nil {
+		return x.DistinctLipVoters
+	}
+	return 0
+}
+
+func (x *PhaseTransitionConditions) GetActiveGuardians() uint64 {
+	if x != nil {
+		return x.ActiveGuardians
+	}
+	return 0
+}
+
+func (x *PhaseTransitionConditions) GetResearchFundBalance() string {
+	if x != nil {
+		return x.ResearchFundBalance
+	}
+	return ""
+}
+
+func (x *PhaseTransitionConditions) GetChainAgeBlocks() uint64 {
+	if x != nil {
+		return x.ChainAgeBlocks
+	}
+	return 0
+}
+
+func (x *PhaseTransitionConditions) GetProposalsExecutedInPhase() uint64 {
+	if x != nil {
+		return x.ProposalsExecutedInPhase
+	}
+	return 0
+}
+
+func (x *PhaseTransitionConditions) GetCommunitySeatParticipation() uint64 {
+	if x != nil {
+		return x.CommunitySeatParticipation
+	}
+	return 0
+}
+
+func (x *PhaseTransitionConditions) GetEmergencyHaltsFromMisuse() uint64 {
+	if x != nil {
+		return x.EmergencyHaltsFromMisuse
+	}
+	return 0
+}
+
 // ResearchSpendProposal represents a 2-of-2 research fund spending proposal.
 type ResearchSpendProposal struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -458,7 +700,7 @@ type ResearchSpendProposal struct {
 
 func (x *ResearchSpendProposal) Reset() {
 	*x = ResearchSpendProposal{}
-	mi := &file_zerone_gov_v1_types_proto_msgTypes[5]
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -470,7 +712,7 @@ func (x *ResearchSpendProposal) String() string {
 func (*ResearchSpendProposal) ProtoMessage() {}
 
 func (x *ResearchSpendProposal) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_gov_v1_types_proto_msgTypes[5]
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -483,7 +725,7 @@ func (x *ResearchSpendProposal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResearchSpendProposal.ProtoReflect.Descriptor instead.
 func (*ResearchSpendProposal) Descriptor() ([]byte, []int) {
-	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{5}
+	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ResearchSpendProposal) GetProposalId() uint64 {
@@ -619,6 +861,248 @@ func (x *ResearchSpendProposal) GetExecutionErr() string {
 	return ""
 }
 
+// SeatElectionProposal nominates a candidate for a research fund community seat.
+type SeatElectionProposal struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	ProposalId         uint64                 `protobuf:"varint,1,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	Proposer           string                 `protobuf:"bytes,2,opt,name=proposer,proto3" json:"proposer,omitempty"`                     // bech32 — nominator
+	Candidate          string                 `protobuf:"bytes,3,opt,name=candidate,proto3" json:"candidate,omitempty"`                   // bech32 — must be Guardian-tier
+	SeatIndex          uint32                 `protobuf:"varint,4,opt,name=seat_index,json=seatIndex,proto3" json:"seat_index,omitempty"` // 0 in Phase 1; 0-2 in Phase 2
+	Statement          string                 `protobuf:"bytes,5,opt,name=statement,proto3" json:"statement,omitempty"`                   // candidate's governance statement (max 2000 chars)
+	Stage              string                 `protobuf:"bytes,6,opt,name=stage,proto3" json:"stage,omitempty"`                           // nominated/accepted/discussion/voting/runoff/passed/failed/expired
+	YesStake           string                 `protobuf:"bytes,7,opt,name=yes_stake,json=yesStake,proto3" json:"yes_stake,omitempty"`
+	NoStake            string                 `protobuf:"bytes,8,opt,name=no_stake,json=noStake,proto3" json:"no_stake,omitempty"`
+	AbstainStake       string                 `protobuf:"bytes,9,opt,name=abstain_stake,json=abstainStake,proto3" json:"abstain_stake,omitempty"`
+	AcceptanceDeadline uint64                 `protobuf:"varint,10,opt,name=acceptance_deadline,json=acceptanceDeadline,proto3" json:"acceptance_deadline,omitempty"`
+	DiscussionEndBlock uint64                 `protobuf:"varint,11,opt,name=discussion_end_block,json=discussionEndBlock,proto3" json:"discussion_end_block,omitempty"`
+	VotingEndBlock     uint64                 `protobuf:"varint,12,opt,name=voting_end_block,json=votingEndBlock,proto3" json:"voting_end_block,omitempty"`
+	CreatedAtBlock     uint64                 `protobuf:"varint,13,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	CandidateAccepted  bool                   `protobuf:"varint,14,opt,name=candidate_accepted,json=candidateAccepted,proto3" json:"candidate_accepted,omitempty"`
+	IsRunoff           bool                   `protobuf:"varint,15,opt,name=is_runoff,json=isRunoff,proto3" json:"is_runoff,omitempty"`
+	RunoffParentIds    []uint64               `protobuf:"varint,16,rep,packed,name=runoff_parent_ids,json=runoffParentIds,proto3" json:"runoff_parent_ids,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *SeatElectionProposal) Reset() {
+	*x = SeatElectionProposal{}
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SeatElectionProposal) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SeatElectionProposal) ProtoMessage() {}
+
+func (x *SeatElectionProposal) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SeatElectionProposal.ProtoReflect.Descriptor instead.
+func (*SeatElectionProposal) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SeatElectionProposal) GetProposalId() uint64 {
+	if x != nil {
+		return x.ProposalId
+	}
+	return 0
+}
+
+func (x *SeatElectionProposal) GetProposer() string {
+	if x != nil {
+		return x.Proposer
+	}
+	return ""
+}
+
+func (x *SeatElectionProposal) GetCandidate() string {
+	if x != nil {
+		return x.Candidate
+	}
+	return ""
+}
+
+func (x *SeatElectionProposal) GetSeatIndex() uint32 {
+	if x != nil {
+		return x.SeatIndex
+	}
+	return 0
+}
+
+func (x *SeatElectionProposal) GetStatement() string {
+	if x != nil {
+		return x.Statement
+	}
+	return ""
+}
+
+func (x *SeatElectionProposal) GetStage() string {
+	if x != nil {
+		return x.Stage
+	}
+	return ""
+}
+
+func (x *SeatElectionProposal) GetYesStake() string {
+	if x != nil {
+		return x.YesStake
+	}
+	return ""
+}
+
+func (x *SeatElectionProposal) GetNoStake() string {
+	if x != nil {
+		return x.NoStake
+	}
+	return ""
+}
+
+func (x *SeatElectionProposal) GetAbstainStake() string {
+	if x != nil {
+		return x.AbstainStake
+	}
+	return ""
+}
+
+func (x *SeatElectionProposal) GetAcceptanceDeadline() uint64 {
+	if x != nil {
+		return x.AcceptanceDeadline
+	}
+	return 0
+}
+
+func (x *SeatElectionProposal) GetDiscussionEndBlock() uint64 {
+	if x != nil {
+		return x.DiscussionEndBlock
+	}
+	return 0
+}
+
+func (x *SeatElectionProposal) GetVotingEndBlock() uint64 {
+	if x != nil {
+		return x.VotingEndBlock
+	}
+	return 0
+}
+
+func (x *SeatElectionProposal) GetCreatedAtBlock() uint64 {
+	if x != nil {
+		return x.CreatedAtBlock
+	}
+	return 0
+}
+
+func (x *SeatElectionProposal) GetCandidateAccepted() bool {
+	if x != nil {
+		return x.CandidateAccepted
+	}
+	return false
+}
+
+func (x *SeatElectionProposal) GetIsRunoff() bool {
+	if x != nil {
+		return x.IsRunoff
+	}
+	return false
+}
+
+func (x *SeatElectionProposal) GetRunoffParentIds() []uint64 {
+	if x != nil {
+		return x.RunoffParentIds
+	}
+	return nil
+}
+
+// SeatElectionVote records a single vote on a seat election proposal.
+type SeatElectionVote struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProposalId    uint64                 `protobuf:"varint,1,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	Voter         string                 `protobuf:"bytes,2,opt,name=voter,proto3" json:"voter,omitempty"`   // bech32 address
+	Option        string                 `protobuf:"bytes,3,opt,name=option,proto3" json:"option,omitempty"` // "yes", "no", "abstain"
+	Stake         string                 `protobuf:"bytes,4,opt,name=stake,proto3" json:"stake,omitempty"`   // uzrn weight at time of vote
+	Block         uint64                 `protobuf:"varint,5,opt,name=block,proto3" json:"block,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SeatElectionVote) Reset() {
+	*x = SeatElectionVote{}
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SeatElectionVote) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SeatElectionVote) ProtoMessage() {}
+
+func (x *SeatElectionVote) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_types_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SeatElectionVote.ProtoReflect.Descriptor instead.
+func (*SeatElectionVote) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_types_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SeatElectionVote) GetProposalId() uint64 {
+	if x != nil {
+		return x.ProposalId
+	}
+	return 0
+}
+
+func (x *SeatElectionVote) GetVoter() string {
+	if x != nil {
+		return x.Voter
+	}
+	return ""
+}
+
+func (x *SeatElectionVote) GetOption() string {
+	if x != nil {
+		return x.Option
+	}
+	return ""
+}
+
+func (x *SeatElectionVote) GetStake() string {
+	if x != nil {
+		return x.Stake
+	}
+	return ""
+}
+
+func (x *SeatElectionVote) GetBlock() uint64 {
+	if x != nil {
+		return x.Block
+	}
+	return 0
+}
+
 var File_zerone_gov_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_gov_v1_types_proto_rawDesc = "" +
@@ -657,7 +1141,23 @@ const file_zerone_gov_v1_types_proto_rawDesc = "" +
 	"\vUpgradePlan\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06height\x18\x02 \x01(\x03R\x06height\x12\x12\n" +
-	"\x04info\x18\x03 \x01(\tR\x04info\"\x8f\x05\n" +
+	"\x04info\x18\x03 \x01(\tR\x04info\"\x9e\x03\n" +
+	"\x1bResearchFundGovernanceState\x12E\n" +
+	"\rcurrent_phase\x18\x01 \x01(\x0e2 .zerone.gov.v1.ResearchFundPhaseR\fcurrentPhase\x123\n" +
+	"\x16phase_started_at_block\x18\x02 \x01(\x04R\x13phaseStartedAtBlock\x12=\n" +
+	"\x1bproposals_executed_in_phase\x18\x03 \x01(\x04R\x18proposalsExecutedInPhase\x122\n" +
+	"\x15last_transition_block\x18\x04 \x01(\x04R\x13lastTransitionBlock\x12'\n" +
+	"\x0fcommunity_seats\x18\x05 \x03(\tR\x0ecommunitySeats\x12/\n" +
+	"\x14seat_term_end_blocks\x18\x06 \x03(\x04R\x11seatTermEndBlocks\x126\n" +
+	"\x17rollback_cooldown_until\x18\a \x01(\x04R\x15rollbackCooldownUntil\"\x94\x03\n" +
+	"\x19PhaseTransitionConditions\x12.\n" +
+	"\x13distinct_lip_voters\x18\x01 \x01(\x04R\x11distinctLipVoters\x12)\n" +
+	"\x10active_guardians\x18\x02 \x01(\x04R\x0factiveGuardians\x122\n" +
+	"\x15research_fund_balance\x18\x03 \x01(\tR\x13researchFundBalance\x12(\n" +
+	"\x10chain_age_blocks\x18\x04 \x01(\x04R\x0echainAgeBlocks\x12=\n" +
+	"\x1bproposals_executed_in_phase\x18\x05 \x01(\x04R\x18proposalsExecutedInPhase\x12@\n" +
+	"\x1ccommunity_seat_participation\x18\x06 \x01(\x04R\x1acommunitySeatParticipation\x12=\n" +
+	"\x1bemergency_halts_from_misuse\x18\a \x01(\x04R\x18emergencyHaltsFromMisuse\"\x8f\x05\n" +
 	"\x15ResearchSpendProposal\x12\x1f\n" +
 	"\vproposal_id\x18\x01 \x01(\x04R\n" +
 	"proposalId\x12\x1a\n" +
@@ -683,7 +1183,40 @@ const file_zerone_gov_v1_types_proto_rawDesc = "" +
 	"\x0fvoter2_voted_at\x18\x11 \x01(\x04R\rvoter2VotedAt\x12\x1f\n" +
 	"\vexecuted_at\x18\x12 \x01(\x04R\n" +
 	"executedAt\x12#\n" +
-	"\rexecution_err\x18\x13 \x01(\tR\fexecutionErrB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
+	"\rexecution_err\x18\x13 \x01(\tR\fexecutionErr\"\xd0\x04\n" +
+	"\x14SeatElectionProposal\x12\x1f\n" +
+	"\vproposal_id\x18\x01 \x01(\x04R\n" +
+	"proposalId\x12\x1a\n" +
+	"\bproposer\x18\x02 \x01(\tR\bproposer\x12\x1c\n" +
+	"\tcandidate\x18\x03 \x01(\tR\tcandidate\x12\x1d\n" +
+	"\n" +
+	"seat_index\x18\x04 \x01(\rR\tseatIndex\x12\x1c\n" +
+	"\tstatement\x18\x05 \x01(\tR\tstatement\x12\x14\n" +
+	"\x05stage\x18\x06 \x01(\tR\x05stage\x12\x1b\n" +
+	"\tyes_stake\x18\a \x01(\tR\byesStake\x12\x19\n" +
+	"\bno_stake\x18\b \x01(\tR\anoStake\x12#\n" +
+	"\rabstain_stake\x18\t \x01(\tR\fabstainStake\x12/\n" +
+	"\x13acceptance_deadline\x18\n" +
+	" \x01(\x04R\x12acceptanceDeadline\x120\n" +
+	"\x14discussion_end_block\x18\v \x01(\x04R\x12discussionEndBlock\x12(\n" +
+	"\x10voting_end_block\x18\f \x01(\x04R\x0evotingEndBlock\x12(\n" +
+	"\x10created_at_block\x18\r \x01(\x04R\x0ecreatedAtBlock\x12-\n" +
+	"\x12candidate_accepted\x18\x0e \x01(\bR\x11candidateAccepted\x12\x1b\n" +
+	"\tis_runoff\x18\x0f \x01(\bR\bisRunoff\x12*\n" +
+	"\x11runoff_parent_ids\x18\x10 \x03(\x04R\x0frunoffParentIds\"\x8d\x01\n" +
+	"\x10SeatElectionVote\x12\x1f\n" +
+	"\vproposal_id\x18\x01 \x01(\x04R\n" +
+	"proposalId\x12\x14\n" +
+	"\x05voter\x18\x02 \x01(\tR\x05voter\x12\x16\n" +
+	"\x06option\x18\x03 \x01(\tR\x06option\x12\x14\n" +
+	"\x05stake\x18\x04 \x01(\tR\x05stake\x12\x14\n" +
+	"\x05block\x18\x05 \x01(\x04R\x05block*\xcb\x01\n" +
+	"\x11ResearchFundPhase\x12#\n" +
+	"\x1fRESEARCH_FUND_PHASE_UNSPECIFIED\x10\x00\x12$\n" +
+	" RESEARCH_FUND_PHASE_GENESIS_PAIR\x10\x01\x12 \n" +
+	"\x1cRESEARCH_FUND_PHASE_OBSERVER\x10\x02\x12 \n" +
+	"\x1cRESEARCH_FUND_PHASE_BALANCED\x10\x03\x12'\n" +
+	"#RESEARCH_FUND_PHASE_FULL_GOVERNANCE\x10\x04B,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
 
 var (
 	file_zerone_gov_v1_types_proto_rawDescOnce sync.Once
@@ -697,22 +1230,29 @@ func file_zerone_gov_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_gov_v1_types_proto_rawDescData
 }
 
-var file_zerone_gov_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_zerone_gov_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_zerone_gov_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_zerone_gov_v1_types_proto_goTypes = []any{
-	(*LIP)(nil),                   // 0: zerone.gov.v1.LIP
-	(*ParamChange)(nil),           // 1: zerone.gov.v1.ParamChange
-	(*Vote)(nil),                  // 2: zerone.gov.v1.Vote
-	(*ResearchFundVoters)(nil),    // 3: zerone.gov.v1.ResearchFundVoters
-	(*UpgradePlan)(nil),           // 4: zerone.gov.v1.UpgradePlan
-	(*ResearchSpendProposal)(nil), // 5: zerone.gov.v1.ResearchSpendProposal
+	(ResearchFundPhase)(0),              // 0: zerone.gov.v1.ResearchFundPhase
+	(*LIP)(nil),                         // 1: zerone.gov.v1.LIP
+	(*ParamChange)(nil),                 // 2: zerone.gov.v1.ParamChange
+	(*Vote)(nil),                        // 3: zerone.gov.v1.Vote
+	(*ResearchFundVoters)(nil),          // 4: zerone.gov.v1.ResearchFundVoters
+	(*UpgradePlan)(nil),                 // 5: zerone.gov.v1.UpgradePlan
+	(*ResearchFundGovernanceState)(nil), // 6: zerone.gov.v1.ResearchFundGovernanceState
+	(*PhaseTransitionConditions)(nil),   // 7: zerone.gov.v1.PhaseTransitionConditions
+	(*ResearchSpendProposal)(nil),       // 8: zerone.gov.v1.ResearchSpendProposal
+	(*SeatElectionProposal)(nil),        // 9: zerone.gov.v1.SeatElectionProposal
+	(*SeatElectionVote)(nil),            // 10: zerone.gov.v1.SeatElectionVote
 }
 var file_zerone_gov_v1_types_proto_depIdxs = []int32{
-	1, // 0: zerone.gov.v1.LIP.param_changes:type_name -> zerone.gov.v1.ParamChange
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	2, // 0: zerone.gov.v1.LIP.param_changes:type_name -> zerone.gov.v1.ParamChange
+	0, // 1: zerone.gov.v1.ResearchFundGovernanceState.current_phase:type_name -> zerone.gov.v1.ResearchFundPhase
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_zerone_gov_v1_types_proto_init() }
@@ -725,13 +1265,14 @@ func file_zerone_gov_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_gov_v1_types_proto_rawDesc), len(file_zerone_gov_v1_types_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   6,
+			NumEnums:      1,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_zerone_gov_v1_types_proto_goTypes,
 		DependencyIndexes: file_zerone_gov_v1_types_proto_depIdxs,
+		EnumInfos:         file_zerone_gov_v1_types_proto_enumTypes,
 		MessageInfos:      file_zerone_gov_v1_types_proto_msgTypes,
 	}.Build()
 	File_zerone_gov_v1_types_proto = out.File

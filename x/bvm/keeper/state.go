@@ -312,6 +312,51 @@ func (k Keeper) CountContractSchedules(ctx sdk.Context, contractAddress string) 
 	return count
 }
 
+// --- Schedule Capabilities ---
+
+// SetScheduleCapabilities stores session capabilities snapshot for a schedule.
+func (k Keeper) SetScheduleCapabilities(ctx sdk.Context, scheduleId string, caps types.SessionCapabilities) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz := encodeCapabilities(caps)
+	_ = store.Set(types.ScheduleCapabilityKey(scheduleId), bz)
+}
+
+// GetScheduleCapabilities retrieves stored session capabilities for a schedule.
+func (k Keeper) GetScheduleCapabilities(ctx sdk.Context, scheduleId string) (types.SessionCapabilities, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.ScheduleCapabilityKey(scheduleId))
+	if err != nil || bz == nil || len(bz) < 4 {
+		return types.SessionCapabilities{}, false
+	}
+	return decodeCapabilities(bz), true
+}
+
+func encodeCapabilities(caps types.SessionCapabilities) []byte {
+	bz := make([]byte, 4)
+	if caps.CanTransfer {
+		bz[0] = 1
+	}
+	if caps.CanStake {
+		bz[1] = 1
+	}
+	if caps.CanSubmitClaims {
+		bz[2] = 1
+	}
+	if caps.CanVote {
+		bz[3] = 1
+	}
+	return bz
+}
+
+func decodeCapabilities(bz []byte) types.SessionCapabilities {
+	return types.SessionCapabilities{
+		CanTransfer:     bz[0] == 1,
+		CanStake:        bz[1] == 1,
+		CanSubmitClaims: bz[2] == 1,
+		CanVote:         bz[3] == 1,
+	}
+}
+
 // --- Params ---
 
 func (k Keeper) SetParams(ctx sdk.Context, params *types.Params) {

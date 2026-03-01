@@ -15,8 +15,18 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	currentBlock := uint64(sdkCtx.BlockHeight())
 
-	// Only run expiry check every 100 blocks.
-	if currentBlock%100 != 0 {
+	// Adaptive expiry check interval (R29-6)
+	expiryCheckInterval := uint64(100)
+	if k.pacingKeeper != nil {
+		creationPacing, _ := k.pacingKeeper.GetGlobalPacingMultiplier(ctx)
+		if creationPacing > 0 && creationPacing != 1_000_000 {
+			expiryCheckInterval = 100 * 1_000_000 / creationPacing
+		}
+	}
+	if expiryCheckInterval == 0 {
+		expiryCheckInterval = 100
+	}
+	if currentBlock%expiryCheckInterval != 0 {
 		return nil
 	}
 

@@ -1,0 +1,29 @@
+# ── Build stage ──────────────────────────────────────────────────────────
+FROM golang:1.24-bookworm AS builder
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN make build
+RUN go install cosmossdk.io/tools/cosmovisor/cmd/cosmovisor@latest
+
+# ── Runtime stage ────────────────────────────────────────────────────────
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates curl jq \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/build/zeroned /usr/local/bin/zeroned
+COPY --from=builder /go/bin/cosmovisor /usr/local/bin/cosmovisor
+
+ENV DAEMON_NAME=zeroned
+ENV DAEMON_HOME=/root/.zeroned
+ENV DAEMON_ALLOW_DOWNLOAD_BINARIES=true
+ENV DAEMON_RESTART_AFTER_UPGRADE=true
+
+EXPOSE 26656 26657 1317 9090
+
+ENTRYPOINT ["cosmovisor"]
+CMD ["run", "start"]

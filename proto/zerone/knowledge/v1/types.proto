@@ -34,6 +34,7 @@ enum ClaimStatus {
   CLAIM_STATUS_EXPIRED            = 9;
   CLAIM_STATUS_INSUFFICIENT       = 10;
   CLAIM_STATUS_CONTESTED          = 11;
+  CLAIM_STATUS_MALFORMED          = 12; // Rejected as not truth-apt
 }
 
 // VerificationPhase tracks progress of a commit-reveal verification round.
@@ -52,6 +53,46 @@ enum Verdict {
   VERDICT_ACCEPT       = 1;
   VERDICT_REJECT       = 2;
   VERDICT_INCONCLUSIVE = 3;
+  VERDICT_MALFORMED    = 4; // Claim is not truth-apt (paradox, category error, nonsense)
+}
+
+// ClaimType classifies the epistemic shape of a knowledge claim.
+// Agents use this to filter and prioritize facts for prompt injection.
+enum ClaimType {
+  CLAIM_TYPE_UNSPECIFIED = 0;  // Legacy/untyped — treated as assertion
+  CLAIM_TYPE_ASSERTION   = 1;  // "X is true" — direct factual statement
+  CLAIM_TYPE_RELATION    = 2;  // "X relates to Y via Z" — graph edge
+  CLAIM_TYPE_DEFINITION  = 3;  // "X means Y" — term/concept definition
+  CLAIM_TYPE_CONSTRAINT  = 4;  // "X must/cannot Y" — rule or boundary
+  CLAIM_TYPE_NEGATION    = 5;  // "X is NOT true" — explicit falsity marker
+  CLAIM_TYPE_OBSERVATION = 6;  // "X was observed at time/place" — empirical data point
+  CLAIM_TYPE_COMPUTATIONAL = 7;  // Derived from computation/inference — agent specialty
+}
+
+// RelationType defines how one fact relates to another.
+enum RelationType {
+  RELATION_TYPE_UNSPECIFIED  = 0;
+  RELATION_TYPE_SUPPORTS     = 1;  // This fact provides evidence for the target
+  RELATION_TYPE_CONTRADICTS  = 2;  // This fact conflicts with the target
+  RELATION_TYPE_REQUIRES     = 3;  // This fact depends on the target being true
+  RELATION_TYPE_REFINES      = 4;  // This fact is a more precise version of the target
+  RELATION_TYPE_GENERALIZES  = 5;  // This fact is a broader version of the target
+  RELATION_TYPE_SUPERSEDES   = 6;  // This fact replaces the target (newer/better)
+}
+
+// FactRelation is a typed, directional edge in the knowledge graph.
+message FactRelation {
+  string source_fact_id   = 1;  // The fact declaring the relationship
+  string target_fact_id   = 2;  // The fact being referenced
+  RelationType relation   = 3;  // How source relates to target
+  uint64 created_at_block = 4;
+  string creator          = 5;  // Address that declared this relation
+}
+
+// ClaimRelation declares a typed relationship from a claim to an existing fact.
+message ClaimRelation {
+  string target_fact_id = 1;
+  RelationType relation = 2;
 }
 
 // DomainStatus tracks whether an epistemic domain is active or proposed.
@@ -60,6 +101,19 @@ enum DomainStatus {
   DOMAIN_STATUS_ACTIVE      = 1;
   DOMAIN_STATUS_DEPRECATED  = 2;
   DOMAIN_STATUS_PROPOSED    = 3;
+}
+
+// ClaimStructure provides machine-readable decomposition of a claim.
+// The full claim text (fact_content) remains the canonical human-readable form.
+// Structure is optional but strongly encouraged — agents prioritize structured facts.
+message ClaimStructure {
+  string subject           = 1;  // What the claim is about: "entropy of a closed system"
+  string predicate         = 2;  // What is being asserted: "cannot decrease spontaneously"
+  string object            = 3;  // Optional target: "second law of thermodynamics"
+  string scope             = 4;  // Conditions/context: "classical thermodynamics, isolated systems"
+  string temporal_scope    = 5;  // Time bounds if any: "post-Big-Bang", "since 2024", "" for timeless
+  bool   negatable         = 6;  // Can this claim be meaningfully negated? (false for definitions)
+  repeated string tags     = 7;  // Free-form searchable tags: ["thermodynamics", "entropy", "physics"]
 }
 
 // Fact represents a piece of verified knowledge in the protocol.
@@ -91,6 +145,59 @@ message Fact {
   string stratum               = 21;
   string maturity              = 22; // "emerging", "established", "canonical"
   uint64 incoming_citation_count = 23;
+  ClaimType claim_type = 24;
+  repeated FactRelation outgoing_relations = 25;  // Relations this fact declares
+  repeated FactRelation incoming_relations = 26;  // Relations pointing to this fact
+  ClaimStructure structure = 27;  // Machine-readable decomposition (optional)
+  string canonical_form      = 28;  // Machine-readable normalized form
+  string canonical_hash      = 29;  // SHA-256 of canonical_form for dedup
+
+  // ─── Fitness scoring ──────────────────────────────────────────────────────
+  uint64 fitness_score           = 30;  // 0-1,000,000 composite fitness
+  uint64 fitness_updated_block   = 31;  // Last block fitness was recalculated
+  uint64 query_count             = 32;  // Lifetime query count
+  uint64 query_count_epoch       = 33;  // Queries in current epoch
+  uint64 epoch_born              = 34;  // Epoch when fact was created
+
+  // ─── Metabolism (energy budget) ─────────────────────────────────────────
+  uint64 energy                  = 35;  // Current energy budget (0-10,000)
+  uint64 energy_cap              = 36;  // Maximum energy (governance-adjustable per domain)
+  uint64 energy_last_updated     = 37;  // Block height of last energy update
+  uint64 at_risk_since_epoch     = 38;  // Epoch when energy first hit 0 (0 = not at risk)
+
+  // ─── Competition (niche dynamics) ────────────────────────────────────
+  string niche_key               = 39;  // Computed: hash(domain + subject + claim_type)
+  bool   niche_leader            = 40;  // Is this the top-ranked fact in its niche?
+  uint64 niche_rank              = 41;  // Rank within niche (1 = leader)
+  uint64 niche_size              = 42;  // How many facts in this niche
+  uint64 competition_tax         = 43;  // Extra maintenance from competition (energy units)
+
+  // ─── Reproduction (lineage tracking) ──────────────────────────────────
+  string parent_fact_id          = 44;  // Direct parent (empty if original)
+  repeated string child_fact_ids = 45;  // Direct children
+  uint64 lineage_depth           = 46;  // 0 = original, 1 = child, 2 = grandchild...
+  uint64 progeny_count           = 47;  // Total descendants (recursively)
+  string lineage_root_id         = 48;  // ID of the original ancestor
+
+  // ─── Novelty detection ──────────────────────────────────────────────────
+  bool   common_knowledge_match = 49;  // True if subject matches common knowledge registry
+
+  // ─── Satisfaction feedback ──────────────────────────────────────────────
+  uint64 satisfaction_up         = 60;  // Lifetime positive ratings
+  uint64 satisfaction_down       = 61;  // Lifetime negative ratings
+  uint64 satisfaction_up_epoch   = 62;  // Positive ratings this epoch (resets)
+  uint64 satisfaction_down_epoch = 63;  // Negative ratings this epoch (resets)
+}
+
+// CommonKnowledgeEntry represents a subject that LLMs already know.
+// Claims matching these subjects receive a novelty penalty.
+message CommonKnowledgeEntry {
+  string id           = 1;
+  string domain       = 2;
+  string subject      = 3;   // Normalized subject string
+  string description  = 4;   // Human-readable explanation
+  uint64 penalty_bps  = 5;   // Novelty penalty (0-1,000,000)
+  uint64 added_block  = 6;
 }
 
 // Claim is an unverified submission awaiting or undergoing verification.
@@ -109,6 +216,11 @@ message Claim {
   uint64 challenge_window_end  = 12;
   string provisional_fact_id   = 13;
   string content_hash          = 14; // SHA-256 of fact_content for duplicate detection
+  ClaimType claim_type          = 15;
+  repeated ClaimRelation relations = 16;  // Typed relationships to existing facts
+  ClaimStructure structure = 17;  // Machine-readable decomposition (optional)
+  string canonical_form      = 18;  // Machine-readable normalized form
+  string canonical_hash      = 19;  // SHA-256 of canonical_form for dedup
 }
 
 // VerificationRound tracks one commit-reveal verification cycle.
@@ -137,7 +249,7 @@ message CommitEntry {
 // RevealEntry records a validator's revealed vote and salt.
 message RevealEntry {
   string verifier         = 1;
-  string vote             = 2; // "accept" or "reject"
+  string vote             = 2; // "accept", "reject", or "malformed"
   bytes  salt             = 3;
   uint64 revealed_at_block = 4;
 }
@@ -160,6 +272,8 @@ message Domain {
   string proposer         = 6;
   repeated string endorsers = 7;
   string stratum          = 8;
+  string parent_domain    = 9;  // empty = root domain
+  uint32 depth            = 10; // tree depth: root=1, child=parent.depth+1, max=5
 }
 
 // ValidatorInfo caches a validator's tier and verification stats for round selection.
@@ -191,4 +305,37 @@ message ProvisionalChallenge {
   // "upheld", "overturned", "weakened", "inconclusive", "undecidability"
   string outcome             = 14;
   uint32 attempt_number      = 15;
+}
+
+// DemandSignal tracks aggregate query demand for a domain/subject pair.
+message DemandSignal {
+    string domain               = 1;
+    string subject              = 2;  // Normalized query subject
+    uint64 query_count          = 3;  // Total queries (lifetime)
+    uint64 fulfilled_count      = 4;  // Queries that returned results
+    uint64 unfulfilled_count    = 5;  // Queries that returned nothing
+    uint64 last_query_block     = 6;
+    uint64 epoch_query_count    = 7;  // Queries this epoch (resets)
+    uint64 epoch_unfulfilled    = 8;  // Unfulfilled this epoch (resets)
+}
+
+// KnowledgeBounty is an auto-generated reward for filling a knowledge gap.
+message KnowledgeBounty {
+    string id                   = 1;
+    string domain               = 2;
+    string subject              = 3;
+    string reward_amount        = 4;  // uzrn
+    uint64 created_at_block     = 5;
+    uint64 expires_at_block     = 6;
+    bool   claimed              = 7;
+    string claimed_by_fact_id   = 8;
+    uint64 demand_count         = 9;  // Demand that triggered this bounty
+}
+
+// CompletedRoundMeta stores metadata for completed verification rounds,
+// indexed by verdict block height for efficient window-based queries (R31-2).
+message CompletedRoundMeta {
+    string domain          = 1;
+    bool   has_dissent     = 2;  // true if any verifier dissented from majority
+    uint64 duration_blocks = 3;  // verdict_block - started_at_block
 }

@@ -574,6 +574,478 @@ func (x *QueryCorrectionHistoryResponse) GetTotal() uint64 {
 	return 0
 }
 
+type QueryHealthHistoryRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Limit         uint32                 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryHealthHistoryRequest) Reset() {
+	*x = QueryHealthHistoryRequest{}
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryHealthHistoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryHealthHistoryRequest) ProtoMessage() {}
+
+func (x *QueryHealthHistoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryHealthHistoryRequest.ProtoReflect.Descriptor instead.
+func (*QueryHealthHistoryRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_alignment_v1_query_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *QueryHealthHistoryRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type QueryHealthHistoryResponse struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	Entries       []*AlignmentHealthIndex `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryHealthHistoryResponse) Reset() {
+	*x = QueryHealthHistoryResponse{}
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryHealthHistoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryHealthHistoryResponse) ProtoMessage() {}
+
+func (x *QueryHealthHistoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryHealthHistoryResponse.ProtoReflect.Descriptor instead.
+func (*QueryHealthHistoryResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_alignment_v1_query_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *QueryHealthHistoryResponse) GetEntries() []*AlignmentHealthIndex {
+	if x != nil {
+		return x.Entries
+	}
+	return nil
+}
+
+type CorrectionOutcome struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Height        uint64                 `protobuf:"varint,1,opt,name=height,proto3" json:"height,omitempty"`
+	Dimension     string                 `protobuf:"bytes,2,opt,name=dimension,proto3" json:"dimension,omitempty"`
+	Magnitude     uint64                 `protobuf:"varint,3,opt,name=magnitude,proto3" json:"magnitude,omitempty"`
+	Direction     string                 `protobuf:"bytes,4,opt,name=direction,proto3" json:"direction,omitempty"`
+	ScoreBefore   uint64                 `protobuf:"varint,5,opt,name=score_before,json=scoreBefore,proto3" json:"score_before,omitempty"`
+	ScoreAfter    uint64                 `protobuf:"varint,6,opt,name=score_after,json=scoreAfter,proto3" json:"score_after,omitempty"`
+	Successful    bool                   `protobuf:"varint,7,opt,name=successful,proto3" json:"successful,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CorrectionOutcome) Reset() {
+	*x = CorrectionOutcome{}
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CorrectionOutcome) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CorrectionOutcome) ProtoMessage() {}
+
+func (x *CorrectionOutcome) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CorrectionOutcome.ProtoReflect.Descriptor instead.
+func (*CorrectionOutcome) Descriptor() ([]byte, []int) {
+	return file_zerone_alignment_v1_query_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *CorrectionOutcome) GetHeight() uint64 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *CorrectionOutcome) GetDimension() string {
+	if x != nil {
+		return x.Dimension
+	}
+	return ""
+}
+
+func (x *CorrectionOutcome) GetMagnitude() uint64 {
+	if x != nil {
+		return x.Magnitude
+	}
+	return 0
+}
+
+func (x *CorrectionOutcome) GetDirection() string {
+	if x != nil {
+		return x.Direction
+	}
+	return ""
+}
+
+func (x *CorrectionOutcome) GetScoreBefore() uint64 {
+	if x != nil {
+		return x.ScoreBefore
+	}
+	return 0
+}
+
+func (x *CorrectionOutcome) GetScoreAfter() uint64 {
+	if x != nil {
+		return x.ScoreAfter
+	}
+	return 0
+}
+
+func (x *CorrectionOutcome) GetSuccessful() bool {
+	if x != nil {
+		return x.Successful
+	}
+	return false
+}
+
+type QueryCorrectionConfidenceRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryCorrectionConfidenceRequest) Reset() {
+	*x = QueryCorrectionConfidenceRequest{}
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryCorrectionConfidenceRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryCorrectionConfidenceRequest) ProtoMessage() {}
+
+func (x *QueryCorrectionConfidenceRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryCorrectionConfidenceRequest.ProtoReflect.Descriptor instead.
+func (*QueryCorrectionConfidenceRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_alignment_v1_query_proto_rawDescGZIP(), []int{15}
+}
+
+type QueryCorrectionConfidenceResponse struct {
+	state                        protoimpl.MessageState `protogen:"open.v1"`
+	ConfidenceBps                uint64                 `protobuf:"varint,1,opt,name=confidence_bps,json=confidenceBps,proto3" json:"confidence_bps,omitempty"`
+	TotalCorrections             uint64                 `protobuf:"varint,2,opt,name=total_corrections,json=totalCorrections,proto3" json:"total_corrections,omitempty"`
+	SuccessfulCorrections        uint64                 `protobuf:"varint,3,opt,name=successful_corrections,json=successfulCorrections,proto3" json:"successful_corrections,omitempty"`
+	EffectiveMaxMagnitude        uint64                 `protobuf:"varint,4,opt,name=effective_max_magnitude,json=effectiveMaxMagnitude,proto3" json:"effective_max_magnitude,omitempty"`
+	EffectiveObservationInterval uint64                 `protobuf:"varint,5,opt,name=effective_observation_interval,json=effectiveObservationInterval,proto3" json:"effective_observation_interval,omitempty"`
+	RecentOutcomes               []*CorrectionOutcome   `protobuf:"bytes,6,rep,name=recent_outcomes,json=recentOutcomes,proto3" json:"recent_outcomes,omitempty"`
+	unknownFields                protoimpl.UnknownFields
+	sizeCache                    protoimpl.SizeCache
+}
+
+func (x *QueryCorrectionConfidenceResponse) Reset() {
+	*x = QueryCorrectionConfidenceResponse{}
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryCorrectionConfidenceResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryCorrectionConfidenceResponse) ProtoMessage() {}
+
+func (x *QueryCorrectionConfidenceResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryCorrectionConfidenceResponse.ProtoReflect.Descriptor instead.
+func (*QueryCorrectionConfidenceResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_alignment_v1_query_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *QueryCorrectionConfidenceResponse) GetConfidenceBps() uint64 {
+	if x != nil {
+		return x.ConfidenceBps
+	}
+	return 0
+}
+
+func (x *QueryCorrectionConfidenceResponse) GetTotalCorrections() uint64 {
+	if x != nil {
+		return x.TotalCorrections
+	}
+	return 0
+}
+
+func (x *QueryCorrectionConfidenceResponse) GetSuccessfulCorrections() uint64 {
+	if x != nil {
+		return x.SuccessfulCorrections
+	}
+	return 0
+}
+
+func (x *QueryCorrectionConfidenceResponse) GetEffectiveMaxMagnitude() uint64 {
+	if x != nil {
+		return x.EffectiveMaxMagnitude
+	}
+	return 0
+}
+
+func (x *QueryCorrectionConfidenceResponse) GetEffectiveObservationInterval() uint64 {
+	if x != nil {
+		return x.EffectiveObservationInterval
+	}
+	return 0
+}
+
+func (x *QueryCorrectionConfidenceResponse) GetRecentOutcomes() []*CorrectionOutcome {
+	if x != nil {
+		return x.RecentOutcomes
+	}
+	return nil
+}
+
+type ModulePacingEffect struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Module         string                 `protobuf:"bytes,1,opt,name=module,proto3" json:"module,omitempty"`
+	Parameter      string                 `protobuf:"bytes,2,opt,name=parameter,proto3" json:"parameter,omitempty"`
+	BaseValue      uint64                 `protobuf:"varint,3,opt,name=base_value,json=baseValue,proto3" json:"base_value,omitempty"`
+	EffectiveValue uint64                 `protobuf:"varint,4,opt,name=effective_value,json=effectiveValue,proto3" json:"effective_value,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ModulePacingEffect) Reset() {
+	*x = ModulePacingEffect{}
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModulePacingEffect) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModulePacingEffect) ProtoMessage() {}
+
+func (x *ModulePacingEffect) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModulePacingEffect.ProtoReflect.Descriptor instead.
+func (*ModulePacingEffect) Descriptor() ([]byte, []int) {
+	return file_zerone_alignment_v1_query_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ModulePacingEffect) GetModule() string {
+	if x != nil {
+		return x.Module
+	}
+	return ""
+}
+
+func (x *ModulePacingEffect) GetParameter() string {
+	if x != nil {
+		return x.Parameter
+	}
+	return ""
+}
+
+func (x *ModulePacingEffect) GetBaseValue() uint64 {
+	if x != nil {
+		return x.BaseValue
+	}
+	return 0
+}
+
+func (x *ModulePacingEffect) GetEffectiveValue() uint64 {
+	if x != nil {
+		return x.EffectiveValue
+	}
+	return 0
+}
+
+type QueryGlobalPacingRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryGlobalPacingRequest) Reset() {
+	*x = QueryGlobalPacingRequest{}
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryGlobalPacingRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryGlobalPacingRequest) ProtoMessage() {}
+
+func (x *QueryGlobalPacingRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryGlobalPacingRequest.ProtoReflect.Descriptor instead.
+func (*QueryGlobalPacingRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_alignment_v1_query_proto_rawDescGZIP(), []int{18}
+}
+
+type QueryGlobalPacingResponse struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	HealthCategory        string                 `protobuf:"bytes,1,opt,name=health_category,json=healthCategory,proto3" json:"health_category,omitempty"`
+	CreationMultiplierBps uint64                 `protobuf:"varint,2,opt,name=creation_multiplier_bps,json=creationMultiplierBps,proto3" json:"creation_multiplier_bps,omitempty"`
+	AnalysisMultiplierBps uint64                 `protobuf:"varint,3,opt,name=analysis_multiplier_bps,json=analysisMultiplierBps,proto3" json:"analysis_multiplier_bps,omitempty"`
+	AffectedModules       []*ModulePacingEffect  `protobuf:"bytes,4,rep,name=affected_modules,json=affectedModules,proto3" json:"affected_modules,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *QueryGlobalPacingResponse) Reset() {
+	*x = QueryGlobalPacingResponse{}
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryGlobalPacingResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryGlobalPacingResponse) ProtoMessage() {}
+
+func (x *QueryGlobalPacingResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_alignment_v1_query_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryGlobalPacingResponse.ProtoReflect.Descriptor instead.
+func (*QueryGlobalPacingResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_alignment_v1_query_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *QueryGlobalPacingResponse) GetHealthCategory() string {
+	if x != nil {
+		return x.HealthCategory
+	}
+	return ""
+}
+
+func (x *QueryGlobalPacingResponse) GetCreationMultiplierBps() uint64 {
+	if x != nil {
+		return x.CreationMultiplierBps
+	}
+	return 0
+}
+
+func (x *QueryGlobalPacingResponse) GetAnalysisMultiplierBps() uint64 {
+	if x != nil {
+		return x.AnalysisMultiplierBps
+	}
+	return 0
+}
+
+func (x *QueryGlobalPacingResponse) GetAffectedModules() []*ModulePacingEffect {
+	if x != nil {
+		return x.AffectedModules
+	}
+	return nil
+}
+
 var File_zerone_alignment_v1_query_proto protoreflect.FileDescriptor
 
 const file_zerone_alignment_v1_query_proto_rawDesc = "" +
@@ -605,14 +1077,53 @@ const file_zerone_alignment_v1_query_proto_rawDesc = "" +
 	"\x06offset\x18\x02 \x01(\rR\x06offset\"\x7f\n" +
 	"\x1eQueryCorrectionHistoryResponse\x12G\n" +
 	"\vcorrections\x18\x01 \x03(\v2%.zerone.alignment.v1.CorrectionRecordR\vcorrections\x12\x14\n" +
-	"\x05total\x18\x02 \x01(\x04R\x05total2\xf9\x06\n" +
+	"\x05total\x18\x02 \x01(\x04R\x05total\"1\n" +
+	"\x19QueryHealthHistoryRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\"a\n" +
+	"\x1aQueryHealthHistoryResponse\x12C\n" +
+	"\aentries\x18\x01 \x03(\v2).zerone.alignment.v1.AlignmentHealthIndexR\aentries\"\xe9\x01\n" +
+	"\x11CorrectionOutcome\x12\x16\n" +
+	"\x06height\x18\x01 \x01(\x04R\x06height\x12\x1c\n" +
+	"\tdimension\x18\x02 \x01(\tR\tdimension\x12\x1c\n" +
+	"\tmagnitude\x18\x03 \x01(\x04R\tmagnitude\x12\x1c\n" +
+	"\tdirection\x18\x04 \x01(\tR\tdirection\x12!\n" +
+	"\fscore_before\x18\x05 \x01(\x04R\vscoreBefore\x12\x1f\n" +
+	"\vscore_after\x18\x06 \x01(\x04R\n" +
+	"scoreAfter\x12\x1e\n" +
+	"\n" +
+	"successful\x18\a \x01(\bR\n" +
+	"successful\"\"\n" +
+	" QueryCorrectionConfidenceRequest\"\xfd\x02\n" +
+	"!QueryCorrectionConfidenceResponse\x12%\n" +
+	"\x0econfidence_bps\x18\x01 \x01(\x04R\rconfidenceBps\x12+\n" +
+	"\x11total_corrections\x18\x02 \x01(\x04R\x10totalCorrections\x125\n" +
+	"\x16successful_corrections\x18\x03 \x01(\x04R\x15successfulCorrections\x126\n" +
+	"\x17effective_max_magnitude\x18\x04 \x01(\x04R\x15effectiveMaxMagnitude\x12D\n" +
+	"\x1eeffective_observation_interval\x18\x05 \x01(\x04R\x1ceffectiveObservationInterval\x12O\n" +
+	"\x0frecent_outcomes\x18\x06 \x03(\v2&.zerone.alignment.v1.CorrectionOutcomeR\x0erecentOutcomes\"\x92\x01\n" +
+	"\x12ModulePacingEffect\x12\x16\n" +
+	"\x06module\x18\x01 \x01(\tR\x06module\x12\x1c\n" +
+	"\tparameter\x18\x02 \x01(\tR\tparameter\x12\x1d\n" +
+	"\n" +
+	"base_value\x18\x03 \x01(\x04R\tbaseValue\x12'\n" +
+	"\x0feffective_value\x18\x04 \x01(\x04R\x0eeffectiveValue\"\x1a\n" +
+	"\x18QueryGlobalPacingRequest\"\x88\x02\n" +
+	"\x19QueryGlobalPacingResponse\x12'\n" +
+	"\x0fhealth_category\x18\x01 \x01(\tR\x0ehealthCategory\x126\n" +
+	"\x17creation_multiplier_bps\x18\x02 \x01(\x04R\x15creationMultiplierBps\x126\n" +
+	"\x17analysis_multiplier_bps\x18\x03 \x01(\x04R\x15analysisMultiplierBps\x12R\n" +
+	"\x10affected_modules\x18\x04 \x03(\v2'.zerone.alignment.v1.ModulePacingEffectR\x0faffectedModules2\xf1\n" +
+	"\n" +
 	"\x05Query\x12\x80\x01\n" +
 	"\x06Params\x12'.zerone.alignment.v1.QueryParamsRequest\x1a(.zerone.alignment.v1.QueryParamsResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/zerone/alignment/v1/params\x12|\n" +
 	"\x05State\x12&.zerone.alignment.v1.QueryStateRequest\x1a'.zerone.alignment.v1.QueryStateResponse\"\"\x82\xd3\xe4\x93\x02\x1c\x12\x1a/zerone/alignment/v1/state\x12\x9e\x01\n" +
 	"\vObservation\x12,.zerone.alignment.v1.QueryObservationRequest\x1a-.zerone.alignment.v1.QueryObservationResponse\"2\x82\xd3\xe4\x93\x02,\x12*/zerone/alignment/v1/observations/{height}\x12\x89\x01\n" +
 	"\x06Scores\x12'.zerone.alignment.v1.QueryScoresRequest\x1a(.zerone.alignment.v1.QueryScoresResponse\",\x82\xd3\xe4\x93\x02&\x12$/zerone/alignment/v1/scores/{height}\x12\x98\x01\n" +
 	"\vHealthIndex\x12,.zerone.alignment.v1.QueryHealthIndexRequest\x1a-.zerone.alignment.v1.QueryHealthIndexResponse\",\x82\xd3\xe4\x93\x02&\x12$/zerone/alignment/v1/health/{height}\x12\xa6\x01\n" +
-	"\x11CorrectionHistory\x122.zerone.alignment.v1.QueryCorrectionHistoryRequest\x1a3.zerone.alignment.v1.QueryCorrectionHistoryResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /zerone/alignment/v1/correctionsB2Z0github.com/zerone-chain/zerone/x/alignment/typesb\x06proto3"
+	"\x11CorrectionHistory\x122.zerone.alignment.v1.QueryCorrectionHistoryRequest\x1a3.zerone.alignment.v1.QueryCorrectionHistoryResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /zerone/alignment/v1/corrections\x12\x9d\x01\n" +
+	"\rHealthHistory\x12..zerone.alignment.v1.QueryHealthHistoryRequest\x1a/.zerone.alignment.v1.QueryHealthHistoryResponse\"+\x82\xd3\xe4\x93\x02%\x12#/zerone/alignment/v1/health-history\x12\xb9\x01\n" +
+	"\x14CorrectionConfidence\x125.zerone.alignment.v1.QueryCorrectionConfidenceRequest\x1a6.zerone.alignment.v1.QueryCorrectionConfidenceResponse\"2\x82\xd3\xe4\x93\x02,\x12*/zerone/alignment/v1/correction-confidence\x12\x99\x01\n" +
+	"\fGlobalPacing\x12-.zerone.alignment.v1.QueryGlobalPacingRequest\x1a..zerone.alignment.v1.QueryGlobalPacingResponse\"*\x82\xd3\xe4\x93\x02$\x12\"/zerone/alignment/v1/global-pacingB2Z0github.com/zerone-chain/zerone/x/alignment/typesb\x06proto3"
 
 var (
 	file_zerone_alignment_v1_query_proto_rawDescOnce sync.Once
@@ -626,51 +1137,68 @@ func file_zerone_alignment_v1_query_proto_rawDescGZIP() []byte {
 	return file_zerone_alignment_v1_query_proto_rawDescData
 }
 
-var file_zerone_alignment_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_zerone_alignment_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_zerone_alignment_v1_query_proto_goTypes = []any{
-	(*QueryParamsRequest)(nil),             // 0: zerone.alignment.v1.QueryParamsRequest
-	(*QueryParamsResponse)(nil),            // 1: zerone.alignment.v1.QueryParamsResponse
-	(*QueryStateRequest)(nil),              // 2: zerone.alignment.v1.QueryStateRequest
-	(*QueryStateResponse)(nil),             // 3: zerone.alignment.v1.QueryStateResponse
-	(*QueryObservationRequest)(nil),        // 4: zerone.alignment.v1.QueryObservationRequest
-	(*QueryObservationResponse)(nil),       // 5: zerone.alignment.v1.QueryObservationResponse
-	(*QueryScoresRequest)(nil),             // 6: zerone.alignment.v1.QueryScoresRequest
-	(*QueryScoresResponse)(nil),            // 7: zerone.alignment.v1.QueryScoresResponse
-	(*QueryHealthIndexRequest)(nil),        // 8: zerone.alignment.v1.QueryHealthIndexRequest
-	(*QueryHealthIndexResponse)(nil),       // 9: zerone.alignment.v1.QueryHealthIndexResponse
-	(*QueryCorrectionHistoryRequest)(nil),  // 10: zerone.alignment.v1.QueryCorrectionHistoryRequest
-	(*QueryCorrectionHistoryResponse)(nil), // 11: zerone.alignment.v1.QueryCorrectionHistoryResponse
-	(*Params)(nil),                         // 12: zerone.alignment.v1.Params
-	(*AlignmentState)(nil),                 // 13: zerone.alignment.v1.AlignmentState
-	(*AlignmentObservation)(nil),           // 14: zerone.alignment.v1.AlignmentObservation
-	(*DimensionScores)(nil),                // 15: zerone.alignment.v1.DimensionScores
-	(*AlignmentHealthIndex)(nil),           // 16: zerone.alignment.v1.AlignmentHealthIndex
-	(*CorrectionRecord)(nil),               // 17: zerone.alignment.v1.CorrectionRecord
+	(*QueryParamsRequest)(nil),                // 0: zerone.alignment.v1.QueryParamsRequest
+	(*QueryParamsResponse)(nil),               // 1: zerone.alignment.v1.QueryParamsResponse
+	(*QueryStateRequest)(nil),                 // 2: zerone.alignment.v1.QueryStateRequest
+	(*QueryStateResponse)(nil),                // 3: zerone.alignment.v1.QueryStateResponse
+	(*QueryObservationRequest)(nil),           // 4: zerone.alignment.v1.QueryObservationRequest
+	(*QueryObservationResponse)(nil),          // 5: zerone.alignment.v1.QueryObservationResponse
+	(*QueryScoresRequest)(nil),                // 6: zerone.alignment.v1.QueryScoresRequest
+	(*QueryScoresResponse)(nil),               // 7: zerone.alignment.v1.QueryScoresResponse
+	(*QueryHealthIndexRequest)(nil),           // 8: zerone.alignment.v1.QueryHealthIndexRequest
+	(*QueryHealthIndexResponse)(nil),          // 9: zerone.alignment.v1.QueryHealthIndexResponse
+	(*QueryCorrectionHistoryRequest)(nil),     // 10: zerone.alignment.v1.QueryCorrectionHistoryRequest
+	(*QueryCorrectionHistoryResponse)(nil),    // 11: zerone.alignment.v1.QueryCorrectionHistoryResponse
+	(*QueryHealthHistoryRequest)(nil),         // 12: zerone.alignment.v1.QueryHealthHistoryRequest
+	(*QueryHealthHistoryResponse)(nil),        // 13: zerone.alignment.v1.QueryHealthHistoryResponse
+	(*CorrectionOutcome)(nil),                 // 14: zerone.alignment.v1.CorrectionOutcome
+	(*QueryCorrectionConfidenceRequest)(nil),  // 15: zerone.alignment.v1.QueryCorrectionConfidenceRequest
+	(*QueryCorrectionConfidenceResponse)(nil), // 16: zerone.alignment.v1.QueryCorrectionConfidenceResponse
+	(*ModulePacingEffect)(nil),                // 17: zerone.alignment.v1.ModulePacingEffect
+	(*QueryGlobalPacingRequest)(nil),          // 18: zerone.alignment.v1.QueryGlobalPacingRequest
+	(*QueryGlobalPacingResponse)(nil),         // 19: zerone.alignment.v1.QueryGlobalPacingResponse
+	(*Params)(nil),                            // 20: zerone.alignment.v1.Params
+	(*AlignmentState)(nil),                    // 21: zerone.alignment.v1.AlignmentState
+	(*AlignmentObservation)(nil),              // 22: zerone.alignment.v1.AlignmentObservation
+	(*DimensionScores)(nil),                   // 23: zerone.alignment.v1.DimensionScores
+	(*AlignmentHealthIndex)(nil),              // 24: zerone.alignment.v1.AlignmentHealthIndex
+	(*CorrectionRecord)(nil),                  // 25: zerone.alignment.v1.CorrectionRecord
 }
 var file_zerone_alignment_v1_query_proto_depIdxs = []int32{
-	12, // 0: zerone.alignment.v1.QueryParamsResponse.params:type_name -> zerone.alignment.v1.Params
-	13, // 1: zerone.alignment.v1.QueryStateResponse.state:type_name -> zerone.alignment.v1.AlignmentState
-	14, // 2: zerone.alignment.v1.QueryObservationResponse.observation:type_name -> zerone.alignment.v1.AlignmentObservation
-	15, // 3: zerone.alignment.v1.QueryScoresResponse.scores:type_name -> zerone.alignment.v1.DimensionScores
-	16, // 4: zerone.alignment.v1.QueryHealthIndexResponse.health_index:type_name -> zerone.alignment.v1.AlignmentHealthIndex
-	17, // 5: zerone.alignment.v1.QueryCorrectionHistoryResponse.corrections:type_name -> zerone.alignment.v1.CorrectionRecord
-	0,  // 6: zerone.alignment.v1.Query.Params:input_type -> zerone.alignment.v1.QueryParamsRequest
-	2,  // 7: zerone.alignment.v1.Query.State:input_type -> zerone.alignment.v1.QueryStateRequest
-	4,  // 8: zerone.alignment.v1.Query.Observation:input_type -> zerone.alignment.v1.QueryObservationRequest
-	6,  // 9: zerone.alignment.v1.Query.Scores:input_type -> zerone.alignment.v1.QueryScoresRequest
-	8,  // 10: zerone.alignment.v1.Query.HealthIndex:input_type -> zerone.alignment.v1.QueryHealthIndexRequest
-	10, // 11: zerone.alignment.v1.Query.CorrectionHistory:input_type -> zerone.alignment.v1.QueryCorrectionHistoryRequest
-	1,  // 12: zerone.alignment.v1.Query.Params:output_type -> zerone.alignment.v1.QueryParamsResponse
-	3,  // 13: zerone.alignment.v1.Query.State:output_type -> zerone.alignment.v1.QueryStateResponse
-	5,  // 14: zerone.alignment.v1.Query.Observation:output_type -> zerone.alignment.v1.QueryObservationResponse
-	7,  // 15: zerone.alignment.v1.Query.Scores:output_type -> zerone.alignment.v1.QueryScoresResponse
-	9,  // 16: zerone.alignment.v1.Query.HealthIndex:output_type -> zerone.alignment.v1.QueryHealthIndexResponse
-	11, // 17: zerone.alignment.v1.Query.CorrectionHistory:output_type -> zerone.alignment.v1.QueryCorrectionHistoryResponse
-	12, // [12:18] is the sub-list for method output_type
-	6,  // [6:12] is the sub-list for method input_type
-	6,  // [6:6] is the sub-list for extension type_name
-	6,  // [6:6] is the sub-list for extension extendee
-	0,  // [0:6] is the sub-list for field type_name
+	20, // 0: zerone.alignment.v1.QueryParamsResponse.params:type_name -> zerone.alignment.v1.Params
+	21, // 1: zerone.alignment.v1.QueryStateResponse.state:type_name -> zerone.alignment.v1.AlignmentState
+	22, // 2: zerone.alignment.v1.QueryObservationResponse.observation:type_name -> zerone.alignment.v1.AlignmentObservation
+	23, // 3: zerone.alignment.v1.QueryScoresResponse.scores:type_name -> zerone.alignment.v1.DimensionScores
+	24, // 4: zerone.alignment.v1.QueryHealthIndexResponse.health_index:type_name -> zerone.alignment.v1.AlignmentHealthIndex
+	25, // 5: zerone.alignment.v1.QueryCorrectionHistoryResponse.corrections:type_name -> zerone.alignment.v1.CorrectionRecord
+	24, // 6: zerone.alignment.v1.QueryHealthHistoryResponse.entries:type_name -> zerone.alignment.v1.AlignmentHealthIndex
+	14, // 7: zerone.alignment.v1.QueryCorrectionConfidenceResponse.recent_outcomes:type_name -> zerone.alignment.v1.CorrectionOutcome
+	17, // 8: zerone.alignment.v1.QueryGlobalPacingResponse.affected_modules:type_name -> zerone.alignment.v1.ModulePacingEffect
+	0,  // 9: zerone.alignment.v1.Query.Params:input_type -> zerone.alignment.v1.QueryParamsRequest
+	2,  // 10: zerone.alignment.v1.Query.State:input_type -> zerone.alignment.v1.QueryStateRequest
+	4,  // 11: zerone.alignment.v1.Query.Observation:input_type -> zerone.alignment.v1.QueryObservationRequest
+	6,  // 12: zerone.alignment.v1.Query.Scores:input_type -> zerone.alignment.v1.QueryScoresRequest
+	8,  // 13: zerone.alignment.v1.Query.HealthIndex:input_type -> zerone.alignment.v1.QueryHealthIndexRequest
+	10, // 14: zerone.alignment.v1.Query.CorrectionHistory:input_type -> zerone.alignment.v1.QueryCorrectionHistoryRequest
+	12, // 15: zerone.alignment.v1.Query.HealthHistory:input_type -> zerone.alignment.v1.QueryHealthHistoryRequest
+	15, // 16: zerone.alignment.v1.Query.CorrectionConfidence:input_type -> zerone.alignment.v1.QueryCorrectionConfidenceRequest
+	18, // 17: zerone.alignment.v1.Query.GlobalPacing:input_type -> zerone.alignment.v1.QueryGlobalPacingRequest
+	1,  // 18: zerone.alignment.v1.Query.Params:output_type -> zerone.alignment.v1.QueryParamsResponse
+	3,  // 19: zerone.alignment.v1.Query.State:output_type -> zerone.alignment.v1.QueryStateResponse
+	5,  // 20: zerone.alignment.v1.Query.Observation:output_type -> zerone.alignment.v1.QueryObservationResponse
+	7,  // 21: zerone.alignment.v1.Query.Scores:output_type -> zerone.alignment.v1.QueryScoresResponse
+	9,  // 22: zerone.alignment.v1.Query.HealthIndex:output_type -> zerone.alignment.v1.QueryHealthIndexResponse
+	11, // 23: zerone.alignment.v1.Query.CorrectionHistory:output_type -> zerone.alignment.v1.QueryCorrectionHistoryResponse
+	13, // 24: zerone.alignment.v1.Query.HealthHistory:output_type -> zerone.alignment.v1.QueryHealthHistoryResponse
+	16, // 25: zerone.alignment.v1.Query.CorrectionConfidence:output_type -> zerone.alignment.v1.QueryCorrectionConfidenceResponse
+	19, // 26: zerone.alignment.v1.Query.GlobalPacing:output_type -> zerone.alignment.v1.QueryGlobalPacingResponse
+	18, // [18:27] is the sub-list for method output_type
+	9,  // [9:18] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_zerone_alignment_v1_query_proto_init() }
@@ -686,7 +1214,7 @@ func file_zerone_alignment_v1_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_alignment_v1_query_proto_rawDesc), len(file_zerone_alignment_v1_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

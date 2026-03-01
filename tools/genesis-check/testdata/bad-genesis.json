@@ -1,0 +1,97 @@
+{
+  "chain_id": "badchain-1",
+  "genesis_time": "2020-01-01T00:00:00Z",
+  "consensus": {
+    "params": {
+      "abci": {
+        "vote_extensions_enable_height": "0"
+      }
+    }
+  },
+  "app_state": {
+    "vesting_rewards": {
+      "params": {
+        "founder_share_bps": "200000",
+        "founder_address": "",
+        "revenue_split": {
+          "contributor_bps": "550000",
+          "protocol_bps": "220000",
+          "research_bps": "33300",
+          "development_bps": "0"
+        },
+        "protocol_sub_split": {
+          "citation_bps": "500000",
+          "verification_bps": "300000",
+          "treasury_bps": "100000"
+        }
+      }
+    },
+    "knowledge": {
+      "params": {
+        "fitness_epoch_blocks": "100",
+        "fitness_weight_query_bps": "0",
+        "fitness_weight_citation_bps": "250000",
+        "fitness_weight_bridge_bps": "100000",
+        "fitness_weight_depth_bps": "100000",
+        "fitness_weight_patron_bps": "50000",
+        "fitness_weight_unique_bps": "100000",
+        "fitness_weight_age_bps": "100000",
+        "fitness_weight_satisfaction_bps": "0",
+        "demand_tracking_enabled": true,
+        "demand_bounty_threshold": "0",
+        "demand_bounty_expiry_epochs": "0",
+        "demand_bounty_base_reward": "0",
+        "metabolism_base_cost": "0",
+        "metabolism_energy_cap": "50",
+        "metabolism_initial_energy": "0",
+        "competition_redundancy_threshold_bps": "1000000",
+        "competition_max_niche_size": "0",
+        "bootstrap_fund_enabled": true,
+        "bootstrap_fund_epoch_blocks": "0",
+        "bootstrap_fund_max_per_epoch": "0"
+      },
+      "facts": [
+        {
+          "id": "bad-fact-1",
+          "domain": "",
+          "status": "FACT_STATUS_PENDING",
+          "energy": "0",
+          "structure": {
+            "subject": ""
+          }
+        },
+        {
+          "id": "bad-fact-2",
+          "domain": "physics",
+          "status": "FACT_STATUS_VERIFIED",
+          "energy": "0"
+        }
+      ]
+    },
+    "zerone_staking": {
+      "params": {
+        "tier_configs": [
+          {"name": "Apprentice", "min_stake": "1000000"},
+          {"name": "Verified", "min_stake": "500000"},
+          {"name": "Scholar", "min_stake": "1111000000"},
+          {"name": "Guardian", "min_stake": "11111000000"}
+        ]
+      }
+    },
+    "zerone_gov": {
+      "params": {
+        "voting_period_blocks": "100",
+        "discussion_period_blocks": "200",
+        "quorum_threshold_bps": "0",
+        "support_threshold_bps": "0",
+        "research_fund_voters": {
+          "voter1": "",
+          "voter2": ""
+        }
+      }
+    },
+    "bank": {
+      "balances": []
+    }
+  }
+}

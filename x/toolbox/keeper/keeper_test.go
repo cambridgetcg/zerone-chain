@@ -47,7 +47,6 @@ type mockBankKeeper struct {
 	modToAccSends []mockSendRecord
 	modToModSends []mockSendRecord
 	accToModSends []mockSendRecord
-	burns         []uint64
 	failSend      bool
 }
 
@@ -79,10 +78,6 @@ func (m *mockBankKeeper) SendCoinsFromModuleToModule(_ context.Context, senderMo
 	})
 	return nil
 }
-func (m *mockBankKeeper) BurnCoins(_ context.Context, _ string, amt sdk.Coins) error {
-	m.burns = append(m.burns, amt.AmountOf("uzrn").Uint64())
-	return nil
-}
 func (m *mockBankKeeper) GetBalance(_ context.Context, _ sdk.AccAddress, _ string) sdk.Coin {
 	return sdk.NewCoin("uzrn", sdkmath.NewInt(1_000_000_000))
 }
@@ -91,7 +86,6 @@ func (m *mockBankKeeper) reset() {
 	m.modToAccSends = nil
 	m.modToModSends = nil
 	m.accToModSends = nil
-	m.burns = nil
 	m.failSend = false
 }
 
@@ -1004,14 +998,20 @@ func TestDistributeRevenue_BasicSplit(t *testing.T) {
 		t.Errorf("treasury: expected 44000, got %d", treasury)
 	}
 
-	// Research: 13% = 130K
-	if len(rf.deposits) != 1 || rf.deposits[0].amount != 130_000 {
-		t.Errorf("research: expected 130000")
+	// Research: 3.33% = 33,300
+	if len(rf.deposits) != 1 || rf.deposits[0].amount != 33_300 {
+		t.Errorf("research: expected 33300")
 	}
 
-	// Burn: 10% = 100K
-	if len(bk.burns) != 1 || bk.burns[0] != 100_000 {
-		t.Errorf("burn: expected 100000, got %v", bk.burns)
+	// Development fund: 19.67% = 196,700 (via SendCoinsFromModuleToModule)
+	var devFund uint64
+	for _, s := range bk.modToModSends {
+		if s.to == "development_fund" {
+			devFund += s.amount
+		}
+	}
+	if devFund != 196_700 {
+		t.Errorf("development fund: expected 196700, got %d", devFund)
 	}
 }
 
@@ -1090,7 +1090,7 @@ func TestDistributeRevenue_GovernanceChangedSplits(t *testing.T) {
 	params.ToolRevenueBps = 600_000
 	params.ProtocolBps = 200_000
 	params.ResearchBps = 150_000
-	params.BurnBps = 50_000
+	params.DevelopmentBps = 50_000
 	k.SetParams(ctx, params)
 
 	tool := &types.Tool{
@@ -1110,8 +1110,14 @@ func TestDistributeRevenue_GovernanceChangedSplits(t *testing.T) {
 	if len(rf.deposits) != 1 || rf.deposits[0].amount != 150_000 {
 		t.Errorf("research: expected 150000")
 	}
-	if len(bk.burns) != 1 || bk.burns[0] != 50_000 {
-		t.Errorf("burn: expected 50000")
+	var devFund uint64
+	for _, s := range bk.modToModSends {
+		if s.to == "development_fund" {
+			devFund += s.amount
+		}
+	}
+	if devFund != 50_000 {
+		t.Errorf("development fund: expected 50000, got %d", devFund)
 	}
 }
 

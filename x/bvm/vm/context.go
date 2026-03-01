@@ -33,6 +33,17 @@ type ExecutionContext struct {
 
 	ContractBvmVersion uint32
 	GasSchedule        *GasSchedule
+
+	CallerDID    string               // DID of the caller (empty if anonymous)
+	Capabilities *SessionCapabilities // nil = deny all agent opcodes (secure default)
+}
+
+// SessionCapabilities restricts what a session key can do within BVM execution.
+type SessionCapabilities struct {
+	CanTransfer     bool
+	CanStake        bool
+	CanSubmitClaims bool
+	CanVote         bool
 }
 
 // ExecutionResult is returned after bytecode execution completes.
@@ -111,6 +122,13 @@ type HostFunctions interface {
 	KVerify(callerDID string, claimId, voteHash []byte) bool
 	// KCITE (0xE2) — record citation
 	KCite(callerDID string, factId []byte) bool
+
+	// HQUERY (0xE3) — query caller's home from x/home
+	HQuery(callerAddr []byte) (hasHome bool, homeId []byte, status []byte)
+	// HMEMORY (0xE4) — get home memory CID
+	HMemory(homeId []byte) []byte
+	// HPARTNER (0xE5) — get home partnership ID
+	HPartner(homeId []byte) []byte
 }
 
 const (

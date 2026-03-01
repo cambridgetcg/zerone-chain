@@ -247,6 +247,16 @@ func (k Keeper) GetCaptureMetrics(ctx context.Context, domain string) (*types.Ca
 	return &m, true
 }
 
+// GetDomainCapturePenalty returns whether a domain is flagged and its HHI as penalty BPS (R31-1).
+// Metal controls Wood: penalty scales with HHI concentration.
+func (k Keeper) GetDomainCapturePenalty(ctx context.Context, domain string) (bool, uint64) {
+	metrics, found := k.GetCaptureMetrics(ctx, domain)
+	if !found || !metrics.Flagged {
+		return false, 0
+	}
+	return true, metrics.HerfindahlIndex
+}
+
 // DeleteCaptureMetrics removes capture metrics for a domain.
 func (k Keeper) DeleteCaptureMetrics(ctx context.Context, domain string) {
 	kvStore := k.storeService.OpenKVStore(ctx)
@@ -281,6 +291,28 @@ func (k Keeper) IterateCaptureMetrics(ctx context.Context, cb func(*types.Captur
 			break
 		}
 	}
+}
+
+// ClearCaptureFlag unflags a domain by setting Flagged=false on its metrics.
+func (k Keeper) ClearCaptureFlag(ctx context.Context, domain string) {
+	metrics, found := k.GetCaptureMetrics(ctx, domain)
+	if !found {
+		return
+	}
+	metrics.Flagged = false
+	k.SetCaptureMetrics(ctx, metrics)
+}
+
+// GetFlaggedDomainCount returns the number of domains currently flagged for capture risk.
+func (k Keeper) GetFlaggedDomainCount(ctx context.Context) uint64 {
+	var count uint64
+	k.IterateCaptureMetrics(ctx, func(m *types.CaptureMetrics) bool {
+		if m.Flagged {
+			count++
+		}
+		return false
+	})
+	return count
 }
 
 // ---------- VerificationHistory ----------

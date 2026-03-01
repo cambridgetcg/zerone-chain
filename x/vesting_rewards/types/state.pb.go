@@ -305,22 +305,22 @@ func (x *CategoryConfig) GetMaxRelease() uint64 {
 
 // RewardRouting represents a routed reward with full revenue split applied.
 type RewardRouting struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	Source           string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`                                              // reward source
-	OriginalAmount   string                 `protobuf:"bytes,2,opt,name=original_amount,json=originalAmount,proto3" json:"original_amount,omitempty"`        // original reward amount (bigint as string)
-	ContributorShare string                 `protobuf:"bytes,3,opt,name=contributor_share,json=contributorShare,proto3" json:"contributor_share,omitempty"`  // contributor's share (bigint as string)
-	ProtocolShare    string                 `protobuf:"bytes,4,opt,name=protocol_share,json=protocolShare,proto3" json:"protocol_share,omitempty"`           // protocol share (bigint as string)
-	ResearchShare    string                 `protobuf:"bytes,5,opt,name=research_share,json=researchShare,proto3" json:"research_share,omitempty"`           // research fund share (bigint as string)
-	BurnAmount       string                 `protobuf:"bytes,6,opt,name=burn_amount,json=burnAmount,proto3" json:"burn_amount,omitempty"`                    // burned amount (bigint as string)
-	Recipient        string                 `protobuf:"bytes,7,opt,name=recipient,proto3" json:"recipient,omitempty"`                                        // bech32 recipient address
-	FactId           string                 `protobuf:"bytes,8,opt,name=fact_id,json=factId,proto3" json:"fact_id,omitempty"`                                // related fact
-	BlockNumber      uint64                 `protobuf:"varint,9,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`                // block height
-	FounderShare     string                 `protobuf:"bytes,10,opt,name=founder_share,json=founderShare,proto3" json:"founder_share,omitempty"`             // founder's operational share (bigint as string)
-	CitationPool     string                 `protobuf:"bytes,11,opt,name=citation_pool,json=citationPool,proto3" json:"citation_pool,omitempty"`             // protocol sub-split: citations (bigint as string)
-	VerificationPool string                 `protobuf:"bytes,12,opt,name=verification_pool,json=verificationPool,proto3" json:"verification_pool,omitempty"` // protocol sub-split: verification (bigint as string)
-	TreasuryShare    string                 `protobuf:"bytes,13,opt,name=treasury_share,json=treasuryShare,proto3" json:"treasury_share,omitempty"`          // protocol sub-split: treasury (bigint as string)
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Source            string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`                                                // reward source
+	OriginalAmount    string                 `protobuf:"bytes,2,opt,name=original_amount,json=originalAmount,proto3" json:"original_amount,omitempty"`          // original reward amount (bigint as string)
+	ContributorShare  string                 `protobuf:"bytes,3,opt,name=contributor_share,json=contributorShare,proto3" json:"contributor_share,omitempty"`    // contributor's share (bigint as string)
+	ProtocolShare     string                 `protobuf:"bytes,4,opt,name=protocol_share,json=protocolShare,proto3" json:"protocol_share,omitempty"`             // protocol share (bigint as string)
+	ResearchShare     string                 `protobuf:"bytes,5,opt,name=research_share,json=researchShare,proto3" json:"research_share,omitempty"`             // research fund share (bigint as string)
+	DevelopmentAmount string                 `protobuf:"bytes,6,opt,name=development_amount,json=developmentAmount,proto3" json:"development_amount,omitempty"` // development fund amount (bigint as string)
+	Recipient         string                 `protobuf:"bytes,7,opt,name=recipient,proto3" json:"recipient,omitempty"`                                          // bech32 recipient address
+	FactId            string                 `protobuf:"bytes,8,opt,name=fact_id,json=factId,proto3" json:"fact_id,omitempty"`                                  // related fact
+	BlockNumber       uint64                 `protobuf:"varint,9,opt,name=block_number,json=blockNumber,proto3" json:"block_number,omitempty"`                  // block height
+	FounderShare      string                 `protobuf:"bytes,10,opt,name=founder_share,json=founderShare,proto3" json:"founder_share,omitempty"`               // founder's operational share (bigint as string)
+	CitationPool      string                 `protobuf:"bytes,11,opt,name=citation_pool,json=citationPool,proto3" json:"citation_pool,omitempty"`               // protocol sub-split: citations (bigint as string)
+	VerificationPool  string                 `protobuf:"bytes,12,opt,name=verification_pool,json=verificationPool,proto3" json:"verification_pool,omitempty"`   // protocol sub-split: verification (bigint as string)
+	TreasuryShare     string                 `protobuf:"bytes,13,opt,name=treasury_share,json=treasuryShare,proto3" json:"treasury_share,omitempty"`            // protocol sub-split: treasury (bigint as string)
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *RewardRouting) Reset() {
@@ -388,9 +388,9 @@ func (x *RewardRouting) GetResearchShare() string {
 	return ""
 }
 
-func (x *RewardRouting) GetBurnAmount() string {
+func (x *RewardRouting) GetDevelopmentAmount() string {
 	if x != nil {
-		return x.BurnAmount
+		return x.DevelopmentAmount
 	}
 	return ""
 }
@@ -446,18 +446,18 @@ func (x *RewardRouting) GetTreasuryShare() string {
 
 // BlockRewardDistribution records block reward distribution for a specific block.
 type BlockRewardDistribution struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	BlockHeight      uint64                 `protobuf:"varint,1,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`                 // block number
-	ProducerReward   string                 `protobuf:"bytes,2,opt,name=producer_reward,json=producerReward,proto3" json:"producer_reward,omitempty"`         // reward to block producer (bigint as string)
-	ResearchShare    string                 `protobuf:"bytes,3,opt,name=research_share,json=researchShare,proto3" json:"research_share,omitempty"`            // research fund share (bigint as string)
-	TotalMinted      string                 `protobuf:"bytes,4,opt,name=total_minted,json=totalMinted,proto3" json:"total_minted,omitempty"`                  // total new tokens (bigint as string)
-	ValidatorCount   uint32                 `protobuf:"varint,5,opt,name=validator_count,json=validatorCount,proto3" json:"validator_count,omitempty"`        // active validators
-	FundBalanceAfter string                 `protobuf:"bytes,6,opt,name=fund_balance_after,json=fundBalanceAfter,proto3" json:"fund_balance_after,omitempty"` // remaining fund balance (bigint as string)
-	FounderShare     string                 `protobuf:"bytes,7,opt,name=founder_share,json=founderShare,proto3" json:"founder_share,omitempty"`               // founder's operational share (bigint as string)
-	BurnAmount       string                 `protobuf:"bytes,8,opt,name=burn_amount,json=burnAmount,proto3" json:"burn_amount,omitempty"`                     // burned amount (bigint as string)
-	ProtocolShare    string                 `protobuf:"bytes,9,opt,name=protocol_share,json=protocolShare,proto3" json:"protocol_share,omitempty"`            // protocol share (bigint as string)
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	BlockHeight       uint64                 `protobuf:"varint,1,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`                  // block number
+	ProducerReward    string                 `protobuf:"bytes,2,opt,name=producer_reward,json=producerReward,proto3" json:"producer_reward,omitempty"`          // reward to block producer (bigint as string)
+	ResearchShare     string                 `protobuf:"bytes,3,opt,name=research_share,json=researchShare,proto3" json:"research_share,omitempty"`             // research fund share (bigint as string)
+	TotalMinted       string                 `protobuf:"bytes,4,opt,name=total_minted,json=totalMinted,proto3" json:"total_minted,omitempty"`                   // total new tokens (bigint as string)
+	ValidatorCount    uint32                 `protobuf:"varint,5,opt,name=validator_count,json=validatorCount,proto3" json:"validator_count,omitempty"`         // active validators
+	FundBalanceAfter  string                 `protobuf:"bytes,6,opt,name=fund_balance_after,json=fundBalanceAfter,proto3" json:"fund_balance_after,omitempty"`  // remaining fund balance (bigint as string)
+	FounderShare      string                 `protobuf:"bytes,7,opt,name=founder_share,json=founderShare,proto3" json:"founder_share,omitempty"`                // founder's operational share (bigint as string)
+	DevelopmentAmount string                 `protobuf:"bytes,8,opt,name=development_amount,json=developmentAmount,proto3" json:"development_amount,omitempty"` // development fund amount (bigint as string)
+	ProtocolShare     string                 `protobuf:"bytes,9,opt,name=protocol_share,json=protocolShare,proto3" json:"protocol_share,omitempty"`             // protocol share (bigint as string)
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *BlockRewardDistribution) Reset() {
@@ -539,9 +539,9 @@ func (x *BlockRewardDistribution) GetFounderShare() string {
 	return ""
 }
 
-func (x *BlockRewardDistribution) GetBurnAmount() string {
+func (x *BlockRewardDistribution) GetDevelopmentAmount() string {
 	if x != nil {
-		return x.BurnAmount
+		return x.DevelopmentAmount
 	}
 	return ""
 }
@@ -682,15 +682,14 @@ const file_zerone_vesting_rewards_v1_state_proto_rawDesc = "" +
 	"\x10half_life_blocks\x18\x02 \x01(\x04R\x0ehalfLifeBlocks\x12!\n" +
 	"\fcliff_blocks\x18\x03 \x01(\x04R\vcliffBlocks\x12\x1f\n" +
 	"\vmax_release\x18\x04 \x01(\x04R\n" +
-	"maxRelease\"\xe4\x03\n" +
+	"maxRelease\"\xf2\x03\n" +
 	"\rRewardRouting\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12'\n" +
 	"\x0foriginal_amount\x18\x02 \x01(\tR\x0eoriginalAmount\x12+\n" +
 	"\x11contributor_share\x18\x03 \x01(\tR\x10contributorShare\x12%\n" +
 	"\x0eprotocol_share\x18\x04 \x01(\tR\rprotocolShare\x12%\n" +
-	"\x0eresearch_share\x18\x05 \x01(\tR\rresearchShare\x12\x1f\n" +
-	"\vburn_amount\x18\x06 \x01(\tR\n" +
-	"burnAmount\x12\x1c\n" +
+	"\x0eresearch_share\x18\x05 \x01(\tR\rresearchShare\x12-\n" +
+	"\x12development_amount\x18\x06 \x01(\tR\x11developmentAmount\x12\x1c\n" +
 	"\trecipient\x18\a \x01(\tR\trecipient\x12\x17\n" +
 	"\afact_id\x18\b \x01(\tR\x06factId\x12!\n" +
 	"\fblock_number\x18\t \x01(\x04R\vblockNumber\x12#\n" +
@@ -698,7 +697,7 @@ const file_zerone_vesting_rewards_v1_state_proto_rawDesc = "" +
 	" \x01(\tR\ffounderShare\x12#\n" +
 	"\rcitation_pool\x18\v \x01(\tR\fcitationPool\x12+\n" +
 	"\x11verification_pool\x18\f \x01(\tR\x10verificationPool\x12%\n" +
-	"\x0etreasury_share\x18\r \x01(\tR\rtreasuryShare\"\xf3\x02\n" +
+	"\x0etreasury_share\x18\r \x01(\tR\rtreasuryShare\"\x81\x03\n" +
 	"\x17BlockRewardDistribution\x12!\n" +
 	"\fblock_height\x18\x01 \x01(\x04R\vblockHeight\x12'\n" +
 	"\x0fproducer_reward\x18\x02 \x01(\tR\x0eproducerReward\x12%\n" +
@@ -706,9 +705,8 @@ const file_zerone_vesting_rewards_v1_state_proto_rawDesc = "" +
 	"\ftotal_minted\x18\x04 \x01(\tR\vtotalMinted\x12'\n" +
 	"\x0fvalidator_count\x18\x05 \x01(\rR\x0evalidatorCount\x12,\n" +
 	"\x12fund_balance_after\x18\x06 \x01(\tR\x10fundBalanceAfter\x12#\n" +
-	"\rfounder_share\x18\a \x01(\tR\ffounderShare\x12\x1f\n" +
-	"\vburn_amount\x18\b \x01(\tR\n" +
-	"burnAmount\x12%\n" +
+	"\rfounder_share\x18\a \x01(\tR\ffounderShare\x12-\n" +
+	"\x12development_amount\x18\b \x01(\tR\x11developmentAmount\x12%\n" +
 	"\x0eprotocol_share\x18\t \x01(\tR\rprotocolShare\"\x98\x02\n" +
 	"\x0eClawbackRecord\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +

@@ -24,6 +24,7 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryParamsCmd(),
 		NewQueryReputationCmd(),
 		NewQueryCaptureMetricsCmd(),
+		NewQueryFlaggedDomainsCmd(),
 	)
 
 	return queryCmd
@@ -72,6 +73,31 @@ func NewQueryReputationCmd() *cobra.Command {
 			resp := &types.QueryReputationResponse{}
 			if err := clientCtx.Invoke(cmd.Context(), "/zerone.capture_defense.v1.Query/Reputation", req, resp); err != nil {
 				return fmt.Errorf("failed to query reputation: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+func NewQueryFlaggedDomainsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "flagged-domains",
+		Short: "Query all domains with active capture flags",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			req := &types.QueryFlaggedDomainsRequest{}
+			resp := &types.QueryFlaggedDomainsResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.capture_defense.v1.Query/FlaggedDomains", req, resp); err != nil {
+				return fmt.Errorf("failed to query flagged domains: %w", err)
 			}
 
 			return clientCtx.PrintObjectLegacy(resp)

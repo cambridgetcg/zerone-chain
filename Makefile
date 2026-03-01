@@ -1,16 +1,18 @@
-.PHONY: build install test lint proto-gen proto-swagger-gen clean pr-check cosmovisor-init boot-test
+.PHONY: build install test lint proto-gen proto-swagger-gen proto-check clean pr-check cosmovisor-init boot-test genesis-check \
+       build-linux-amd64 build-linux-arm64 build-darwin-arm64 build-all release
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 
-LDFLAGS := -X github.com/cosmos/cosmos-sdk/version.Name=zerone \
+LDFLAGS := -s -w \
+           -X github.com/cosmos/cosmos-sdk/version.Name=zerone \
            -X github.com/cosmos/cosmos-sdk/version.AppName=zeroned \
            -X github.com/cosmos/cosmos-sdk/version.Version=$(VERSION) \
            -X github.com/cosmos/cosmos-sdk/version.Commit=$(COMMIT)
 
 build:
 	mkdir -p build
-	go build -ldflags "$(LDFLAGS)" -o build/zeroned ./cmd/zeroned
+	go build -trimpath -ldflags "$(LDFLAGS)" -o build/zeroned ./cmd/zeroned
 
 install:
 	go install -ldflags "$(LDFLAGS)" ./cmd/zeroned
@@ -30,10 +32,37 @@ proto-swagger-gen:
 	go run scripts/merge_swagger.go
 	rm -rf tmp-swagger-gen
 
+proto-check:
+	@bash scripts/proto-audit.sh
+
+# ── Cross-compile targets ──────────────────────────────────────────────
+
+build-linux-amd64:
+	mkdir -p build
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o build/zeroned-linux-amd64 ./cmd/zeroned
+
+build-linux-arm64:
+	mkdir -p build
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o build/zeroned-linux-arm64 ./cmd/zeroned
+
+build-darwin-arm64:
+	mkdir -p build
+	GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o build/zeroned-darwin-arm64 ./cmd/zeroned
+
+build-all: build-linux-amd64 build-linux-arm64 build-darwin-arm64
+
+release: build-all
+	@echo "Binaries built:"
+	@ls -la build/zeroned-*
+	@echo ""
+	@cd build && for f in zeroned-*; do shasum -a 256 "$$f" > "$$f.sha256"; done
+	@echo "Checksums:"
+	@cat build/*.sha256
+
 clean:
 	rm -rf build/
 
-pr-check: lint test build
+pr-check: lint test proto-check build
 	@echo "PR check passed"
 
 cosmovisor-init: build
@@ -44,3 +73,6 @@ cosmovisor-init: build
 
 boot-test: build
 	@./scripts/boot-test.sh build/zeroned
+
+genesis-check:
+	@go run tools/genesis-check/main.go --genesis $(GENESIS)

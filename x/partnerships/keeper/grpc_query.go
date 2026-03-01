@@ -68,3 +68,49 @@ func (qs queryServer) FormationPool(goCtx context.Context, req *types.QueryForma
 	entries := qs.GetAllPoolEntries(ctx)
 	return &types.QueryFormationPoolResponse{Entries: entries}, nil
 }
+
+func (qs queryServer) Mentorship(goCtx context.Context, req *types.QueryMentorshipRequest) (*types.QueryMentorshipResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, fmt.Errorf("mentorship id is required")
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	m, found := qs.GetMentorship(ctx, req.Id)
+	if !found {
+		return nil, fmt.Errorf("%w: %s", types.ErrMentorshipNotFound, req.Id)
+	}
+	return &types.QueryMentorshipResponse{Mentorship: m}, nil
+}
+
+func (qs queryServer) MentorshipsByAddress(goCtx context.Context, req *types.QueryMentorshipsByAddressRequest) (*types.QueryMentorshipsByAddressResponse, error) {
+	if req == nil || req.Address == "" {
+		return nil, fmt.Errorf("address is required")
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	byMentor := qs.GetMentorshipsByMentor(ctx, req.Address)
+	byMentee := qs.GetMentorshipsByMentee(ctx, req.Address)
+
+	seen := make(map[string]bool)
+	var all []*types.Mentorship
+	for _, m := range byMentor {
+		if !seen[m.Id] {
+			seen[m.Id] = true
+			all = append(all, m)
+		}
+	}
+	for _, m := range byMentee {
+		if !seen[m.Id] {
+			seen[m.Id] = true
+			all = append(all, m)
+		}
+	}
+	return &types.QueryMentorshipsByAddressResponse{Mentorships: all}, nil
+}
+
+func (qs queryServer) FormationMatches(goCtx context.Context, req *types.QueryFormationMatchesRequest) (*types.QueryFormationMatchesResponse, error) {
+	if req == nil {
+		return nil, fmt.Errorf("request cannot be nil")
+	}
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	matches := qs.GetAllFormationMatches(ctx)
+	return &types.QueryFormationMatchesResponse{Matches: matches}, nil
+}

@@ -130,21 +130,6 @@ func (m *mockBankKeeper) SendCoinsFromModuleToModule(_ context.Context, senderMo
 	return nil
 }
 
-func (m *mockBankKeeper) BurnCoins(_ context.Context, moduleName string, amt sdk.Coins) error {
-	for _, coin := range amt {
-		key := moduleName + "/" + coin.Denom
-		bal, ok := m.balances[key]
-		if !ok {
-			bal = sdkmath.ZeroInt()
-		}
-		if bal.LT(coin.Amount) {
-			return fmt.Errorf("insufficient balance to burn")
-		}
-		m.balances[key] = bal.Sub(coin.Amount)
-	}
-	return nil
-}
-
 // -----------------------------------------------------------------------
 // Mock KnowledgeKeeper
 // -----------------------------------------------------------------------
@@ -415,20 +400,20 @@ func TestDistribution_RevenueSplit(t *testing.T) {
 
 	researchShare := new(big.Int)
 	researchShare.SetString(distribution.ResearchShare, 10)
-	expectedResearch := big.NewInt(1300000) // 13%
+	expectedResearch := big.NewInt(333000) // 3.33%
 	if researchShare.Cmp(expectedResearch) != 0 {
 		t.Errorf("expected research share %s, got %s", expectedResearch, researchShare)
 	}
 
-	burnAmt := new(big.Int)
-	burnAmt.SetString(distribution.ProtocolBurn, 10)
-	expectedBurn := big.NewInt(1000000) // 10%
-	if burnAmt.Cmp(expectedBurn) != 0 {
-		t.Errorf("expected burn %s, got %s", expectedBurn, burnAmt)
+	devAmt := new(big.Int)
+	devAmt.SetString(distribution.ProtocolBurn, 10)
+	expectedDev := big.NewInt(1967000) // 19.67% development fund
+	if devAmt.Cmp(expectedDev) != 0 {
+		t.Errorf("expected development fund %s, got %s", expectedDev, devAmt)
 	}
 }
 
-func TestDistribution_Burn(t *testing.T) {
+func TestDistribution_DevelopmentFund(t *testing.T) {
 	k, ctx, bk, kk := setupKeeper(t)
 
 	callerAddr := sdk.AccAddress([]byte(fmt.Sprintf("test-addr-%010d", 1)))
@@ -446,9 +431,17 @@ func TestDistribution_Burn(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	// Billing module should have zero balance after routing to development_fund
 	billingBal := bk.balances["billing/uzrn"]
 	if billingBal.IsPositive() {
-		t.Errorf("expected billing module balance 0 after burn, got %s", billingBal)
+		t.Errorf("expected billing module balance 0 after development fund transfer, got %s", billingBal)
+	}
+
+	// Development fund should have received the allocation
+	devBal := bk.balances[keeper.DevelopmentFund+"/uzrn"]
+	expectedDev := sdkmath.NewInt(1967000) // 19.67% of 10M
+	if !devBal.Equal(expectedDev) {
+		t.Errorf("expected development_fund balance %s, got %s", expectedDev, devBal)
 	}
 }
 
@@ -506,7 +499,7 @@ func TestDistribution_ModuleAccounts(t *testing.T) {
 	}
 
 	researchBal := bk.balances[keeper.ResearchFund+"/uzrn"]
-	expectedResearch := sdkmath.NewInt(1300000)
+	expectedResearch := sdkmath.NewInt(333000) // 3.33% of 10M
 	if !researchBal.Equal(expectedResearch) {
 		t.Errorf("expected research_fund balance %s, got %s", expectedResearch, researchBal)
 	}
@@ -529,12 +522,12 @@ func TestRevenueSplit_FromParams(t *testing.T) {
 
 	kk.addFact("fact-1", 500000, 10, 50, testAddr(10))
 
-	// Default split: 55/22/13/10 → change to 60/20/10/10
+	// Default split: 55/22/3.33/19.67 → change to 60/20/10/10
 	params := types.DefaultParams()
 	params.RevenueSplit.ContributorBps = 600000
 	params.RevenueSplit.ProtocolBps = 200000
 	params.RevenueSplit.ResearchBps = 100000
-	params.RevenueSplit.BurnBps = 100000
+	params.RevenueSplit.DevelopmentBps = 100000
 	k.SetParams(ctx, params)
 
 	distribution := k.CalculateDistribution(ctx, big.NewInt(10000000), []string{"fact-1"})

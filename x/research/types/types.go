@@ -61,14 +61,15 @@ func IsValidReviewVerdict(v ReviewVerdict) bool {
 
 func DefaultParams() Params {
 	return Params{
-		MinResearchStake:         "1000000",      // 1 ZRN in uzrn
-		MinChallengeStake:        "1000000",      // 1 ZRN in uzrn
-		ReviewPeriodBlocks:       68544,          // ~2 days
-		MinReviewerCount:         3,
-		AcceptanceScoreThreshold: 70,             // 70/100 per spec
-		RejectionSlashBps:        330000,         // 33%
-		MaxBountyReward:          "10000000000",  // 10,000 ZRN in uzrn
-		BountyMinDeadlineBlocks:  34272,          // ~1 day
+		MinResearchStake:              "1000000",      // 1 ZRN in uzrn
+		MinChallengeStake:             "1000000",      // 1 ZRN in uzrn
+		ReviewPeriodBlocks:            68544,          // ~2 days
+		MinReviewerCount:              3,
+		AcceptanceScoreThreshold:      70,             // 70/100 per spec
+		RejectionSlashBps:             330000,         // 33%
+		MaxBountyReward:               "10000000000",  // 10,000 ZRN in uzrn
+		BountyMinDeadlineBlocks:       34272,          // ~1 day
+		BountyFulfillmentPeriodBlocks: 34272,          // ~1 day
 	}
 }
 

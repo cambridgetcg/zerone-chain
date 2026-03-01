@@ -23,6 +23,7 @@ const (
 	Query_Reputation_FullMethodName               = "/zerone.capture_defense.v1.Query/Reputation"
 	Query_CaptureMetrics_FullMethodName           = "/zerone.capture_defense.v1.Query/CaptureMetrics"
 	Query_CrossStratumRequirements_FullMethodName = "/zerone.capture_defense.v1.Query/CrossStratumRequirements"
+	Query_FlaggedDomains_FullMethodName           = "/zerone.capture_defense.v1.Query/FlaggedDomains"
 )
 
 // QueryClient is the client API for Query service.
@@ -35,6 +36,7 @@ type QueryClient interface {
 	Reputation(ctx context.Context, in *QueryReputationRequest, opts ...grpc.CallOption) (*QueryReputationResponse, error)
 	CaptureMetrics(ctx context.Context, in *QueryCaptureMetricsRequest, opts ...grpc.CallOption) (*QueryCaptureMetricsResponse, error)
 	CrossStratumRequirements(ctx context.Context, in *QueryCrossStratumRequirementsRequest, opts ...grpc.CallOption) (*QueryCrossStratumRequirementsResponse, error)
+	FlaggedDomains(ctx context.Context, in *QueryFlaggedDomainsRequest, opts ...grpc.CallOption) (*QueryFlaggedDomainsResponse, error)
 }
 
 type queryClient struct {
@@ -85,6 +87,16 @@ func (c *queryClient) CrossStratumRequirements(ctx context.Context, in *QueryCro
 	return out, nil
 }
 
+func (c *queryClient) FlaggedDomains(ctx context.Context, in *QueryFlaggedDomainsRequest, opts ...grpc.CallOption) (*QueryFlaggedDomainsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFlaggedDomainsResponse)
+	err := c.cc.Invoke(ctx, Query_FlaggedDomains_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -95,6 +107,7 @@ type QueryServer interface {
 	Reputation(context.Context, *QueryReputationRequest) (*QueryReputationResponse, error)
 	CaptureMetrics(context.Context, *QueryCaptureMetricsRequest) (*QueryCaptureMetricsResponse, error)
 	CrossStratumRequirements(context.Context, *QueryCrossStratumRequirementsRequest) (*QueryCrossStratumRequirementsResponse, error)
+	FlaggedDomains(context.Context, *QueryFlaggedDomainsRequest) (*QueryFlaggedDomainsResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -116,6 +129,9 @@ func (UnimplementedQueryServer) CaptureMetrics(context.Context, *QueryCaptureMet
 }
 func (UnimplementedQueryServer) CrossStratumRequirements(context.Context, *QueryCrossStratumRequirementsRequest) (*QueryCrossStratumRequirementsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CrossStratumRequirements not implemented")
+}
+func (UnimplementedQueryServer) FlaggedDomains(context.Context, *QueryFlaggedDomainsRequest) (*QueryFlaggedDomainsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FlaggedDomains not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -210,6 +226,24 @@ func _Query_CrossStratumRequirements_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_FlaggedDomains_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFlaggedDomainsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FlaggedDomains(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FlaggedDomains_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FlaggedDomains(ctx, req.(*QueryFlaggedDomainsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -232,6 +266,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CrossStratumRequirements",
 			Handler:    _Query_CrossStratumRequirements_Handler,
+		},
+		{
+			MethodName: "FlaggedDomains",
+			Handler:    _Query_FlaggedDomains_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

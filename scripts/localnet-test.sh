@@ -3,7 +3,7 @@
 # Zerone — Local Testnet Integration Tests
 # ═══════════════════════════════════════════════════════════════════════════
 #
-# Runs 8 test scenarios against a running 4-validator local testnet.
+# Runs 9 test scenarios against a running 4-validator local testnet.
 # Requires: scripts/localnet.sh start (must be running)
 #
 # Usage:
@@ -11,6 +11,7 @@
 #   scripts/localnet-test.sh [name]    # Run specific test
 #
 # Tests:
+#   genesis_invariants — Validate cross-module genesis invariants
 #   block_production  — Verify all 4 validators produce blocks
 #   validator_set     — Verify 4 active validators in CometBFT set
 #   delegation        — Delegate from test account, verify stake increase
@@ -39,7 +40,7 @@ NODE_FLAG="--node ${RPC_URL}"
 HOME_FLAG="--home ${COORDINATOR_HOME}"
 KEYRING_FLAG="--keyring-backend ${KEYRING}"
 COMMON_FLAGS="${NODE_FLAG} ${HOME_FLAG} ${KEYRING_FLAG} --chain-id ${CHAIN_ID} --output json"
-TX_FLAGS="${COMMON_FLAGS} --gas auto --gas-adjustment 1.5 --gas-prices 0.025${DENOM} --yes --broadcast-mode sync"
+TX_FLAGS="${COMMON_FLAGS} --gas auto --gas-adjustment 1.5 --gas-prices 1${DENOM} --yes --broadcast-mode sync"
 
 # Test results
 PASSED=0
@@ -113,7 +114,7 @@ wait_tx() {
 # Submit tx and return hash
 submit_tx() {
   local result
-  result=$(eval "$@" 2>&1) || { echo "TX_FAILED"; return 1; }
+  result=$(eval "$@" 2>/dev/null) || { echo "TX_FAILED"; return 1; }
   local tx_hash
   tx_hash=$(echo "$result" | jq -r '.txhash // empty' 2>/dev/null || echo "")
   if [ -z "$tx_hash" ]; then
@@ -133,6 +134,27 @@ preflight() {
   height=$(curl -s "${RPC_URL}/status" | jq -r '.result.sync_info.latest_block_height')
   [ "${height}" -ge 1 ] 2>/dev/null || die "Chain not producing blocks (height=${height})"
   info "Localnet reachable (height=${height})"
+}
+
+# ── Test 0: Genesis Invariants ────────────────────────────────────────────
+
+test_genesis_invariants() {
+  info "Checking genesis invariants..."
+
+  local genesis="${COORDINATOR_HOME}/config/genesis.json"
+  if [ ! -f "${genesis}" ]; then
+    fail "genesis_invariants" "genesis.json not found at ${genesis}"
+    return
+  fi
+
+  local output
+  if output=$(go run "${PROJECT_ROOT}/tools/genesis-check/main.go" \
+      --genesis "${genesis}" --profile testnet 2>&1); then
+    pass "genesis_invariants"
+  else
+    echo "$output"
+    fail "genesis_invariants" "genesis invariant check failed"
+  fi
 }
 
 # ── Test 1: Block Production ─────────────────────────────────────────────
@@ -285,10 +307,10 @@ test_pot_round() {
 
   # Step 1: Submit a knowledge claim from faucet
   local claim_text="Test knowledge claim for multi-validator localnet verification cycle"
-  local stake_amount="1000000${DENOM}"
+  local review_fee="1000000"  # raw integer, NOT coin denomination
 
   local tx_hash
-  tx_hash=$(submit_tx "${BINARY} tx knowledge submit-claim '${claim_text}' protocol computational ${stake_amount} --from faucet ${TX_FLAGS}")
+  tx_hash=$(submit_tx "${BINARY} tx knowledge submit-claim '${claim_text}' general computational ${review_fee} --from faucet ${TX_FLAGS}")
 
   if [ "$tx_hash" = "TX_FAILED" ]; then
     fail "pot_round" "Claim submission failed"
@@ -301,18 +323,18 @@ test_pot_round() {
   fi
   info "  Claim submitted (tx: ${tx_hash})"
 
-  # Step 2: Query pending claims to get the round ID
-  wait_blocks 2
-
-  local claims_result
-  claims_result=$(${BINARY} query knowledge pending-claims ${NODE_FLAG} --output json 2>/dev/null || echo "{}")
+  # Step 2: Extract round ID from tx events
+  if ! wait_tx "$tx_hash" 30; then
+    fail "pot_round" "Claim tx not confirmed (hash: ${tx_hash})"
+    return
+  fi
 
   local round_id
-  round_id=$(echo "$claims_result" | jq -r '.claims[0].round_id // .claims[0].id // empty' 2>/dev/null || echo "")
+  round_id=$(${BINARY} query tx "${tx_hash}" ${NODE_FLAG} --output json 2>/dev/null | \
+    jq -r '[.events[] | select(.type == "zerone.knowledge.verification_round_created") | .attributes[] | select(.key == "round_id") | .value][0] // empty' 2>/dev/null || echo "")
 
   if [ -z "$round_id" ]; then
-    # Try querying directly — round may have been auto-created
-    skip "pot_round" "Could not find round_id from pending claims (chain may need more blocks)"
+    skip "pot_round" "Could not find round_id from tx events"
     return
   fi
   info "  Round ID: ${round_id}"
@@ -320,9 +342,10 @@ test_pot_round() {
   # Step 3: Generate commitment data
   local salt_hex
   salt_hex=$(openssl rand -hex 16)
-  # Commit hash = SHA256(vote || salt)
+  # Commit hash = SHA256(vote_bytes || salt_bytes)
+  # The reveal handler verifies: SHA256([]byte(vote) || salt_raw_bytes)
   local commit_hash
-  commit_hash=$(echo -n "accept${salt_hex}" | shasum -a 256 | awk '{print $1}')
+  commit_hash=$( (printf "accept"; printf '%s' "${salt_hex}" | xxd -r -p) | shasum -a 256 | awk '{print $1}')
 
   # Step 4: Submit commitments from val0 and val1
   for val in val0 val1; do
@@ -364,65 +387,67 @@ test_pot_round() {
   local round_result
   round_result=$(${BINARY} query knowledge verification-round "${round_id}" ${NODE_FLAG} --output json 2>/dev/null || echo "{}")
 
-  local round_status
-  round_status=$(echo "$round_result" | jq -r '.round.status // .status // "unknown"' 2>/dev/null || echo "unknown")
+  # phase: 4 = completed, verdict: 1 = accept, 2 = reject, 3 = malformed
+  local round_phase
+  round_phase=$(echo "$round_result" | jq -r '.round.phase // 0' 2>/dev/null || echo "0")
+  local round_verdict
+  round_verdict=$(echo "$round_result" | jq -r '.round.verdict // 0' 2>/dev/null || echo "0")
 
-  if [ "$round_status" = "completed" ] || [ "$round_status" = "ROUND_STATUS_COMPLETED" ]; then
-    pass "pot_round (round ${round_id} completed)"
+  if [ "$round_phase" -ge 3 ] 2>/dev/null && [ "$round_verdict" -ge 1 ] 2>/dev/null; then
+    pass "pot_round (round ${round_id} phase=${round_phase} verdict=${round_verdict})"
+  elif [ "$round_phase" -ge 2 ] 2>/dev/null; then
+    pass "pot_round (round ${round_id} progressed to phase=${round_phase})"
   else
-    # Even partial completion counts — the mechanism works
-    info "  Round status: ${round_status}"
-    pass "pot_round (round ${round_id} progressed to: ${round_status})"
+    fail "pot_round" "Round ${round_id} did not progress (phase=${round_phase}, verdict=${round_verdict})"
   fi
 }
 
 # ── Test 6: Slashing ────────────────────────────────────────────────────
 
 test_slashing() {
-  info "Testing slashing via val3 downtime..."
+  # Use val1 (1000 ZRN, ~0.9% of total power) so:
+  # 1. Remaining validators still have >2/3 quorum and keep producing blocks
+  # 2. val0 (port 26601) stays up since it's the RPC endpoint for all test queries
+  # val3 has ~90% power — stopping it would halt the chain entirely.
+  info "Testing slashing via val1 downtime..."
 
-  # Get val3's operator address before stopping
-  local val3_addr
-  val3_addr=$(${BINARY} query staking validators ${NODE_FLAG} --output json 2>/dev/null | \
-    jq -r '.validators[] | select(.description.moniker == "val3") | .operator_address' 2>/dev/null || echo "")
+  # Get val1's operator address before stopping
+  local slash_val="val1"
+  local slash_addr
+  slash_addr=$(${BINARY} query staking validators ${NODE_FLAG} --output json 2>/dev/null | \
+    jq -r '.validators[] | select(.description.moniker == "val1") | .operator_address' 2>/dev/null || echo "")
 
-  if [ -z "$val3_addr" ]; then
-    # Fallback: use last validator
-    val3_addr=$(${BINARY} query staking validators ${NODE_FLAG} --output json 2>/dev/null | \
-      jq -r '.validators[-1].operator_address' 2>/dev/null || echo "")
-  fi
-
-  if [ -z "$val3_addr" ]; then
-    fail "slashing" "Could not find val3 operator address"
+  if [ -z "$slash_addr" ]; then
+    fail "slashing" "Could not find val0 operator address"
     return
   fi
 
-  # Stop val3
-  local pid_file="${BASE_DIR}/val3.pid"
+  # Stop val0
+  local pid_file="${BASE_DIR}/${slash_val}.pid"
   if [ -f "$pid_file" ]; then
-    local val3_pid
-    val3_pid=$(cat "$pid_file")
-    if kill -0 "$val3_pid" 2>/dev/null; then
-      kill "$val3_pid" 2>/dev/null || true
-      info "  Stopped val3 (PID=${val3_pid})"
+    local slash_pid
+    slash_pid=$(cat "$pid_file")
+    if kill -0 "$slash_pid" 2>/dev/null; then
+      kill "$slash_pid" 2>/dev/null || true
+      info "  Stopped ${slash_val} (PID=${slash_pid})"
     fi
   else
-    skip "slashing" "val3 PID file not found"
+    skip "slashing" "${slash_val} PID file not found"
     return
   fi
 
   # Wait for signed_blocks_window (100 blocks at 2.5s each ~ 250s, but we check periodically)
-  info "  Waiting for val3 to be jailed (checking every 30s, max 5 min)..."
+  info "  Waiting for ${slash_val} to be jailed (checking every 30s, max 5 min)..."
   local elapsed=0
   local jailed=false
   while [ $elapsed -lt 300 ]; do
     sleep 30
     elapsed=$((elapsed + 30))
 
-    local val3_info
-    val3_info=$(${BINARY} query staking validator "${val3_addr}" ${NODE_FLAG} --output json 2>/dev/null || echo "{}")
+    local val_info
+    val_info=$(${BINARY} query staking validator "${slash_addr}" ${NODE_FLAG} --output json 2>/dev/null || echo "{}")
     local is_jailed
-    is_jailed=$(echo "$val3_info" | jq -r '.validator.jailed // false' 2>/dev/null || echo "false")
+    is_jailed=$(echo "$val_info" | jq -r '.validator.jailed // false' 2>/dev/null || echo "false")
 
     if [ "$is_jailed" = "true" ]; then
       jailed=true
@@ -432,42 +457,47 @@ test_slashing() {
   done
 
   if [ "$jailed" = "true" ]; then
-    pass "slashing (val3 jailed after ${elapsed}s)"
+    pass "slashing (${slash_val} jailed after ${elapsed}s)"
   else
-    fail "slashing" "val3 not jailed after ${elapsed}s"
+    fail "slashing" "${slash_val} not jailed after ${elapsed}s"
   fi
 }
 
 # ── Test 7: Recovery ────────────────────────────────────────────────────
 
 test_recovery() {
-  info "Testing validator recovery (unjail val3)..."
+  # Recovers val1 which was stopped in test_slashing
+  info "Testing validator recovery (unjail val1)..."
 
-  # Restart val3
-  local val3_home="${BASE_DIR}/val3"
-  local val3_log="${BASE_DIR}/val3.log"
+  local recover_val="val1"
+  local recover_home="${BASE_DIR}/${recover_val}"
+  local recover_log="${BASE_DIR}/${recover_val}.log"
 
-  if [ ! -d "$val3_home" ]; then
-    skip "recovery" "val3 home not found (slashing test may not have run)"
+  if [ ! -d "$recover_home" ]; then
+    skip "recovery" "${recover_val} home not found (slashing test may not have run)"
     return
   fi
 
   ${BINARY} start \
-    --home "${val3_home}" \
-    --minimum-gas-prices "0.025${DENOM}" \
-    > "${val3_log}" 2>&1 &
+    --home "${recover_home}" \
+    --minimum-gas-prices "1${DENOM}" \
+    > "${recover_log}" 2>&1 &
 
-  local val3_pid=$!
-  echo "${val3_pid}" > "${BASE_DIR}/val3.pid"
-  info "  Restarted val3 (PID=${val3_pid})"
+  local recover_pid=$!
+  echo "${recover_pid}" > "${BASE_DIR}/${recover_val}.pid"
+  info "  Restarted ${recover_val} (PID=${recover_pid})"
 
   # Wait for it to sync
   sleep 10
   wait_blocks 2
 
-  # Unjail val3
+  # Wait for jail duration to expire (downtime_jail_duration = 60s in genesis)
+  info "  Waiting 60s for jail duration to expire..."
+  sleep 60
+
+  # Unjail val1
   local tx_hash
-  tx_hash=$(submit_tx "${BINARY} tx slashing unjail --from val3 ${TX_FLAGS}")
+  tx_hash=$(submit_tx "${BINARY} tx slashing unjail --from ${recover_val} ${TX_FLAGS}")
 
   if [ "$tx_hash" = "TX_FAILED" ]; then
     fail "recovery" "Unjail tx submission failed"
@@ -479,26 +509,26 @@ test_recovery() {
     return
   fi
 
-  # Verify val3 is no longer jailed
+  # Verify val0 is no longer jailed
   wait_blocks 2
-  local val3_addr
-  val3_addr=$(${BINARY} query staking validators ${NODE_FLAG} --output json 2>/dev/null | \
-    jq -r '.validators[] | select(.description.moniker == "val3") | .operator_address' 2>/dev/null || echo "")
+  local recover_addr
+  recover_addr=$(${BINARY} query staking validators ${NODE_FLAG} --output json 2>/dev/null | \
+    jq -r ".validators[] | select(.description.moniker == \"${recover_val}\") | .operator_address" 2>/dev/null || echo "")
 
-  if [ -z "$val3_addr" ]; then
-    val3_addr=$(${BINARY} query staking validators ${NODE_FLAG} --output json 2>/dev/null | \
-      jq -r '.validators[-1].operator_address' 2>/dev/null || echo "")
+  if [ -z "$recover_addr" ]; then
+    recover_addr=$(${BINARY} query staking validators ${NODE_FLAG} --output json 2>/dev/null | \
+      jq -r '.validators[0].operator_address' 2>/dev/null || echo "")
   fi
 
-  local val3_info
-  val3_info=$(${BINARY} query staking validator "${val3_addr}" ${NODE_FLAG} --output json 2>/dev/null || echo "{}")
+  local val_info
+  val_info=$(${BINARY} query staking validator "${recover_addr}" ${NODE_FLAG} --output json 2>/dev/null || echo "{}")
   local is_jailed
-  is_jailed=$(echo "$val3_info" | jq -r '.validator.jailed // true' 2>/dev/null || echo "true")
+  is_jailed=$(echo "$val_info" | jq -r 'if .validator.jailed == true then "true" else "false" end' 2>/dev/null || echo "unknown")
 
   if [ "$is_jailed" = "false" ]; then
-    pass "recovery (val3 unjailed and signing)"
+    pass "recovery (${recover_val} unjailed and signing)"
   else
-    fail "recovery" "val3 still jailed after unjail tx"
+    fail "recovery" "${recover_val} still jailed after unjail tx"
   fi
 }
 
@@ -507,9 +537,9 @@ test_recovery() {
 test_governance() {
   info "Testing LIP governance lifecycle..."
 
-  # Step 1: Submit LIP from faucet
+  # Step 1: Submit LIP from faucet (initial-stake is raw integer uzrn, NOT coin denomination)
   local tx_hash
-  tx_hash=$(submit_tx "${BINARY} tx zerone_gov submit-lip 'Test Parameter Update' 'Update slashing window for localnet testing' parameter 1000000${DENOM} --from faucet ${TX_FLAGS}")
+  tx_hash=$(submit_tx "${BINARY} tx zerone_gov submit-lip 'Test Parameter Update' 'Update slashing window for localnet testing' parameter 1000000 --from faucet ${TX_FLAGS}")
 
   if [ "$tx_hash" = "TX_FAILED" ]; then
     fail "governance" "LIP submission failed"
@@ -537,38 +567,50 @@ test_governance() {
   fi
   info "  LIP ID: ${lip_id}"
 
-  # Step 3: Stake on the LIP to meet threshold
+  # Step 3: Stake on the LIP to meet threshold — auto-advances draft->review
+  # (draft->review is automatic in StakeLIP when staked >= required_stake_bps)
   local stake_tx
-  stake_tx=$(submit_tx "${BINARY} tx zerone_gov stake-lip ${lip_id} 5000000${DENOM} --from faucet ${TX_FLAGS}")
+  stake_tx=$(submit_tx "${BINARY} tx zerone_gov stake-lip ${lip_id} 5000000 --from faucet ${TX_FLAGS}")
 
   if [ "$stake_tx" != "TX_FAILED" ]; then
     wait_tx "$stake_tx" 30 || true
-    info "  Additional stake submitted"
+    info "  Staked — should auto-advance to review"
   fi
 
-  # Step 4: Advance LIP stage (draft -> review -> last_call -> voting)
-  for stage in "review" "last_call" "voting"; do
-    wait_blocks 2
-    local advance_tx
-    advance_tx=$(submit_tx "${BINARY} tx zerone_gov advance-lip-stage ${lip_id} --from faucet ${TX_FLAGS}")
-    if [ "$advance_tx" != "TX_FAILED" ]; then
-      wait_tx "$advance_tx" 30 || true
-      info "  Advanced to ${stage}"
-    fi
-  done
+  # Step 4: Wait for review_blocks (5 in localnet genesis) then advance stages
+  # review -> last_call -> voting (advance-lip-stage only handles these transitions)
+  wait_blocks 7
+
+  # advance-lip-stage: review->last_call or review->voting depending on params
+  local advance1_tx
+  advance1_tx=$(submit_tx "${BINARY} tx zerone_gov advance-lip-stage ${lip_id} --from faucet ${TX_FLAGS}") || true
+  if [ "$advance1_tx" != "TX_FAILED" ] && [ -n "$advance1_tx" ]; then
+    wait_tx "$advance1_tx" 30 || true
+    info "  Stage advanced (1)"
+  fi
+
+  wait_blocks 2
+
+  # Second advance (last_call->voting) — may fail if already at voting
+  local advance2_tx
+  advance2_tx=$(submit_tx "${BINARY} tx zerone_gov advance-lip-stage ${lip_id} --from faucet ${TX_FLAGS}") || true
+  if [ "$advance2_tx" != "TX_FAILED" ] && [ -n "$advance2_tx" ]; then
+    wait_tx "$advance2_tx" 30 || true
+    info "  Stage advanced (2)"
+  fi
 
   # Step 5: All validators vote yes
   for val in val0 val1 val2 val3; do
     local vote_tx
-    vote_tx=$(submit_tx "${BINARY} tx zerone_gov cast-vote ${lip_id} yes --from ${val} ${TX_FLAGS}")
-    if [ "$vote_tx" != "TX_FAILED" ]; then
+    vote_tx=$(submit_tx "${BINARY} tx zerone_gov cast-vote ${lip_id} yes --from ${val} ${TX_FLAGS}") || true
+    if [ "$vote_tx" != "TX_FAILED" ] && [ -n "$vote_tx" ]; then
       wait_tx "$vote_tx" 30 || true
       info "  ${val} voted yes"
     fi
   done
 
-  # Step 6: Wait for voting period to end
-  wait_blocks 5
+  # Step 6: Wait for voting period to end (voting_period_blocks=10 in localnet genesis)
+  wait_blocks 12
 
   # Step 7: Query LIP status
   local lip_result
@@ -597,6 +639,8 @@ run_all() {
   preflight
   echo ""
 
+  test_genesis_invariants
+  echo ""
   test_block_production
   echo ""
   test_validator_set
@@ -637,6 +681,7 @@ run_single() {
   echo ""
 
   case "$test_name" in
+    genesis_invariants) test_genesis_invariants ;;
     block_production) test_block_production ;;
     validator_set)    test_validator_set ;;
     delegation)       test_delegation ;;

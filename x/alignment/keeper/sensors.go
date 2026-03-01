@@ -2,8 +2,8 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 	"math/big"
-	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -17,7 +17,7 @@ func (k Keeper) ObserveAll(ctx context.Context) *types.AlignmentObservation {
 
 	return &types.AlignmentObservation{
 		Height:                  height,
-		Timestamp:               time.Now().Unix(),
+		Timestamp:               sdkCtx.BlockTime().Unix(),
 		KnowledgeQuality:        k.senseKnowledgeQuality(ctx),
 		EconomicStability:       k.senseEconomicStability(ctx),
 		GovernanceParticipation: k.senseGovernanceParticipation(ctx),
@@ -26,17 +26,33 @@ func (k Keeper) ObserveAll(ctx context.Context) *types.AlignmentObservation {
 	}
 }
 
-// senseKnowledgeQuality reads the verification rate from x/knowledge.
-// Returns BPS direct. Nil-safe: returns NeutralBPS if keeper is nil.
+// senseKnowledgeQuality reads verification rate and consensus diversity from x/knowledge.
+// Weighted: 60% verification rate, 40% diversity.
+// A system that verifies everything unanimously scores LOWER on knowledge quality.
+// Growth pressure (R31-1): if pending/active ratio exceeds 150%, apply 20% penalty (Wood overwhelming Earth).
+// Returns BPS. Nil-safe: returns NeutralBPS if keeper is nil.
 func (k Keeper) senseKnowledgeQuality(ctx context.Context) uint64 {
 	if k.knowledgeKeeper == nil {
 		return types.NeutralBPS
 	}
 	rate := k.knowledgeKeeper.GetVerificationRate(ctx)
 	if rate > types.BPS {
-		return types.BPS
+		rate = types.BPS
 	}
-	return rate
+	diversity := k.knowledgeKeeper.GetConsensusDiversity(ctx)
+	if diversity > types.BPS {
+		diversity = types.BPS
+	}
+	// Weighted: 60% verification rate, 40% diversity
+	qualityScore := (rate*6 + diversity*4) / 10
+
+	// Growth pressure penalty (R31-1: Wood controls Earth)
+	pendingRatio := k.knowledgeKeeper.GetPendingVerificationRatio(ctx)
+	if pendingRatio > 1_500_000 { // 150% — verification backlog
+		qualityScore = qualityScore * 800_000 / types.BPS // 20% penalty
+	}
+
+	return qualityScore
 }
 
 // senseEconomicStability computes staked/supply ratio as BPS.
@@ -66,8 +82,9 @@ func (k Keeper) senseGovernanceParticipation(ctx context.Context) uint64 {
 	return count * types.BPS / targetDomains
 }
 
-// senseNetworkSecurity computes active/target validator ratio as BPS.
-// Nil-safe: returns NeutralBPS if keeper is nil.
+// senseNetworkSecurity computes active/target validator ratio as BPS,
+// then applies a capture risk penalty based on flagged domain ratio.
+// Nil-safe: returns NeutralBPS if staking keeper is nil.
 func (k Keeper) senseNetworkSecurity(ctx context.Context) uint64 {
 	if k.stakingKeeper == nil {
 		return types.NeutralBPS
@@ -77,11 +94,28 @@ func (k Keeper) senseNetworkSecurity(ctx context.Context) uint64 {
 	if target == 0 {
 		return types.NeutralBPS
 	}
-	ratio := active * types.BPS / target
-	if ratio > types.BPS {
-		return types.BPS
+	baseSecurity := active * types.BPS / target
+	if baseSecurity > types.BPS {
+		baseSecurity = types.BPS
 	}
-	return ratio
+
+	// Apply capture risk penalty (R28-8).
+	if k.captureDefenseKeeper != nil {
+		flaggedCount := k.captureDefenseKeeper.GetFlaggedDomainCount(ctx)
+		if flaggedCount > 0 && k.ontologyKeeper != nil {
+			totalDomains := k.ontologyKeeper.GetDomainCount(ctx)
+			if totalDomains > 0 {
+				captureRatio := flaggedCount * types.BPS / totalDomains
+				if captureRatio > types.BPS {
+					captureRatio = types.BPS
+				}
+				// security = baseSecurity * (1 - captureRatio)
+				baseSecurity = baseSecurity * (types.BPS - captureRatio) / types.BPS
+			}
+		}
+	}
+
+	return baseSecurity
 }
 
 // senseStakingRatio computes staked/supply from the staking angle.
@@ -94,6 +128,23 @@ func (k Keeper) senseStakingRatio(ctx context.Context) uint64 {
 	totalStaked := k.stakingKeeper.GetTotalStaked(ctx)
 	totalSupply := k.vestingRewardsKeeper.GetTotalSupply(ctx)
 	return ratioBPS(totalStaked, totalSupply)
+}
+
+// EmitGrowthPressureEvent emits a growth_pressure_detected event when verification backlog is high (R31-1).
+func (k Keeper) EmitGrowthPressureEvent(ctx sdk.Context, qualityScore uint64) {
+	if k.knowledgeKeeper == nil {
+		return
+	}
+	pendingRatio := k.knowledgeKeeper.GetPendingVerificationRatio(ctx)
+	if pendingRatio <= 1_500_000 {
+		return // no pressure
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.alignment.growth_pressure_detected",
+		sdk.NewAttribute("pending_ratio_bps", fmt.Sprintf("%d", pendingRatio)),
+		sdk.NewAttribute("quality_penalty_applied", "true"),
+	))
 }
 
 // ratioBPS computes (numerator / denominator) * BPS, capped at BPS.

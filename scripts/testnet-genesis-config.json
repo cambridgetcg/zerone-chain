@@ -1,0 +1,701 @@
+{
+  "_meta": {
+    "description": "Zerone testnet genesis configuration reference",
+    "chain_id": "zerone-testnet-1",
+    "genesis_time": "2026-07-01T00:00:00Z",
+    "block_time_ms": 2521,
+    "denom": "uzrn",
+    "generated_by": "scripts/testnet-genesis.sh",
+    "_note": "Values marked [TESTNET] differ from production defaults. Production values shown in _prod fields."
+  },
+  "consensus": {
+    "_note": "CometBFT consensus parameters",
+    "max_gas": "33333333",
+    "max_bytes": "4194304",
+    "vote_extensions_enable_height": "1"
+  },
+  "sdk_overrides": {
+    "_note": "Cosmos SDK module overrides",
+    "staking": {
+      "bond_denom": "uzrn"
+    },
+    "slashing": {
+      "signed_blocks_window": "100",
+      "slash_fraction_downtime": "0.010000000000000000"
+    },
+    "bank": {
+      "denom_metadata": "ZRN (uzrn/mzrn/zrn)"
+    }
+  },
+  "bootstrap_accounts": {
+    "_note": "Initial token distribution [TESTNET: lower balances]",
+    "foundation": {
+      "balance": "1000000000000uzrn",
+      "zrn": "1,000,000 ZRN",
+      "_prod": "10000000000000uzrn (10,000,000 ZRN)"
+    },
+    "research_treasury": {
+      "balance": "500000000000uzrn",
+      "zrn": "500,000 ZRN",
+      "_prod": "5000000000000uzrn (5,000,000 ZRN)"
+    },
+    "faucet": {
+      "balance": "100000000000uzrn",
+      "zrn": "100,000 ZRN",
+      "_prod": "500000000000uzrn (500,000 ZRN)"
+    },
+    "validator_default": {
+      "balance": "100000000000uzrn",
+      "stake": "10000000000uzrn",
+      "zrn_balance": "100,000 ZRN",
+      "zrn_stake": "10,000 ZRN",
+      "_prod_balance": "1000000000000uzrn (1,000,000 ZRN)",
+      "_prod_stake": "100000000000uzrn (100,000 ZRN)"
+    }
+  },
+  "modules": {
+    "knowledge": {
+      "_note": "Proof-of-Truth lifecycle: claim submission, verification rounds, challenge mechanics",
+      "params": {
+        "min_verifiers": 2,
+        "min_verifiers_[TESTNET]": "prod=3",
+        "max_verifiers": 22,
+        "commit_phase_blocks": 4,
+        "reveal_phase_blocks": 4,
+        "aggregation_phase_blocks": 3,
+        "claim_cooldown_blocks": 50,
+        "initial_confidence": 500000,
+        "confidence_boost_per_verification": 50000,
+        "confidence_threshold": 770000,
+        "quorum_threshold": 660000,
+        "wrong_verification_slash_bps": 50000,
+        "missed_reveal_slash_bps": 100000,
+        "equivocation_slash_bps": 200000,
+        "invalid_claim_slash_bps": 0,
+        "verification_reward": "3000000",
+        "verification_reward_decay_bps": 999000,
+        "min_claim_text_length": 20,
+        "max_claim_text_length": 10000,
+        "min_review_fee": "100000",
+        "adversarial_verification_enabled": true,
+        "provisional_threshold": 500000,
+        "reject_threshold": 300000,
+        "challenge_duration_blocks": 17136,
+        "challenge_duration_blocks_[TESTNET]": "prod=34272, halved for faster iteration",
+        "min_challenge_stake": "11000000",
+        "failed_challenge_slash_bps": 220000,
+        "successful_challenge_reward_bps": 300000,
+        "max_concurrent_challenges": 3,
+        "citation_share_bps": 150000,
+        "cross_domain_bonus_bps": 200000,
+        "max_facts_per_domain": 100000,
+        "fact_expiry_blocks": 0,
+        "cross_stratum_discount_bps": 0,
+        "novelty_bonus_bps": 0,
+        "max_validators_per_round": 22,
+        "max_citations_per_claim": 50,
+        "citation_decay_per_level": 500000,
+        "self_citation_discount_bps": 500000,
+        "confidence_growth_epoch": 1111,
+        "confidence_growth_per_epoch_bps": 11000,
+        "max_survival_confidence": 770000,
+        "survived_challenge_confidence_cap": 880000,
+        "max_apprentice_validators": 111,
+        "conformity_threshold_bps": 950000,
+        "calibration_trivial_threshold": 950000,
+        "misbehavior_rejection_threshold": 300000,
+        "min_domain_contributors_for_novelty": 3,
+        "min_participation_rate_bps": 500000,
+        "challenge_stake_ratio_min_bps": 500000,
+        "research_fund_share_bps": 130000
+      }
+    },
+    "zerone_gov": {
+      "_note": "On-chain governance: LIP proposals, voting, category-specific rules",
+      "params": {
+        "voting_period_blocks": 34272,
+        "voting_period_blocks_[TESTNET]": "prod=102816, ~1/3 for faster governance cycles",
+        "discussion_period_blocks": 17136,
+        "discussion_period_blocks_[TESTNET]": "prod=68544, ~1/4 for faster iteration",
+        "quorum_threshold_bps": 334000,
+        "support_threshold_bps": 500000,
+        "min_lip_stake": "1000000",
+        "min_vote_stake": "0",
+        "research_discussion_blocks": 17136,
+        "research_discussion_blocks_[TESTNET]": "prod=68544",
+        "research_voting_blocks": 34272,
+        "research_voting_blocks_[TESTNET]": "prod=102816",
+        "category_configs": [
+          {
+            "category": "parameter",
+            "required_stake_bps": "1000000000",
+            "review_blocks": 17136,
+            "review_blocks_[TESTNET]": "prod=34272"
+          },
+          {
+            "category": "upgrade",
+            "required_stake_bps": "800000000",
+            "review_blocks": 17136,
+            "review_blocks_[TESTNET]": "prod=34272"
+          },
+          {
+            "category": "text",
+            "required_stake_bps": "400000000",
+            "review_blocks": 8568,
+            "review_blocks_[TESTNET]": "prod=17136"
+          },
+          {
+            "category": "research_spend",
+            "required_stake_bps": "200000000",
+            "review_blocks": 8568,
+            "review_blocks_[TESTNET]": "prod=17136"
+          }
+        ]
+      }
+    },
+    "emergency": {
+      "_note": "Emergency governance: halt, revert, resume mechanisms with guardian voting",
+      "params": {
+        "halt_quorum": 750000,
+        "revert_quorum": 800000,
+        "resume_quorum": 800000,
+        "halt_prevote_blocks": 11,
+        "halt_precommit_blocks": 11,
+        "halt_timeout_blocks": 44,
+        "revert_prevote_blocks": 22,
+        "revert_precommit_blocks": 22,
+        "revert_timeout_blocks": 111,
+        "resume_prevote_blocks": 22,
+        "resume_precommit_blocks": 22,
+        "resume_timeout_blocks": 111,
+        "max_proposals_per_epoch": 3,
+        "max_proposals_per_guardian_per_epoch": 1,
+        "cooldown_blocks": 55,
+        "cooldown_blocks_[TESTNET]": "prod=111, halved for faster testing",
+        "min_guardian_stake": "111111000000",
+        "min_distinct_voters": 4,
+        "max_revert_depth": 111111,
+        "epoch_blocks": 17136,
+        "epoch_blocks_[TESTNET]": "prod=34272, halved",
+        "council_expiry_block": 0,
+        "council_virtual_stake": "11111000000",
+        "max_halt_duration_blocks": 17136,
+        "max_halt_duration_blocks_[TESTNET]": "prod=34272, halved"
+      }
+    },
+    "zerone_staking": {
+      "_note": "Tiered validator staking with reputation-based progression",
+      "params": {
+        "unbonding_period": 134280,
+        "unbonding_period_[TESTNET]": "prod=268560, halved for faster validator churn",
+        "max_validators": 100,
+        "min_self_delegation": "111000",
+        "virtual_stake": "11000000",
+        "max_slashes_per_epoch": 2,
+        "slash_decay_period_blocks": 17136,
+        "slash_decay_period_blocks_[TESTNET]": "prod=34272",
+        "max_slash_count_deactivate": 3,
+        "min_stake_for_verification": "111000",
+        "slash_escalation_bps": 100000,
+        "reputation_correct_delta": 100,
+        "reputation_incorrect_delta": 200,
+        "reputation_slash_delta": 10000,
+        "redelegation_cooldown_blocks": 555,
+        "redelegation_cooldown_blocks_[TESTNET]": "prod=1111, halved",
+        "tier_configs": [
+          {
+            "name": "Apprentice",
+            "min_stake": "111000",
+            "min_reputation": 0,
+            "min_verifications": 0,
+            "min_accuracy": 0,
+            "allowed_categories": ["protocol", "computational", "formal"],
+            "reward_multiplier_bps": 100,
+            "selection_weight_bps": 100,
+            "slash_multiplier_bps": 1500
+          },
+          {
+            "name": "Verified",
+            "min_stake": "1110000",
+            "min_reputation": 770000,
+            "min_verifications": 22,
+            "min_accuracy": 770000,
+            "allowed_categories": ["protocol", "computational", "formal", "empirical"],
+            "reward_multiplier_bps": 500,
+            "selection_weight_bps": 500,
+            "slash_multiplier_bps": 1200
+          },
+          {
+            "name": "Scholar",
+            "min_stake": "1111000000",
+            "min_reputation": 500000,
+            "min_verifications": 11,
+            "min_accuracy": 500000,
+            "allowed_categories": ["protocol", "computational", "formal", "empirical", "oracle", "attestation"],
+            "reward_multiplier_bps": 1000,
+            "selection_weight_bps": 1000,
+            "slash_multiplier_bps": 1000
+          },
+          {
+            "name": "Guardian",
+            "min_stake": "11111000000",
+            "min_reputation": 770000,
+            "min_verifications": 333,
+            "min_accuracy": 770000,
+            "max_slash_count": 0,
+            "allowed_categories": ["protocol", "computational", "formal", "empirical", "oracle", "attestation", "historical", "testimonial"],
+            "reward_multiplier_bps": 2000,
+            "selection_weight_bps": 1500,
+            "min_contested_verifications": 33,
+            "contested_verification_multiplier": 3,
+            "slash_multiplier_bps": 1000
+          }
+        ]
+      }
+    },
+    "vesting_rewards": {
+      "_note": "Block rewards with evidence-category vesting schedules and revenue splits",
+      "params": {
+        "block_reward": "10000000",
+        "reward_decay_bps": 994478,
+        "reward_decay_bps_note": "1-year half-life: rewards halve annually (prod=994478)",
+        "blocks_per_reward_epoch": 50000,
+        "blocks_per_reward_epoch_[TESTNET]": "prod=100000, halved for faster epoch cycling",
+        "founder_share_bps": 70000,
+        "founder_address": "",
+        "governance_activation_height_DEPRECATED": "removed — founder share is governance-immune",
+        "vesting_enabled": true,
+        "released_clawback_rate": 3300,
+        "min_validators_for_full_reward": 11,
+        "min_validators_for_full_reward_[TESTNET]": "prod=22, halved for smaller testnet validator set",
+        "empty_block_reward_rate": 0,
+        "floor_reward": "100000",
+        "initial_fund_balance": "0",
+        "revenue_split": {
+          "contributor_bps": 550000,
+          "protocol_bps": 220000,
+          "research_bps": 33300,
+          "development_bps": 196700
+        },
+        "protocol_sub_split": {
+          "citation_bps": 500000,
+          "verification_bps": 300000,
+          "treasury_bps": 200000
+        },
+        "category_reward_configs": [
+          {"category": "axiomatic", "reward_multiplier_bps": 1200000},
+          {"category": "formal_proof", "reward_multiplier_bps": 1100000},
+          {"category": "on_chain", "reward_multiplier_bps": 1000000},
+          {"category": "cryptographic", "reward_multiplier_bps": 1050000},
+          {"category": "computational", "reward_multiplier_bps": 1000000},
+          {"category": "peer_reviewed", "reward_multiplier_bps": 900000},
+          {"category": "replicated", "reward_multiplier_bps": 950000},
+          {"category": "oracle_feed", "reward_multiplier_bps": 800000},
+          {"category": "attestation", "reward_multiplier_bps": 850000},
+          {"category": "contested", "reward_multiplier_bps": 600000}
+        ],
+        "category_configs": [
+          {"category": "axiomatic", "half_life_blocks": 1111111, "cliff_blocks": 11111, "max_release": 950000},
+          {"category": "formal_proof", "half_life_blocks": 555555, "cliff_blocks": 5555, "max_release": 920000},
+          {"category": "on_chain", "half_life_blocks": 222222, "cliff_blocks": 1111, "max_release": 900000},
+          {"category": "cryptographic", "half_life_blocks": 222222, "cliff_blocks": 3333, "max_release": 900000},
+          {"category": "computational", "half_life_blocks": 333333, "cliff_blocks": 2222, "max_release": 880000},
+          {"category": "peer_reviewed", "half_life_blocks": 111111, "cliff_blocks": 5555, "max_release": 850000},
+          {"category": "replicated", "half_life_blocks": 111111, "cliff_blocks": 3333, "max_release": 880000},
+          {"category": "oracle_feed", "half_life_blocks": 55555, "cliff_blocks": 555, "max_release": 800000},
+          {"category": "attestation", "half_life_blocks": 77777, "cliff_blocks": 2222, "max_release": 800000},
+          {"category": "contested", "half_life_blocks": 22222, "cliff_blocks": 1111, "max_release": 600000}
+        ]
+      }
+    },
+    "alignment": {
+      "_note": "System health alignment monitoring — SSI (System Stability Index)",
+      "params": {
+        "observation_interval_blocks": 100,
+        "weight_knowledge_quality": 200000,
+        "weight_economic_stability": 200000,
+        "weight_governance_participation": 200000,
+        "weight_network_security": 200000,
+        "weight_staking_ratio": 200000,
+        "critical_threshold": 200000,
+        "degraded_threshold": 400000,
+        "healthy_threshold": 700000,
+        "enabled": true
+      }
+    },
+    "autopoiesis": {
+      "_note": "Self-regulating system dynamics — adaptive slash multipliers based on SSI",
+      "params": {
+        "epoch_length_blocks": 100,
+        "max_change_per_epoch_bps": 10000,
+        "slash_multiplier_min": 500000,
+        "slash_multiplier_max": 2000000,
+        "ssi_critical_threshold": 250000,
+        "ssi_stressed_threshold": 500000,
+        "ssi_healthy_threshold": 750000,
+        "enabled": true
+      }
+    },
+    "billing": {
+      "_note": "Knowledge query billing with confidence-weighted pricing",
+      "params": {
+        "base_query_price": "1000000",
+        "confidence_weight_bps": 200000,
+        "novelty_weight_bps": 0,
+        "freshness_weight_bps": 100000,
+        "min_provider_stake": "100000000",
+        "confidence_threshold": 500000,
+        "freshness_window_blocks": 1000,
+        "quote_validity_blocks": 100,
+        "revenue_split": {
+          "contributor_bps": 550000,
+          "protocol_bps": 220000,
+          "research_bps": 33300,
+          "development_bps": 196700
+        },
+        "dynamic_pricing_config": {
+          "enabled": false,
+          "target_query_cost_usd": "10000",
+          "manual_zrn_price_usd": "0",
+          "twap_window_blocks": 1000,
+          "staleness_blocks": 5000,
+          "min_cost_per_fact": "1000",
+          "max_cost_per_fact": "100000000"
+        }
+      }
+    },
+    "bvm": {
+      "_note": "Bytecode Virtual Machine for on-chain smart contracts",
+      "params": {
+        "max_bytecode_size": 65536,
+        "max_gas_per_call": 10000000,
+        "max_gas_per_block": 100000000,
+        "max_contracts_per_creator": 100,
+        "max_state_entries": 10000,
+        "deploy_cost": "5000000",
+        "max_schedule_gas": 1000000,
+        "schedule_horizon_blocks": 100000,
+        "current_bvm_version": 1,
+        "max_schedules_per_contract": 100
+      }
+    },
+    "capture_challenge": {
+      "_note": "Anti-capture challenge mechanism — domain health monitoring",
+      "params": {
+        "min_challenge_stake": "10000000",
+        "evidence_period_blocks": 2500,
+        "evidence_period_blocks_[TESTNET]": "prod=5000, halved",
+        "review_period_blocks": 10000,
+        "review_period_blocks_[TESTNET]": "prod=20000, halved",
+        "domain_pause_blocks": 500,
+        "domain_pause_blocks_[TESTNET]": "prod=1000, halved",
+        "reward_rate_bps": 100000,
+        "slash_rate_bps": 50000,
+        "bounty_contribution_per_fact": "1000",
+        "risk_analysis_interval": 500,
+        "risk_analysis_interval_[TESTNET]": "prod=1000, halved"
+      }
+    },
+    "capture_defense": {
+      "_note": "Anti-capture defense — HHI-based concentration monitoring",
+      "params": {
+        "decay_epoch_blocks": 5000,
+        "decay_epoch_blocks_[TESTNET]": "prod=10000, halved",
+        "min_verifications_for_score": 5,
+        "hhi_threshold": 250000,
+        "risk_analysis_interval": 500,
+        "risk_analysis_interval_[TESTNET]": "prod=1000, halved",
+        "history_retention_blocks": 25000,
+        "history_retention_blocks_[TESTNET]": "prod=50000, halved",
+        "base_reputation_score": 500000,
+        "max_history_per_domain": 100
+      }
+    },
+    "channels": {
+      "_note": "Payment channels for off-chain micro-transactions",
+      "params": {
+        "min_deposit": "1000000",
+        "min_timeout_blocks": 100,
+        "max_timeout_blocks": 1000000,
+        "dispute_window_blocks": 500,
+        "default_settlement_freq": 100,
+        "max_channels_per_pair": 10,
+        "channel_open_fee": "100000"
+      }
+    },
+    "claiming_pot": {
+      "_note": "Reward claiming pots for knowledge verification payouts",
+      "params": {
+        "max_pots_active": 10,
+        "min_claim_amount": "1000"
+      }
+    },
+    "compute_pool": {
+      "_note": "Decentralized compute resource pooling — uses default genesis, no custom params",
+      "params": {}
+    },
+    "discovery": {
+      "_note": "Agent discovery and capability registration",
+      "params": {
+        "min_registration_stake": "1000000",
+        "max_capabilities_per_agent": 20,
+        "profile_expiry_blocks": 50000,
+        "profile_expiry_blocks_[TESTNET]": "prod=100000, halved"
+      }
+    },
+    "disputes": {
+      "_note": "Multi-tier dispute resolution with progressive arbitration",
+      "params": {
+        "max_active_disputes": 100,
+        "escalation_delay": 250,
+        "escalation_delay_[TESTNET]": "prod=500, halved",
+        "slash_rate_loser_bps": 500000,
+        "reward_rate_winner_bps": 400000,
+        "arbiter_reward_bps": 100000,
+        "tier_configs": [
+          {
+            "arbiter_count": 3,
+            "min_bond": "1000000",
+            "evidence_period": 500,
+            "voting_period": 1000,
+            "quorum_bps": 500000,
+            "majority_bps": 666667
+          },
+          {
+            "arbiter_count": 7,
+            "min_bond": "10000000",
+            "evidence_period": 1000,
+            "voting_period": 2000,
+            "quorum_bps": 500000,
+            "majority_bps": 666667
+          },
+          {
+            "arbiter_count": 13,
+            "min_bond": "100000000",
+            "evidence_period": 2000,
+            "voting_period": 5000,
+            "quorum_bps": 600000,
+            "majority_bps": 750000
+          },
+          {
+            "arbiter_count": 21,
+            "min_bond": "1000000000",
+            "evidence_period": 5000,
+            "voting_period": 10000,
+            "quorum_bps": 666000,
+            "majority_bps": 800000
+          }
+        ]
+      }
+    },
+    "evidence_mgmt": {
+      "_note": "Evidence management for knowledge claims and disputes",
+      "params": {
+        "min_verifier_tier": 2,
+        "verification_quorum": 3,
+        "challenge_bond": "500000",
+        "challenge_window_blocks": 25000,
+        "challenge_window_blocks_[TESTNET]": "prod=50000, halved"
+      }
+    },
+    "home": {
+      "_note": "Home identity management — key rotation, session keys, deadman switches",
+      "params": {
+        "max_keys_per_home": 20,
+        "max_sessions_per_home": 5,
+        "session_timeout_blocks": 500,
+        "session_timeout_blocks_[TESTNET]": "prod=1000, halved",
+        "deadman_min_threshold": 100,
+        "deadman_max_threshold": 100000,
+        "max_alerts_per_home": 100,
+        "home_creation_fee": "10000000",
+        "max_recovery_addresses": 5
+      }
+    },
+    "ibcratelimit": {
+      "_note": "IBC transfer rate limiting for cross-chain security",
+      "params": {
+        "enabled": true
+      }
+    },
+    "icaauth": {
+      "_note": "Interchain Accounts authorization with whitelisted message types",
+      "params": {
+        "max_remote_accounts_per_owner": 5,
+        "registration_cooldown": 100,
+        "max_messages_per_tx": 5,
+        "allowed_host_msg_types": [
+          "/cosmos.bank.v1beta1.MsgSend",
+          "/cosmos.staking.v1beta1.MsgDelegate",
+          "/cosmos.staking.v1beta1.MsgUndelegate",
+          "/cosmos.staking.v1beta1.MsgBeginRedelegate",
+          "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
+          "/cosmos.gov.v1beta1.MsgVote"
+        ]
+      }
+    },
+    "liquiditypool": {
+      "_note": "AMM liquidity pools with TWAP-based pricing",
+      "params": {
+        "default_swap_fee_bps": 3000,
+        "max_pools": 3,
+        "min_initial_liquidity": "10000000000",
+        "twap_window_blocks": 1000,
+        "protocol_fee_bps": 450000,
+        "min_reserve": "1"
+      }
+    },
+    "ontology": {
+      "_note": "Knowledge domain ontology — strata and domain taxonomy management",
+      "params": {
+        "min_proposal_stake": "1000000",
+        "proposal_voting_period": 17136,
+        "proposal_voting_period_[TESTNET]": "prod=34272, halved",
+        "min_endorsements": 3,
+        "cross_stratum_discount": 50000,
+        "max_domains_per_stratum": 100,
+        "allow_new_strata": false
+      }
+    },
+    "partnerships": {
+      "_note": "Human-agent partnerships with lock tiers and coercion protection",
+      "params": {
+        "formation_window_blocks": 500,
+        "formation_window_blocks_[TESTNET]": "prod=1000, halved",
+        "cooling_period_blocks": 2500,
+        "cooling_period_blocks_[TESTNET]": "prod=5000, halved",
+        "common_pot_share_bps": 100000,
+        "safety_freeze_duration_blocks": 250,
+        "safety_freeze_duration_blocks_[TESTNET]": "prod=500, halved",
+        "max_freezes_per_epoch": 3,
+        "coercion_review_blocks": 1000,
+        "coercion_review_blocks_[TESTNET]": "prod=2000, halved",
+        "base_cooldown_blocks": 50,
+        "base_cooldown_blocks_[TESTNET]": "prod=100, halved",
+        "max_counter_proposal_depth": 3,
+        "default_human_split_bps": 500000,
+        "default_agent_split_bps": 500000,
+        "min_partnership_stake": "1000000",
+        "seed_partnership_duration": 5000,
+        "seed_partnership_duration_[TESTNET]": "prod=10000, halved",
+        "seed_common_pot_cap": "100000000",
+        "lock_tiers": [
+          {"min_blocks": 22222, "multiplier_bps": 1000000, "exit_penalty_bps": 110000},
+          {"min_blocks": 77777, "multiplier_bps": 1110000, "exit_penalty_bps": 220000},
+          {"min_blocks": 222222, "multiplier_bps": 1220000, "exit_penalty_bps": 330000},
+          {"min_blocks": 777777, "multiplier_bps": 1440000, "exit_penalty_bps": 440000},
+          {"min_blocks": 1111111, "multiplier_bps": 1550000, "exit_penalty_bps": 550000},
+          {"min_blocks": 2222222, "multiplier_bps": 1770000, "exit_penalty_bps": 660000}
+        ]
+      }
+    },
+    "qualification": {
+      "_note": "Validator qualification and tier progression requirements",
+      "params": {
+        "min_stake_amount": "100000000",
+        "stake_lock_period": 50400,
+        "stake_lock_period_[TESTNET]": "prod=100800, halved",
+        "min_verifications": 100,
+        "min_accuracy_bps": 800000,
+        "min_reputation_score": 500000,
+        "qualification_period": 604800,
+        "qualification_period_[TESTNET]": "prod=1209600, halved",
+        "probation_period": 151200,
+        "probation_period_[TESTNET]": "prod=302400, halved",
+        "renewal_window": 50400,
+        "renewal_window_[TESTNET]": "prod=100800, halved",
+        "max_endorsements": 50,
+        "cross_ref_min_weight": 30,
+        "cross_ref_weight_discount_bps": 200000,
+        "inheritance_weight_discount_bps": 300000
+      }
+    },
+    "research": {
+      "_note": "Research funding, peer review, and bounty mechanisms",
+      "params": {
+        "min_research_stake": "1000000",
+        "min_challenge_stake": "1000000",
+        "review_period_blocks": 34272,
+        "review_period_blocks_[TESTNET]": "prod=68544, halved",
+        "min_reviewer_count": 3,
+        "acceptance_score_threshold": 70,
+        "rejection_slash_bps": 330000,
+        "max_bounty_reward": "10000000000",
+        "bounty_min_deadline_blocks": 17136,
+        "bounty_min_deadline_blocks_[TESTNET]": "prod=34272, halved"
+      }
+    },
+    "schedule": {
+      "_note": "Transaction scheduling for time-delayed and recurring operations",
+      "params": {
+        "max_active_per_account": 20,
+        "max_gas_per_block": 50000000,
+        "min_interval_blocks": 10,
+        "min_fee_per_execution": "10000",
+        "max_compound_depth": 3
+      }
+    },
+    "tokens": {
+      "_note": "Token emission and fee configuration",
+      "params": {
+        "emission_epoch_blocks": 0,
+        "default_fee_bps": ""
+      }
+    },
+    "toolbox": {
+      "_note": "On-chain tool registry with surge pricing and revenue sharing",
+      "params": {
+        "max_contributors": 22,
+        "max_dependency_depth": 10,
+        "max_dependencies": 20,
+        "min_tool_stake": 11000000,
+        "share_lock_cooldown_blocks": 17136,
+        "share_lock_cooldown_blocks_[TESTNET]": "prod=34272, halved",
+        "deprecation_grace_blocks": 120000,
+        "deprecation_grace_blocks_[TESTNET]": "prod=240000, halved",
+        "blocks_per_trust_update": 1000,
+        "verified_grace_period_blocks": 10000,
+        "tool_gas_limit": 1000000,
+        "demand_window_size": 1000,
+        "target_calls_per_block_per_tool": 10,
+        "target_global_calls_per_block": 100,
+        "surge_threshold_bps": 500000,
+        "surge_critical_bps": 800000,
+        "max_surge_multiplier_bps": 10000000,
+        "surge_enabled": true,
+        "free_calls_per_epoch": 50,
+        "min_home_age_blocks": 5000,
+        "min_home_age_blocks_[TESTNET]": "prod=10000, halved",
+        "free_calls_enabled": true,
+        "tool_revenue_bps": 550000,
+        "protocol_bps": 220000,
+        "research_bps": 33300,
+        "development_bps": 196700,
+        "protocol_citation_bps": 500000,
+        "protocol_verification_bps": 300000,
+        "protocol_treasury_bps": 200000
+      }
+    },
+    "tree": {
+      "_note": "Project management — task trees with budget allocation and evidence requirements",
+      "params": {
+        "min_budget": "1000000",
+        "max_tasks_per_project": 200,
+        "max_contributors": 50,
+        "max_applications": 100,
+        "task_deadline_min_blocks": 100,
+        "task_deadline_max_blocks": 518400,
+        "task_deadline_max_blocks_[TESTNET]": "prod=1036800, halved",
+        "max_rejections": 3,
+        "seed_expiry_blocks": 86400,
+        "seed_expiry_blocks_[TESTNET]": "prod=172800, halved",
+        "min_contributors_to_start": 1,
+        "contributors_bp": 550000,
+        "protocol_treasury_bp": 220000,
+        "research_fund_bp": 33300,
+        "development_bp": 196700,
+        "evidence_tax_bp": 220000
+      }
+    }
+  }
+}

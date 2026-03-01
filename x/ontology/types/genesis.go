@@ -38,13 +38,13 @@ func DefaultStrata() []*StratumProperties {
 
 func DefaultDomains() []*Domain {
 	return []*Domain{
-		{Name: "logic", DisplayName: "Logic & Foundations", Description: "Propositional logic, predicate logic, set theory foundations, and metamathematics", Stratum: uint32(StratumAxiomatic), Status: "active"},
-		{Name: "mathematics", DisplayName: "Mathematics", Description: "Formal mathematical truths, proofs, and theorems", Stratum: uint32(StratumFormal), Status: "active"},
-		{Name: "protocol", DisplayName: "Blockchain Protocol", Description: "On-chain state, transaction results, and protocol-verifiable facts", Stratum: uint32(StratumProtocol), Status: "active"},
-		{Name: "computer_science", DisplayName: "Computer Science", Description: "Algorithms, data structures, protocols, and computational theory", Stratum: uint32(StratumComputational), Status: "active"},
-		{Name: "physics", DisplayName: "Physics", Description: "Physical laws, constants, and empirical observations about the natural world", Stratum: uint32(StratumEmpirical), Status: "active"},
-		{Name: "general", DisplayName: "General Knowledge", Description: "General knowledge claims not fitting a specific domain", Stratum: uint32(StratumEmpirical), Status: "active"},
-		{Name: "history", DisplayName: "History", Description: "Historical records, events, and evidence-based accounts of the past", Stratum: uint32(StratumHistorical), Status: "active"},
+		{Name: "logic", DisplayName: "Logic & Foundations", Description: "Propositional logic, predicate logic, set theory foundations, and metamathematics", Stratum: uint32(StratumAxiomatic), Status: "active", Depth: 1},
+		{Name: "mathematics", DisplayName: "Mathematics", Description: "Formal mathematical truths, proofs, and theorems", Stratum: uint32(StratumFormal), Status: "active", Depth: 1},
+		{Name: "protocol", DisplayName: "Blockchain Protocol", Description: "On-chain state, transaction results, and protocol-verifiable facts", Stratum: uint32(StratumProtocol), Status: "active", Depth: 1},
+		{Name: "computer_science", DisplayName: "Computer Science", Description: "Algorithms, data structures, protocols, and computational theory", Stratum: uint32(StratumComputational), Status: "active", Depth: 1},
+		{Name: "physics", DisplayName: "Physics", Description: "Physical laws, constants, and empirical observations about the natural world", Stratum: uint32(StratumEmpirical), Status: "active", Depth: 1},
+		{Name: "general", DisplayName: "General Knowledge", Description: "General knowledge claims not fitting a specific domain", Stratum: uint32(StratumEmpirical), Status: "active", Depth: 1},
+		{Name: "history", DisplayName: "History", Description: "Historical records, events, and evidence-based accounts of the past", Stratum: uint32(StratumHistorical), Status: "active", Depth: 1},
 	}
 }
 

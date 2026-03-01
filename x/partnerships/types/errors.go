@@ -33,4 +33,21 @@ var (
 	ErrAlreadyInPool      = errors.Register(ModuleName, 39, "already registered in formation pool")
 	ErrNotInPool          = errors.Register(ModuleName, 40, "not registered in formation pool")
 	ErrSeedPotCapExceeded = errors.Register(ModuleName, 41, "seed partnership common pot cap exceeded")
+
+	// Mentorship errors
+	ErrMentorshipNotFound       = errors.Register(ModuleName, 50, "mentorship not found")
+	ErrSelfMentorship           = errors.Register(ModuleName, 51, "cannot mentor yourself")
+	ErrMaxMentorshipsReached    = errors.Register(ModuleName, 52, "mentor has reached max active mentorships")
+	ErrAlreadyMentored          = errors.Register(ModuleName, 53, "mentee already has an active mentorship")
+	ErrMentorshipNotProposed    = errors.Register(ModuleName, 54, "mentorship is not in proposed status")
+	ErrMentorshipNotActive      = errors.Register(ModuleName, 55, "mentorship is not in active status")
+	ErrNotMentorshipParticipant = errors.Register(ModuleName, 56, "sender is not a participant of this mentorship")
+
+	// Formation match errors
+	ErrMatchNotFound       = errors.Register(ModuleName, 60, "formation match not found")
+	ErrNotMatchParticipant = errors.Register(ModuleName, 61, "sender is not a participant of this match")
+	ErrMatchNotProposed    = errors.Register(ModuleName, 62, "match is not in proposed status")
+
+	// Formation freeze errors (R31-3)
+	ErrDomainFrozen = errors.Register(ModuleName, 70, "domain is under formation freeze")
 )

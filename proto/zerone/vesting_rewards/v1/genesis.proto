@@ -27,7 +27,7 @@ message Params {
   // Founder share
   uint64 founder_share_bps = 6;                      // founder's share of research fund (default: 70,000 = 7% on 1M scale)
   string founder_address = 7;                        // bech32, empty = disabled
-  uint64 governance_activation_height = 8;           // block when founder share sunsets (0 = never)
+  uint64 governance_activation_height = 8;           // DEPRECATED — founder share is governance-immune
 
   // Category reward multipliers
   repeated CategoryRewardConfig category_reward_configs = 9;

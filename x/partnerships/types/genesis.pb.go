@@ -30,6 +30,8 @@ type GenesisState struct {
 	CoercionSignals     []*CoercionSignal      `protobuf:"bytes,5,rep,name=coercion_signals,json=coercionSignals,proto3" json:"coercion_signals,omitempty"`
 	SeedPartnerships    []*SeedPartnership     `protobuf:"bytes,6,rep,name=seed_partnerships,json=seedPartnerships,proto3" json:"seed_partnerships,omitempty"`
 	PoolEntries         []*PoolEntry           `protobuf:"bytes,7,rep,name=pool_entries,json=poolEntries,proto3" json:"pool_entries,omitempty"`
+	Mentorships         []*Mentorship          `protobuf:"bytes,8,rep,name=mentorships,proto3" json:"mentorships,omitempty"`
+	FormationMatches    []*FormationMatch      `protobuf:"bytes,9,rep,name=formation_matches,json=formationMatches,proto3" json:"formation_matches,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -113,23 +115,45 @@ func (x *GenesisState) GetPoolEntries() []*PoolEntry {
 	return nil
 }
 
+func (x *GenesisState) GetMentorships() []*Mentorship {
+	if x != nil {
+		return x.Mentorships
+	}
+	return nil
+}
+
+func (x *GenesisState) GetFormationMatches() []*FormationMatch {
+	if x != nil {
+		return x.FormationMatches
+	}
+	return nil
+}
+
 type Params struct {
-	state                      protoimpl.MessageState `protogen:"open.v1"`
-	FormationWindowBlocks      uint64                 `protobuf:"varint,1,opt,name=formation_window_blocks,json=formationWindowBlocks,proto3" json:"formation_window_blocks,omitempty"`
-	CoolingPeriodBlocks        uint64                 `protobuf:"varint,2,opt,name=cooling_period_blocks,json=coolingPeriodBlocks,proto3" json:"cooling_period_blocks,omitempty"`
-	CommonPotShareBps          uint64                 `protobuf:"varint,3,opt,name=common_pot_share_bps,json=commonPotShareBps,proto3" json:"common_pot_share_bps,omitempty"`
-	SafetyFreezeDurationBlocks uint64                 `protobuf:"varint,4,opt,name=safety_freeze_duration_blocks,json=safetyFreezeDurationBlocks,proto3" json:"safety_freeze_duration_blocks,omitempty"`
-	MaxFreezesPerEpoch         uint32                 `protobuf:"varint,5,opt,name=max_freezes_per_epoch,json=maxFreezesPerEpoch,proto3" json:"max_freezes_per_epoch,omitempty"`
-	CoercionReviewBlocks       uint64                 `protobuf:"varint,6,opt,name=coercion_review_blocks,json=coercionReviewBlocks,proto3" json:"coercion_review_blocks,omitempty"`
-	BaseCooldownBlocks         uint64                 `protobuf:"varint,7,opt,name=base_cooldown_blocks,json=baseCooldownBlocks,proto3" json:"base_cooldown_blocks,omitempty"`
-	MaxCounterProposalDepth    uint32                 `protobuf:"varint,8,opt,name=max_counter_proposal_depth,json=maxCounterProposalDepth,proto3" json:"max_counter_proposal_depth,omitempty"`
-	DefaultHumanSplitBps       uint64                 `protobuf:"varint,9,opt,name=default_human_split_bps,json=defaultHumanSplitBps,proto3" json:"default_human_split_bps,omitempty"`
-	DefaultAgentSplitBps       uint64                 `protobuf:"varint,10,opt,name=default_agent_split_bps,json=defaultAgentSplitBps,proto3" json:"default_agent_split_bps,omitempty"`
-	MinPartnershipStake        string                 `protobuf:"bytes,11,opt,name=min_partnership_stake,json=minPartnershipStake,proto3" json:"min_partnership_stake,omitempty"`
-	SeedPartnershipDuration    uint64                 `protobuf:"varint,12,opt,name=seed_partnership_duration,json=seedPartnershipDuration,proto3" json:"seed_partnership_duration,omitempty"`
-	SeedCommonPotCap           string                 `protobuf:"bytes,13,opt,name=seed_common_pot_cap,json=seedCommonPotCap,proto3" json:"seed_common_pot_cap,omitempty"`
-	unknownFields              protoimpl.UnknownFields
-	sizeCache                  protoimpl.SizeCache
+	state                              protoimpl.MessageState `protogen:"open.v1"`
+	FormationWindowBlocks              uint64                 `protobuf:"varint,1,opt,name=formation_window_blocks,json=formationWindowBlocks,proto3" json:"formation_window_blocks,omitempty"`
+	CoolingPeriodBlocks                uint64                 `protobuf:"varint,2,opt,name=cooling_period_blocks,json=coolingPeriodBlocks,proto3" json:"cooling_period_blocks,omitempty"`
+	CommonPotShareBps                  uint64                 `protobuf:"varint,3,opt,name=common_pot_share_bps,json=commonPotShareBps,proto3" json:"common_pot_share_bps,omitempty"`
+	SafetyFreezeDurationBlocks         uint64                 `protobuf:"varint,4,opt,name=safety_freeze_duration_blocks,json=safetyFreezeDurationBlocks,proto3" json:"safety_freeze_duration_blocks,omitempty"`
+	MaxFreezesPerEpoch                 uint32                 `protobuf:"varint,5,opt,name=max_freezes_per_epoch,json=maxFreezesPerEpoch,proto3" json:"max_freezes_per_epoch,omitempty"`
+	CoercionReviewBlocks               uint64                 `protobuf:"varint,6,opt,name=coercion_review_blocks,json=coercionReviewBlocks,proto3" json:"coercion_review_blocks,omitempty"`
+	BaseCooldownBlocks                 uint64                 `protobuf:"varint,7,opt,name=base_cooldown_blocks,json=baseCooldownBlocks,proto3" json:"base_cooldown_blocks,omitempty"`
+	MaxCounterProposalDepth            uint32                 `protobuf:"varint,8,opt,name=max_counter_proposal_depth,json=maxCounterProposalDepth,proto3" json:"max_counter_proposal_depth,omitempty"`
+	DefaultHumanSplitBps               uint64                 `protobuf:"varint,9,opt,name=default_human_split_bps,json=defaultHumanSplitBps,proto3" json:"default_human_split_bps,omitempty"`
+	DefaultAgentSplitBps               uint64                 `protobuf:"varint,10,opt,name=default_agent_split_bps,json=defaultAgentSplitBps,proto3" json:"default_agent_split_bps,omitempty"`
+	MinPartnershipStake                string                 `protobuf:"bytes,11,opt,name=min_partnership_stake,json=minPartnershipStake,proto3" json:"min_partnership_stake,omitempty"`
+	SeedPartnershipDuration            uint64                 `protobuf:"varint,12,opt,name=seed_partnership_duration,json=seedPartnershipDuration,proto3" json:"seed_partnership_duration,omitempty"`
+	SeedCommonPotCap                   string                 `protobuf:"bytes,13,opt,name=seed_common_pot_cap,json=seedCommonPotCap,proto3" json:"seed_common_pot_cap,omitempty"`
+	HumanCoercionFreezeMultiplierBps   uint64                 `protobuf:"varint,14,opt,name=human_coercion_freeze_multiplier_bps,json=humanCoercionFreezeMultiplierBps,proto3" json:"human_coercion_freeze_multiplier_bps,omitempty"`
+	GraduationVerifications            uint64                 `protobuf:"varint,15,opt,name=graduation_verifications,json=graduationVerifications,proto3" json:"graduation_verifications,omitempty"`
+	GraduationClaims                   uint64                 `protobuf:"varint,16,opt,name=graduation_claims,json=graduationClaims,proto3" json:"graduation_claims,omitempty"`
+	MaxMentorshipsPerMentor            uint64                 `protobuf:"varint,17,opt,name=max_mentorships_per_mentor,json=maxMentorshipsPerMentor,proto3" json:"max_mentorships_per_mentor,omitempty"`
+	FormationMatchIntervalBlocks       uint64                 `protobuf:"varint,18,opt,name=formation_match_interval_blocks,json=formationMatchIntervalBlocks,proto3" json:"formation_match_interval_blocks,omitempty"`
+	MatchAcceptanceBlocks              uint64                 `protobuf:"varint,19,opt,name=match_acceptance_blocks,json=matchAcceptanceBlocks,proto3" json:"match_acceptance_blocks,omitempty"`
+	AutoProposePartnershipOnGraduation bool                   `protobuf:"varint,20,opt,name=auto_propose_partnership_on_graduation,json=autoProposePartnershipOnGraduation,proto3" json:"auto_propose_partnership_on_graduation,omitempty"`
+	SocialSaturationThreshold          uint64                 `protobuf:"varint,21,opt,name=social_saturation_threshold,json=socialSaturationThreshold,proto3" json:"social_saturation_threshold,omitempty"` // Min unique participants for social benefit (R31-5, default: 4)
+	unknownFields                      protoimpl.UnknownFields
+	sizeCache                          protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -253,11 +277,67 @@ func (x *Params) GetSeedCommonPotCap() string {
 	return ""
 }
 
+func (x *Params) GetHumanCoercionFreezeMultiplierBps() uint64 {
+	if x != nil {
+		return x.HumanCoercionFreezeMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetGraduationVerifications() uint64 {
+	if x != nil {
+		return x.GraduationVerifications
+	}
+	return 0
+}
+
+func (x *Params) GetGraduationClaims() uint64 {
+	if x != nil {
+		return x.GraduationClaims
+	}
+	return 0
+}
+
+func (x *Params) GetMaxMentorshipsPerMentor() uint64 {
+	if x != nil {
+		return x.MaxMentorshipsPerMentor
+	}
+	return 0
+}
+
+func (x *Params) GetFormationMatchIntervalBlocks() uint64 {
+	if x != nil {
+		return x.FormationMatchIntervalBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetMatchAcceptanceBlocks() uint64 {
+	if x != nil {
+		return x.MatchAcceptanceBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetAutoProposePartnershipOnGraduation() bool {
+	if x != nil {
+		return x.AutoProposePartnershipOnGraduation
+	}
+	return false
+}
+
+func (x *Params) GetSocialSaturationThreshold() uint64 {
+	if x != nil {
+		return x.SocialSaturationThreshold
+	}
+	return 0
+}
+
 var File_zerone_partnerships_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"$zerone/partnerships/v1/genesis.proto\x12\x16zerone.partnerships.v1\x1a\"zerone/partnerships/v1/types.proto\"\xaa\x04\n" +
+	"$zerone/partnerships/v1/genesis.proto\x12\x16zerone.partnerships.v1\x1a\"zerone/partnerships/v1/types.proto\"\xc5\x05\n" +
 	"\fGenesisState\x126\n" +
 	"\x06params\x18\x01 \x01(\v2\x1e.zerone.partnerships.v1.ParamsR\x06params\x12G\n" +
 	"\fpartnerships\x18\x02 \x03(\v2#.zerone.partnerships.v1.PartnershipR\fpartnerships\x12]\n" +
@@ -265,7 +345,9 @@ const file_zerone_partnerships_v1_genesis_proto_rawDesc = "" +
 	"\x0esafety_freezes\x18\x04 \x03(\v2$.zerone.partnerships.v1.SafetyFreezeR\rsafetyFreezes\x12Q\n" +
 	"\x10coercion_signals\x18\x05 \x03(\v2&.zerone.partnerships.v1.CoercionSignalR\x0fcoercionSignals\x12T\n" +
 	"\x11seed_partnerships\x18\x06 \x03(\v2'.zerone.partnerships.v1.SeedPartnershipR\x10seedPartnerships\x12D\n" +
-	"\fpool_entries\x18\a \x03(\v2!.zerone.partnerships.v1.PoolEntryR\vpoolEntries\"\xcd\x05\n" +
+	"\fpool_entries\x18\a \x03(\v2!.zerone.partnerships.v1.PoolEntryR\vpoolEntries\x12D\n" +
+	"\vmentorships\x18\b \x03(\v2\".zerone.partnerships.v1.MentorshipR\vmentorships\x12S\n" +
+	"\x11formation_matches\x18\t \x03(\v2&.zerone.partnerships.v1.FormationMatchR\x10formationMatches\"\xd5\t\n" +
 	"\x06Params\x126\n" +
 	"\x17formation_window_blocks\x18\x01 \x01(\x04R\x15formationWindowBlocks\x122\n" +
 	"\x15cooling_period_blocks\x18\x02 \x01(\x04R\x13coolingPeriodBlocks\x12/\n" +
@@ -280,7 +362,15 @@ const file_zerone_partnerships_v1_genesis_proto_rawDesc = "" +
 	" \x01(\x04R\x14defaultAgentSplitBps\x122\n" +
 	"\x15min_partnership_stake\x18\v \x01(\tR\x13minPartnershipStake\x12:\n" +
 	"\x19seed_partnership_duration\x18\f \x01(\x04R\x17seedPartnershipDuration\x12-\n" +
-	"\x13seed_common_pot_cap\x18\r \x01(\tR\x10seedCommonPotCapB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
+	"\x13seed_common_pot_cap\x18\r \x01(\tR\x10seedCommonPotCap\x12N\n" +
+	"$human_coercion_freeze_multiplier_bps\x18\x0e \x01(\x04R humanCoercionFreezeMultiplierBps\x129\n" +
+	"\x18graduation_verifications\x18\x0f \x01(\x04R\x17graduationVerifications\x12+\n" +
+	"\x11graduation_claims\x18\x10 \x01(\x04R\x10graduationClaims\x12;\n" +
+	"\x1amax_mentorships_per_mentor\x18\x11 \x01(\x04R\x17maxMentorshipsPerMentor\x12E\n" +
+	"\x1fformation_match_interval_blocks\x18\x12 \x01(\x04R\x1cformationMatchIntervalBlocks\x126\n" +
+	"\x17match_acceptance_blocks\x18\x13 \x01(\x04R\x15matchAcceptanceBlocks\x12R\n" +
+	"&auto_propose_partnership_on_graduation\x18\x14 \x01(\bR\"autoProposePartnershipOnGraduation\x12>\n" +
+	"\x1bsocial_saturation_threshold\x18\x15 \x01(\x04R\x19socialSaturationThresholdB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
 
 var (
 	file_zerone_partnerships_v1_genesis_proto_rawDescOnce sync.Once
@@ -304,6 +394,8 @@ var file_zerone_partnerships_v1_genesis_proto_goTypes = []any{
 	(*CoercionSignal)(nil),     // 5: zerone.partnerships.v1.CoercionSignal
 	(*SeedPartnership)(nil),    // 6: zerone.partnerships.v1.SeedPartnership
 	(*PoolEntry)(nil),          // 7: zerone.partnerships.v1.PoolEntry
+	(*Mentorship)(nil),         // 8: zerone.partnerships.v1.Mentorship
+	(*FormationMatch)(nil),     // 9: zerone.partnerships.v1.FormationMatch
 }
 var file_zerone_partnerships_v1_genesis_proto_depIdxs = []int32{
 	1, // 0: zerone.partnerships.v1.GenesisState.params:type_name -> zerone.partnerships.v1.Params
@@ -313,11 +405,13 @@ var file_zerone_partnerships_v1_genesis_proto_depIdxs = []int32{
 	5, // 4: zerone.partnerships.v1.GenesisState.coercion_signals:type_name -> zerone.partnerships.v1.CoercionSignal
 	6, // 5: zerone.partnerships.v1.GenesisState.seed_partnerships:type_name -> zerone.partnerships.v1.SeedPartnership
 	7, // 6: zerone.partnerships.v1.GenesisState.pool_entries:type_name -> zerone.partnerships.v1.PoolEntry
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	8, // 7: zerone.partnerships.v1.GenesisState.mentorships:type_name -> zerone.partnerships.v1.Mentorship
+	9, // 8: zerone.partnerships.v1.GenesisState.formation_matches:type_name -> zerone.partnerships.v1.FormationMatch
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_zerone_partnerships_v1_genesis_proto_init() }

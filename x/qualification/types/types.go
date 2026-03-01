@@ -71,6 +71,15 @@ func (gs *GenesisState) Validate() error {
 	return nil
 }
 
+// QualificationPenalty represents a temporary reduction in qualification weight.
+type QualificationPenalty struct {
+	Validator    string `json:"validator"`
+	Domain       string `json:"domain"`
+	ReductionBps uint64 `json:"reduction_bps"`
+	ExpiryHeight uint64 `json:"expiry_height"`
+	CreatedAt    uint64 `json:"created_at"`
+}
+
 // ---- GetSigners / ValidateBasic for Msg types ----
 
 func (msg *MsgQualifyByStake) GetSigners() []sdk.AccAddress {

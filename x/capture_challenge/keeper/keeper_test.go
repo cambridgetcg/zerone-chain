@@ -29,7 +29,6 @@ import (
 type mockBankKeeper struct {
 	balances       map[string]map[string]int64
 	moduleBalances map[string]map[string]int64
-	burned         int64
 }
 
 func newMockBankKeeper() *mockBankKeeper {
@@ -106,16 +105,6 @@ func (m *mockBankKeeper) SendCoinsFromModuleToModule(_ context.Context, senderMo
 	return nil
 }
 
-func (m *mockBankKeeper) BurnCoins(_ context.Context, moduleName string, amt sdk.Coins) error {
-	for _, coin := range amt {
-		if m.moduleBalances[moduleName] == nil {
-			m.moduleBalances[moduleName] = make(map[string]int64)
-		}
-		m.moduleBalances[moduleName][coin.Denom] -= coin.Amount.Int64()
-		m.burned += coin.Amount.Int64()
-	}
-	return nil
-}
 
 // -----------------------------------------------------------------------
 // Test Setup
@@ -492,7 +481,7 @@ func TestResolveRejected(t *testing.T) {
 	k.SetChallenge(ctx, ch)
 
 	authority := k.GetAuthority()
-	burnedBefore := bk.burned
+	devFundBefore := bk.moduleBalances["development_fund"]["uzrn"]
 
 	// Resolve as rejected
 	_, err = srv.ResolveChallenge(ctx, &types.MsgResolveChallenge{
@@ -505,13 +494,13 @@ func TestResolveRejected(t *testing.T) {
 		t.Fatalf("ResolveChallenge failed: %v", err)
 	}
 
-	// Verify stake was burned
-	burnedAfter := bk.burned
-	if burnedAfter-burnedBefore != 10_000_000 {
-		t.Errorf("expected 10000000 burned, got %d", burnedAfter-burnedBefore)
+	// Verify stake was sent to development fund
+	devFundAfter := bk.moduleBalances["development_fund"]["uzrn"]
+	if devFundAfter-devFundBefore != 10_000_000 {
+		t.Errorf("expected 10000000 sent to development fund, got %d", devFundAfter-devFundBefore)
 	}
 
-	// Verify bounty pool received the burned amount
+	// Verify bounty pool received the slashed amount
 	pool, found := k.GetBountyPool(ctx, "biology")
 	if !found {
 		t.Fatal("bounty pool not found after reject")

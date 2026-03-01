@@ -21,6 +21,9 @@ service Query {
   rpc ChallengesByDomain(QueryChallengesByDomainRequest) returns (QueryChallengesByDomainResponse) {
     option (google.api.http).get = "/zerone/capture_challenge/v1/challenges/{domain}";
   }
+  rpc ActiveChallenges(QueryActiveChallengesRequest) returns (QueryActiveChallengesResponse) {
+    option (google.api.http).get = "/zerone/capture_challenge/v1/active_challenges";
+  }
 }
 
 message QueryParamsRequest {}
@@ -46,5 +49,10 @@ message QueryChallengesByDomainRequest {
   string domain = 1;
 }
 message QueryChallengesByDomainResponse {
+  repeated CaptureChallenge challenges = 1;
+}
+
+message QueryActiveChallengesRequest {}
+message QueryActiveChallengesResponse {
   repeated CaptureChallenge challenges = 1;
 }

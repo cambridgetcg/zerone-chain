@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"cosmossdk.io/log"
 	"cosmossdk.io/store"
 	storemetrics "cosmossdk.io/store/metrics"
@@ -26,8 +28,10 @@ import (
 // --- Mock Keepers ---
 
 type mockKnowledgeKeeper struct {
-	verificationRate uint64
-	totalFacts       uint64
+	verificationRate         uint64
+	totalFacts               uint64
+	consensusDiversity       uint64
+	pendingVerificationRatio uint64
 }
 
 func (m *mockKnowledgeKeeper) GetVerificationRate(_ context.Context) uint64 {
@@ -36,6 +40,14 @@ func (m *mockKnowledgeKeeper) GetVerificationRate(_ context.Context) uint64 {
 
 func (m *mockKnowledgeKeeper) GetTotalFacts(_ context.Context) uint64 {
 	return m.totalFacts
+}
+
+func (m *mockKnowledgeKeeper) GetConsensusDiversity(_ context.Context) uint64 {
+	return m.consensusDiversity
+}
+
+func (m *mockKnowledgeKeeper) GetPendingVerificationRatio(_ context.Context) uint64 {
+	return m.pendingVerificationRatio
 }
 
 type mockStakingKeeper struct {
@@ -131,8 +143,9 @@ func setupKeeper(t *testing.T) (keeper.Keeper, testKeepers, sdk.Context) {
 
 	mocks := testKeepers{
 		knowledge: &mockKnowledgeKeeper{
-			verificationRate: 700_000, // 70%
-			totalFacts:       1000,
+			verificationRate:   700_000, // 70%
+			totalFacts:         1000,
+			consensusDiversity: 500_000, // 50% — neutral default
 		},
 		staking: &mockStakingKeeper{
 			totalStaked:      big.NewInt(600_000_000_000), // 600k ZRN
@@ -179,9 +192,9 @@ func TestSensorReadings(t *testing.T) {
 
 	obs := k.ObserveAll(ctx)
 
-	// Knowledge: 700k (from mock)
-	if obs.KnowledgeQuality != 700_000 {
-		t.Fatalf("expected knowledge=700000, got %d", obs.KnowledgeQuality)
+	// Knowledge: (700k*6 + 500k*4) / 10 = 620k (60% verification rate + 40% diversity)
+	if obs.KnowledgeQuality != 620_000 {
+		t.Fatalf("expected knowledge=620000, got %d", obs.KnowledgeQuality)
 	}
 	// Economic: staked/supply = 600k/1M = 60% = 600,000 BPS
 	if obs.EconomicStability != 600_000 {
@@ -434,7 +447,7 @@ func TestDifferentWeightsChangeComposite(t *testing.T) {
 	scores2 := k.ComputeScores(ctx, obs)
 	composite2 := scores2.Composite
 
-	// Knowledge is 700k (highest), so weighting it more should increase composite.
+	// Knowledge is 620k (above average), so weighting it more should increase composite.
 	if composite2 <= composite1 {
 		t.Fatalf("expected higher composite with knowledge-heavy weights: got %d (was %d)", composite2, composite1)
 	}
@@ -477,6 +490,174 @@ func TestAutopoiesisNilSafe(t *testing.T) {
 
 	if len(autoMock.adjustments) == 0 {
 		t.Fatal("expected adjustments after wiring autopoiesis")
+	}
+}
+
+// --- Test 10: Bounded correction — small magnitude auto-applied ---
+
+func TestBoundedCorrectionSmallAutoApplied(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	autoMock := &mockAutopoiesisKeeper{}
+	mocks.autopoiesis = autoMock
+	k.SetAutopoiesisKeeper(autoMock)
+
+	corrections := []*types.CorrectionRecord{{
+		Height:    100,
+		Dimension: types.DimKnowledgeQuality,
+		Parameter: "knowledge.reward_multiplier",
+		Direction: "increase",
+		Magnitude: 100_000, // 10% — below 50% default max
+		Timestamp: 1000,
+	}}
+
+	k.ApplyCorrections(ctx, corrections)
+
+	if len(autoMock.adjustments) != 1 {
+		t.Fatalf("expected 1 adjustment, got %d", len(autoMock.adjustments))
+	}
+	stored, _ := k.GetCorrections(ctx, 100, 0)
+	if len(stored) == 0 || !stored[0].Applied {
+		t.Fatal("expected correction marked as applied")
+	}
+}
+
+// --- Test 11: Bounded correction — large magnitude blocked ---
+
+func TestBoundedCorrectionLargeBlocked(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	params := k.GetParams(ctx)
+	params.MaxAutoApplyMagnitudeBps = 50_000 // 5%
+	k.SetParams(ctx, params)
+
+	autoMock := &mockAutopoiesisKeeper{}
+	mocks.autopoiesis = autoMock
+	k.SetAutopoiesisKeeper(autoMock)
+
+	corrections := []*types.CorrectionRecord{{
+		Height:    100,
+		Dimension: types.DimKnowledgeQuality,
+		Parameter: "knowledge.reward_multiplier",
+		Direction: "increase",
+		Magnitude: 200_000, // 20% — exceeds 5% max
+		Timestamp: 1000,
+	}}
+
+	k.ApplyCorrections(ctx, corrections)
+
+	if len(autoMock.adjustments) != 0 {
+		t.Fatalf("expected 0 adjustments for large correction, got %d", len(autoMock.adjustments))
+	}
+	stored, _ := k.GetCorrections(ctx, 100, 0)
+	if len(stored) == 0 {
+		t.Fatal("expected correction stored")
+	}
+	if stored[0].Applied {
+		t.Fatal("expected correction NOT applied (magnitude exceeds bounds)")
+	}
+}
+
+// --- Test: Health transition to degraded enables double frequency ---
+
+func TestHealthTransitionDegradedDoubleFrequency(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	k.SetState(ctx, &types.AlignmentState{
+		Enabled:          true,
+		PreviousCategory: types.CategoryHealthy,
+	})
+
+	// Set dimensions to produce degraded composite (< 700k healthy threshold).
+	mocks.knowledge.verificationRate = 300_000
+	mocks.knowledge.consensusDiversity = 300_000
+	mocks.staking.totalStaked = big.NewInt(400_000_000_000)
+	mocks.staking.activeValidators = 50
+	mocks.staking.targetValidators = 111
+	mocks.ontology.domainCount = 30
+	mocks.vestingRewards.totalSupply = big.NewInt(1_000_000_000_000)
+
+	ctx = ctx.WithBlockHeight(100)
+	am := alignment.NewAppModule(nil, k)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock failed: %v", err)
+	}
+
+	state := k.GetState(ctx)
+	if !state.DegradedFrequencyActive {
+		t.Error("expected DegradedFrequencyActive=true after transition to degraded")
+	}
+	if state.PreviousCategory != types.CategoryDegraded && state.PreviousCategory != types.CategoryCritical {
+		t.Errorf("expected PreviousCategory degraded or critical, got %s", state.PreviousCategory)
+	}
+}
+
+// --- Test: Health transition recovery resets frequency ---
+
+func TestHealthTransitionRecoveryResetsFrequency(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	k.SetState(ctx, &types.AlignmentState{
+		Enabled:                 true,
+		PreviousCategory:        types.CategoryDegraded,
+		DegradedFrequencyActive: true,
+	})
+
+	// Set all dimensions high to produce healthy composite.
+	mocks.knowledge.verificationRate = 900_000
+	mocks.knowledge.consensusDiversity = 900_000
+	mocks.staking.totalStaked = big.NewInt(800_000_000_000)
+	mocks.staking.activeValidators = 111
+	mocks.staking.targetValidators = 111
+	mocks.ontology.domainCount = 100
+	mocks.vestingRewards.totalSupply = big.NewInt(1_000_000_000_000)
+
+	ctx = ctx.WithBlockHeight(100)
+	am := alignment.NewAppModule(nil, k)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock failed: %v", err)
+	}
+
+	state := k.GetState(ctx)
+	if state.DegradedFrequencyActive {
+		t.Error("expected DegradedFrequencyActive=false after recovery to healthy")
+	}
+	if state.PreviousCategory != types.CategoryHealthy {
+		t.Errorf("expected PreviousCategory=healthy, got %s", state.PreviousCategory)
+	}
+}
+
+// --- Test: Degraded frequency affects interval ---
+
+func TestDegradedFrequencyAffectsInterval(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	// Pre-set degraded state with frequency active.
+	k.SetState(ctx, &types.AlignmentState{
+		Enabled:                 true,
+		DegradedFrequencyActive: true,
+		PreviousCategory:        types.CategoryDegraded,
+	})
+
+	mocks.knowledge.verificationRate = 300_000
+	mocks.knowledge.consensusDiversity = 300_000
+	mocks.staking.totalStaked = big.NewInt(400_000_000_000)
+	mocks.staking.activeValidators = 50
+	mocks.staking.targetValidators = 111
+	mocks.ontology.domainCount = 30
+	mocks.vestingRewards.totalSupply = big.NewInt(1_000_000_000_000)
+
+	// Default interval = 100, degraded = 50.
+	// Height 50 should trigger (50 % 50 == 0).
+	ctx = ctx.WithBlockHeight(50)
+	am := alignment.NewAppModule(nil, k)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock failed: %v", err)
+	}
+
+	_, found := k.GetObservation(ctx, 50)
+	if !found {
+		t.Error("expected observation at height 50 (degraded frequency: interval=50)")
 	}
 }
 
@@ -525,6 +706,13 @@ func TestParamValidation(t *testing.T) {
 			},
 			errMsg: "threshold",
 		},
+		{
+			name: "max_auto_apply exceeds BPS",
+			modify: func(p *types.Params) {
+				p.MaxAutoApplyMagnitudeBps = types.BPS + 1
+			},
+			errMsg: "max_auto_apply",
+		},
 	}
 
 	for _, tt := range tests {
@@ -543,4 +731,476 @@ func TestParamValidation(t *testing.T) {
 	if err := params.Validate(); err != nil {
 		t.Fatalf("default params should be valid: %v", err)
 	}
+}
+
+// --- Test: Query HealthHistory returns entries in reverse order ---
+
+func TestQueryHealthHistory(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+	qs := keeper.NewQueryServerImpl(k)
+
+	for i := uint64(100); i <= 500; i += 100 {
+		k.SetHealthIndex(ctx, &types.AlignmentHealthIndex{
+			Height:         i,
+			CompositeScore: 700_000 + i,
+			Category:       types.CategoryHealthy,
+		})
+	}
+
+	resp, err := qs.HealthHistory(ctx, &types.QueryHealthHistoryRequest{Limit: 3})
+	if err != nil {
+		t.Fatalf("query HealthHistory failed: %v", err)
+	}
+	if len(resp.Entries) != 3 {
+		t.Fatalf("expected 3 entries, got %d", len(resp.Entries))
+	}
+	if resp.Entries[0].Height != 500 {
+		t.Errorf("expected first entry height=500 (most recent), got %d", resp.Entries[0].Height)
+	}
+}
+
+func TestGetRecentHealthIndicesEmpty(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+	results := k.GetRecentHealthIndices(ctx, 0)
+	if len(results) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(results))
+	}
+}
+
+// --- Test: Full EndBlocker lifecycle — healthy → degraded → recovery ---
+
+func TestEndBlockerFullCycle(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	// Wire autopoiesis.
+	autoMock := &mockAutopoiesisKeeper{}
+	k.SetAutopoiesisKeeper(autoMock)
+
+	// Set all dimensions to healthy values.
+	mocks.knowledge.verificationRate = 800_000
+	mocks.knowledge.consensusDiversity = 700_000
+	mocks.staking.totalStaked = big.NewInt(800_000_000_000)
+	mocks.staking.activeValidators = 100
+	mocks.staking.targetValidators = 111
+	mocks.ontology.domainCount = 80
+	mocks.vestingRewards.totalSupply = big.NewInt(1_000_000_000_000)
+
+	am := alignment.NewAppModule(nil, k)
+
+	// --- Block 100: First observation (should be healthy) ---
+	ctx = ctx.WithBlockHeight(100)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock at 100 failed: %v", err)
+	}
+
+	obs, found := k.GetObservation(ctx, 100)
+	if !found {
+		t.Fatal("expected observation at height 100")
+	}
+	if obs.KnowledgeQuality == 0 {
+		t.Error("expected non-zero knowledge quality")
+	}
+
+	hi, found := k.GetHealthIndex(ctx, 100)
+	if !found {
+		t.Fatal("expected health index at height 100")
+	}
+	if hi.Category != types.CategoryHealthy {
+		t.Errorf("expected healthy at block 100, got %s (composite=%d)", hi.Category, hi.CompositeScore)
+	}
+
+	state := k.GetState(ctx)
+	if state.ObservationCount != 1 {
+		t.Errorf("expected observation_count=1, got %d", state.ObservationCount)
+	}
+	if state.PreviousCategory != types.CategoryHealthy {
+		t.Errorf("expected PreviousCategory=healthy, got %s", state.PreviousCategory)
+	}
+
+	// --- Degrade dimensions ---
+	mocks.knowledge.verificationRate = 200_000
+	mocks.knowledge.consensusDiversity = 200_000
+	mocks.staking.totalStaked = big.NewInt(200_000_000_000)
+	mocks.staking.activeValidators = 30
+	mocks.ontology.domainCount = 10
+
+	// --- Block 200: Second observation (should be degraded/critical) ---
+	ctx = ctx.WithBlockHeight(200)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock at 200 failed: %v", err)
+	}
+
+	hi2, found := k.GetHealthIndex(ctx, 200)
+	if !found {
+		t.Fatal("expected health index at height 200")
+	}
+	if hi2.Category == types.CategoryHealthy {
+		t.Error("expected NOT healthy with degraded dimensions")
+	}
+
+	state2 := k.GetState(ctx)
+	if state2.ObservationCount != 2 {
+		t.Errorf("expected observation_count=2, got %d", state2.ObservationCount)
+	}
+	if !state2.DegradedFrequencyActive {
+		t.Error("expected DegradedFrequencyActive=true after health degradation")
+	}
+
+	// Verify corrections were generated (dimensions below degraded threshold).
+	corrections, total := k.GetCorrections(ctx, 100, 0)
+	if total == 0 {
+		t.Error("expected corrections generated during degraded observation")
+	}
+	_ = corrections
+
+	// --- Recover dimensions ---
+	mocks.knowledge.verificationRate = 900_000
+	mocks.knowledge.consensusDiversity = 900_000
+	mocks.staking.totalStaked = big.NewInt(900_000_000_000)
+	mocks.staking.activeValidators = 111
+	mocks.ontology.domainCount = 100
+
+	// --- Recovery: Degraded frequency means interval=50, so height 250 should trigger ---
+	ctx = ctx.WithBlockHeight(250)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock at 250 failed: %v", err)
+	}
+
+	hi3, found := k.GetHealthIndex(ctx, 250)
+	if !found {
+		t.Fatal("expected health index at height 250")
+	}
+	if hi3.Category != types.CategoryHealthy {
+		t.Errorf("expected healthy after recovery, got %s (composite=%d)", hi3.Category, hi3.CompositeScore)
+	}
+
+	state3 := k.GetState(ctx)
+	if state3.DegradedFrequencyActive {
+		t.Error("expected DegradedFrequencyActive=false after recovery to healthy")
+	}
+	if state3.PreviousCategory != types.CategoryHealthy {
+		t.Errorf("expected PreviousCategory=healthy after recovery, got %s", state3.PreviousCategory)
+	}
+	if state3.ObservationCount != 3 {
+		t.Errorf("expected observation_count=3, got %d", state3.ObservationCount)
+	}
+
+	// --- Verify history query returns all 3 observations ---
+	results := k.GetRecentHealthIndices(ctx, 10)
+	if len(results) != 3 {
+		t.Errorf("expected 3 health history entries, got %d", len(results))
+	}
+	if len(results) > 0 && results[0].Height != 250 {
+		t.Errorf("expected most recent entry at height 250, got %d", results[0].Height)
+	}
+}
+
+// --- Test: Correction confidence returns neutral without data ---
+
+func TestCorrectionConfidenceNeutralWithoutData(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+	confidence := k.GetCorrectionConfidence(ctx)
+	if confidence != 500_000 {
+		t.Fatalf("expected neutral confidence 500000, got %d", confidence)
+	}
+}
+
+// --- Test: Correction confidence calculation with 8/10 success ---
+
+func TestCorrectionConfidenceCalculation(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height:      100 + i*100,
+			Dimension:   types.DimKnowledgeQuality,
+			Magnitude:   100_000,
+			Direction:   "increase",
+			ScoreBefore: 300_000,
+			ScoreAfter:  400_000,
+			Successful:  i < 8,
+		})
+	}
+
+	confidence := k.GetCorrectionConfidence(ctx)
+	expected := uint64(8) * types.BPS / 10
+	if confidence != expected {
+		t.Fatalf("expected confidence %d, got %d", expected, confidence)
+	}
+}
+
+// --- Test: Correction confidence returns neutral below min samples ---
+
+func TestCorrectionConfidenceMinSamples(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 3; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 400_000, Successful: true,
+		})
+	}
+
+	confidence := k.GetCorrectionConfidence(ctx)
+	if confidence != 500_000 {
+		t.Fatalf("expected neutral 500000 (below min samples), got %d", confidence)
+	}
+}
+
+// --- Test: High confidence widens effective max magnitude ---
+
+func TestEffectiveMaxMagnitudeHighConfidence(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 400_000, Successful: true,
+		})
+	}
+
+	effectiveMax := k.GetEffectiveMaxMagnitude(ctx)
+	params := k.GetParams(ctx)
+	baseMax := params.MaxAutoApplyMagnitudeBps
+
+	if effectiveMax <= baseMax {
+		t.Fatalf("expected effective max > base max with high confidence, got %d <= %d", effectiveMax, baseMax)
+	}
+}
+
+// --- Test: Low confidence triggers governance lockout ---
+
+func TestEffectiveMaxMagnitudeLowConfidence(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 200_000, Successful: false,
+		})
+	}
+
+	effectiveMax := k.GetEffectiveMaxMagnitude(ctx)
+	if effectiveMax != 0 {
+		t.Fatalf("expected effective max = 0 (governance only) with 0%% confidence, got %d", effectiveMax)
+	}
+}
+
+// --- Test: High confidence extends observation interval ---
+
+func TestEffectiveObservationIntervalHighConfidence(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 400_000, Successful: true,
+		})
+	}
+
+	interval := k.GetEffectiveObservationInterval(ctx)
+	params := k.GetParams(ctx)
+	expected := params.ObservationIntervalBlocks * 3 / 2
+	if interval != expected {
+		t.Fatalf("expected interval %d (150%%), got %d", expected, interval)
+	}
+}
+
+// --- Test: Low confidence shortens observation interval ---
+
+func TestEffectiveObservationIntervalLowConfidence(t *testing.T) {
+	k, _, ctx := setupKeeper(t)
+
+	for i := uint64(0); i < 10; i++ {
+		k.SetCorrectionOutcome(ctx, &types.CorrectionOutcome{
+			Height: 100 + i*100, Dimension: types.DimKnowledgeQuality,
+			ScoreBefore: 300_000, ScoreAfter: 200_000, Successful: false,
+		})
+	}
+
+	interval := k.GetEffectiveObservationInterval(ctx)
+	params := k.GetParams(ctx)
+	expected := params.ObservationIntervalBlocks * 2 / 3
+	if interval != expected {
+		t.Fatalf("expected interval %d (67%%), got %d", expected, interval)
+	}
+}
+
+// --- Test: Correction confidence full lifecycle ---
+
+func TestCorrectionConfidenceFullLifecycle(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	autoMock := &mockAutopoiesisKeeper{}
+	k.SetAutopoiesisKeeper(autoMock)
+
+	am := alignment.NewAppModule(nil, k)
+
+	// --- Phase 1: Boot — neutral confidence, base bounds ---
+	confidence := k.GetCorrectionConfidence(ctx)
+	if confidence != 500_000 {
+		t.Fatalf("expected neutral confidence at boot, got %d", confidence)
+	}
+
+	params := k.GetParams(ctx)
+	effectiveMax := k.GetEffectiveMaxMagnitude(ctx)
+	if effectiveMax == 0 {
+		t.Fatal("expected non-zero effective max at boot")
+	}
+	_ = params
+
+	// --- Phase 2: Run observations with degraded dimensions to generate corrections ---
+	mocks.knowledge.verificationRate = 300_000
+	mocks.knowledge.consensusDiversity = 300_000
+	mocks.staking.totalStaked = big.NewInt(400_000_000_000)
+	mocks.staking.activeValidators = 50
+	mocks.staking.targetValidators = 111
+	mocks.ontology.domainCount = 30
+	mocks.vestingRewards.totalSupply = big.NewInt(1_000_000_000_000)
+
+	ctx = ctx.WithBlockHeight(100)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock at 100 failed: %v", err)
+	}
+
+	// Verify outcomes were recorded at height 100.
+	outcomes100 := k.GetCorrectionsAtHeight(ctx, 100)
+	if len(outcomes100) == 0 {
+		t.Fatal("expected correction outcomes recorded at height 100")
+	}
+
+	// --- Phase 3: Improve dimensions — corrections "succeed" ---
+	mocks.knowledge.verificationRate = 800_000
+	mocks.knowledge.consensusDiversity = 700_000
+	mocks.staking.totalStaked = big.NewInt(800_000_000_000)
+	mocks.staking.activeValidators = 100
+	mocks.ontology.domainCount = 80
+
+	ctx = ctx.WithBlockHeight(200)
+	if err := am.EndBlock(ctx); err != nil {
+		t.Fatalf("EndBlock at 200 failed: %v", err)
+	}
+
+	// Check that outcomes at height 100 were evaluated.
+	outcomes100After := k.GetCorrectionsAtHeight(ctx, 100)
+	evaluatedCount := 0
+	successCount := 0
+	for _, o := range outcomes100After {
+		if o.ScoreAfter > 0 {
+			evaluatedCount++
+			if o.Successful {
+				successCount++
+			}
+		}
+	}
+	if evaluatedCount == 0 {
+		t.Fatal("expected at least one evaluated outcome")
+	}
+	t.Logf("Evaluated: %d, Successful: %d out of %d total outcomes", evaluatedCount, successCount, len(outcomes100After))
+
+	// Query the confidence via gRPC.
+	qs := keeper.NewQueryServerImpl(k)
+	resp, err := qs.CorrectionConfidence(ctx, &types.QueryCorrectionConfidenceRequest{})
+	if err != nil {
+		t.Fatalf("CorrectionConfidence query failed: %v", err)
+	}
+	t.Logf("Confidence: %d BPS, Total: %d, Successful: %d, EffectiveMax: %d, EffectiveInterval: %d",
+		resp.ConfidenceBps, resp.TotalCorrections, resp.SuccessfulCorrections,
+		resp.EffectiveMaxMagnitude, resp.EffectiveObservationInterval)
+}
+
+// --- Test: ApplyCorrections records correction outcomes ---
+
+func TestApplyCorrectionsRecordsOutcomes(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	autoMock := &mockAutopoiesisKeeper{}
+	mocks.autopoiesis = autoMock
+	k.SetAutopoiesisKeeper(autoMock)
+
+	// Set scores so we know pre-correction state.
+	k.SetScores(ctx, &types.DimensionScores{
+		Height:           100,
+		KnowledgeQuality: 300_000,
+	})
+
+	corrections := []*types.CorrectionRecord{{
+		Height:    100,
+		Dimension: types.DimKnowledgeQuality,
+		Parameter: "knowledge.reward_multiplier",
+		Direction: "increase",
+		Magnitude: 100_000,
+		Timestamp: 1000,
+	}}
+
+	k.ApplyCorrections(ctx, corrections)
+
+	// Verify outcome was recorded.
+	outcome, found := k.GetCorrectionOutcome(ctx, 100, types.DimKnowledgeQuality)
+	if !found {
+		t.Fatal("expected correction outcome to be recorded")
+	}
+	if outcome.ScoreBefore != 300_000 {
+		t.Fatalf("expected score_before=300000, got %d", outcome.ScoreBefore)
+	}
+	if outcome.ScoreAfter != 0 {
+		t.Fatal("expected score_after=0 (not yet evaluated)")
+	}
+}
+
+// --- Test: Growth pressure penalty applied when pending ratio exceeds 150% ---
+
+func TestSenseKnowledgeQuality_GrowthPressurePenalty(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	mocks.knowledge.verificationRate = 800_000
+	mocks.knowledge.consensusDiversity = 600_000
+	mocks.knowledge.pendingVerificationRatio = 1_600_000 // 160% — exceeds 150% threshold
+
+	obs := k.ObserveAll(ctx)
+	// Base quality: (800_000*6 + 600_000*4) / 10 = 720_000
+	// After 20% penalty: 720_000 * 800_000 / 1_000_000 = 576_000
+	require.Equal(t, uint64(576_000), obs.KnowledgeQuality)
+}
+
+// --- Test: No growth pressure penalty when below 150% threshold ---
+
+func TestSenseKnowledgeQuality_NoGrowthPressureBelowThreshold(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+
+	mocks.knowledge.verificationRate = 800_000
+	mocks.knowledge.consensusDiversity = 600_000
+	mocks.knowledge.pendingVerificationRatio = 1_400_000 // 140% — below 150% threshold
+
+	obs := k.ObserveAll(ctx)
+	require.Equal(t, uint64(720_000), obs.KnowledgeQuality) // no penalty
+}
+
+// --- Test: Growth pressure event emitted when pending ratio exceeds 150% ---
+
+func TestGrowthPressureEvent(t *testing.T) {
+	k, mocks, ctx := setupKeeper(t)
+	mocks.knowledge.pendingVerificationRatio = 1_600_000 // 160%
+
+	obs := k.ObserveAll(ctx)
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	k.EmitGrowthPressureEvent(sdkCtx, obs.KnowledgeQuality)
+
+	events := sdkCtx.EventManager().Events()
+	found := false
+	for _, e := range events {
+		if e.Type == "zerone.alignment.growth_pressure_detected" {
+			found = true
+			for _, attr := range e.Attributes {
+				switch attr.Key {
+				case "pending_ratio_bps":
+					require.Equal(t, "1600000", attr.Value)
+				case "quality_penalty_applied":
+					require.Equal(t, "true", attr.Value)
+				}
+			}
+		}
+	}
+	require.True(t, found, "expected growth_pressure_detected event")
 }

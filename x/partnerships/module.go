@@ -16,6 +16,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
 
+	"github.com/zerone-chain/zerone/x/partnerships/client/cli"
 	"github.com/zerone-chain/zerone/x/partnerships/keeper"
 	"github.com/zerone-chain/zerone/x/partnerships/types"
 )
@@ -70,12 +71,12 @@ func (AppModuleBasic) RegisterGRPCGatewayRoutes(_ client.Context, _ *runtime.Ser
 
 // GetTxCmd returns the module's tx CLI command.
 func (a AppModuleBasic) GetTxCmd() *cobra.Command {
-	return nil
+	return cli.NewTxCmd()
 }
 
 // GetQueryCmd returns the module's query CLI command.
 func (AppModuleBasic) GetQueryCmd() *cobra.Command {
-	return nil
+	return cli.NewQueryCmd()
 }
 
 // AppModule implements the AppModule interface.
@@ -140,6 +141,7 @@ func (AppModule) ConsensusVersion() uint64 { return 1 }
 //   - Expire consensus operations past their deliberation window
 //   - Expire pool entries past their TTL
 //   - Expire seed partnerships past their duration
+//   - Expire formation matches past their acceptance window
 func (am AppModule) BeginBlock(ctx context.Context) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 
@@ -149,6 +151,9 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 	am.keeper.ExpireConsensusOps(sdkCtx)
 	am.keeper.ExpirePoolEntries(sdkCtx)
 	am.keeper.ExpireSeedPartnerships(sdkCtx)
+	am.keeper.ExpireFormationMatches(sdkCtx)
+	am.keeper.ExpireFormationBonuses(sdkCtx) // R29-5: expire structural immunity bonuses
+	am.keeper.ExpireFormationFreezes(sdkCtx) // R31-3: expire domain formation freezes
 
 	return nil
 }
@@ -156,8 +161,12 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 // EndBlock executes end-block logic.
 //
 //   - Settle cooling partnerships that have completed their cooling period
+//   - Auto-graduate mentorships that have reached their duration
+//   - Run formation matching engine at configured intervals
 func (am AppModule) EndBlock(ctx context.Context) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	am.keeper.SettleCoolingPartnerships(sdkCtx)
+	am.keeper.AutoGraduateMentorships(sdkCtx)
+	am.keeper.RunFormationMatching(sdkCtx)
 	return nil
 }

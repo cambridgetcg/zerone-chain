@@ -102,7 +102,7 @@ func TestParamsValidate_AllSlashCombinations(t *testing.T) {
 		{"WrongVerificationSlashBps=0", func(p *types.Params) { p.WrongVerificationSlashBps = 0 }},
 		{"MissedRevealSlashBps=0", func(p *types.Params) { p.MissedRevealSlashBps = 0 }},
 		{"EquivocationSlashBps=0", func(p *types.Params) { p.EquivocationSlashBps = 0 }},
-		{"InvalidClaimSlashBps=0", func(p *types.Params) { p.InvalidClaimSlashBps = 0 }},
+		// InvalidClaimSlashBps=0 no longer fails validation (R19-6: deprecated)
 	}
 
 	for _, sf := range slashFields {
@@ -122,9 +122,9 @@ func TestDefaultParams_CoreVerification(t *testing.T) {
 
 	require.Equal(t, uint64(3), p.MinVerifiers)
 	require.Equal(t, uint64(22), p.MaxVerifiers)
-	require.Equal(t, uint64(4), p.CommitPhaseBlocks)
-	require.Equal(t, uint64(4), p.RevealPhaseBlocks)
-	require.Equal(t, uint64(3), p.AggregationPhaseBlocks)
+	require.Equal(t, uint64(200), p.CommitPhaseBlocks)
+	require.Equal(t, uint64(200), p.RevealPhaseBlocks)
+	require.Equal(t, uint64(50), p.AggregationPhaseBlocks)
 	require.Equal(t, uint64(50), p.ClaimCooldownBlocks)
 }
 
@@ -148,8 +148,8 @@ func TestDefaultParams_ClaimValidation(t *testing.T) {
 	p := types.DefaultParams()
 
 	require.Equal(t, uint64(20), p.MinClaimTextLength)
-	require.Equal(t, uint64(10_000), p.MaxClaimTextLength)
-	require.Equal(t, "1000000", p.MinClaimStake)
+	require.Equal(t, uint64(1_000), p.MaxClaimTextLength)
+	require.Equal(t, "100000", p.MinReviewFee)
 }
 
 func TestDefaultParams_AdversarialVerification(t *testing.T) {
@@ -176,4 +176,14 @@ func TestDefaultParams_MinEqualsMax(t *testing.T) {
 	p.MinVerifiers = 5
 	p.MaxVerifiers = 5
 	require.NoError(t, p.Validate(), "min == max should be valid")
+}
+
+
+func TestRoleBonusParamsDefaults(t *testing.T) {
+	params := types.DefaultParams()
+	require.Equal(t, uint64(150_000), params.HumanEmpiricalBonusBps, "human empirical bonus should be +15%")
+	require.Equal(t, uint64(150_000), params.AgentComputationalBonusBps, "agent computational bonus should be +15%")
+	require.Equal(t, uint64(200_000), params.AgentVerificationBonusBps, "agent verification bonus should be +20%")
+	require.Equal(t, uint64(100_000), params.HumanPatronageBonusBps, "human patronage bonus should be +10%")
+	require.Equal(t, uint64(250_000), params.DualValidationBonusBps, "dual validation bonus should be +25%")
 }

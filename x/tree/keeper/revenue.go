@@ -15,7 +15,7 @@ type RevenueDistribution struct {
 	ResearchFund     int64
 	ProtocolTreasury int64
 	VerificationPool int64
-	Burn             int64
+	DevelopmentFund  int64
 
 	ContributorShares []ContributorShare
 }
@@ -27,7 +27,7 @@ type ContributorShare struct {
 
 func CalculateRevenue(
 	total int64,
-	contributorsBp, treasuryBp, researchBp, burnBp uint32,
+	contributorsBp, treasuryBp, researchBp, developmentBp uint32,
 	contributors []*types.ContributorRecord,
 ) RevenueDistribution {
 	if total <= 0 {
@@ -37,8 +37,8 @@ func CalculateRevenue(
 	dist := RevenueDistribution{}
 	dist.ContributorPool = total * int64(contributorsBp) / BpDenominator
 	dist.ResearchFund = total * int64(researchBp) / BpDenominator
-	dist.Burn = total * int64(burnBp) / BpDenominator
-	protocolAllocation := total - dist.ContributorPool - dist.ResearchFund - dist.Burn
+	dist.DevelopmentFund = total * int64(developmentBp) / BpDenominator
+	protocolAllocation := total - dist.ContributorPool - dist.ResearchFund - dist.DevelopmentFund
 	dist.VerificationPool = protocolAllocation * VerificationPoolShareOfTreasuryBps / BpDenominator
 	dist.ProtocolTreasury = protocolAllocation - dist.VerificationPool
 

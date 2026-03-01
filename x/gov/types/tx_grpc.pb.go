@@ -19,16 +19,20 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Msg_SubmitLIP_FullMethodName           = "/zerone.gov.v1.Msg/SubmitLIP"
-	Msg_StakeLIP_FullMethodName            = "/zerone.gov.v1.Msg/StakeLIP"
-	Msg_AdvanceLIPStage_FullMethodName     = "/zerone.gov.v1.Msg/AdvanceLIPStage"
-	Msg_CastVote_FullMethodName            = "/zerone.gov.v1.Msg/CastVote"
-	Msg_WithdrawLIP_FullMethodName         = "/zerone.gov.v1.Msg/WithdrawLIP"
-	Msg_UpdateParams_FullMethodName        = "/zerone.gov.v1.Msg/UpdateParams"
-	Msg_SubmitResearchSpend_FullMethodName = "/zerone.gov.v1.Msg/SubmitResearchSpend"
-	Msg_VoteResearchSpend_FullMethodName   = "/zerone.gov.v1.Msg/VoteResearchSpend"
-	Msg_SetResearchVoters_FullMethodName   = "/zerone.gov.v1.Msg/SetResearchVoters"
-	Msg_AttachUpgradePlan_FullMethodName   = "/zerone.gov.v1.Msg/AttachUpgradePlan"
+	Msg_SubmitLIP_FullMethodName             = "/zerone.gov.v1.Msg/SubmitLIP"
+	Msg_StakeLIP_FullMethodName              = "/zerone.gov.v1.Msg/StakeLIP"
+	Msg_AdvanceLIPStage_FullMethodName       = "/zerone.gov.v1.Msg/AdvanceLIPStage"
+	Msg_CastVote_FullMethodName              = "/zerone.gov.v1.Msg/CastVote"
+	Msg_WithdrawLIP_FullMethodName           = "/zerone.gov.v1.Msg/WithdrawLIP"
+	Msg_UpdateParams_FullMethodName          = "/zerone.gov.v1.Msg/UpdateParams"
+	Msg_SubmitResearchSpend_FullMethodName   = "/zerone.gov.v1.Msg/SubmitResearchSpend"
+	Msg_VoteResearchSpend_FullMethodName     = "/zerone.gov.v1.Msg/VoteResearchSpend"
+	Msg_SetResearchVoters_FullMethodName     = "/zerone.gov.v1.Msg/SetResearchVoters"
+	Msg_AttachUpgradePlan_FullMethodName     = "/zerone.gov.v1.Msg/AttachUpgradePlan"
+	Msg_NominateSeatElection_FullMethodName  = "/zerone.gov.v1.Msg/NominateSeatElection"
+	Msg_AcceptSeatNomination_FullMethodName  = "/zerone.gov.v1.Msg/AcceptSeatNomination"
+	Msg_VoteSeatElection_FullMethodName      = "/zerone.gov.v1.Msg/VoteSeatElection"
+	Msg_DomainFormationFreeze_FullMethodName = "/zerone.gov.v1.Msg/DomainFormationFreeze"
 )
 
 // MsgClient is the client API for Msg service.
@@ -47,6 +51,10 @@ type MsgClient interface {
 	VoteResearchSpend(ctx context.Context, in *MsgVoteResearchSpend, opts ...grpc.CallOption) (*MsgVoteResearchSpendResponse, error)
 	SetResearchVoters(ctx context.Context, in *MsgSetResearchVoters, opts ...grpc.CallOption) (*MsgSetResearchVotersResponse, error)
 	AttachUpgradePlan(ctx context.Context, in *MsgAttachUpgradePlan, opts ...grpc.CallOption) (*MsgAttachUpgradePlanResponse, error)
+	NominateSeatElection(ctx context.Context, in *MsgNominateSeatElection, opts ...grpc.CallOption) (*MsgNominateSeatElectionResponse, error)
+	AcceptSeatNomination(ctx context.Context, in *MsgAcceptSeatNomination, opts ...grpc.CallOption) (*MsgAcceptSeatNominationResponse, error)
+	VoteSeatElection(ctx context.Context, in *MsgVoteSeatElection, opts ...grpc.CallOption) (*MsgVoteSeatElectionResponse, error)
+	DomainFormationFreeze(ctx context.Context, in *MsgDomainFormationFreeze, opts ...grpc.CallOption) (*MsgDomainFormationFreezeResponse, error)
 }
 
 type msgClient struct {
@@ -157,6 +165,46 @@ func (c *msgClient) AttachUpgradePlan(ctx context.Context, in *MsgAttachUpgradeP
 	return out, nil
 }
 
+func (c *msgClient) NominateSeatElection(ctx context.Context, in *MsgNominateSeatElection, opts ...grpc.CallOption) (*MsgNominateSeatElectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgNominateSeatElectionResponse)
+	err := c.cc.Invoke(ctx, Msg_NominateSeatElection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) AcceptSeatNomination(ctx context.Context, in *MsgAcceptSeatNomination, opts ...grpc.CallOption) (*MsgAcceptSeatNominationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAcceptSeatNominationResponse)
+	err := c.cc.Invoke(ctx, Msg_AcceptSeatNomination_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) VoteSeatElection(ctx context.Context, in *MsgVoteSeatElection, opts ...grpc.CallOption) (*MsgVoteSeatElectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgVoteSeatElectionResponse)
+	err := c.cc.Invoke(ctx, Msg_VoteSeatElection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) DomainFormationFreeze(ctx context.Context, in *MsgDomainFormationFreeze, opts ...grpc.CallOption) (*MsgDomainFormationFreezeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgDomainFormationFreezeResponse)
+	err := c.cc.Invoke(ctx, Msg_DomainFormationFreeze_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -173,6 +221,10 @@ type MsgServer interface {
 	VoteResearchSpend(context.Context, *MsgVoteResearchSpend) (*MsgVoteResearchSpendResponse, error)
 	SetResearchVoters(context.Context, *MsgSetResearchVoters) (*MsgSetResearchVotersResponse, error)
 	AttachUpgradePlan(context.Context, *MsgAttachUpgradePlan) (*MsgAttachUpgradePlanResponse, error)
+	NominateSeatElection(context.Context, *MsgNominateSeatElection) (*MsgNominateSeatElectionResponse, error)
+	AcceptSeatNomination(context.Context, *MsgAcceptSeatNomination) (*MsgAcceptSeatNominationResponse, error)
+	VoteSeatElection(context.Context, *MsgVoteSeatElection) (*MsgVoteSeatElectionResponse, error)
+	DomainFormationFreeze(context.Context, *MsgDomainFormationFreeze) (*MsgDomainFormationFreezeResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -212,6 +264,18 @@ func (UnimplementedMsgServer) SetResearchVoters(context.Context, *MsgSetResearch
 }
 func (UnimplementedMsgServer) AttachUpgradePlan(context.Context, *MsgAttachUpgradePlan) (*MsgAttachUpgradePlanResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AttachUpgradePlan not implemented")
+}
+func (UnimplementedMsgServer) NominateSeatElection(context.Context, *MsgNominateSeatElection) (*MsgNominateSeatElectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method NominateSeatElection not implemented")
+}
+func (UnimplementedMsgServer) AcceptSeatNomination(context.Context, *MsgAcceptSeatNomination) (*MsgAcceptSeatNominationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptSeatNomination not implemented")
+}
+func (UnimplementedMsgServer) VoteSeatElection(context.Context, *MsgVoteSeatElection) (*MsgVoteSeatElectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VoteSeatElection not implemented")
+}
+func (UnimplementedMsgServer) DomainFormationFreeze(context.Context, *MsgDomainFormationFreeze) (*MsgDomainFormationFreezeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DomainFormationFreeze not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -414,6 +478,78 @@ func _Msg_AttachUpgradePlan_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_NominateSeatElection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgNominateSeatElection)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).NominateSeatElection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_NominateSeatElection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).NominateSeatElection(ctx, req.(*MsgNominateSeatElection))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_AcceptSeatNomination_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAcceptSeatNomination)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AcceptSeatNomination(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AcceptSeatNomination_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AcceptSeatNomination(ctx, req.(*MsgAcceptSeatNomination))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_VoteSeatElection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgVoteSeatElection)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).VoteSeatElection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_VoteSeatElection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).VoteSeatElection(ctx, req.(*MsgVoteSeatElection))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_DomainFormationFreeze_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgDomainFormationFreeze)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).DomainFormationFreeze(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_DomainFormationFreeze_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).DomainFormationFreeze(ctx, req.(*MsgDomainFormationFreeze))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -460,6 +596,22 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AttachUpgradePlan",
 			Handler:    _Msg_AttachUpgradePlan_Handler,
+		},
+		{
+			MethodName: "NominateSeatElection",
+			Handler:    _Msg_NominateSeatElection_Handler,
+		},
+		{
+			MethodName: "AcceptSeatNomination",
+			Handler:    _Msg_AcceptSeatNomination_Handler,
+		},
+		{
+			MethodName: "VoteSeatElection",
+			Handler:    _Msg_VoteSeatElection_Handler,
+		},
+		{
+			MethodName: "DomainFormationFreeze",
+			Handler:    _Msg_DomainFormationFreeze_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

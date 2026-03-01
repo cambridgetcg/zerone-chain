@@ -223,8 +223,8 @@ func DefaultParams() *Params {
 		// Revenue split (must sum to 1,000,000)
 		ToolRevenueBps: 550_000, // 55%
 		ProtocolBps:    220_000, // 22%
-		ResearchBps:    130_000, // 13%
-		BurnBps:        100_000, // 10%
+		ResearchBps:    33_300,  // 3.33%
+		DevelopmentBps: 196_700, // 19.67%
 
 		// Protocol sub-split (must sum to 1,000,000)
 		ProtocolCitationBps:     500_000, // 50%
@@ -264,7 +264,7 @@ func (p *Params) Validate() error {
 	}
 
 	// Revenue split must sum to 1,000,000
-	revSum := p.ToolRevenueBps + p.ProtocolBps + p.ResearchBps + p.BurnBps
+	revSum := p.ToolRevenueBps + p.ProtocolBps + p.ResearchBps + p.DevelopmentBps
 	if revSum != BpsDenominator {
 		return fmt.Errorf("revenue split must sum to %d, got %d", BpsDenominator, revSum)
 	}

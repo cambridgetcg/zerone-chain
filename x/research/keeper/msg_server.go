@@ -276,10 +276,10 @@ func (m msgServer) ResolveResearch(
 		slashAmount := new(big.Int).Mul(stakeInt, slashRate)
 		slashAmount.Div(slashAmount, new(big.Int).SetUint64(1000000))
 
-		// Burn slashed amount
+		// Route slashed amount to development fund
 		if slashAmount.Sign() > 0 {
-			burnCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(slashAmount)))
-			m.Keeper.bankKeeper.BurnCoins(ctx, types.ModuleName, burnCoins)
+			slashCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(slashAmount)))
+			m.Keeper.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, "development_fund", slashCoins)
 		}
 
 		// Return remainder to submitter
@@ -392,6 +392,7 @@ func (m msgServer) ClaimBounty(
 
 	bounty.Status = string(types.BountyStatusClaimed)
 	bounty.ClaimedBy = msg.Claimer
+	bounty.ClaimedAt = uint64(ctx.BlockHeight())
 	m.Keeper.SetBounty(ctx, bounty)
 
 	ctx.EventManager().EmitEvent(

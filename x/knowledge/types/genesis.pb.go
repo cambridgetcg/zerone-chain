@@ -41,14 +41,14 @@ type Params struct {
 	WrongVerificationSlashBps uint64 `protobuf:"varint,11,opt,name=wrong_verification_slash_bps,json=wrongVerificationSlashBps,proto3" json:"wrong_verification_slash_bps,omitempty"` // default: 50,000  (5%)
 	MissedRevealSlashBps      uint64 `protobuf:"varint,12,opt,name=missed_reveal_slash_bps,json=missedRevealSlashBps,proto3" json:"missed_reveal_slash_bps,omitempty"`                // default: 100,000 (10%)
 	EquivocationSlashBps      uint64 `protobuf:"varint,13,opt,name=equivocation_slash_bps,json=equivocationSlashBps,proto3" json:"equivocation_slash_bps,omitempty"`                  // default: 200,000 (20%)
-	InvalidClaimSlashBps      uint64 `protobuf:"varint,14,opt,name=invalid_claim_slash_bps,json=invalidClaimSlashBps,proto3" json:"invalid_claim_slash_bps,omitempty"`                // default: 220,000 (22%)
+	InvalidClaimSlashBps      uint64 `protobuf:"varint,14,opt,name=invalid_claim_slash_bps,json=invalidClaimSlashBps,proto3" json:"invalid_claim_slash_bps,omitempty"`                // DEPRECATED (R19-6): no longer used — review fee is non-refundable
 	// ─── Rewards ─────────────────────────────────────────────────────────────
 	VerificationReward         string `protobuf:"bytes,15,opt,name=verification_reward,json=verificationReward,proto3" json:"verification_reward,omitempty"`                              // default: "3000000" (3 ZRN in uzrn)
 	VerificationRewardDecayBps uint64 `protobuf:"varint,16,opt,name=verification_reward_decay_bps,json=verificationRewardDecayBps,proto3" json:"verification_reward_decay_bps,omitempty"` // default: 999,000 (0.999× per epoch)
 	// ─── Claim validation ────────────────────────────────────────────────────
 	MinClaimTextLength uint64 `protobuf:"varint,17,opt,name=min_claim_text_length,json=minClaimTextLength,proto3" json:"min_claim_text_length,omitempty"` // default: 20
 	MaxClaimTextLength uint64 `protobuf:"varint,18,opt,name=max_claim_text_length,json=maxClaimTextLength,proto3" json:"max_claim_text_length,omitempty"` // default: 10,000
-	MinClaimStake      string `protobuf:"bytes,19,opt,name=min_claim_stake,json=minClaimStake,proto3" json:"min_claim_stake,omitempty"`                   // default: "1000000" (1 ZRN in uzrn)
+	MinReviewFee       string `protobuf:"bytes,19,opt,name=min_review_fee,json=minReviewFee,proto3" json:"min_review_fee,omitempty"`                      // default: "100000" (0.1 ZRN) — non-refundable review fee
 	// ─── Adversarial verification ────────────────────────────────────────────
 	AdversarialVerificationEnabled bool   `protobuf:"varint,20,opt,name=adversarial_verification_enabled,json=adversarialVerificationEnabled,proto3" json:"adversarial_verification_enabled,omitempty"` // default: true
 	ProvisionalThreshold           uint64 `protobuf:"varint,21,opt,name=provisional_threshold,json=provisionalThreshold,proto3" json:"provisional_threshold,omitempty"`                                 // default: 500,000 (50%)
@@ -84,8 +84,109 @@ type Params struct {
 	ChallengeStakeRatioMinBps       uint64 `protobuf:"varint,48,opt,name=challenge_stake_ratio_min_bps,json=challengeStakeRatioMinBps,proto3" json:"challenge_stake_ratio_min_bps,omitempty"`                   // default: 500,000 (FARM-9)
 	// ─── Research fund ───────────────────────────────────────────────────────
 	ResearchFundShareBps uint64 `protobuf:"varint,49,opt,name=research_fund_share_bps,json=researchFundShareBps,proto3" json:"research_fund_share_bps,omitempty"` // default: 130,000 (13%)
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// ─── Malformed claim slashing ──────────────────────────────────────────
+	MalformedClaimSlashBps uint64 `protobuf:"varint,50,opt,name=malformed_claim_slash_bps,json=malformedClaimSlashBps,proto3" json:"malformed_claim_slash_bps,omitempty"` // default: 500,000 (50%) — harsher than invalid_claim (22%)
+	// ─── Fitness scoring ─────────────────────────────────────────────────────
+	FitnessEpochBlocks       uint64 `protobuf:"varint,51,opt,name=fitness_epoch_blocks,json=fitnessEpochBlocks,proto3" json:"fitness_epoch_blocks,omitempty"`                     // Blocks per fitness epoch
+	FitnessWeightQueryBps    uint64 `protobuf:"varint,52,opt,name=fitness_weight_query_bps,json=fitnessWeightQueryBps,proto3" json:"fitness_weight_query_bps,omitempty"`          // Weight for query rate
+	FitnessWeightCitationBps uint64 `protobuf:"varint,53,opt,name=fitness_weight_citation_bps,json=fitnessWeightCitationBps,proto3" json:"fitness_weight_citation_bps,omitempty"` // Weight for citation rate
+	FitnessWeightBridgeBps   uint64 `protobuf:"varint,54,opt,name=fitness_weight_bridge_bps,json=fitnessWeightBridgeBps,proto3" json:"fitness_weight_bridge_bps,omitempty"`       // Weight for bridge score
+	FitnessWeightDepthBps    uint64 `protobuf:"varint,55,opt,name=fitness_weight_depth_bps,json=fitnessWeightDepthBps,proto3" json:"fitness_weight_depth_bps,omitempty"`          // Weight for dependency depth
+	FitnessWeightPatronBps   uint64 `protobuf:"varint,56,opt,name=fitness_weight_patron_bps,json=fitnessWeightPatronBps,proto3" json:"fitness_weight_patron_bps,omitempty"`       // Weight for active patronage
+	FitnessWeightUniqueBps   uint64 `protobuf:"varint,57,opt,name=fitness_weight_unique_bps,json=fitnessWeightUniqueBps,proto3" json:"fitness_weight_unique_bps,omitempty"`       // Weight for uniqueness
+	FitnessWeightAgeBps      uint64 `protobuf:"varint,58,opt,name=fitness_weight_age_bps,json=fitnessWeightAgeBps,proto3" json:"fitness_weight_age_bps,omitempty"`                // Weight for age penalty
+	FitnessInitialScore      uint64 `protobuf:"varint,59,opt,name=fitness_initial_score,json=fitnessInitialScore,proto3" json:"fitness_initial_score,omitempty"`                  // Score assigned at birth (grace period)
+	FitnessGraceEpochs       uint64 `protobuf:"varint,60,opt,name=fitness_grace_epochs,json=fitnessGraceEpochs,proto3" json:"fitness_grace_epochs,omitempty"`                     // Epochs before age penalty kicks in
+	// ─── Bootstrap fund (R19-7) ────────────────────────────────────────────
+	BootstrapFundEnabled       bool   `protobuf:"varint,61,opt,name=bootstrap_fund_enabled,json=bootstrapFundEnabled,proto3" json:"bootstrap_fund_enabled,omitempty"`                      // Whether sponsored claims are accepted
+	BootstrapFundMaxPerAddress string `protobuf:"bytes,62,opt,name=bootstrap_fund_max_per_address,json=bootstrapFundMaxPerAddress,proto3" json:"bootstrap_fund_max_per_address,omitempty"` // Max sponsored claims per address (lifetime)
+	BootstrapFundMaxPerEpoch   string `protobuf:"bytes,63,opt,name=bootstrap_fund_max_per_epoch,json=bootstrapFundMaxPerEpoch,proto3" json:"bootstrap_fund_max_per_epoch,omitempty"`       // Max sponsored claims per epoch (rate limit)
+	BootstrapFundEpochBlocks   uint64 `protobuf:"varint,64,opt,name=bootstrap_fund_epoch_blocks,json=bootstrapFundEpochBlocks,proto3" json:"bootstrap_fund_epoch_blocks,omitempty"`        // Epoch length in blocks for rate limiting
+	BootstrapFundFeeCap        string `protobuf:"bytes,65,opt,name=bootstrap_fund_fee_cap,json=bootstrapFundFeeCap,proto3" json:"bootstrap_fund_fee_cap,omitempty"`                        // Max fee the fund will cover per claim (uzrn)
+	// ─── Metabolism ──────────────────────────────────────────────────────────
+	MetabolismBaseCost                uint64 `protobuf:"varint,66,opt,name=metabolism_base_cost,json=metabolismBaseCost,proto3" json:"metabolism_base_cost,omitempty"`                                                // Base energy drain per epoch
+	MetabolismContentLengthBps        uint64 `protobuf:"varint,67,opt,name=metabolism_content_length_bps,json=metabolismContentLengthBps,proto3" json:"metabolism_content_length_bps,omitempty"`                      // Additional cost per 100 chars of content (BPS of base)
+	MetabolismDomainCompetitionBps    uint64 `protobuf:"varint,68,opt,name=metabolism_domain_competition_bps,json=metabolismDomainCompetitionBps,proto3" json:"metabolism_domain_competition_bps,omitempty"`          // Additional cost per 100 facts in domain (BPS of base)
+	MetabolismEnergyPerQuery          uint64 `protobuf:"varint,69,opt,name=metabolism_energy_per_query,json=metabolismEnergyPerQuery,proto3" json:"metabolism_energy_per_query,omitempty"`                            // Energy gained per query
+	MetabolismEnergyPerCitation       uint64 `protobuf:"varint,70,opt,name=metabolism_energy_per_citation,json=metabolismEnergyPerCitation,proto3" json:"metabolism_energy_per_citation,omitempty"`                   // Energy gained per new citation
+	MetabolismEnergyPerPatronage      uint64 `protobuf:"varint,71,opt,name=metabolism_energy_per_patronage,json=metabolismEnergyPerPatronage,proto3" json:"metabolism_energy_per_patronage,omitempty"`                // Energy gained per patronage epoch
+	MetabolismEnergyChallengeSurvival uint64 `protobuf:"varint,72,opt,name=metabolism_energy_challenge_survival,json=metabolismEnergyChallengeSurvival,proto3" json:"metabolism_energy_challenge_survival,omitempty"` // One-time energy for surviving challenge
+	MetabolismEnergyCap               uint64 `protobuf:"varint,73,opt,name=metabolism_energy_cap,json=metabolismEnergyCap,proto3" json:"metabolism_energy_cap,omitempty"`                                             // Maximum energy a fact can hold
+	MetabolismInitialEnergy           uint64 `protobuf:"varint,74,opt,name=metabolism_initial_energy,json=metabolismInitialEnergy,proto3" json:"metabolism_initial_energy,omitempty"`                                 // Starting energy for new facts
+	MetabolismAtRiskEpochs            uint64 `protobuf:"varint,75,opt,name=metabolism_at_risk_epochs,json=metabolismAtRiskEpochs,proto3" json:"metabolism_at_risk_epochs,omitempty"`                                  // Epochs at 0 energy before expiry
+	MetabolismExpiredToPrunedEpochs   uint64 `protobuf:"varint,76,opt,name=metabolism_expired_to_pruned_epochs,json=metabolismExpiredToPrunedEpochs,proto3" json:"metabolism_expired_to_pruned_epochs,omitempty"`     // Epochs after expiry before pruning
+	// ─── Reproduction ────────────────────────────────────────────────────
+	ReproductionRoyaltyBps                 uint64 `protobuf:"varint,77,opt,name=reproduction_royalty_bps,json=reproductionRoyaltyBps,proto3" json:"reproduction_royalty_bps,omitempty"`                                                     // Royalty to parent per child reward epoch
+	ReproductionRoyaltyDecayBps            uint64 `protobuf:"varint,78,opt,name=reproduction_royalty_decay_bps,json=reproductionRoyaltyDecayBps,proto3" json:"reproduction_royalty_decay_bps,omitempty"`                                    // Decay per generation (BPS of previous)
+	ReproductionMaxRoyaltyDepth            uint64 `protobuf:"varint,79,opt,name=reproduction_max_royalty_depth,json=reproductionMaxRoyaltyDepth,proto3" json:"reproduction_max_royalty_depth,omitempty"`                                    // Max generations for royalty propagation
+	ReproductionParentEnergyBonus          uint64 `protobuf:"varint,80,opt,name=reproduction_parent_energy_bonus,json=reproductionParentEnergyBonus,proto3" json:"reproduction_parent_energy_bonus,omitempty"`                              // Energy bonus to parent when child is created
+	ReproductionChildFitnessInheritanceBps uint64 `protobuf:"varint,81,opt,name=reproduction_child_fitness_inheritance_bps,json=reproductionChildFitnessInheritanceBps,proto3" json:"reproduction_child_fitness_inheritance_bps,omitempty"` // % of parent fitness inherited by child
+	ReproductionMaxChildren                uint64 `protobuf:"varint,82,opt,name=reproduction_max_children,json=reproductionMaxChildren,proto3" json:"reproduction_max_children,omitempty"`                                                  // Max direct children per fact
+	// ─── Novelty detection ──────────────────────────────────────────────────
+	NoveltyCommonKnowledgePenaltyBps uint64 `protobuf:"varint,83,opt,name=novelty_common_knowledge_penalty_bps,json=noveltyCommonKnowledgePenaltyBps,proto3" json:"novelty_common_knowledge_penalty_bps,omitempty"` // Default penalty for common knowledge match
+	NoveltySubjectOverlapPenaltyBps  uint64 `protobuf:"varint,84,opt,name=novelty_subject_overlap_penalty_bps,json=noveltySubjectOverlapPenaltyBps,proto3" json:"novelty_subject_overlap_penalty_bps,omitempty"`    // Penalty per existing fact with same subject
+	NoveltyPrecisionBonusBps         uint64 `protobuf:"varint,85,opt,name=novelty_precision_bonus_bps,json=noveltyPrecisionBonusBps,proto3" json:"novelty_precision_bonus_bps,omitempty"`                           // Bonus if more precise than existing
+	NoveltyCrossDomainBonusBps       uint64 `protobuf:"varint,86,opt,name=novelty_cross_domain_bonus_bps,json=noveltyCrossDomainBonusBps,proto3" json:"novelty_cross_domain_bonus_bps,omitempty"`                   // Bonus if subject spans multiple domains
+	NoveltyMaxOverlapFacts           uint64 `protobuf:"varint,87,opt,name=novelty_max_overlap_facts,json=noveltyMaxOverlapFacts,proto3" json:"novelty_max_overlap_facts,omitempty"`                                 // Cap on overlap penalty (after N, no more penalty)
+	// ─── Agent demand ────────────────────────────────────────────────
+	DemandBountyThreshold     uint64   `protobuf:"varint,88,opt,name=demand_bounty_threshold,json=demandBountyThreshold,proto3" json:"demand_bounty_threshold,omitempty"`                // Unfulfilled queries per epoch to trigger bounty
+	DemandBountyBaseReward    string   `protobuf:"bytes,89,opt,name=demand_bounty_base_reward,json=demandBountyBaseReward,proto3" json:"demand_bounty_base_reward,omitempty"`            // Base bounty reward (uzrn)
+	DemandBountyPerQueryBonus string   `protobuf:"bytes,90,opt,name=demand_bounty_per_query_bonus,json=demandBountyPerQueryBonus,proto3" json:"demand_bounty_per_query_bonus,omitempty"` // Additional reward per unfulfilled query (uzrn)
+	DemandBountyExpiryEpochs  uint64   `protobuf:"varint,91,opt,name=demand_bounty_expiry_epochs,json=demandBountyExpiryEpochs,proto3" json:"demand_bounty_expiry_epochs,omitempty"`     // Epochs before unclaimed bounty expires
+	DemandMultiplierCap       uint64   `protobuf:"varint,92,opt,name=demand_multiplier_cap,json=demandMultiplierCap,proto3" json:"demand_multiplier_cap,omitempty"`                      // Max demand multiplier for energy (BPS)
+	DemandTrackingEnabled     bool     `protobuf:"varint,93,opt,name=demand_tracking_enabled,json=demandTrackingEnabled,proto3" json:"demand_tracking_enabled,omitempty"`                // Enable/disable demand tracking
+	AuthorizedDemandReporters []string `protobuf:"bytes,94,rep,name=authorized_demand_reporters,json=authorizedDemandReporters,proto3" json:"authorized_demand_reporters,omitempty"`     // Addresses allowed to report demand
+	// ─── Competition (niche dynamics) ──────────────────────────────────
+	CompetitionNicheDominanceBonusBps uint64 `protobuf:"varint,95,opt,name=competition_niche_dominance_bonus_bps,json=competitionNicheDominanceBonusBps,proto3" json:"competition_niche_dominance_bonus_bps,omitempty"` // Fitness bonus for niche leader (BPS)
+	CompetitionRedundancyThresholdBps uint64 `protobuf:"varint,96,opt,name=competition_redundancy_threshold_bps,json=competitionRedundancyThresholdBps,proto3" json:"competition_redundancy_threshold_bps,omitempty"`   // Below this ratio of leader fitness = redundant (BPS)
+	CompetitionMaxNicheSize           uint64 `protobuf:"varint,97,opt,name=competition_max_niche_size,json=competitionMaxNicheSize,proto3" json:"competition_max_niche_size,omitempty"`                                 // Max facts per niche before forced pruning
+	CompetitionSymbiosisBonusBps      uint64 `protobuf:"varint,98,opt,name=competition_symbiosis_bonus_bps,json=competitionSymbiosisBonusBps,proto3" json:"competition_symbiosis_bonus_bps,omitempty"`                  // Fitness bonus per SUPPORTS link to healthy fact (BPS)
+	// ─── Query satisfaction ──────────────────────────────────────────────
+	FitnessWeightSatisfactionBps uint64 `protobuf:"varint,99,opt,name=fitness_weight_satisfaction_bps,json=fitnessWeightSatisfactionBps,proto3" json:"fitness_weight_satisfaction_bps,omitempty"` // Weight of satisfaction in fitness (default: 150,000 = 15%)
+	SatisfactionMinRatings       uint64 `protobuf:"varint,100,opt,name=satisfaction_min_ratings,json=satisfactionMinRatings,proto3" json:"satisfaction_min_ratings,omitempty"`                    // Minimum ratings before satisfaction affects fitness (default: 3)
+	// ─── Consensus diversity (R28-2) ──────────────────────────────────
+	DiversityConformityAlertThreshold uint64 `protobuf:"varint,101,opt,name=diversity_conformity_alert_threshold,json=diversityConformityAlertThreshold,proto3" json:"diversity_conformity_alert_threshold,omitempty"` // BPS entropy below which a domain is "conforming" (default: 50,000 = 5%)
+	DiversityConformityAlertEpochs    uint64 `protobuf:"varint,102,opt,name=diversity_conformity_alert_epochs,json=diversityConformityAlertEpochs,proto3" json:"diversity_conformity_alert_epochs,omitempty"`          // Consecutive low-diversity epochs before alert (default: 3)
+	// ─── Retroactive vindication (R28-1) ──────────────────────────────
+	VindicationRefundEnabled bool   `protobuf:"varint,103,opt,name=vindication_refund_enabled,json=vindicationRefundEnabled,proto3" json:"vindication_refund_enabled,omitempty"` // Master switch for vindication escrow (default: true)
+	VindicationBonusBps      uint64 `protobuf:"varint,104,opt,name=vindication_bonus_bps,json=vindicationBonusBps,proto3" json:"vindication_bonus_bps,omitempty"`                // % of majority slash pool as bonus to vindicated minority (default: 2000 = 20%)
+	VindicationSlashBps      uint64 `protobuf:"varint,105,opt,name=vindication_slash_bps,json=vindicationSlashBps,proto3" json:"vindication_slash_bps,omitempty"`                // Slash rate for majority on disproven fact (default: 500 = 5%)
+	VindicationWindowBlocks  uint64 `protobuf:"varint,106,opt,name=vindication_window_blocks,json=vindicationWindowBlocks,proto3" json:"vindication_window_blocks,omitempty"`    // How long escrowed entries are eligible (default: 100000)
+	// ─── Multi-level energy thresholds (R28-4) ──────────────────────────
+	MetabolismActiveThreshold     uint64 `protobuf:"varint,107,opt,name=metabolism_active_threshold,json=metabolismActiveThreshold,proto3" json:"metabolism_active_threshold,omitempty"`             // Energy below which fact → AT_RISK (default: 300,000 = 30%)
+	MetabolismExtinctionThreshold uint64 `protobuf:"varint,108,opt,name=metabolism_extinction_threshold,json=metabolismExtinctionThreshold,proto3" json:"metabolism_extinction_threshold,omitempty"` // Energy below which (for N epochs) → EXTINCT (default: 10,000 = 1%)
+	MaxConfidence                 uint64 `protobuf:"varint,109,opt,name=max_confidence,json=maxConfidence,proto3" json:"max_confidence,omitempty"`                                                   // Hard cap on confidence (default: 880,000 = 88%)
+	// ─── Role bonuses (R28-5) ──────────────────────────────────────────────
+	HumanEmpiricalBonusBps     uint64 `protobuf:"varint,110,opt,name=human_empirical_bonus_bps,json=humanEmpiricalBonusBps,proto3" json:"human_empirical_bonus_bps,omitempty"`             // +15% confidence for human OBSERVATION claims (BPS)
+	AgentComputationalBonusBps uint64 `protobuf:"varint,111,opt,name=agent_computational_bonus_bps,json=agentComputationalBonusBps,proto3" json:"agent_computational_bonus_bps,omitempty"` // +15% confidence for agent COMPUTATIONAL claims (BPS)
+	AgentVerificationBonusBps  uint64 `protobuf:"varint,112,opt,name=agent_verification_bonus_bps,json=agentVerificationBonusBps,proto3" json:"agent_verification_bonus_bps,omitempty"`    // +20% vote weight for agent verifiers (BPS)
+	HumanPatronageBonusBps     uint64 `protobuf:"varint,113,opt,name=human_patronage_bonus_bps,json=humanPatronageBonusBps,proto3" json:"human_patronage_bonus_bps,omitempty"`             // +10% energy boost for human patrons (BPS)
+	DualValidationBonusBps     uint64 `protobuf:"varint,114,opt,name=dual_validation_bonus_bps,json=dualValidationBonusBps,proto3" json:"dual_validation_bonus_bps,omitempty"`             // +25% confidence for partnership claims (BPS)
+	// ─── Domain carrying capacity (R29-1) ──────────────────────────────────
+	DomainBaseCapacity              uint64 `protobuf:"varint,115,opt,name=domain_base_capacity,json=domainBaseCapacity,proto3" json:"domain_base_capacity,omitempty"`                                            // Base facts per domain before pressure kicks in (default: 1000)
+	DomainCapacityGrowthPerCitation uint64 `protobuf:"varint,116,opt,name=domain_capacity_growth_per_citation,json=domainCapacityGrowthPerCitation,proto3" json:"domain_capacity_growth_per_citation,omitempty"` // Capacity bonus per inbound cross-domain citation (default: 1)
+	OvercrowdingDecayMultiplierBps  uint64 `protobuf:"varint,117,opt,name=overcrowding_decay_multiplier_bps,json=overcrowdingDecayMultiplierBps,proto3" json:"overcrowding_decay_multiplier_bps,omitempty"`      // Decay multiplier at 2× capacity (default: 1,500,000 = 150%)
+	UnderpopulationBirthBonusBps    uint64 `protobuf:"varint,118,opt,name=underpopulation_birth_bonus_bps,json=underpopulationBirthBonusBps,proto3" json:"underpopulation_birth_bonus_bps,omitempty"`            // Energy bonus for facts in sparse domains (default: 200,000 = 20%)
+	// ─── Epistemic temperature (R29-2) ──────────────────────────────────
+	EpistemicTemperatureDecayBps     uint64 `protobuf:"varint,119,opt,name=epistemic_temperature_decay_bps,json=epistemicTemperatureDecayBps,proto3" json:"epistemic_temperature_decay_bps,omitempty"`             // Per-epoch decay toward neutral (default: 995,000 = 99.5%)
+	EpistemicConformityCoolingBps    uint64 `protobuf:"varint,120,opt,name=epistemic_conformity_cooling_bps,json=epistemicConformityCoolingBps,proto3" json:"epistemic_conformity_cooling_bps,omitempty"`          // Cooling per high-conformity epoch (default: 50,000 = 5%)
+	EpistemicVindicationHeatingBps   uint64 `protobuf:"varint,121,opt,name=epistemic_vindication_heating_bps,json=epistemicVindicationHeatingBps,proto3" json:"epistemic_vindication_heating_bps,omitempty"`       // Heating per vindication event (default: 100,000 = 10%)
+	EpistemicColdConfidenceCapBps    uint64 `protobuf:"varint,122,opt,name=epistemic_cold_confidence_cap_bps,json=epistemicColdConfidenceCapBps,proto3" json:"epistemic_cold_confidence_cap_bps,omitempty"`        // Max confidence in cold domains (default: 600,000 = 60%)
+	EpistemicHotConfidenceGrowthBps  uint64 `protobuf:"varint,123,opt,name=epistemic_hot_confidence_growth_bps,json=epistemicHotConfidenceGrowthBps,proto3" json:"epistemic_hot_confidence_growth_bps,omitempty"`  // Confidence growth multiplier in hot domains (default: 1,500,000 = 150%)
+	EpistemicTemperatureWindowBlocks uint64 `protobuf:"varint,124,opt,name=epistemic_temperature_window_blocks,json=epistemicTemperatureWindowBlocks,proto3" json:"epistemic_temperature_window_blocks,omitempty"` // Lookback window for vindication counting (default: 10,000)
+	// ─── Domain role elasticity (R29-3) ──────────────────────────────────
+	RoleElasticityMinCalls         uint64 `protobuf:"varint,125,opt,name=role_elasticity_min_calls,json=roleElasticityMinCalls,proto3" json:"role_elasticity_min_calls,omitempty"`                           // Min calls per role before elasticity activates (default: 10)
+	RoleElasticityMaxMultiplierBps uint64 `protobuf:"varint,126,opt,name=role_elasticity_max_multiplier_bps,json=roleElasticityMaxMultiplierBps,proto3" json:"role_elasticity_max_multiplier_bps,omitempty"` // Max bonus scaling (default: 2,000,000 = 200%)
+	RoleElasticityMinMultiplierBps uint64 `protobuf:"varint,127,opt,name=role_elasticity_min_multiplier_bps,json=roleElasticityMinMultiplierBps,proto3" json:"role_elasticity_min_multiplier_bps,omitempty"` // Min bonus scaling (default: 500,000 = 50%)
+	RoleElasticityDecayEpochs      uint64 `protobuf:"varint,128,opt,name=role_elasticity_decay_epochs,json=roleElasticityDecayEpochs,proto3" json:"role_elasticity_decay_epochs,omitempty"`                  // Blocks between 5% decay cycles (default: 100)
+	// ─── Mentorship dividends (R31-5: Water → Wood) ──────────────────────
+	MentorshipDividendEnergy uint64 `protobuf:"varint,129,opt,name=mentorship_dividend_energy,json=mentorshipDividendEnergy,proto3" json:"mentorship_dividend_energy,omitempty"` // Energy added to domain on mentorship graduation (default: 50,000)
+	MentorshipCapacityBonus  uint64 `protobuf:"varint,130,opt,name=mentorship_capacity_bonus,json=mentorshipCapacityBonus,proto3" json:"mentorship_capacity_bonus,omitempty"`    // Carrying capacity bonus per graduation (default: 5)
+	// ─── Social verification adjustment (R31-2: Water → Fire) ──────────────
+	SocialSaturationThreshold uint64 `protobuf:"varint,131,opt,name=social_saturation_threshold,json=socialSaturationThreshold,proto3" json:"social_saturation_threshold,omitempty"` // Partnership density above which verification relaxes (default: 10)
+	ObservationWindowBlocks   uint64 `protobuf:"varint,132,opt,name=observation_window_blocks,json=observationWindowBlocks,proto3" json:"observation_window_blocks,omitempty"`       // Lookback window for verification health metrics (default: 10000)
+	unknownFields             protoimpl.UnknownFields
+	sizeCache                 protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -244,9 +345,9 @@ func (x *Params) GetMaxClaimTextLength() uint64 {
 	return 0
 }
 
-func (x *Params) GetMinClaimStake() string {
+func (x *Params) GetMinReviewFee() string {
 	if x != nil {
-		return x.MinClaimStake
+		return x.MinReviewFee
 	}
 	return ""
 }
@@ -461,16 +562,599 @@ func (x *Params) GetResearchFundShareBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetMalformedClaimSlashBps() uint64 {
+	if x != nil {
+		return x.MalformedClaimSlashBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessEpochBlocks() uint64 {
+	if x != nil {
+		return x.FitnessEpochBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightQueryBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightQueryBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightCitationBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightCitationBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightBridgeBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightBridgeBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightDepthBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightDepthBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightPatronBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightPatronBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightUniqueBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightUniqueBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightAgeBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightAgeBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessInitialScore() uint64 {
+	if x != nil {
+		return x.FitnessInitialScore
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessGraceEpochs() uint64 {
+	if x != nil {
+		return x.FitnessGraceEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetBootstrapFundEnabled() bool {
+	if x != nil {
+		return x.BootstrapFundEnabled
+	}
+	return false
+}
+
+func (x *Params) GetBootstrapFundMaxPerAddress() string {
+	if x != nil {
+		return x.BootstrapFundMaxPerAddress
+	}
+	return ""
+}
+
+func (x *Params) GetBootstrapFundMaxPerEpoch() string {
+	if x != nil {
+		return x.BootstrapFundMaxPerEpoch
+	}
+	return ""
+}
+
+func (x *Params) GetBootstrapFundEpochBlocks() uint64 {
+	if x != nil {
+		return x.BootstrapFundEpochBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetBootstrapFundFeeCap() string {
+	if x != nil {
+		return x.BootstrapFundFeeCap
+	}
+	return ""
+}
+
+func (x *Params) GetMetabolismBaseCost() uint64 {
+	if x != nil {
+		return x.MetabolismBaseCost
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismContentLengthBps() uint64 {
+	if x != nil {
+		return x.MetabolismContentLengthBps
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismDomainCompetitionBps() uint64 {
+	if x != nil {
+		return x.MetabolismDomainCompetitionBps
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyPerQuery() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyPerQuery
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyPerCitation() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyPerCitation
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyPerPatronage() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyPerPatronage
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyChallengeSurvival() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyChallengeSurvival
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismEnergyCap() uint64 {
+	if x != nil {
+		return x.MetabolismEnergyCap
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismInitialEnergy() uint64 {
+	if x != nil {
+		return x.MetabolismInitialEnergy
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismAtRiskEpochs() uint64 {
+	if x != nil {
+		return x.MetabolismAtRiskEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismExpiredToPrunedEpochs() uint64 {
+	if x != nil {
+		return x.MetabolismExpiredToPrunedEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionRoyaltyBps() uint64 {
+	if x != nil {
+		return x.ReproductionRoyaltyBps
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionRoyaltyDecayBps() uint64 {
+	if x != nil {
+		return x.ReproductionRoyaltyDecayBps
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionMaxRoyaltyDepth() uint64 {
+	if x != nil {
+		return x.ReproductionMaxRoyaltyDepth
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionParentEnergyBonus() uint64 {
+	if x != nil {
+		return x.ReproductionParentEnergyBonus
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionChildFitnessInheritanceBps() uint64 {
+	if x != nil {
+		return x.ReproductionChildFitnessInheritanceBps
+	}
+	return 0
+}
+
+func (x *Params) GetReproductionMaxChildren() uint64 {
+	if x != nil {
+		return x.ReproductionMaxChildren
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltyCommonKnowledgePenaltyBps() uint64 {
+	if x != nil {
+		return x.NoveltyCommonKnowledgePenaltyBps
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltySubjectOverlapPenaltyBps() uint64 {
+	if x != nil {
+		return x.NoveltySubjectOverlapPenaltyBps
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltyPrecisionBonusBps() uint64 {
+	if x != nil {
+		return x.NoveltyPrecisionBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltyCrossDomainBonusBps() uint64 {
+	if x != nil {
+		return x.NoveltyCrossDomainBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetNoveltyMaxOverlapFacts() uint64 {
+	if x != nil {
+		return x.NoveltyMaxOverlapFacts
+	}
+	return 0
+}
+
+func (x *Params) GetDemandBountyThreshold() uint64 {
+	if x != nil {
+		return x.DemandBountyThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetDemandBountyBaseReward() string {
+	if x != nil {
+		return x.DemandBountyBaseReward
+	}
+	return ""
+}
+
+func (x *Params) GetDemandBountyPerQueryBonus() string {
+	if x != nil {
+		return x.DemandBountyPerQueryBonus
+	}
+	return ""
+}
+
+func (x *Params) GetDemandBountyExpiryEpochs() uint64 {
+	if x != nil {
+		return x.DemandBountyExpiryEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetDemandMultiplierCap() uint64 {
+	if x != nil {
+		return x.DemandMultiplierCap
+	}
+	return 0
+}
+
+func (x *Params) GetDemandTrackingEnabled() bool {
+	if x != nil {
+		return x.DemandTrackingEnabled
+	}
+	return false
+}
+
+func (x *Params) GetAuthorizedDemandReporters() []string {
+	if x != nil {
+		return x.AuthorizedDemandReporters
+	}
+	return nil
+}
+
+func (x *Params) GetCompetitionNicheDominanceBonusBps() uint64 {
+	if x != nil {
+		return x.CompetitionNicheDominanceBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetCompetitionRedundancyThresholdBps() uint64 {
+	if x != nil {
+		return x.CompetitionRedundancyThresholdBps
+	}
+	return 0
+}
+
+func (x *Params) GetCompetitionMaxNicheSize() uint64 {
+	if x != nil {
+		return x.CompetitionMaxNicheSize
+	}
+	return 0
+}
+
+func (x *Params) GetCompetitionSymbiosisBonusBps() uint64 {
+	if x != nil {
+		return x.CompetitionSymbiosisBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetFitnessWeightSatisfactionBps() uint64 {
+	if x != nil {
+		return x.FitnessWeightSatisfactionBps
+	}
+	return 0
+}
+
+func (x *Params) GetSatisfactionMinRatings() uint64 {
+	if x != nil {
+		return x.SatisfactionMinRatings
+	}
+	return 0
+}
+
+func (x *Params) GetDiversityConformityAlertThreshold() uint64 {
+	if x != nil {
+		return x.DiversityConformityAlertThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetDiversityConformityAlertEpochs() uint64 {
+	if x != nil {
+		return x.DiversityConformityAlertEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetVindicationRefundEnabled() bool {
+	if x != nil {
+		return x.VindicationRefundEnabled
+	}
+	return false
+}
+
+func (x *Params) GetVindicationBonusBps() uint64 {
+	if x != nil {
+		return x.VindicationBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetVindicationSlashBps() uint64 {
+	if x != nil {
+		return x.VindicationSlashBps
+	}
+	return 0
+}
+
+func (x *Params) GetVindicationWindowBlocks() uint64 {
+	if x != nil {
+		return x.VindicationWindowBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismActiveThreshold() uint64 {
+	if x != nil {
+		return x.MetabolismActiveThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetMetabolismExtinctionThreshold() uint64 {
+	if x != nil {
+		return x.MetabolismExtinctionThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetMaxConfidence() uint64 {
+	if x != nil {
+		return x.MaxConfidence
+	}
+	return 0
+}
+
+func (x *Params) GetHumanEmpiricalBonusBps() uint64 {
+	if x != nil {
+		return x.HumanEmpiricalBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetAgentComputationalBonusBps() uint64 {
+	if x != nil {
+		return x.AgentComputationalBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetAgentVerificationBonusBps() uint64 {
+	if x != nil {
+		return x.AgentVerificationBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetHumanPatronageBonusBps() uint64 {
+	if x != nil {
+		return x.HumanPatronageBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetDualValidationBonusBps() uint64 {
+	if x != nil {
+		return x.DualValidationBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetDomainBaseCapacity() uint64 {
+	if x != nil {
+		return x.DomainBaseCapacity
+	}
+	return 0
+}
+
+func (x *Params) GetDomainCapacityGrowthPerCitation() uint64 {
+	if x != nil {
+		return x.DomainCapacityGrowthPerCitation
+	}
+	return 0
+}
+
+func (x *Params) GetOvercrowdingDecayMultiplierBps() uint64 {
+	if x != nil {
+		return x.OvercrowdingDecayMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetUnderpopulationBirthBonusBps() uint64 {
+	if x != nil {
+		return x.UnderpopulationBirthBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicTemperatureDecayBps() uint64 {
+	if x != nil {
+		return x.EpistemicTemperatureDecayBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicConformityCoolingBps() uint64 {
+	if x != nil {
+		return x.EpistemicConformityCoolingBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicVindicationHeatingBps() uint64 {
+	if x != nil {
+		return x.EpistemicVindicationHeatingBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicColdConfidenceCapBps() uint64 {
+	if x != nil {
+		return x.EpistemicColdConfidenceCapBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicHotConfidenceGrowthBps() uint64 {
+	if x != nil {
+		return x.EpistemicHotConfidenceGrowthBps
+	}
+	return 0
+}
+
+func (x *Params) GetEpistemicTemperatureWindowBlocks() uint64 {
+	if x != nil {
+		return x.EpistemicTemperatureWindowBlocks
+	}
+	return 0
+}
+
+func (x *Params) GetRoleElasticityMinCalls() uint64 {
+	if x != nil {
+		return x.RoleElasticityMinCalls
+	}
+	return 0
+}
+
+func (x *Params) GetRoleElasticityMaxMultiplierBps() uint64 {
+	if x != nil {
+		return x.RoleElasticityMaxMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetRoleElasticityMinMultiplierBps() uint64 {
+	if x != nil {
+		return x.RoleElasticityMinMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetRoleElasticityDecayEpochs() uint64 {
+	if x != nil {
+		return x.RoleElasticityDecayEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetMentorshipDividendEnergy() uint64 {
+	if x != nil {
+		return x.MentorshipDividendEnergy
+	}
+	return 0
+}
+
+func (x *Params) GetMentorshipCapacityBonus() uint64 {
+	if x != nil {
+		return x.MentorshipCapacityBonus
+	}
+	return 0
+}
+
+func (x *Params) GetSocialSaturationThreshold() uint64 {
+	if x != nil {
+		return x.SocialSaturationThreshold
+	}
+	return 0
+}
+
+func (x *Params) GetObservationWindowBlocks() uint64 {
+	if x != nil {
+		return x.ObservationWindowBlocks
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Params        *Params                `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
-	Facts         []*Fact                `protobuf:"bytes,2,rep,name=facts,proto3" json:"facts,omitempty"`
-	PendingClaims []*Claim               `protobuf:"bytes,3,rep,name=pending_claims,json=pendingClaims,proto3" json:"pending_claims,omitempty"`
-	ActiveRounds  []*VerificationRound   `protobuf:"bytes,4,rep,name=active_rounds,json=activeRounds,proto3" json:"active_rounds,omitempty"`
-	Domains       []*Domain              `protobuf:"bytes,5,rep,name=domains,proto3" json:"domains,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                   protoimpl.MessageState  `protogen:"open.v1"`
+	Params                  *Params                 `protobuf:"bytes,1,opt,name=params,proto3" json:"params,omitempty"`
+	Facts                   []*Fact                 `protobuf:"bytes,2,rep,name=facts,proto3" json:"facts,omitempty"`
+	PendingClaims           []*Claim                `protobuf:"bytes,3,rep,name=pending_claims,json=pendingClaims,proto3" json:"pending_claims,omitempty"`
+	ActiveRounds            []*VerificationRound    `protobuf:"bytes,4,rep,name=active_rounds,json=activeRounds,proto3" json:"active_rounds,omitempty"`
+	Domains                 []*Domain               `protobuf:"bytes,5,rep,name=domains,proto3" json:"domains,omitempty"`
+	BootstrapFundAllocation string                  `protobuf:"bytes,6,opt,name=bootstrap_fund_allocation,json=bootstrapFundAllocation,proto3" json:"bootstrap_fund_allocation,omitempty"` // Initial fund allocation (uzrn) — one-time genesis mint
+	CommonKnowledge         []*CommonKnowledgeEntry `protobuf:"bytes,7,rep,name=common_knowledge,json=commonKnowledge,proto3" json:"common_knowledge,omitempty"`                           // Seeded common knowledge entries
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *GenesisState) Reset() {
@@ -538,11 +1222,25 @@ func (x *GenesisState) GetDomains() []*Domain {
 	return nil
 }
 
+func (x *GenesisState) GetBootstrapFundAllocation() string {
+	if x != nil {
+		return x.BootstrapFundAllocation
+	}
+	return ""
+}
+
+func (x *GenesisState) GetCommonKnowledge() []*CommonKnowledgeEntry {
+	if x != nil {
+		return x.CommonKnowledge
+	}
+	return nil
+}
+
 var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xcd\x15\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xc6?\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -562,8 +1260,8 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x13verification_reward\x18\x0f \x01(\tR\x12verificationReward\x12A\n" +
 	"\x1dverification_reward_decay_bps\x18\x10 \x01(\x04R\x1averificationRewardDecayBps\x121\n" +
 	"\x15min_claim_text_length\x18\x11 \x01(\x04R\x12minClaimTextLength\x121\n" +
-	"\x15max_claim_text_length\x18\x12 \x01(\x04R\x12maxClaimTextLength\x12&\n" +
-	"\x0fmin_claim_stake\x18\x13 \x01(\tR\rminClaimStake\x12H\n" +
+	"\x15max_claim_text_length\x18\x12 \x01(\x04R\x12maxClaimTextLength\x12$\n" +
+	"\x0emin_review_fee\x18\x13 \x01(\tR\fminReviewFee\x12H\n" +
 	" adversarial_verification_enabled\x18\x14 \x01(\bR\x1eadversarialVerificationEnabled\x123\n" +
 	"\x15provisional_threshold\x18\x15 \x01(\x04R\x14provisionalThreshold\x12)\n" +
 	"\x10reject_threshold\x18\x16 \x01(\x04R\x0frejectThreshold\x12:\n" +
@@ -593,13 +1291,98 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"#min_domain_contributors_for_novelty\x18. \x01(\x04R\x1fminDomainContributorsForNovelty\x12;\n" +
 	"\x1amin_participation_rate_bps\x18/ \x01(\x04R\x17minParticipationRateBps\x12@\n" +
 	"\x1dchallenge_stake_ratio_min_bps\x180 \x01(\x04R\x19challengeStakeRatioMinBps\x125\n" +
-	"\x17research_fund_share_bps\x181 \x01(\x04R\x14researchFundShareBps\"\xbb\x02\n" +
+	"\x17research_fund_share_bps\x181 \x01(\x04R\x14researchFundShareBps\x129\n" +
+	"\x19malformed_claim_slash_bps\x182 \x01(\x04R\x16malformedClaimSlashBps\x120\n" +
+	"\x14fitness_epoch_blocks\x183 \x01(\x04R\x12fitnessEpochBlocks\x127\n" +
+	"\x18fitness_weight_query_bps\x184 \x01(\x04R\x15fitnessWeightQueryBps\x12=\n" +
+	"\x1bfitness_weight_citation_bps\x185 \x01(\x04R\x18fitnessWeightCitationBps\x129\n" +
+	"\x19fitness_weight_bridge_bps\x186 \x01(\x04R\x16fitnessWeightBridgeBps\x127\n" +
+	"\x18fitness_weight_depth_bps\x187 \x01(\x04R\x15fitnessWeightDepthBps\x129\n" +
+	"\x19fitness_weight_patron_bps\x188 \x01(\x04R\x16fitnessWeightPatronBps\x129\n" +
+	"\x19fitness_weight_unique_bps\x189 \x01(\x04R\x16fitnessWeightUniqueBps\x123\n" +
+	"\x16fitness_weight_age_bps\x18: \x01(\x04R\x13fitnessWeightAgeBps\x122\n" +
+	"\x15fitness_initial_score\x18; \x01(\x04R\x13fitnessInitialScore\x120\n" +
+	"\x14fitness_grace_epochs\x18< \x01(\x04R\x12fitnessGraceEpochs\x124\n" +
+	"\x16bootstrap_fund_enabled\x18= \x01(\bR\x14bootstrapFundEnabled\x12B\n" +
+	"\x1ebootstrap_fund_max_per_address\x18> \x01(\tR\x1abootstrapFundMaxPerAddress\x12>\n" +
+	"\x1cbootstrap_fund_max_per_epoch\x18? \x01(\tR\x18bootstrapFundMaxPerEpoch\x12=\n" +
+	"\x1bbootstrap_fund_epoch_blocks\x18@ \x01(\x04R\x18bootstrapFundEpochBlocks\x123\n" +
+	"\x16bootstrap_fund_fee_cap\x18A \x01(\tR\x13bootstrapFundFeeCap\x120\n" +
+	"\x14metabolism_base_cost\x18B \x01(\x04R\x12metabolismBaseCost\x12A\n" +
+	"\x1dmetabolism_content_length_bps\x18C \x01(\x04R\x1ametabolismContentLengthBps\x12I\n" +
+	"!metabolism_domain_competition_bps\x18D \x01(\x04R\x1emetabolismDomainCompetitionBps\x12=\n" +
+	"\x1bmetabolism_energy_per_query\x18E \x01(\x04R\x18metabolismEnergyPerQuery\x12C\n" +
+	"\x1emetabolism_energy_per_citation\x18F \x01(\x04R\x1bmetabolismEnergyPerCitation\x12E\n" +
+	"\x1fmetabolism_energy_per_patronage\x18G \x01(\x04R\x1cmetabolismEnergyPerPatronage\x12O\n" +
+	"$metabolism_energy_challenge_survival\x18H \x01(\x04R!metabolismEnergyChallengeSurvival\x122\n" +
+	"\x15metabolism_energy_cap\x18I \x01(\x04R\x13metabolismEnergyCap\x12:\n" +
+	"\x19metabolism_initial_energy\x18J \x01(\x04R\x17metabolismInitialEnergy\x129\n" +
+	"\x19metabolism_at_risk_epochs\x18K \x01(\x04R\x16metabolismAtRiskEpochs\x12L\n" +
+	"#metabolism_expired_to_pruned_epochs\x18L \x01(\x04R\x1fmetabolismExpiredToPrunedEpochs\x128\n" +
+	"\x18reproduction_royalty_bps\x18M \x01(\x04R\x16reproductionRoyaltyBps\x12C\n" +
+	"\x1ereproduction_royalty_decay_bps\x18N \x01(\x04R\x1breproductionRoyaltyDecayBps\x12C\n" +
+	"\x1ereproduction_max_royalty_depth\x18O \x01(\x04R\x1breproductionMaxRoyaltyDepth\x12G\n" +
+	" reproduction_parent_energy_bonus\x18P \x01(\x04R\x1dreproductionParentEnergyBonus\x12Z\n" +
+	"*reproduction_child_fitness_inheritance_bps\x18Q \x01(\x04R&reproductionChildFitnessInheritanceBps\x12:\n" +
+	"\x19reproduction_max_children\x18R \x01(\x04R\x17reproductionMaxChildren\x12N\n" +
+	"$novelty_common_knowledge_penalty_bps\x18S \x01(\x04R noveltyCommonKnowledgePenaltyBps\x12L\n" +
+	"#novelty_subject_overlap_penalty_bps\x18T \x01(\x04R\x1fnoveltySubjectOverlapPenaltyBps\x12=\n" +
+	"\x1bnovelty_precision_bonus_bps\x18U \x01(\x04R\x18noveltyPrecisionBonusBps\x12B\n" +
+	"\x1enovelty_cross_domain_bonus_bps\x18V \x01(\x04R\x1anoveltyCrossDomainBonusBps\x129\n" +
+	"\x19novelty_max_overlap_facts\x18W \x01(\x04R\x16noveltyMaxOverlapFacts\x126\n" +
+	"\x17demand_bounty_threshold\x18X \x01(\x04R\x15demandBountyThreshold\x129\n" +
+	"\x19demand_bounty_base_reward\x18Y \x01(\tR\x16demandBountyBaseReward\x12@\n" +
+	"\x1ddemand_bounty_per_query_bonus\x18Z \x01(\tR\x19demandBountyPerQueryBonus\x12=\n" +
+	"\x1bdemand_bounty_expiry_epochs\x18[ \x01(\x04R\x18demandBountyExpiryEpochs\x122\n" +
+	"\x15demand_multiplier_cap\x18\\ \x01(\x04R\x13demandMultiplierCap\x126\n" +
+	"\x17demand_tracking_enabled\x18] \x01(\bR\x15demandTrackingEnabled\x12>\n" +
+	"\x1bauthorized_demand_reporters\x18^ \x03(\tR\x19authorizedDemandReporters\x12P\n" +
+	"%competition_niche_dominance_bonus_bps\x18_ \x01(\x04R!competitionNicheDominanceBonusBps\x12O\n" +
+	"$competition_redundancy_threshold_bps\x18` \x01(\x04R!competitionRedundancyThresholdBps\x12;\n" +
+	"\x1acompetition_max_niche_size\x18a \x01(\x04R\x17competitionMaxNicheSize\x12E\n" +
+	"\x1fcompetition_symbiosis_bonus_bps\x18b \x01(\x04R\x1ccompetitionSymbiosisBonusBps\x12E\n" +
+	"\x1ffitness_weight_satisfaction_bps\x18c \x01(\x04R\x1cfitnessWeightSatisfactionBps\x128\n" +
+	"\x18satisfaction_min_ratings\x18d \x01(\x04R\x16satisfactionMinRatings\x12O\n" +
+	"$diversity_conformity_alert_threshold\x18e \x01(\x04R!diversityConformityAlertThreshold\x12I\n" +
+	"!diversity_conformity_alert_epochs\x18f \x01(\x04R\x1ediversityConformityAlertEpochs\x12<\n" +
+	"\x1avindication_refund_enabled\x18g \x01(\bR\x18vindicationRefundEnabled\x122\n" +
+	"\x15vindication_bonus_bps\x18h \x01(\x04R\x13vindicationBonusBps\x122\n" +
+	"\x15vindication_slash_bps\x18i \x01(\x04R\x13vindicationSlashBps\x12:\n" +
+	"\x19vindication_window_blocks\x18j \x01(\x04R\x17vindicationWindowBlocks\x12>\n" +
+	"\x1bmetabolism_active_threshold\x18k \x01(\x04R\x19metabolismActiveThreshold\x12F\n" +
+	"\x1fmetabolism_extinction_threshold\x18l \x01(\x04R\x1dmetabolismExtinctionThreshold\x12%\n" +
+	"\x0emax_confidence\x18m \x01(\x04R\rmaxConfidence\x129\n" +
+	"\x19human_empirical_bonus_bps\x18n \x01(\x04R\x16humanEmpiricalBonusBps\x12A\n" +
+	"\x1dagent_computational_bonus_bps\x18o \x01(\x04R\x1aagentComputationalBonusBps\x12?\n" +
+	"\x1cagent_verification_bonus_bps\x18p \x01(\x04R\x19agentVerificationBonusBps\x129\n" +
+	"\x19human_patronage_bonus_bps\x18q \x01(\x04R\x16humanPatronageBonusBps\x129\n" +
+	"\x19dual_validation_bonus_bps\x18r \x01(\x04R\x16dualValidationBonusBps\x120\n" +
+	"\x14domain_base_capacity\x18s \x01(\x04R\x12domainBaseCapacity\x12L\n" +
+	"#domain_capacity_growth_per_citation\x18t \x01(\x04R\x1fdomainCapacityGrowthPerCitation\x12I\n" +
+	"!overcrowding_decay_multiplier_bps\x18u \x01(\x04R\x1eovercrowdingDecayMultiplierBps\x12E\n" +
+	"\x1funderpopulation_birth_bonus_bps\x18v \x01(\x04R\x1cunderpopulationBirthBonusBps\x12E\n" +
+	"\x1fepistemic_temperature_decay_bps\x18w \x01(\x04R\x1cepistemicTemperatureDecayBps\x12G\n" +
+	" epistemic_conformity_cooling_bps\x18x \x01(\x04R\x1depistemicConformityCoolingBps\x12I\n" +
+	"!epistemic_vindication_heating_bps\x18y \x01(\x04R\x1eepistemicVindicationHeatingBps\x12H\n" +
+	"!epistemic_cold_confidence_cap_bps\x18z \x01(\x04R\x1depistemicColdConfidenceCapBps\x12L\n" +
+	"#epistemic_hot_confidence_growth_bps\x18{ \x01(\x04R\x1fepistemicHotConfidenceGrowthBps\x12M\n" +
+	"#epistemic_temperature_window_blocks\x18| \x01(\x04R epistemicTemperatureWindowBlocks\x129\n" +
+	"\x19role_elasticity_min_calls\x18} \x01(\x04R\x16roleElasticityMinCalls\x12J\n" +
+	"\"role_elasticity_max_multiplier_bps\x18~ \x01(\x04R\x1eroleElasticityMaxMultiplierBps\x12J\n" +
+	"\"role_elasticity_min_multiplier_bps\x18\x7f \x01(\x04R\x1eroleElasticityMinMultiplierBps\x12@\n" +
+	"\x1crole_elasticity_decay_epochs\x18\x80\x01 \x01(\x04R\x19roleElasticityDecayEpochs\x12=\n" +
+	"\x1amentorship_dividend_energy\x18\x81\x01 \x01(\x04R\x18mentorshipDividendEnergy\x12;\n" +
+	"\x19mentorship_capacity_bonus\x18\x82\x01 \x01(\x04R\x17mentorshipCapacityBonus\x12?\n" +
+	"\x1bsocial_saturation_threshold\x18\x83\x01 \x01(\x04R\x19socialSaturationThreshold\x12;\n" +
+	"\x19observation_window_blocks\x18\x84\x01 \x01(\x04R\x17observationWindowBlocks\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +
 	"\x0epending_claims\x18\x03 \x03(\v2\x1a.zerone.knowledge.v1.ClaimR\rpendingClaims\x12K\n" +
 	"\ractive_rounds\x18\x04 \x03(\v2&.zerone.knowledge.v1.VerificationRoundR\factiveRounds\x125\n" +
-	"\adomains\x18\x05 \x03(\v2\x1b.zerone.knowledge.v1.DomainR\adomainsB2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
+	"\adomains\x18\x05 \x03(\v2\x1b.zerone.knowledge.v1.DomainR\adomains\x12:\n" +
+	"\x19bootstrap_fund_allocation\x18\x06 \x01(\tR\x17bootstrapFundAllocation\x12T\n" +
+	"\x10common_knowledge\x18\a \x03(\v2).zerone.knowledge.v1.CommonKnowledgeEntryR\x0fcommonKnowledgeB2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
 	file_zerone_knowledge_v1_genesis_proto_rawDescOnce sync.Once
@@ -615,12 +1398,13 @@ func file_zerone_knowledge_v1_genesis_proto_rawDescGZIP() []byte {
 
 var file_zerone_knowledge_v1_genesis_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_zerone_knowledge_v1_genesis_proto_goTypes = []any{
-	(*Params)(nil),            // 0: zerone.knowledge.v1.Params
-	(*GenesisState)(nil),      // 1: zerone.knowledge.v1.GenesisState
-	(*Fact)(nil),              // 2: zerone.knowledge.v1.Fact
-	(*Claim)(nil),             // 3: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil), // 4: zerone.knowledge.v1.VerificationRound
-	(*Domain)(nil),            // 5: zerone.knowledge.v1.Domain
+	(*Params)(nil),               // 0: zerone.knowledge.v1.Params
+	(*GenesisState)(nil),         // 1: zerone.knowledge.v1.GenesisState
+	(*Fact)(nil),                 // 2: zerone.knowledge.v1.Fact
+	(*Claim)(nil),                // 3: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),    // 4: zerone.knowledge.v1.VerificationRound
+	(*Domain)(nil),               // 5: zerone.knowledge.v1.Domain
+	(*CommonKnowledgeEntry)(nil), // 6: zerone.knowledge.v1.CommonKnowledgeEntry
 }
 var file_zerone_knowledge_v1_genesis_proto_depIdxs = []int32{
 	0, // 0: zerone.knowledge.v1.GenesisState.params:type_name -> zerone.knowledge.v1.Params
@@ -628,11 +1412,12 @@ var file_zerone_knowledge_v1_genesis_proto_depIdxs = []int32{
 	3, // 2: zerone.knowledge.v1.GenesisState.pending_claims:type_name -> zerone.knowledge.v1.Claim
 	4, // 3: zerone.knowledge.v1.GenesisState.active_rounds:type_name -> zerone.knowledge.v1.VerificationRound
 	5, // 4: zerone.knowledge.v1.GenesisState.domains:type_name -> zerone.knowledge.v1.Domain
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	6, // 5: zerone.knowledge.v1.GenesisState.common_knowledge:type_name -> zerone.knowledge.v1.CommonKnowledgeEntry
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_genesis_proto_init() }

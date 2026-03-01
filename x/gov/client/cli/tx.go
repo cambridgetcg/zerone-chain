@@ -32,6 +32,11 @@ func NewTxCmd() *cobra.Command {
 		NewSubmitResearchSpendCmd(),
 		NewVoteResearchSpendCmd(),
 		NewSetResearchVotersCmd(),
+		NewNominateSeatElectionCmd(),
+		NewAcceptSeatNominationCmd(),
+		NewVoteSeatElectionCmd(),
+		NewProposePhaseTransitionCmd(),
+		NewProposePhaseRollbackCmd(),
 	)
 
 	return txCmd
@@ -257,6 +262,178 @@ func NewSetResearchVotersCmd() *cobra.Command {
 		},
 	}
 
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewNominateSeatElectionCmd creates a CLI command for MsgNominateSeatElection.
+func NewNominateSeatElectionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "nominate-research-seat",
+		Short: "Nominate a candidate for a research fund community seat",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			candidate, _ := cmd.Flags().GetString("candidate")
+			seatIndex, _ := cmd.Flags().GetUint32("seat-index")
+			statement, _ := cmd.Flags().GetString("statement")
+
+			msg := &types.MsgNominateSeatElection{
+				Proposer:  clientCtx.GetFromAddress().String(),
+				Candidate: candidate,
+				SeatIndex: seatIndex,
+				Statement: statement,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().String("candidate", "", "Candidate bech32 address")
+	cmd.Flags().Uint32("seat-index", 0, "Seat index (0 for Phase 1; 0-2 for Phase 2)")
+	cmd.Flags().String("statement", "", "Candidate's governance statement (max 2000 chars)")
+	_ = cmd.MarkFlagRequired("candidate")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewAcceptSeatNominationCmd creates a CLI command for MsgAcceptSeatNomination.
+func NewAcceptSeatNominationCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "accept-research-nomination",
+		Short: "Accept a pending seat election nomination",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			proposalID, _ := cmd.Flags().GetUint64("proposal-id")
+
+			msg := &types.MsgAcceptSeatNomination{
+				Candidate:  clientCtx.GetFromAddress().String(),
+				ProposalId: proposalID,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().Uint64("proposal-id", 0, "Seat election proposal ID")
+	_ = cmd.MarkFlagRequired("proposal-id")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewVoteSeatElectionCmd creates a CLI command for MsgVoteSeatElection.
+func NewVoteSeatElectionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "vote-seat-election",
+		Short: "Cast a vote on a seat election",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			proposalID, _ := cmd.Flags().GetUint64("proposal-id")
+			option, _ := cmd.Flags().GetString("option")
+
+			msg := &types.MsgVoteSeatElection{
+				Voter:      clientCtx.GetFromAddress().String(),
+				ProposalId: proposalID,
+				Option:     option,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().Uint64("proposal-id", 0, "Seat election proposal ID")
+	cmd.Flags().String("option", "", "Vote option: yes, no, abstain")
+	_ = cmd.MarkFlagRequired("proposal-id")
+	_ = cmd.MarkFlagRequired("option")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewProposePhaseTransitionCmd creates a CLI command to propose a phase transition.
+// Internally submits a LIP with category "research_phase_transition".
+func NewProposePhaseTransitionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "propose-phase-transition",
+		Short: "Propose a research fund governance phase transition",
+		Long:  "Propose advancing the research fund to the next governance phase. Requires exit conditions to be met. Submits a LIP with supermajority (66.7%) voting threshold and 7-day activation delay.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			targetPhase, _ := cmd.Flags().GetUint32("target-phase")
+			justification, _ := cmd.Flags().GetString("justification")
+			amount, _ := cmd.Flags().GetString("amount")
+
+			// Encode target phase as JSON in the description field.
+			description := fmt.Sprintf(`{"target_phase":%d}`, targetPhase)
+
+			msg := &types.MsgSubmitLIP{
+				Proposer:     clientCtx.GetFromAddress().String(),
+				Title:        justification,
+				Description:  description,
+				Category:     types.CategoryPhaseTransition,
+				InitialStake: amount,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().Uint32("target-phase", 0, "Target phase number (must be current + 1)")
+	cmd.Flags().String("justification", "", "Justification for why the community is ready")
+	cmd.Flags().String("amount", "", "Stake amount in uzrn")
+	_ = cmd.MarkFlagRequired("target-phase")
+	_ = cmd.MarkFlagRequired("justification")
+	_ = cmd.MarkFlagRequired("amount")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewProposePhaseRollbackCmd creates a CLI command to propose a phase rollback.
+// Internally submits a LIP with category "research_phase_rollback".
+func NewProposePhaseRollbackCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "propose-phase-rollback",
+		Short: "Propose a research fund governance phase rollback",
+		Long:  "Propose rolling back the research fund to the previous governance phase. Requires gridlock (3+ expired proposals) or emergency halt evidence.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			justification, _ := cmd.Flags().GetString("justification")
+			amount, _ := cmd.Flags().GetString("amount")
+
+			msg := &types.MsgSubmitLIP{
+				Proposer:     clientCtx.GetFromAddress().String(),
+				Title:        justification,
+				Description:  "Phase rollback proposal",
+				Category:     types.CategoryPhaseRollback,
+				InitialStake: amount,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().String("justification", "", "Justification for rollback (gridlock or emergency halt)")
+	cmd.Flags().String("amount", "", "Stake amount in uzrn")
+	_ = cmd.MarkFlagRequired("justification")
+	_ = cmd.MarkFlagRequired("amount")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }

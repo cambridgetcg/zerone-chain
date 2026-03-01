@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"cosmossdk.io/core/store"
@@ -23,6 +24,7 @@ type Keeper struct {
 	bankKeeper           types.BankKeeper
 	stakingKeeper        types.StakingKeeper
 	captureDefenseKeeper types.CaptureDefenseKeeper // nil-safe, set post-init
+	ontologyKeeper       types.OntologyKeeper       // nil-safe, set post-init
 }
 
 // NewKeeper creates a new qualification module Keeper.
@@ -56,6 +58,11 @@ func (k Keeper) GetAuthority() string {
 // SetCaptureDefenseKeeper sets the capture defense keeper post-initialization.
 func (k *Keeper) SetCaptureDefenseKeeper(cdk types.CaptureDefenseKeeper) {
 	k.captureDefenseKeeper = cdk
+}
+
+// SetOntologyKeeper sets the ontology keeper post-initialization.
+func (k *Keeper) SetOntologyKeeper(ok types.OntologyKeeper) {
+	k.ontologyKeeper = ok
 }
 
 // ---------- Params ----------
@@ -172,6 +179,27 @@ func (k Keeper) RecordVerificationOutcome(ctx context.Context, validator string,
 	q.Metrics.LastVerificationBlock = uint64(sdkCtx.BlockHeight())
 	k.SetQualification(ctx, q)
 	return nil
+}
+
+// ReduceQualificationWeight temporarily reduces a validator's qualification weight
+// in a domain. The reduction expires at expiryHeight.
+func (k Keeper) ReduceQualificationWeight(ctx context.Context, validator, domain string, reductionBps, expiryHeight uint64) error {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	kvStore := k.storeService.OpenKVStore(ctx)
+
+	key := append(append([]byte{}, types.QualificationPenaltyKeyPrefix...), []byte(validator+"/"+domain)...)
+	penalty := &types.QualificationPenalty{
+		Validator:    validator,
+		Domain:       domain,
+		ReductionBps: reductionBps,
+		ExpiryHeight: expiryHeight,
+		CreatedAt:    uint64(sdkCtx.BlockHeight()),
+	}
+	bz, err := json.Marshal(penalty)
+	if err != nil {
+		return fmt.Errorf("failed to marshal qualification penalty: %w", err)
+	}
+	return kvStore.Set(key, bz)
 }
 
 // prefixEndBytes returns the end key for prefix iteration (exclusive upper bound).

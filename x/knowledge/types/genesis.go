@@ -9,9 +9,9 @@ func DefaultParams() Params {
 		// ─── Core verification ────────────────────────────────────────────────
 		MinVerifiers:          3,
 		MaxVerifiers:          22,
-		CommitPhaseBlocks:     4,
-		RevealPhaseBlocks:     4,
-		AggregationPhaseBlocks: 3,
+		CommitPhaseBlocks:     200,
+		RevealPhaseBlocks:     200,
+		AggregationPhaseBlocks: 50,
 		ClaimCooldownBlocks:   50,
 
 		// ─── Confidence scoring ───────────────────────────────────────────────
@@ -24,7 +24,7 @@ func DefaultParams() Params {
 		WrongVerificationSlashBps: 50_000,  // 5%
 		MissedRevealSlashBps:      100_000, // 10%
 		EquivocationSlashBps:      200_000, // 20%
-		InvalidClaimSlashBps:      220_000, // 22%
+		InvalidClaimSlashBps:      0,       // DEPRECATED (R19-6): unused — review fee is non-refundable
 
 		// ─── Rewards ─────────────────────────────────────────────────────────
 		VerificationReward:          "3000000", // 3 ZRN in uzrn
@@ -32,8 +32,8 @@ func DefaultParams() Params {
 
 		// ─── Claim validation ─────────────────────────────────────────────────
 		MinClaimTextLength: 20,
-		MaxClaimTextLength: 10_000,
-		MinClaimStake:      "1000000", // 1 ZRN in uzrn
+		MaxClaimTextLength: 1_000,
+		MinReviewFee:       "100000", // 0.1 ZRN — non-refundable review fee
 
 		// ─── Adversarial verification ─────────────────────────────────────────
 		AdversarialVerificationEnabled: true,
@@ -74,6 +74,123 @@ func DefaultParams() Params {
 
 		// ─── Research fund ────────────────────────────────────────────────────
 		ResearchFundShareBps: 130_000, // 13%
+
+		// ─── Malformed claim slashing ────────────────────────────────────────
+		MalformedClaimSlashBps: 500_000, // 50% — submitting garbage wastes verifier time
+
+		// ─── Fitness scoring ─────────────────────────────────────────────────
+		FitnessEpochBlocks:       10_000,  // ~7 hours at 2.5s blocks
+		FitnessWeightQueryBps:    150_000, // 15% — agent usage (reduced from 30% to make room for satisfaction)
+		FitnessWeightCitationBps: 250_000, // 25% — facts cited by other facts are foundational
+		FitnessWeightBridgeBps:   100_000, // 10% — cross-domain facts are rare and valuable
+		FitnessWeightDepthBps:    100_000, // 10% — facts with deep dependency trees are load-bearing
+		FitnessWeightPatronBps:    50_000, // 5%  — someone willing to pay for this fact's survival
+		FitnessWeightUniqueBps:   100_000, // 10% — non-redundant facts score higher
+		FitnessWeightAgeBps:      100_000, // 10% — uncited old facts decay
+		FitnessInitialScore:      500_000, // born healthy — 50%
+		FitnessGraceEpochs:       10,      // ~3 days before age penalty kicks in
+
+		// ─── Bootstrap fund (R19-7) ─────────────────────────────────────────
+		BootstrapFundEnabled:        true,
+		BootstrapFundMaxPerAddress:  "10",        // 10 sponsored claims per address lifetime
+		BootstrapFundMaxPerEpoch:    "100",       // 100 sponsored claims per epoch across all users
+		BootstrapFundEpochBlocks:    50_000,      // ~1.5 days at 2.5s blocks
+		BootstrapFundFeeCap:         "5000000",   // Fund covers up to 5 ZRN per claim
+
+		// ─── Metabolism ─────────────────────────────────────────────────────
+		MetabolismBaseCost:                10_000,     // 10,000 energy drain per epoch (1% of cap)
+		MetabolismContentLengthBps:        10_000,     // +1% base cost per 100 chars
+		MetabolismDomainCompetitionBps:    5_000,      // +0.5% base cost per 100 domain facts
+		MetabolismEnergyPerQuery:          1_000,      // 1,000 energy per agent query
+		MetabolismEnergyPerCitation:       5_000,      // 5,000 energy per new citation
+		MetabolismEnergyPerPatronage:      20_000,     // 20,000 energy per patronage epoch
+		MetabolismEnergyChallengeSurvival: 100_000,    // 100,000 energy for surviving challenge
+		MetabolismEnergyCap:               1_000_000,  // Max 1,000,000 energy (matches BPS scale)
+		MetabolismInitialEnergy:           500_000,    // Born with 50% of cap
+		MetabolismAtRiskEpochs:            5,          // 5 epochs at low energy before expiry
+		MetabolismExpiredToPrunedEpochs:   20,         // 20 epochs after expiry before archive
+		MetabolismActiveThreshold:         300_000,    // 30% — below this → AT_RISK
+		MetabolismExtinctionThreshold:     10_000,     // 1% — below this for N epochs → EXTINCT
+		MaxConfidence:                     880_000,    // Hard cap on confidence (matches SurvivedChallengeConfidenceCap)
+
+		// ─── Reproduction ───────────────────────────────────────────────────
+		ReproductionRoyaltyBps:                 50_000,  // 5% of child rewards to parent
+		ReproductionRoyaltyDecayBps:            500_000, // 50% per generation
+		ReproductionMaxRoyaltyDepth:            5,       // Max 5 generations
+		ReproductionParentEnergyBonus:          30_000,  // 30,000 energy to parent on child creation
+		ReproductionChildFitnessInheritanceBps: 200_000, // Child starts with 20% of parent fitness
+		ReproductionMaxChildren:                20,      // Max 20 direct children per fact
+
+		// ─── Novelty detection ──────────────────────────────────────────────
+		NoveltyCommonKnowledgePenaltyBps: 700_000, // Default 70% penalty for common knowledge match
+		NoveltySubjectOverlapPenaltyBps:  100_000, // 10% penalty per duplicate subject fact
+		NoveltyPrecisionBonusBps:         100_000, // 10% bonus for more precise scope
+		NoveltyCrossDomainBonusBps:       100_000, // 10% bonus for cross-domain bridge facts
+		NoveltyMaxOverlapFacts:           5,       // Cap: after 5 duplicates, no more penalty
+
+		// ─── Demand signals ────────────────────────────────────────────────
+		DemandBountyThreshold:     100,          // 100 unfulfilled queries per epoch to trigger bounty
+		DemandBountyBaseReward:    "10000000",   // 10 ZRN base bounty reward
+		DemandBountyPerQueryBonus: "100000",     // 0.1 ZRN additional per unfulfilled query
+		DemandBountyExpiryEpochs:  50,           // 50 epochs before unclaimed bounty expires
+		DemandMultiplierCap:       10_000_000,   // 10x demand multiplier cap (BPS)
+		DemandTrackingEnabled:     true,         // Demand tracking enabled by default
+		AuthorizedDemandReporters: []string{},   // Empty — governance adds reporters
+
+		// ─── Competition (niche dynamics) ────────────────────────────────
+		CompetitionNicheDominanceBonusBps: 100_000, // +10% fitness for niche leader
+		CompetitionRedundancyThresholdBps: 200_000, // Below 20% of leader = redundant
+		CompetitionMaxNicheSize:           10,       // Max 10 facts per niche
+		CompetitionSymbiosisBonusBps:      50_000,  // +5% fitness per healthy SUPPORTS link
+
+		// ─── Query satisfaction ───────────────────────────────────────────
+		FitnessWeightSatisfactionBps: 150_000, // 15% — relevance quality signal
+		SatisfactionMinRatings:       3,       // Minimum ratings before satisfaction affects fitness
+
+		// ─── Consensus diversity (R28-2) ─────────────────────────────────
+		DiversityConformityAlertThreshold: 50_000, // 5% entropy — catches pure unanimity on small validator sets
+		DiversityConformityAlertEpochs:    3,      // 3 consecutive low-diversity epochs before alert
+
+		// ─── Retroactive vindication (R28-1) ─────────────────────────────
+		VindicationRefundEnabled: true,
+		VindicationBonusBps:      2_000,    // 20% of majority slash pool as bonus
+		VindicationSlashBps:      500,      // 5% slash rate for majority on disproven fact
+		VindicationWindowBlocks:  100_000,  // ~3 days at 2.5s blocks
+
+		// ─── Role bonuses (R28-5) — additive BPS, NOT thresholds ──────────
+		HumanEmpiricalBonusBps:     150_000, // +15% confidence for human OBSERVATION claims
+		AgentComputationalBonusBps: 150_000, // +15% confidence for agent COMPUTATIONAL claims
+		AgentVerificationBonusBps:  200_000, // +20% vote weight for agent verifiers
+		HumanPatronageBonusBps:     100_000, // +10% energy boost for human patrons
+		DualValidationBonusBps:     250_000, // +25% confidence for partnership claims
+
+		// ─── Domain carrying capacity (R29-1) ───────────────────────────
+		DomainBaseCapacity:              1_000,
+		DomainCapacityGrowthPerCitation: 1,
+		OvercrowdingDecayMultiplierBps:  1_500_000, // 150% decay at 2× capacity
+		UnderpopulationBirthBonusBps:    200_000,   // 20% energy bonus in sparse domains
+
+		// ─── Epistemic temperature (R29-2) ──────────────────────────────────
+		EpistemicTemperatureDecayBps:     995_000,   // 99.5% per-epoch decay toward neutral
+		EpistemicConformityCoolingBps:    50_000,    // 5% cooling per high-conformity epoch
+		EpistemicVindicationHeatingBps:   100_000,   // 10% heating per vindication event
+		EpistemicColdConfidenceCapBps:    600_000,   // 60% max confidence in cold domains
+		EpistemicHotConfidenceGrowthBps:  1_500_000, // 150% confidence growth multiplier in hot domains
+		EpistemicTemperatureWindowBlocks: 10_000,    // Lookback window for vindication counting
+
+		// ─── Domain role elasticity (R29-3) ──────────────────────────────
+		RoleElasticityMinCalls:         10,
+		RoleElasticityMaxMultiplierBps: 2_000_000, // 200% max bonus scaling
+		RoleElasticityMinMultiplierBps: 500_000,   // 50% min bonus scaling
+		RoleElasticityDecayEpochs:      100,        // decay every 100 fitness epochs
+
+		// ─── Mentorship dividends (R31-5: Water → Wood) ──────────────────────
+		MentorshipDividendEnergy: 50_000,  // 50,000 energy (5% of cap)
+		MentorshipCapacityBonus:  5,       // +5 carrying capacity per graduation
+
+		// ─── Social verification adjustment (R31-2: Water → Fire) ────────
+		SocialSaturationThreshold: 10,
+		ObservationWindowBlocks:   10_000,
 	}
 }
 
@@ -81,11 +198,12 @@ func DefaultParams() Params {
 func DefaultGenesis() *GenesisState {
 	p := DefaultParams()
 	return &GenesisState{
-		Params:        &p,
-		Facts:         []*Fact{},
-		PendingClaims: []*Claim{},
-		ActiveRounds:  []*VerificationRound{},
-		Domains:       DefaultDomains(),
+		Params:                  &p,
+		Facts:                   []*Fact{},
+		PendingClaims:           []*Claim{},
+		ActiveRounds:            []*VerificationRound{},
+		Domains:                 DefaultDomains(),
+		BootstrapFundAllocation: "22222000000", // 22,222 ZRN (0.01% of max supply)
 	}
 }
 
@@ -117,6 +235,7 @@ func DefaultDomains() []*Domain {
 		domains = append(domains, &Domain{
 			Name:   name,
 			Status: DomainStatus_DOMAIN_STATUS_ACTIVE,
+			Depth:  1, // root domains
 		})
 	}
 	return domains
@@ -228,8 +347,9 @@ func (p *Params) Validate() error {
 	if p.EquivocationSlashBps == 0 {
 		return fmt.Errorf("equivocation_slash_bps must be > 0")
 	}
-	if p.InvalidClaimSlashBps == 0 {
-		return fmt.Errorf("invalid_claim_slash_bps must be > 0")
+	// InvalidClaimSlashBps deprecated (R19-6): review fee is non-refundable, no stake to slash.
+	if p.MalformedClaimSlashBps == 0 {
+		return fmt.Errorf("malformed_claim_slash_bps must be > 0")
 	}
 
 	// Confidence values must be within BPS range.
@@ -262,6 +382,235 @@ func (p *Params) Validate() error {
 	}
 	if p.MaxClaimTextLength < p.MinClaimTextLength {
 		return fmt.Errorf("max_claim_text_length must be >= min_claim_text_length")
+	}
+
+	// Review fee must be positive.
+	if p.MinReviewFee == "" || p.MinReviewFee == "0" {
+		return fmt.Errorf("min_review_fee must be > 0")
+	}
+
+	// ─── Fitness params ──────────────────────────────────────────────────
+	if p.FitnessEpochBlocks == 0 {
+		return fmt.Errorf("fitness_epoch_blocks must be > 0")
+	}
+	// Weights are BPS — each must be <= 1,000,000.
+	for _, w := range []struct {
+		name string
+		val  uint64
+	}{
+		{"fitness_weight_query_bps", p.FitnessWeightQueryBps},
+		{"fitness_weight_citation_bps", p.FitnessWeightCitationBps},
+		{"fitness_weight_bridge_bps", p.FitnessWeightBridgeBps},
+		{"fitness_weight_depth_bps", p.FitnessWeightDepthBps},
+		{"fitness_weight_patron_bps", p.FitnessWeightPatronBps},
+		{"fitness_weight_unique_bps", p.FitnessWeightUniqueBps},
+		{"fitness_weight_age_bps", p.FitnessWeightAgeBps},
+		{"fitness_weight_satisfaction_bps", p.FitnessWeightSatisfactionBps},
+	} {
+		if w.val > 1_000_000 {
+			return fmt.Errorf("%s must be <= 1,000,000", w.name)
+		}
+	}
+	if p.FitnessInitialScore > 1_000_000 {
+		return fmt.Errorf("fitness_initial_score must be <= 1,000,000")
+	}
+
+	// ─── Metabolism params ──────────────────────────────────────────────
+	if p.MetabolismBaseCost == 0 {
+		return fmt.Errorf("metabolism_base_cost must be > 0")
+	}
+	if p.MetabolismEnergyCap == 0 {
+		return fmt.Errorf("metabolism_energy_cap must be > 0")
+	}
+	if p.MetabolismInitialEnergy > p.MetabolismEnergyCap {
+		return fmt.Errorf("metabolism_initial_energy (%d) must be <= metabolism_energy_cap (%d)", p.MetabolismInitialEnergy, p.MetabolismEnergyCap)
+	}
+	if p.MetabolismAtRiskEpochs == 0 {
+		return fmt.Errorf("metabolism_at_risk_epochs must be > 0")
+	}
+	if p.MetabolismExpiredToPrunedEpochs == 0 {
+		return fmt.Errorf("metabolism_expired_to_pruned_epochs must be > 0")
+	}
+	if p.MetabolismActiveThreshold == 0 {
+		return fmt.Errorf("metabolism_active_threshold must be > 0")
+	}
+	if p.MetabolismActiveThreshold > p.MetabolismEnergyCap {
+		return fmt.Errorf("metabolism_active_threshold (%d) must be <= metabolism_energy_cap (%d)", p.MetabolismActiveThreshold, p.MetabolismEnergyCap)
+	}
+	if p.MetabolismExtinctionThreshold == 0 {
+		return fmt.Errorf("metabolism_extinction_threshold must be > 0")
+	}
+	if p.MetabolismExtinctionThreshold >= p.MetabolismActiveThreshold {
+		return fmt.Errorf("metabolism_extinction_threshold (%d) must be < metabolism_active_threshold (%d)", p.MetabolismExtinctionThreshold, p.MetabolismActiveThreshold)
+	}
+	if p.MaxConfidence == 0 {
+		return fmt.Errorf("max_confidence must be > 0")
+	}
+	if p.MaxConfidence > 1_000_000 {
+		return fmt.Errorf("max_confidence must be <= 1,000,000")
+	}
+
+	// ─── Reproduction params ──────────────────────────────────────────
+	if p.ReproductionRoyaltyBps > 1_000_000 {
+		return fmt.Errorf("reproduction_royalty_bps must be <= 1,000,000")
+	}
+	if p.ReproductionRoyaltyDecayBps > 1_000_000 {
+		return fmt.Errorf("reproduction_royalty_decay_bps must be <= 1,000,000")
+	}
+	if p.ReproductionMaxRoyaltyDepth == 0 {
+		return fmt.Errorf("reproduction_max_royalty_depth must be > 0")
+	}
+	if p.ReproductionChildFitnessInheritanceBps > 1_000_000 {
+		return fmt.Errorf("reproduction_child_fitness_inheritance_bps must be <= 1,000,000")
+	}
+	if p.ReproductionMaxChildren == 0 {
+		return fmt.Errorf("reproduction_max_children must be > 0")
+	}
+
+	// ─── Demand params ──────────────────────────────────────────────
+	if p.DemandTrackingEnabled {
+		if p.DemandBountyThreshold == 0 {
+			return fmt.Errorf("demand_bounty_threshold must be > 0 when demand tracking is enabled")
+		}
+		if p.DemandBountyBaseReward == "" || p.DemandBountyBaseReward == "0" {
+			return fmt.Errorf("demand_bounty_base_reward must be > 0 when demand tracking is enabled")
+		}
+		if p.DemandBountyExpiryEpochs == 0 {
+			return fmt.Errorf("demand_bounty_expiry_epochs must be > 0 when demand tracking is enabled")
+		}
+		if p.DemandMultiplierCap == 0 {
+			return fmt.Errorf("demand_multiplier_cap must be > 0 when demand tracking is enabled")
+		}
+	}
+
+	// ─── Competition params ─────────────────────────────────────────────
+	if p.CompetitionNicheDominanceBonusBps > 1_000_000 {
+		return fmt.Errorf("competition_niche_dominance_bonus_bps must be <= 1,000,000")
+	}
+	if p.CompetitionRedundancyThresholdBps > 1_000_000 {
+		return fmt.Errorf("competition_redundancy_threshold_bps must be <= 1,000,000")
+	}
+	if p.CompetitionMaxNicheSize == 0 {
+		return fmt.Errorf("competition_max_niche_size must be > 0")
+	}
+	if p.CompetitionSymbiosisBonusBps > 1_000_000 {
+		return fmt.Errorf("competition_symbiosis_bonus_bps must be <= 1,000,000")
+	}
+
+	// ─── Bootstrap fund params ──────────────────────────────────────────
+	if p.BootstrapFundEnabled {
+		if p.BootstrapFundEpochBlocks == 0 {
+			return fmt.Errorf("bootstrap_fund_epoch_blocks must be > 0 when fund is enabled")
+		}
+		if p.BootstrapFundMaxPerAddress == "" || p.BootstrapFundMaxPerAddress == "0" {
+			return fmt.Errorf("bootstrap_fund_max_per_address must be > 0 when fund is enabled")
+		}
+		if p.BootstrapFundMaxPerEpoch == "" || p.BootstrapFundMaxPerEpoch == "0" {
+			return fmt.Errorf("bootstrap_fund_max_per_epoch must be > 0 when fund is enabled")
+		}
+		if p.BootstrapFundFeeCap == "" || p.BootstrapFundFeeCap == "0" {
+			return fmt.Errorf("bootstrap_fund_fee_cap must be > 0 when fund is enabled")
+		}
+	}
+
+	// ─── Diversity params ──────────────────────────────────────────────
+	if p.DiversityConformityAlertThreshold > 1_000_000 {
+		return fmt.Errorf("diversity_conformity_alert_threshold must be <= 1,000,000")
+	}
+	if p.DiversityConformityAlertEpochs == 0 {
+		return fmt.Errorf("diversity_conformity_alert_epochs must be > 0")
+	}
+
+	// ─── Vindication params ──────────────────────────────────────────
+	if p.VindicationBonusBps > 10_000 {
+		return fmt.Errorf("vindication_bonus_bps must be <= 10,000 (100%%)")
+	}
+	if p.VindicationSlashBps > 1_000_000 {
+		return fmt.Errorf("vindication_slash_bps must be <= 1,000,000")
+	}
+	if p.VindicationRefundEnabled && p.VindicationWindowBlocks == 0 {
+		return fmt.Errorf("vindication_window_blocks must be > 0 when vindication is enabled")
+	}
+
+
+	// ─── Role bonus params (R28-5) ──────────────────────────────────
+	if p.HumanEmpiricalBonusBps > 1_000_000 {
+		return fmt.Errorf("human_empirical_bonus_bps must be <= 1,000,000")
+	}
+	if p.AgentComputationalBonusBps > 1_000_000 {
+		return fmt.Errorf("agent_computational_bonus_bps must be <= 1,000,000")
+	}
+	if p.AgentVerificationBonusBps > 1_000_000 {
+		return fmt.Errorf("agent_verification_bonus_bps must be <= 1,000,000")
+	}
+	if p.HumanPatronageBonusBps > 1_000_000 {
+		return fmt.Errorf("human_patronage_bonus_bps must be <= 1,000,000")
+	}
+	if p.DualValidationBonusBps > 1_000_000 {
+		return fmt.Errorf("dual_validation_bonus_bps must be <= 1,000,000")
+	}
+
+	// ─── Epistemic temperature (R29-2) ──────────────────────────────
+	if p.EpistemicTemperatureDecayBps > 1_000_000 {
+		return fmt.Errorf("epistemic_temperature_decay_bps must be <= 1,000,000")
+	}
+	if p.EpistemicConformityCoolingBps > 1_000_000 {
+		return fmt.Errorf("epistemic_conformity_cooling_bps must be <= 1,000,000")
+	}
+	if p.EpistemicVindicationHeatingBps > 1_000_000 {
+		return fmt.Errorf("epistemic_vindication_heating_bps must be <= 1,000,000")
+	}
+	if p.EpistemicColdConfidenceCapBps > 1_000_000 {
+		return fmt.Errorf("epistemic_cold_confidence_cap_bps must be <= 1,000,000")
+	}
+	// EpistemicHotConfidenceGrowthBps is intentionally allowed > 1,000,000 (it's a multiplier, e.g. 1,500,000 = 150%)
+
+	// ─── Domain carrying capacity (R29-1) ──────────────────────────
+	if p.DomainBaseCapacity == 0 {
+		return fmt.Errorf("domain_base_capacity must be > 0")
+	}
+	if p.OvercrowdingDecayMultiplierBps < 1_000_000 {
+		return fmt.Errorf("overcrowding_decay_multiplier_bps must be >= 1,000,000 (at least 100%%)")
+	}
+
+	// ─── Domain role elasticity (R29-3) ──────────────────────────────
+	if p.RoleElasticityMinCalls == 0 {
+		return fmt.Errorf("role_elasticity_min_calls must be > 0")
+	}
+	if p.RoleElasticityMaxMultiplierBps < 1_000_000 {
+		return fmt.Errorf("role_elasticity_max_multiplier_bps must be >= 1,000,000 (at least 100%%)")
+	}
+	if p.RoleElasticityMinMultiplierBps > 1_000_000 {
+		return fmt.Errorf("role_elasticity_min_multiplier_bps must be <= 1,000,000 (at most 100%%)")
+	}
+	if p.RoleElasticityMinMultiplierBps >= p.RoleElasticityMaxMultiplierBps {
+		return fmt.Errorf("role_elasticity_min_multiplier_bps must be < max_multiplier_bps")
+	}
+	if p.RoleElasticityDecayEpochs == 0 {
+		return fmt.Errorf("role_elasticity_decay_epochs must be > 0")
+	}
+
+	// ─── Cross-parameter safety (R30-2) ──────────────────────────────────
+	// Carrying capacity: decay multiplier must not cause instant death.
+	// At 2× capacity, one cycle drains: baseCost × multiplier / BPS.
+	// That must not exceed 50% of initial energy.
+	if p.OvercrowdingDecayMultiplierBps > 0 && p.MetabolismBaseCost > 0 {
+		maxDecayPerCycle := p.MetabolismBaseCost * p.OvercrowdingDecayMultiplierBps / 1_000_000
+		if maxDecayPerCycle > p.MetabolismInitialEnergy/2 {
+			return fmt.Errorf("overcrowding_decay_multiplier too aggressive: would drain %d of %d initial energy per cycle",
+				maxDecayPerCycle, p.MetabolismInitialEnergy)
+		}
+	}
+
+	// Epistemic temperature: cold cap must be < max survival confidence.
+	if p.EpistemicColdConfidenceCapBps >= p.MaxSurvivalConfidence {
+		return fmt.Errorf("epistemic_cold_confidence_cap (%d) must be < max_survival_confidence (%d)",
+			p.EpistemicColdConfidenceCapBps, p.MaxSurvivalConfidence)
+	}
+
+	// Role elasticity × agent bonus must not exceed 100% vote weight.
+	if p.RoleElasticityMaxMultiplierBps*p.AgentVerificationBonusBps/1_000_000 > 1_000_000 {
+		return fmt.Errorf("role_elasticity_max_multiplier * agent_verification_bonus would exceed 100%% vote weight")
 	}
 
 	return nil

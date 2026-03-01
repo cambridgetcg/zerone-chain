@@ -69,6 +69,132 @@ service Query {
   rpc FactCitationCount(QueryFactCitationCountRequest) returns (QueryFactCitationCountResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/facts/{id}/citations";
   }
+
+  // FactRelations queries typed relations for a fact (knowledge graph edges).
+  rpc FactRelations(QueryFactRelationsRequest) returns (QueryFactRelationsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts/{fact_id}/relations";
+  }
+
+  // FactsBySubject queries facts by structured subject within a domain.
+  rpc FactsBySubject(QueryFactsBySubjectRequest) returns (QueryFactsBySubjectResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts_by_subject/{domain}/{subject}";
+  }
+
+  // FactsByTag queries facts by a searchable tag.
+  rpc FactsByTag(QueryFactsByTagRequest) returns (QueryFactsByTagResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts_by_tag/{tag}";
+  }
+
+  // FactByCanonical queries a fact by its canonical form hash.
+  rpc FactByCanonical(QueryFactByCanonicalRequest) returns (QueryFactByCanonicalResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fact_by_canonical/{canonical_hash}";
+  }
+
+  // FactsByFitness queries facts sorted by fitness score.
+  rpc FactsByFitness(QueryFactsByFitnessRequest) returns (QueryFactsByFitnessResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts_by_fitness";
+  }
+
+  // BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
+  rpc BootstrapFundStatus(QueryBootstrapFundStatusRequest) returns (QueryBootstrapFundStatusResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/bootstrap_fund";
+  }
+
+  // FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
+  rpc FactsAtRisk(QueryFactsAtRiskRequest) returns (QueryFactsAtRiskResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/facts_at_risk";
+  }
+
+  // FactLineage traces a fact's ancestry up to the root.
+  rpc FactLineage(QueryFactLineageRequest) returns (QueryFactLineageResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/lineage";
+  }
+
+  // FactProgeny returns a fact's descendant tree.
+  rpc FactProgeny(QueryFactProgenyRequest) returns (QueryFactProgenyResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/progeny";
+  }
+
+  // ─── Novelty detection ─────────────────────────────────────────────────
+
+  // CommonKnowledge queries the common knowledge registry.
+  rpc CommonKnowledge(QueryCommonKnowledgeRequest) returns (QueryCommonKnowledgeResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/common_knowledge";
+  }
+
+  // CheckNovelty previews the novelty score a claim would receive before submission.
+  rpc CheckNovelty(QueryCheckNoveltyRequest) returns (QueryCheckNoveltyResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/check_novelty";
+  }
+
+  // ─── Agent demand queries ──────────────────────────────────────────
+
+  // ActiveBounties queries active (unclaimed) knowledge bounties.
+  rpc ActiveBounties(QueryActiveBountiesRequest) returns (QueryActiveBountiesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/bounties";
+  }
+
+  // DemandSignals queries demand signal data for a domain.
+  rpc DemandSignals(QueryDemandSignalsRequest) returns (QueryDemandSignalsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/demand";
+  }
+
+  // TopDemandGaps queries the top unfulfilled demand gaps.
+  rpc TopDemandGaps(QueryTopDemandGapsRequest) returns (QueryTopDemandGapsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/demand_gaps";
+  }
+
+  // ─── Niche competition queries ─────────────────────────────────────
+
+  // NicheInfo queries members and metadata for a specific niche.
+  rpc NicheInfo(QueryNicheInfoRequest) returns (QueryNicheInfoResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/niche/{niche_key}";
+  }
+
+  // NichesByDomain queries all niches within a domain.
+  rpc NichesByDomain(QueryNichesByDomainRequest) returns (QueryNichesByDomainResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/niches/{domain}";
+  }
+
+  // ─── Consensus diversity queries ─────────────────────────────────────
+
+  // DomainDiversity queries consensus diversity for a domain (current epoch).
+  rpc DomainDiversity(QueryDomainDiversityRequest) returns (QueryDomainDiversityResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/diversity/domain/{domain}";
+  }
+
+  // DomainDiversityHistory queries historical diversity for a domain.
+  rpc DomainDiversityHistory(QueryDomainDiversityHistoryRequest) returns (QueryDomainDiversityHistoryResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/diversity/domain/{domain}/history";
+  }
+
+  // ValidatorIndependence queries a validator's independence score.
+  rpc ValidatorIndependence(QueryValidatorIndependenceRequest) returns (QueryValidatorIndependenceResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/diversity/validator/{validator}";
+  }
+
+  // ConformityAlerts queries domains with active conformity alerts.
+  rpc ConformityAlerts(QueryConformityAlertsRequest) returns (QueryConformityAlertsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/diversity/conformity_alerts";
+  }
+  rpc MetabolismStatus(QueryMetabolismStatusRequest) returns (QueryMetabolismStatusResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/metabolism/status";
+  }
+
+  // DomainCapacity queries carrying capacity and pressure for a domain.
+  rpc DomainCapacity(QueryDomainCapacityRequest) returns (QueryDomainCapacityResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/domains/{domain}/capacity";
+  }
+
+  // EpistemicTemperature queries a domain's epistemic temperature state (R29-2).
+  rpc EpistemicTemperature(QueryEpistemicTemperatureRequest) returns (QueryEpistemicTemperatureResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/epistemic_temperature/{domain}";
+  }
+
+  // RoleElasticity queries domain role elasticity and track record (R29-3).
+  rpc RoleElasticity(QueryRoleElasticityRequest) returns (QueryRoleElasticityResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/role_elasticity/{domain}";
+  }
 }
 
 // ─── Request / Response messages ─────────────────────────────────────────────
@@ -80,7 +206,9 @@ message QueryParamsResponse {
 }
 
 message QueryFactRequest {
-  string id = 1;
+  string id         = 1;
+  bool track_query  = 2;  // Increment query counter (agents set this)
+  string querier    = 3;  // Address of the querier (required if track_query=true, for receipt)
 }
 
 message QueryFactResponse {
@@ -92,6 +220,7 @@ message QueryFactsRequest {
   string   status     = 2;
   string   category   = 3;
   cosmos.base.query.v1beta1.PageRequest pagination = 4;
+  ClaimType claim_type = 5; // Optional filter by claim type
 }
 
 message QueryFactsResponse {
@@ -175,4 +304,284 @@ message QueryFactCitationCountRequest {
 
 message QueryFactCitationCountResponse {
   uint64 count = 1;
+}
+
+message QueryFactRelationsRequest {
+  string fact_id           = 1;
+  RelationType relation    = 2;  // Optional: filter by type (0 = all)
+  string direction         = 3;  // "outgoing", "incoming", or "both" (default: "both")
+}
+
+message QueryFactRelationsResponse {
+  repeated FactRelation relations = 1;
+}
+
+message QueryFactsBySubjectRequest {
+  string domain  = 1;
+  string subject = 2;
+}
+
+message QueryFactsBySubjectResponse {
+  repeated Fact facts = 1;
+}
+
+message QueryFactsByTagRequest {
+  string tag = 1;
+}
+
+message QueryFactsByTagResponse {
+  repeated Fact facts = 1;
+}
+
+message QueryFactByCanonicalRequest {
+  string canonical_hash = 1;  // SHA-256 hex of normalized canonical form
+  string canonical_form = 2;  // Or provide the form directly (server hashes it)
+}
+
+message QueryFactByCanonicalResponse {
+  Fact fact = 1;
+}
+
+message QueryFactsByFitnessRequest {
+  string domain          = 1;  // Optional domain filter
+  uint64 min_fitness     = 2;  // Minimum fitness score
+  uint64 limit           = 3;  // Max results (default 50)
+  string order           = 4;  // "desc" (default) or "asc"
+}
+
+message QueryFactsByFitnessResponse {
+  repeated Fact facts = 1;
+}
+
+message QueryBootstrapFundStatusRequest {}
+
+message QueryBootstrapFundStatusResponse {
+  string balance              = 1;  // Current fund balance (uzrn)
+  bool   enabled              = 2;  // Whether sponsorship is active
+  string total_claims_funded  = 3;  // Lifetime count of sponsored claims
+  string total_amount_spent   = 4;  // Lifetime amount distributed (uzrn)
+  string remaining_per_epoch  = 5;  // Remaining sponsored claims this epoch
+}
+
+message QueryFactsAtRiskRequest {
+  string domain = 1;  // Optional domain filter
+  uint64 limit  = 2;  // Max results (default 50)
+}
+
+message QueryFactsAtRiskResponse {
+  repeated Fact facts = 1;
+}
+
+// ─── Lineage queries ────────────────────────────────────────────────────────
+
+message QueryFactLineageRequest {
+  string fact_id  = 1;
+  uint64 depth    = 2;  // How far up to trace (0 = to root)
+}
+
+message QueryFactLineageResponse {
+  repeated Fact ancestors = 1;  // Ordered: parent, grandparent, ...root
+  string root_id = 2;
+}
+
+message QueryFactProgenyRequest {
+  string fact_id  = 1;
+  uint64 depth    = 2;  // How deep to traverse (0 = default 3)
+}
+
+message QueryFactProgenyResponse {
+  Fact root = 1;
+  repeated FactWithChildren tree = 2;  // Recursive tree structure
+}
+
+message FactWithChildren {
+  Fact fact = 1;
+  repeated FactWithChildren children = 2;
+}
+
+// ─── Novelty detection queries ──────────────────────────────────────────────
+
+message QueryCommonKnowledgeRequest {
+  string domain = 1;  // Optional domain filter (empty = all)
+}
+
+message QueryCommonKnowledgeResponse {
+  repeated CommonKnowledgeEntry entries = 1;
+}
+
+message QueryCheckNoveltyRequest {
+  string domain  = 1;
+  string subject = 2;
+  string content = 3;
+}
+
+message QueryCheckNoveltyResponse {
+  uint64 novelty_score          = 1;
+  bool   common_knowledge_match = 2;
+  string matched_entry          = 3;  // ID of matched common knowledge entry (if any)
+  uint64 subject_overlap_count  = 4;
+}
+
+// ─── Agent demand query messages ─────────────────────────────────────────────
+
+message QueryActiveBountiesRequest {
+  string domain = 1;  // Optional domain filter
+}
+
+message QueryActiveBountiesResponse {
+  repeated KnowledgeBounty bounties = 1;
+}
+
+message QueryDemandSignalsRequest {
+  string domain          = 1;  // Optional domain filter
+  uint64 min_unfulfilled = 2;  // Optional minimum unfulfilled count filter
+}
+
+message QueryDemandSignalsResponse {
+  repeated DemandSignal signals = 1;
+}
+
+message QueryTopDemandGapsRequest {
+  uint64 limit = 1;  // Max results (default 20)
+}
+
+message QueryTopDemandGapsResponse {
+  repeated DemandSignal gaps = 1;  // Sorted by unfulfilled count desc
+}
+
+// ─── Niche competition query messages ────────────────────────────────────────
+
+message QueryNicheInfoRequest {
+  string niche_key = 1;
+}
+
+message QueryNicheInfoResponse {
+  string niche_key         = 1;
+  string domain            = 2;
+  string subject           = 3;
+  Fact leader              = 4;
+  repeated Fact members    = 5;  // Sorted by fitness desc
+  uint64 total_energy      = 6;  // Sum of all member energy
+}
+
+message QueryNichesByDomainRequest {
+  string domain = 1;
+}
+
+message QueryNichesByDomainResponse {
+  repeated QueryNicheInfoResponse niches = 1;
+}
+
+// ─── Consensus diversity query messages ──────────────────────────────────────
+
+message QueryDomainDiversityRequest {
+  string domain = 1;
+}
+
+message QueryDomainDiversityResponse {
+  string  domain             = 1;
+  uint64  epoch              = 2;
+  uint64  mean_entropy_bps   = 3;
+  uint64  round_count        = 4;
+}
+
+message QueryDomainDiversityHistoryRequest {
+  string domain = 1;
+  uint64 epochs = 2;  // How many epochs to look back (default 10)
+}
+
+message QueryDomainDiversityHistoryResponse {
+  string domain = 1;
+  repeated DomainDiversityEpoch history = 2;
+}
+
+message DomainDiversityEpoch {
+  uint64 epoch            = 1;
+  uint64 mean_entropy_bps = 2;
+  uint64 round_count      = 3;
+}
+
+message QueryValidatorIndependenceRequest {
+  string validator = 1;
+}
+
+message QueryValidatorIndependenceResponse {
+  string validator            = 1;
+  uint64 total_votes          = 2;
+  uint64 dissenting_votes     = 3;
+  uint64 independence_bps     = 4;  // dissenting / total * 1_000_000
+}
+
+message QueryConformityAlertsRequest {}
+
+message QueryConformityAlertsResponse {
+  repeated ConformityAlert alerts = 1;
+}
+
+message ConformityAlert {
+  string domain             = 1;
+  uint64 consecutive_epochs = 2;
+  uint64 threshold_bps      = 3;
+}
+
+message QueryMetabolismStatusRequest {}
+message QueryMetabolismStatusResponse {
+  uint64 total_facts      = 1;
+  uint64 active_count     = 2;
+  uint64 at_risk_count    = 3;
+  uint64 expired_count    = 4;
+  uint64 pruned_count     = 5;
+  uint64 avg_energy       = 6;
+  uint64 current_epoch    = 7;
+  uint64 next_epoch_block = 8;
+}
+
+// ─── Domain carrying capacity (R29-1) ────────────────────────────────────────
+
+message QueryDomainCapacityRequest {
+  string domain = 1;
+}
+
+message QueryDomainCapacityResponse {
+  string domain         = 1;
+  uint64 active_count   = 2;
+  uint64 at_risk_count  = 3;
+  uint64 capacity       = 4;
+  uint64 pressure_bps   = 5;
+  string category       = 6;
+  uint64 total_energy   = 7;
+}
+
+// ─── Epistemic temperature query messages (R29-2) ────────────────────────────
+
+message QueryEpistemicTemperatureRequest {
+  string domain = 1;
+}
+
+message QueryEpistemicTemperatureResponse {
+  string domain                    = 1;
+  uint64 temperature_bps           = 2;
+  string category                  = 3;
+  uint64 conformity_streak         = 4;
+  uint64 recent_vindications       = 5;
+  uint64 effective_confidence_cap  = 6;
+  uint64 effective_growth_rate     = 7;
+}
+
+// ─── Role elasticity query messages (R29-3) ──────────────────────────────────
+
+message QueryRoleElasticityRequest {
+  string domain = 1;
+}
+
+message QueryRoleElasticityResponse {
+  string domain              = 1;
+  uint64 agent_correct       = 2;
+  uint64 agent_incorrect     = 3;
+  uint64 human_correct       = 4;
+  uint64 human_incorrect     = 5;
+  uint64 agent_bonus_bps     = 6;
+  uint64 human_bonus_bps     = 7;
+  uint64 agent_accuracy_bps  = 8;
+  uint64 human_accuracy_bps  = 9;
 }

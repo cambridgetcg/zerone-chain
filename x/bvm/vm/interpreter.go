@@ -818,6 +818,50 @@ func (interp *Interpreter) executeOpcode(op byte, bytecode []byte, ctx *Executio
 		}
 		interp.pc++
 
+	// ─── Home Bridge ───────────────────────────────────────────────────
+	case HQUERY:
+		callerWord, _ := interp.stack.Pop()
+		callerBytes := WordToBytes20(callerWord)
+		if host != nil {
+			hasHome, homeId, status := host.HQuery(callerBytes)
+			if hasHome {
+				interp.stack.Push(big.NewInt(1))
+				interp.stack.Push(new(big.Int).SetBytes(homeId))
+				interp.stack.Push(new(big.Int).SetBytes(status))
+			} else {
+				interp.stack.Push(new(big.Int))
+				interp.stack.Push(new(big.Int))
+				interp.stack.Push(new(big.Int))
+			}
+		} else {
+			interp.stack.Push(new(big.Int))
+			interp.stack.Push(new(big.Int))
+			interp.stack.Push(new(big.Int))
+		}
+		interp.pc++
+
+	case HMEMORY:
+		homeIdWord, _ := interp.stack.Pop()
+		homeIdBytes := WordToBytes32(homeIdWord)
+		if host != nil {
+			cid := host.HMemory(homeIdBytes[:])
+			interp.stack.Push(new(big.Int).SetBytes(cid))
+		} else {
+			interp.stack.Push(new(big.Int))
+		}
+		interp.pc++
+
+	case HPARTNER:
+		homeIdWord, _ := interp.stack.Pop()
+		homeIdBytes := WordToBytes32(homeIdWord)
+		if host != nil {
+			pid := host.HPartner(homeIdBytes[:])
+			interp.stack.Push(new(big.Int).SetBytes(pid))
+		} else {
+			interp.stack.Push(new(big.Int))
+		}
+		interp.pc++
+
 	// ─── System (CALL, CREATE, etc.) ────────────────────────────────────
 	case CALL:
 		gasWord, _ := interp.stack.Pop()

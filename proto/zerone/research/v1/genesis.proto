@@ -24,4 +24,5 @@ message Params {
   uint64 rejection_slash_bps         = 6; // slash rate on rejection (basis points)
   string max_bounty_reward           = 7; // maximum bounty reward (bigint as string)
   uint64 bounty_min_deadline_blocks  = 8; // minimum bounty deadline in blocks
+  uint64 bounty_fulfillment_period_blocks = 9; // blocks after claim before auto-fulfillment
 }

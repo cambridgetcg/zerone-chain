@@ -977,7 +977,7 @@ func (m msgServer) CallService(goCtx context.Context, msg *types.MsgCallService)
 				params.ContributorsBp,
 				params.ProtocolTreasuryBp,
 				params.ResearchFundBp,
-				params.BurnBp,
+				params.BurnBp, // proto field 13: development fund share (formerly burn)
 				project.Contributors,
 			)
 
@@ -1015,10 +1015,10 @@ func (m msgServer) CallService(goCtx context.Context, msg *types.MsgCallService)
 				}
 			}
 
-			if dist.Burn > 0 {
-				coins := sdk.NewCoins(sdk.NewCoin("uzrn", math.NewInt(dist.Burn)))
-				if err := m.Keeper.bankKeeper.BurnCoins(ctx, types.ModuleName, coins); err != nil {
-					return nil, fmt.Errorf("burn failed: %w", err)
+			if dist.DevelopmentFund > 0 {
+				coins := sdk.NewCoins(sdk.NewCoin("uzrn", math.NewInt(dist.DevelopmentFund)))
+				if err := m.Keeper.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, "development_fund", coins); err != nil {
+					return nil, fmt.Errorf("development fund deposit failed: %w", err)
 				}
 			}
 

@@ -126,6 +126,8 @@ func (am AppModule) BeginBlock(_ context.Context) error {
 
 // EndBlock runs observation→scoring→corrections every ObservationIntervalBlocks.
 // Skips if module is disabled or chain is emergency-halted.
+// When health degrades, enables 2x observation frequency (halved interval).
+// When health recovers to healthy, restores normal frequency.
 func (am AppModule) EndBlock(ctx context.Context) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	height := uint64(sdkCtx.BlockHeight())
@@ -143,8 +145,14 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 		return nil
 	}
 
-	// Only observe at interval boundaries.
-	if height%params.ObservationIntervalBlocks != 0 {
+	// Compute effective interval: confidence-modulated, then halved when degraded frequency is active.
+	state := am.keeper.GetState(ctx)
+	effectiveInterval := am.keeper.GetEffectiveObservationInterval(ctx)
+	if state.DegradedFrequencyActive && effectiveInterval > 1 {
+		effectiveInterval = effectiveInterval / 2
+	}
+
+	if height%effectiveInterval != 0 {
 		return nil
 	}
 
@@ -156,6 +164,9 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 	scores := am.keeper.ComputeScores(ctx, obs)
 	am.keeper.SetScores(ctx, scores)
 
+	// 2.5 Evaluate pending correction outcomes from previous observation (R29-4).
+	am.keeper.EvaluatePendingCorrections(ctx, scores)
+
 	// 3. Corrections
 	corrections := am.keeper.GenerateCorrections(ctx, scores)
 	am.keeper.ApplyCorrections(ctx, corrections)
@@ -165,11 +176,65 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 	hi := am.keeper.BuildHealthIndex(scores, category, uint32(len(corrections)))
 	am.keeper.SetHealthIndex(ctx, hi)
 
-	// 5. Update state
-	state := am.keeper.GetState(ctx)
+	// 4.5 Emit correction confidence event (R29-4).
+	confidence := am.keeper.GetCorrectionConfidence(ctx)
+	effectiveMaxMag := am.keeper.GetEffectiveMaxMagnitude(ctx)
+	sdkCtx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.alignment.correction_confidence_updated",
+			sdk.NewAttribute("confidence_bps", fmt.Sprintf("%d", confidence)),
+			sdk.NewAttribute("effective_max_magnitude", fmt.Sprintf("%d", effectiveMaxMag)),
+			sdk.NewAttribute("category", keeper.CategorizeConfidence(confidence)),
+		),
+	)
+
+	// 5. Health transition responses
+	// Compute pacing for event enrichment (R29-6).
+	creationPacing, analysisPacing := am.keeper.GetGlobalPacingMultiplier(ctx)
+
+	previousCategory := state.PreviousCategory
+	if previousCategory != "" && previousCategory != category {
+		switch {
+		case category == types.CategoryDegraded && previousCategory == types.CategoryHealthy:
+			state.DegradedFrequencyActive = true
+			sdkCtx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.alignment.network_health_degraded",
+					sdk.NewAttribute("height", fmt.Sprintf("%d", height)),
+					sdk.NewAttribute("composite", fmt.Sprintf("%d", scores.Composite)),
+					sdk.NewAttribute("creation_multiplier_bps", fmt.Sprintf("%d", creationPacing)),
+					sdk.NewAttribute("analysis_multiplier_bps", fmt.Sprintf("%d", analysisPacing)),
+				),
+			)
+		case category == types.CategoryCritical:
+			state.DegradedFrequencyActive = true
+			sdkCtx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.alignment.network_health_critical",
+					sdk.NewAttribute("height", fmt.Sprintf("%d", height)),
+					sdk.NewAttribute("composite", fmt.Sprintf("%d", scores.Composite)),
+					sdk.NewAttribute("creation_multiplier_bps", fmt.Sprintf("%d", creationPacing)),
+					sdk.NewAttribute("analysis_multiplier_bps", fmt.Sprintf("%d", analysisPacing)),
+				),
+			)
+		case category == types.CategoryHealthy && (previousCategory == types.CategoryDegraded || previousCategory == types.CategoryCritical):
+			state.DegradedFrequencyActive = false
+			sdkCtx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.alignment.network_health_recovered",
+					sdk.NewAttribute("height", fmt.Sprintf("%d", height)),
+					sdk.NewAttribute("composite", fmt.Sprintf("%d", scores.Composite)),
+					sdk.NewAttribute("creation_multiplier_bps", fmt.Sprintf("%d", creationPacing)),
+					sdk.NewAttribute("analysis_multiplier_bps", fmt.Sprintf("%d", analysisPacing)),
+				),
+			)
+		}
+	}
+	state.PreviousCategory = category
+
+	// 6. Update state
 	state.LastObservationHeight = height
 	state.ObservationCount++
 	am.keeper.SetState(ctx, state)
+
+	// 6.5 Prune old correction outcomes (R29-4).
+	am.keeper.PruneOldOutcomes(ctx)
 
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.alignment.observation_recorded",
@@ -178,8 +243,13 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 			sdk.NewAttribute("category", category),
 			sdk.NewAttribute("correction_count", fmt.Sprintf("%d", len(corrections))),
 			sdk.NewAttribute("observation_count", fmt.Sprintf("%d", state.ObservationCount)),
+			sdk.NewAttribute("creation_multiplier_bps", fmt.Sprintf("%d", creationPacing)),
+			sdk.NewAttribute("analysis_multiplier_bps", fmt.Sprintf("%d", analysisPacing)),
 		),
 	)
+
+	// Emit growth pressure event if applicable (R31-1)
+	am.keeper.EmitGrowthPressureEvent(sdkCtx, obs.KnowledgeQuality)
 
 	am.keeper.Logger(ctx).Info("alignment observation complete",
 		"height", height,

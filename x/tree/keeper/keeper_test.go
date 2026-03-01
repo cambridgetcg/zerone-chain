@@ -1,7 +1,9 @@
 package keeper_test
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"testing"
 
 	"cosmossdk.io/log"
@@ -98,16 +100,6 @@ func (m *mockBankKeeper) SendCoinsFromModuleToModule(_ context.Context, senderMo
 		}
 		m.moduleBalances[senderModule][coin.Denom] -= coin.Amount.Int64()
 		m.moduleBalances[recipientModule][coin.Denom] += coin.Amount.Int64()
-	}
-	return nil
-}
-
-func (m *mockBankKeeper) BurnCoins(_ context.Context, moduleName string, amt sdk.Coins) error {
-	for _, coin := range amt {
-		if m.moduleBalances[moduleName] == nil {
-			m.moduleBalances[moduleName] = make(map[string]int64)
-		}
-		m.moduleBalances[moduleName][coin.Denom] -= coin.Amount.Int64()
 	}
 	return nil
 }
@@ -1404,22 +1396,22 @@ func TestCalculateRevenue(t *testing.T) {
 		1_000_000,
 		550000, // 55% contributor
 		220000, // 22% treasury
-		130000, // 13% research
-		100000, // 10% burn
+		33300,  // 3.33% research
+		196700, // 19.67% development fund
 		contributors,
 	)
 
 	if dist.ContributorPool != 550000 {
 		t.Errorf("expected contributor pool 550000, got %d", dist.ContributorPool)
 	}
-	if dist.Burn != 100000 {
-		t.Errorf("expected burn 100000, got %d", dist.Burn)
+	if dist.DevelopmentFund != 196700 {
+		t.Errorf("expected development fund 196700, got %d", dist.DevelopmentFund)
 	}
-	if dist.ResearchFund != 130000 {
-		t.Errorf("expected research fund 130000, got %d", dist.ResearchFund)
+	if dist.ResearchFund != 33300 {
+		t.Errorf("expected research fund 33300, got %d", dist.ResearchFund)
 	}
 
-	// Treasury allocation = 1M - 550K - 130K - 100K = 220K
+	// Treasury allocation = 1M - 550K - 33.3K - 196.7K = 220K
 	// Verification pool = 220K * 300000 / 1000000 = 66K
 	// Protocol treasury = 220K - 66K = 154K
 	if dist.ProtocolTreasury != 154000 {
@@ -1430,7 +1422,7 @@ func TestCalculateRevenue(t *testing.T) {
 	}
 
 	// Check lossless: all allocations sum to total
-	total := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.Burn
+	total := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.DevelopmentFund
 	if total != 1_000_000 {
 		t.Errorf("expected total 1000000, got %d (lossless violation)", total)
 	}
@@ -1442,14 +1434,14 @@ func TestCalculateRevenue(t *testing.T) {
 }
 
 func TestCalculateRevenue_ZeroAmount(t *testing.T) {
-	dist := keeper.CalculateRevenue(0, 550000, 220000, 130000, 100000, nil)
+	dist := keeper.CalculateRevenue(0, 550000, 220000, 33300, 196700, nil)
 	if dist.ContributorPool != 0 || dist.ProtocolTreasury != 0 {
 		t.Error("expected zero distribution for zero total")
 	}
 }
 
 func TestCalculateRevenue_NoContributors(t *testing.T) {
-	dist := keeper.CalculateRevenue(1_000_000, 550000, 220000, 130000, 100000, nil)
+	dist := keeper.CalculateRevenue(1_000_000, 550000, 220000, 33300, 196700, nil)
 	if dist.ContributorPool != 0 {
 		t.Errorf("expected contributor pool redirected to treasury, got %d", dist.ContributorPool)
 	}
@@ -1465,7 +1457,7 @@ func TestCalculateRevenue_EqualSplitNoTasks(t *testing.T) {
 		{Did: agent1, TasksCompleted: 0},
 	}
 
-	dist := keeper.CalculateRevenue(1_000_000, 550000, 220000, 130000, 100000, contributors)
+	dist := keeper.CalculateRevenue(1_000_000, 550000, 220000, 33300, 196700, contributors)
 	if len(dist.ContributorShares) != 2 {
 		t.Fatalf("expected 2 shares, got %d", len(dist.ContributorShares))
 	}
@@ -1591,5 +1583,195 @@ func TestSetAvailability(t *testing.T) {
 	}
 	if len(avail.Capabilities) != 2 {
 		t.Errorf("expected 2 capabilities, got %d", len(avail.Capabilities))
+	}
+}
+
+// ---------- Determinism Tests ----------
+
+// setupDeterministicKeeper creates an independent keeper+store pair for
+// determinism comparison testing. Each call returns a fresh, isolated
+// instance backed by its own in-memory DB.
+func setupDeterministicKeeper(t *testing.T) (keeper.Keeper, sdk.Context, storetypes.CommitMultiStore) {
+	t.Helper()
+	initAddresses()
+
+	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
+	db := dbm.NewMemDB()
+	stateStore := store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
+	stateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, db)
+	if err := stateStore.LoadLatestVersion(); err != nil {
+		t.Fatalf("failed to load latest version: %v", err)
+	}
+
+	registry := codectypes.NewInterfaceRegistry()
+	cdc := codec.NewProtoCodec(registry)
+	mockBK := newMockBankKeeper()
+	noop := &noOpResearchFundDepositor{bk: mockBK}
+	k := keeper.NewKeeper(cdc, runtime.NewKVStoreService(storeKey), mockBK, "zrn1authority", noop)
+	ctx := sdk.NewContext(stateStore, cmtproto.Header{Height: 100}, false, log.NewNopLogger())
+
+	return k, ctx, stateStore
+}
+
+// TestDeterminism_ProjectCRUD verifies that the same project operations on
+// two independent stores produce identical IAVL commit hashes.
+func TestDeterminism_ProjectCRUD(t *testing.T) {
+	// Run identical operations on two independent stores
+	hashes := make([][]byte, 2)
+	for run := 0; run < 2; run++ {
+		k, ctx, cms := setupDeterministicKeeper(t)
+
+		// Create 5 projects
+		for i := 1; i <= 5; i++ {
+			p := &types.ProductProject{
+				Id:              fmt.Sprintf("proj-%d", i),
+				Name:            fmt.Sprintf("Project %d", i),
+				Description:     fmt.Sprintf("Description for project %d", i),
+				Phase:           string(types.PhaseSeed),
+				CreatedAtBlock:  100,
+				Founder:         founder1,
+				KnowledgeDomain: "general",
+				Budget:          "1000000",
+				Spent:           "0",
+				TaskIds:         []string{},
+				ServiceIds:      []string{},
+				Contributors: []*types.ContributorRecord{
+					{Did: founder1, Role: string(types.RoleFounder), JoinedAtBlock: 100},
+				},
+			}
+			k.SetProject(ctx, p)
+		}
+
+		// Update one
+		p, _ := k.GetProject(ctx, "proj-3")
+		p.Phase = string(types.PhaseGrowing)
+		k.SetProject(ctx, p)
+
+		// Delete one
+		p2, _ := k.GetProject(ctx, "proj-5")
+		k.DeleteProject(ctx, p2)
+
+		commitID := cms.Commit()
+		hashes[run] = commitID.Hash
+	}
+
+	if !bytes.Equal(hashes[0], hashes[1]) {
+		t.Fatalf("non-deterministic state: hash1=%x hash2=%x", hashes[0], hashes[1])
+	}
+}
+
+// TestDeterminism_SeedWithMapEvidence verifies that seeds containing
+// DemandSignal.Evidence (a proto map<string,string>) produce identical
+// bytes across independent serialization runs. This is the critical
+// test: proto map serialization must be deterministic for consensus.
+func TestDeterminism_SeedWithMapEvidence(t *testing.T) {
+	hashes := make([][]byte, 2)
+	for run := 0; run < 2; run++ {
+		k, ctx, cms := setupDeterministicKeeper(t)
+
+		// Create seeds with map evidence in varying key insertion order.
+		// If marshaling is non-deterministic, different runs may produce
+		// different bytes for the same logical map content.
+		for i := 1; i <= 3; i++ {
+			evidence := make(map[string]string)
+			// Insert keys in different "logical" groups to stress map ordering.
+			evidence["description"] = fmt.Sprintf("Opportunity %d detected", i)
+			evidence["related_fact_0"] = fmt.Sprintf("fact-alpha-%d", i)
+			evidence["related_fact_1"] = fmt.Sprintf("fact-beta-%d", i)
+			evidence["related_fact_2"] = fmt.Sprintf("fact-gamma-%d", i)
+			evidence["source"] = "agent_detection"
+			evidence["confidence"] = "0.85"
+
+			seed := &types.OpportunitySeed{
+				Id:              fmt.Sprintf("seed-%d", i),
+				DetectedAtBlock: 100,
+				KnowledgeDomain: "general",
+				Confidence:      "0.5",
+				Status:          string(types.SeedDetected),
+				ExpiresAtBlock:  200,
+				Signal: &types.DemandSignal{
+					Type:     "agent_detection",
+					Evidence: evidence,
+					Strength: "0.5",
+				},
+			}
+			k.SetSeed(ctx, seed)
+		}
+
+		commitID := cms.Commit()
+		hashes[run] = commitID.Hash
+	}
+
+	if !bytes.Equal(hashes[0], hashes[1]) {
+		t.Fatalf("non-deterministic state from map evidence: hash1=%x hash2=%x",
+			hashes[0], hashes[1])
+	}
+}
+
+// TestDeterminism_FullWorkflow runs a comprehensive workflow (projects, tasks,
+// services, seeds, params) on two independent stores and verifies the commit
+// hashes match. This catches any non-determinism in the complete state machine.
+func TestDeterminism_FullWorkflow(t *testing.T) {
+	hashes := make([][]byte, 2)
+	for run := 0; run < 2; run++ {
+		k, ctx, cms := setupDeterministicKeeper(t)
+
+		// Set params
+		k.SetParams(ctx, &types.Params{
+			MinBudget:              "100000",
+			MaxTasksPerProject:     100,
+			MaxContributors:        20,
+			MaxApplications:        50,
+			TaskDeadlineMinBlocks:  100,
+			TaskDeadlineMaxBlocks:  100000,
+			MaxRejections:          3,
+			SeedExpiryBlocks:       50000,
+			MinContributorsToStart: 2,
+		})
+
+		// Create project
+		k.SetProject(ctx, &types.ProductProject{
+			Id: "proj-100-1", Name: "Workflow Test", Phase: string(types.PhaseSeed),
+			CreatedAtBlock: 100, Founder: founder1, KnowledgeDomain: "general",
+			Budget: "5000000", Spent: "0", TaskIds: []string{"task-100-1"},
+			ServiceIds: []string{}, Contributors: []*types.ContributorRecord{
+				{Did: founder1, Role: string(types.RoleFounder), JoinedAtBlock: 100},
+				{Did: agent1, Role: "developer", JoinedAtBlock: 101},
+			},
+		})
+
+		// Create task
+		k.SetTask(ctx, &types.ProjectTask{
+			Id: "task-100-1", ProjectId: "proj-100-1", Title: "Build API",
+			Status: string(types.TaskAssigned), CreatedAtBlock: 100,
+			Assignee: agent1, BountyAmount: "1000000",
+		})
+
+		// Create service
+		k.SetService(ctx, &types.ServiceLeaf{
+			Id: "svc-100-1", Name: "API Service", Description: "REST API",
+			ContractAddress: "https://api.example.com", Status: string(types.ServiceActive),
+			DeployedAtBlock: 100, PricePerCall: "1000",
+			TotalCalls: "0", TotalRevenue: "0", UptimeBlocks: "0",
+		})
+
+		// Create seed with evidence map
+		k.SetSeed(ctx, &types.OpportunitySeed{
+			Id: "seed-100-1", DetectedAtBlock: 100, KnowledgeDomain: "general",
+			Status: string(types.SeedDetected), ExpiresAtBlock: 200,
+			Signal: &types.DemandSignal{
+				Type:     "agent_detection",
+				Evidence: map[string]string{"desc": "opportunity", "fact_0": "evidence"},
+				Strength: "0.7",
+			},
+		})
+
+		commitID := cms.Commit()
+		hashes[run] = commitID.Hash
+	}
+
+	if !bytes.Equal(hashes[0], hashes[1]) {
+		t.Fatalf("non-deterministic state in full workflow: hash1=%x hash2=%x",
+			hashes[0], hashes[1])
 	}
 }

@@ -36,6 +36,7 @@ message Bounty {
   string claimed_by      = 9;  // bech32 claimer address
   string fulfilled_by    = 10; // bech32 fulfiller address
   uint64 created_at      = 11; // block height when created
+  uint64 claimed_at      = 12; // block height when claimed
 }
 
 // PeerReview represents a review of a research submission.

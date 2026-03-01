@@ -12,12 +12,21 @@ type StakingKeeper interface {
 	GetTotalBondedStake(ctx context.Context) (string, error)
 	// GetDelegatorTotalBonded returns the total bonded tokens for a delegator as a decimal string.
 	GetDelegatorTotalBonded(ctx context.Context, addr string) (string, error)
+	// CountActiveGuardians returns the number of active Guardian-tier validators.
+	CountActiveGuardians(ctx context.Context) (uint64, error)
+	// IsGuardian returns true if the address is Guardian tier (tier 4) and active.
+	IsGuardian(ctx context.Context, addr string) (bool, error)
+	// IsJailed returns true if the validator at the given address is jailed.
+	IsJailed(ctx context.Context, addr string) (bool, error)
+	// GetSlashCount returns the number of times a validator has been slashed.
+	GetSlashCount(ctx context.Context, addr string) (uint64, error)
 }
 
 // BankKeeper defines the bank module interface required by governance.
 type BankKeeper interface {
 	SendCoinsFromAccountToModule(ctx context.Context, senderAddr sdk.AccAddress, recipientModule string, amt sdk.Coins) error
 	SendCoinsFromModuleToAccount(ctx context.Context, senderModule string, recipientAddr sdk.AccAddress, amt sdk.Coins) error
+	GetAllBalances(ctx context.Context, addr sdk.AccAddress) sdk.Coins
 }
 
 // VestingRewardsKeeper defines the vesting rewards module interface for research fund disbursement.
@@ -26,21 +35,31 @@ type VestingRewardsKeeper interface {
 }
 
 // UpgradeKeeper defines the upgrade module interface for scheduling software upgrades.
-// When an upgrade-category LIP passes with an attached plan, ScheduleUpgrade halts
-// the chain at the specified height so validators can swap binaries.
 type UpgradeKeeper interface {
 	ScheduleUpgrade(ctx context.Context, plan *UpgradePlan) error
 }
 
-// ParamRouter dispatches parameter changes from passed LIPs to the target
-// module keepers. Each module registers itself; ApplyParamChange sets the
-// parameter identified by (module, key) to value.
+// ParamRouter dispatches parameter changes from passed LIPs to the target module keepers.
 type ParamRouter interface {
 	ApplyParamChange(ctx context.Context, module, key, value string) error
 }
 
-// FundingRecorder is the interface used by the SybilFundingDecorator to record
-// sender->recipient funding relationships for sybil vote-weight decay.
+// FundingRecorder is the interface used by the SybilFundingDecorator.
 type FundingRecorder interface {
 	RecordFunding(ctx sdk.Context, sender, recipient, amount string, blockHeight uint64)
+}
+
+// EmergencyKeeper defines the emergency module interface for governance condition checking.
+type EmergencyKeeper interface {
+	CountHaltsForReason(ctx context.Context, reason string) uint64
+}
+
+// AlignmentKeeper defines the alignment module interface for health-aware governance.
+type AlignmentKeeper interface {
+	GetHealthCategory(ctx context.Context) string
+}
+
+// PartnershipsKeeper defines the partnerships module interface for governance-controlled formation.
+type PartnershipsKeeper interface {
+	SetDomainFormationFreeze(ctx context.Context, domain string, expiryHeight uint64, reason string)
 }

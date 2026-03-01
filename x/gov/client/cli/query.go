@@ -32,6 +32,11 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryResearchSpendCmd(),
 		NewQueryResearchSpendsCmd(),
 		NewQueryResearchVotersCmd(),
+		NewQueryResearchFundGovernanceCmd(),
+		NewQueryResearchFundSeatsCmd(),
+		NewQuerySeatElectionCmd(),
+		NewQuerySeatElectionsCmd(),
+		NewQueryPendingPhaseTransitionCmd(),
 	)
 
 	return queryCmd
@@ -292,6 +297,170 @@ func NewQueryResearchVotersCmd() *cobra.Command {
 			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/ResearchVoters", req, resp); err != nil {
 				return fmt.Errorf("failed to query research voters: %w", err)
 			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryResearchFundGovernanceCmd returns the command to query research fund governance state.
+func NewQueryResearchFundGovernanceCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "research-fund-governance",
+		Short: "Query the research fund governance phase, state, and exit conditions",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			req := &types.QueryResearchFundGovernanceRequest{}
+			resp := &types.QueryResearchFundGovernanceResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/ResearchFundGovernance", req, resp); err != nil {
+				return fmt.Errorf("failed to query research fund governance: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryResearchFundSeatsCmd returns the command to query current community seat holders.
+func NewQueryResearchFundSeatsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "research-fund-seats",
+		Short: "Query current community seat holders",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			req := &types.QueryResearchFundSeatsRequest{}
+			resp := &types.QueryResearchFundSeatsResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/ResearchFundSeats", req, resp); err != nil {
+				return fmt.Errorf("failed to query research fund seats: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQuerySeatElectionCmd returns the command to query a seat election proposal by ID.
+func NewQuerySeatElectionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "seat-election [proposal-id]",
+		Short: "Query a seat election proposal by ID",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			proposalID, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return fmt.Errorf("invalid proposal-id: %w", err)
+			}
+
+			req := &types.QuerySeatElectionRequest{ProposalId: proposalID}
+			resp := &types.QuerySeatElectionResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/SeatElection", req, resp); err != nil {
+				return fmt.Errorf("failed to query seat election: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQuerySeatElectionsCmd returns the command to list seat election proposals.
+func NewQuerySeatElectionsCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "seat-elections",
+		Short: "List seat election proposals",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			stage, _ := cmd.Flags().GetString("stage")
+			limit, _ := cmd.Flags().GetUint64("limit")
+			offset, _ := cmd.Flags().GetUint64("offset")
+
+			req := &types.QuerySeatElectionsRequest{
+				Stage:  stage,
+				Limit:  limit,
+				Offset: offset,
+			}
+			resp := &types.QuerySeatElectionsResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/SeatElections", req, resp); err != nil {
+				return fmt.Errorf("failed to query seat elections: %w", err)
+			}
+
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+
+	cmd.Flags().String("stage", "", "Filter by stage")
+	cmd.Flags().Uint64("limit", 100, "Max results")
+	cmd.Flags().Uint64("offset", 0, "Result offset")
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryPendingPhaseTransitionCmd returns the command to query pending phase transitions.
+// Uses the LIP query filtered by phase transition categories.
+func NewQueryPendingPhaseTransitionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "pending-phase-transition",
+		Short: "Query pending phase transition proposals",
+		Long:  "Query LIPs with research_phase_transition or research_phase_rollback categories that are not in terminal state.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			// Query phase transition LIPs.
+			req := &types.QueryLIPsRequest{
+				Category: types.CategoryPhaseTransition,
+				Limit:    100,
+			}
+			resp := &types.QueryLIPsResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/LIPs", req, resp); err != nil {
+				return fmt.Errorf("failed to query phase transition LIPs: %w", err)
+			}
+
+			// Also query rollback LIPs.
+			reqRollback := &types.QueryLIPsRequest{
+				Category: types.CategoryPhaseRollback,
+				Limit:    100,
+			}
+			respRollback := &types.QueryLIPsResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.gov.v1.Query/LIPs", reqRollback, respRollback); err != nil {
+				return fmt.Errorf("failed to query phase rollback LIPs: %w", err)
+			}
+
+			// Merge results.
+			resp.Lips = append(resp.Lips, respRollback.Lips...)
+			resp.Total += respRollback.Total
 
 			return clientCtx.PrintObjectLegacy(resp)
 		},

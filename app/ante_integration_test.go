@@ -6,6 +6,7 @@ import (
 	"math"
 	"testing"
 
+	"cosmossdk.io/errors"
 	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store"
@@ -199,13 +200,17 @@ func setupBothKeepers(t *testing.T) (zeroneauthkeeper.Keeper, emergencykeeper.Ke
 // registerZeroneAccount creates a Zerone Account entry (optionally frozen).
 func registerZeroneAccount(t *testing.T, k zeroneauthkeeper.Keeper, ctx sdk.Context, address string, frozen bool) {
 	t.Helper()
+	registerZeroneAccountWithType(t, k, ctx, address, "agent", &zeroneauthtypes.AccountFlags{Frozen: frozen})
+}
+
+// registerZeroneAccountWithType creates a Zerone Account with specified type and flags.
+func registerZeroneAccountWithType(t *testing.T, k zeroneauthkeeper.Keeper, ctx sdk.Context, address, accountType string, flags *zeroneauthtypes.AccountFlags) {
+	t.Helper()
 	account := &zeroneauthtypes.Account{
-		Address:     address,
-		Did:         "did:zrn:abcdef0123456789abcdef0123456789",
-		AccountType: "agent",
-		Flags: &zeroneauthtypes.AccountFlags{
-			Frozen: frozen,
-		},
+		Address:         address,
+		Did:             "did:zrn:abcdef0123456789abcdef0123456789",
+		AccountType:     accountType,
+		Flags:           flags,
 		LastActiveBlock: 0,
 	}
 	k.SetAccount(ctx, account)
@@ -421,7 +426,9 @@ func TestAnteIntegration_BootstrapGasFreeAtHeight1(t *testing.T) {
 		0,
 	)
 
-	// The decorator should set infinite gas meter
+	// The decorator should set gas meter to BlockGasLimit so bootstrap txs
+	// can consume gas freely. We use BlockGasLimit (not infinite) because
+	// CometBFT's mempool rejects txs with gas_wanted > ConsensusParams.Block.MaxGas.
 	var receivedCtx sdk.Context
 	handler := func(ctx sdk.Context, tx sdk.Tx, simulate bool) (sdk.Context, error) {
 		receivedCtx = ctx
@@ -433,10 +440,10 @@ func TestAnteIntegration_BootstrapGasFreeAtHeight1(t *testing.T) {
 		t.Fatalf("bootstrap gas-free should pass at height 1, got: %v", err)
 	}
 
-	// Check for infinite gas meter
-	if receivedCtx.GasMeter().Limit() != math.MaxUint64 {
-		t.Errorf("expected infinite gas meter (limit=%d), got limit=%d",
-			uint64(math.MaxUint64), receivedCtx.GasMeter().Limit())
+	// Check for BlockGasLimit gas meter
+	if receivedCtx.GasMeter().Limit() != BlockGasLimit {
+		t.Errorf("expected BlockGasLimit gas meter (limit=%d), got limit=%d",
+			BlockGasLimit, receivedCtx.GasMeter().Limit())
 	}
 }
 
@@ -616,5 +623,237 @@ func TestAnteIntegration_DIDResolutionFromMemo(t *testing.T) {
 	}
 	if !found {
 		t.Error("expected did_reference event to be emitted")
+	}
+}
+
+// ---------- Account-Level Capability Enforcement Tests ----------
+
+// capabilityTestCase defines a single capability enforcement test.
+type capabilityTestCase struct {
+	name        string
+	accountType string
+	flags       *zeroneauthtypes.AccountFlags
+	register    bool // false = unregistered account
+	msgType     string
+	wantErr     bool
+	errType     *errors.Error
+}
+
+func TestAnteIntegration_AccountCapabilityEnforcement(t *testing.T) {
+	tests := []capabilityTestCase{
+		// Contract restrictions
+		{
+			name:        "ContractBlockedFromClaims",
+			accountType: "contract",
+			flags:       &zeroneauthtypes.AccountFlags{CanSubmitClaims: false, CanChallenge: false},
+			register:    true,
+			msgType:     "/zerone.knowledge.v1.MsgSubmitClaim",
+			wantErr:     true,
+			errType:     zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		{
+			name:        "ContractBlockedFromChallenge",
+			accountType: "contract",
+			flags:       &zeroneauthtypes.AccountFlags{CanSubmitClaims: false, CanChallenge: false},
+			register:    true,
+			msgType:     "/zerone.knowledge.v1.MsgChallengeFact",
+			wantErr:     true,
+			errType:     zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		{
+			name:        "ContractBlockedFromStaking",
+			accountType: "contract",
+			flags:       &zeroneauthtypes.AccountFlags{},
+			register:    true,
+			msgType:     "/cosmos.staking.v1beta1.MsgDelegate",
+			wantErr:     true,
+			errType:     zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		{
+			name:        "ContractBlockedFromVoting",
+			accountType: "contract",
+			flags:       &zeroneauthtypes.AccountFlags{},
+			register:    true,
+			msgType:     "/cosmos.gov.v1.MsgVote",
+			wantErr:     true,
+			errType:     zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		{
+			name:        "ContractBlockedFromResearch",
+			accountType: "contract",
+			flags:       &zeroneauthtypes.AccountFlags{},
+			register:    true,
+			msgType:     "/zerone.research.v1.MsgSubmitResearch",
+			wantErr:     true,
+			errType:     zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		{
+			name:        "ContractAllowsPartnership",
+			accountType: "contract",
+			flags:       &zeroneauthtypes.AccountFlags{},
+			register:    true,
+			msgType:     "/zerone.partnerships.v1.MsgInitiatePartnership",
+			wantErr:     false,
+		},
+		{
+			name:        "ContractAllowsTransfer",
+			accountType: "contract",
+			flags:       &zeroneauthtypes.AccountFlags{},
+			register:    true,
+			msgType:     "/cosmos.bank.v1beta1.MsgSend",
+			wantErr:     false,
+		},
+		// Human allows all (with flags enabled)
+		{
+			name:        "HumanAllowsAll",
+			accountType: "human",
+			flags:       &zeroneauthtypes.AccountFlags{CanSubmitClaims: true, CanChallenge: true},
+			register:    true,
+			msgType:     "/zerone.knowledge.v1.MsgSubmitClaim",
+			wantErr:     false,
+		},
+		// Agent allows all (with flags enabled)
+		{
+			name:        "AgentAllowsAll",
+			accountType: "agent",
+			flags:       &zeroneauthtypes.AccountFlags{CanSubmitClaims: true, CanChallenge: true},
+			register:    true,
+			msgType:     "/zerone.knowledge.v1.MsgChallengeFact",
+			wantErr:     false,
+		},
+		// Unregistered account restrictions
+		{
+			name:     "UnregisteredBlockedFromClaims",
+			register: false,
+			msgType:  "/zerone.knowledge.v1.MsgSubmitClaim",
+			wantErr:  true,
+			errType:  zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		{
+			name:     "UnregisteredAllowsTransfer",
+			register: false,
+			msgType:  "/cosmos.bank.v1beta1.MsgSend",
+			wantErr:  false,
+		},
+		{
+			name:     "UnregisteredAllowsStaking",
+			register: false,
+			msgType:  "/cosmos.staking.v1beta1.MsgDelegate",
+			wantErr:  false,
+		},
+		{
+			name:     "UnregisteredAllowsRegistration",
+			register: false,
+			msgType:  "/zerone.auth.v1.MsgRegisterAccount",
+			wantErr:  false,
+		},
+		{
+			name:     "UnregisteredBlockedFromPartnership",
+			register: false,
+			msgType:  "/zerone.partnerships.v1.MsgInitiatePartnership",
+			wantErr:  true,
+			errType:  zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		// Challenge split from claims
+		{
+			name:        "ChallengeSplitFromClaims",
+			accountType: "contract",
+			flags:       &zeroneauthtypes.AccountFlags{CanSubmitClaims: true, CanChallenge: false},
+			register:    true,
+			msgType:     "/zerone.knowledge.v1.MsgChallengeFact",
+			wantErr:     true,
+			errType:     zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		// Nil flags blocks claims
+		{
+			name:        "NilFlagsBlocksClaims",
+			accountType: "human",
+			flags:       nil,
+			register:    true,
+			msgType:     "/zerone.knowledge.v1.MsgSubmitClaim",
+			wantErr:     true,
+			errType:     zeroneauthtypes.ErrAccountCapabilityDenied,
+		},
+		// Primary key default-allow for unknown msg types
+		{
+			name:        "PrimaryKeyDefaultAllow",
+			accountType: "human",
+			flags:       &zeroneauthtypes.AccountFlags{CanSubmitClaims: true, CanChallenge: true},
+			register:    true,
+			msgType:     "/cosmos.unknown.v1.MsgDoSomething",
+			wantErr:     false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ak, _, ctx := setupBothKeepers(t)
+
+			key := ed25519.GenPrivKey()
+			addr := sdk.AccAddress(key.PubKey().Address())
+
+			if tc.register {
+				registerZeroneAccountWithType(t, ak, ctx, addr.String(), tc.accountType, tc.flags)
+			}
+
+			decorator := NewZeroneCapabilityDecorator(ak, mockCosmosAccountKeeperForAnte{})
+			tx := newMockSignedTx(
+				[]*ed25519.PrivKey{key},
+				[]sdk.Msg{mockMsg{typeURL: tc.msgType}},
+				sdk.NewCoins(sdk.NewCoin(BondDenom, sdkmath.NewInt(100_000))),
+				100_000,
+			)
+
+			_, err := decorator.AnteHandle(ctx, tx, false, passThroughHandler)
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+				if tc.errType != nil && !tc.errType.Is(err) {
+					t.Fatalf("expected %v, got: %v", tc.errType, err)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, got: %v", err)
+				}
+			}
+		})
+	}
+}
+
+// Test 18: Session key still uses default-deny for unknown msg types
+func TestAnteIntegration_SessionKeyStillDefaultDeny(t *testing.T) {
+	ak, _, ctx := setupBothKeepers(t)
+
+	sessionKey := ed25519.GenPrivKey()
+	sessionAddr := sdk.AccAddress(sessionKey.PubKey().Address())
+	pubKeyHex := hex.EncodeToString(sessionKey.PubKey().Bytes())
+
+	ak.SetSessionKey(ctx, &zeroneauthtypes.SessionKey{
+		Owner:          sessionAddr.String(),
+		KeyHash:        "session-default-deny",
+		PublicKey:      pubKeyHex,
+		ExpiresAtBlock: 1_000_000,
+		Capabilities: &zeroneauthtypes.SessionCapabilities{
+			CanTransfer: true,
+		},
+	})
+
+	decorator := NewZeroneCapabilityDecorator(ak, mockCosmosAccountKeeperForAnte{})
+
+	// Unknown msg type should be denied for session keys
+	tx := newMockSignedTx(
+		[]*ed25519.PrivKey{sessionKey},
+		[]sdk.Msg{mockMsg{typeURL: "/cosmos.unknown.v1.MsgDoSomething"}},
+		sdk.NewCoins(sdk.NewCoin(BondDenom, sdkmath.NewInt(100_000))),
+		100_000,
+	)
+
+	_, err := decorator.AnteHandle(ctx, tx, false, passThroughHandler)
+	if err == nil {
+		t.Fatal("expected ErrSessionCapabilityDenied for unknown msg type with session key, got nil")
+	}
+	if !zeroneauthtypes.ErrSessionCapabilityDenied.Is(err) {
+		t.Fatalf("expected ErrSessionCapabilityDenied, got: %v", err)
 	}
 }

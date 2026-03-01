@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"cosmossdk.io/log"
+	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store"
 	storemetrics "cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
@@ -46,9 +47,11 @@ func (bk *mockBankKeeper) SendCoinsFromAccountToModule(_ context.Context, _ sdk.
 func (bk *mockBankKeeper) SendCoinsFromModuleToModule(_ context.Context, _, _ string, _ sdk.Coins) error {
 	return nil
 }
-func (bk *mockBankKeeper) BurnCoins(_ context.Context, _ string, _ sdk.Coins) error { return nil }
 func (bk *mockBankKeeper) GetBalance(_ context.Context, _ sdk.AccAddress, _ string) sdk.Coin {
 	return sdk.NewInt64Coin("uzrn", 0)
+}
+func (bk *mockBankKeeper) MintCoins(_ context.Context, _ string, _ sdk.Coins) error {
+	return nil
 }
 
 type mockStakingKeeper struct {
@@ -98,6 +101,10 @@ func (sk *mockStakingKeeper) GetTotalStake(_ context.Context) (uint64, error) {
 
 func (sk *mockStakingKeeper) SlashValidator(_ context.Context, _ string, _ uint64) error {
 	return nil
+}
+
+func (sk *mockStakingKeeper) SlashValidatorToModule(_ context.Context, _ string, _ uint64, _ string) (sdkmath.Int, error) {
+	return sdkmath.ZeroInt(), nil
 }
 
 // ---------- Test Setup ----------
@@ -763,7 +770,7 @@ func TestGetEligibleValidators_ReturnsAll(t *testing.T) {
 		AccuracyBps:       850_000,
 	}
 
-	vals, err := k.GetEligibleValidators(ctx)
+	vals, err := k.GetEligibleValidators(ctx, "")
 	require.NoError(t, err)
 	require.Len(t, vals, 2)
 
@@ -780,7 +787,7 @@ func TestGetEligibleValidators_Empty(t *testing.T) {
 	k, ctx := setupKnowledgeKeeper(t)
 
 	// Mock staking keeper has no validators by default
-	vals, err := k.GetEligibleValidators(ctx)
+	vals, err := k.GetEligibleValidators(ctx, "")
 	require.NoError(t, err)
 	require.Empty(t, vals)
 }
@@ -797,7 +804,7 @@ func TestGetEligibleValidators_PreservesValidatorInfo(t *testing.T) {
 		AccuracyBps:       950_000,
 	}
 
-	vals, err := k.GetEligibleValidators(ctx)
+	vals, err := k.GetEligibleValidators(ctx, "")
 	require.NoError(t, err)
 	require.Len(t, vals, 1)
 

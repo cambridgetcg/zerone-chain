@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"cosmossdk.io/log"
+	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/store"
 	storemetrics "cosmossdk.io/store/metrics"
 	storetypes "cosmossdk.io/store/types"
@@ -16,6 +17,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
 
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
@@ -29,7 +31,6 @@ import (
 type trackingBankKeeper struct {
 	balances map[string]sdk.Coins // addr → coins
 	minted   sdk.Coins
-	burned   sdk.Coins
 	// Module account balances
 	moduleBalances map[string]sdk.Coins
 	// Track calls for assertions
@@ -65,17 +66,31 @@ func (bk *trackingBankKeeper) SendCoinsFromAccountToModule(_ context.Context, se
 
 func (bk *trackingBankKeeper) SendCoinsFromModuleToModule(_ context.Context, senderModule, recipientModule string, amt sdk.Coins) error {
 	bk.sendCalls = append(bk.sendCalls, sendRecord{senderModule, recipientModule, amt})
+	// Track module balance changes for bootstrap fund tests
+	if bal, ok := bk.moduleBalances[senderModule]; ok {
+		bk.moduleBalances[senderModule] = bal.Sub(amt...)
+	}
+	bk.moduleBalances[recipientModule] = bk.moduleBalances[recipientModule].Add(amt...)
 	return nil
 }
 
-func (bk *trackingBankKeeper) BurnCoins(_ context.Context, _ string, amt sdk.Coins) error {
-	bk.burned = bk.burned.Add(amt...)
+
+func (bk *trackingBankKeeper) MintCoins(_ context.Context, moduleName string, amt sdk.Coins) error {
+	bk.minted = bk.minted.Add(amt...)
+	bk.moduleBalances[moduleName] = bk.moduleBalances[moduleName].Add(amt...)
 	return nil
 }
 
 func (bk *trackingBankKeeper) GetBalance(_ context.Context, addr sdk.AccAddress, denom string) sdk.Coin {
 	if coins, ok := bk.balances[addr.String()]; ok {
 		return sdk.NewCoin(denom, coins.AmountOf(denom))
+	}
+	// Check module balances by iterating known modules and matching addresses
+	for modName, coins := range bk.moduleBalances {
+		modAddr := sdk.AccAddress(authtypes.NewModuleAddress(modName))
+		if addr.Equals(modAddr) {
+			return sdk.NewCoin(denom, coins.AmountOf(denom))
+		}
 	}
 	return sdk.NewInt64Coin(denom, 0)
 }
@@ -136,6 +151,16 @@ func (sk *trackingStakingKeeper) GetTotalStake(_ context.Context) (uint64, error
 func (sk *trackingStakingKeeper) SlashValidator(_ context.Context, addr string, slashBps uint64) error {
 	sk.slashes = append(sk.slashes, slashRecord{Validator: addr, SlashBps: slashBps})
 	return nil
+}
+
+func (sk *trackingStakingKeeper) SlashValidatorToModule(_ context.Context, addr string, slashBps uint64, _ string) (sdkmath.Int, error) {
+	sk.slashes = append(sk.slashes, slashRecord{Validator: addr, SlashBps: slashBps})
+	stake := uint64(100_000)
+	if v, ok := sk.validators[addr]; ok {
+		stake = v.Stake
+	}
+	slashAmt := stake * slashBps / 1_000_000
+	return sdkmath.NewIntFromUint64(slashAmt), nil
 }
 
 func (sk *trackingStakingKeeper) addValidator(addr string, stake uint64, tier string) {
@@ -320,9 +345,9 @@ func makeRoundInPhase(id, claimID string, phase types.VerificationPhase, startBl
 		ClaimId:             claimID,
 		StartedAtBlock:      startBlock,
 		Phase:               phase,
-		CommitDeadline:      startBlock + 4,
-		RevealDeadline:      startBlock + 8,
-		AggregationDeadline: startBlock + 11,
+		CommitDeadline:      startBlock + 200,
+		RevealDeadline:      startBlock + 400,
+		AggregationDeadline: startBlock + 450,
 	}
 }
 

@@ -146,10 +146,9 @@ fetch_genesis() {
     curl -sSfL "${GENESIS_URL}" -o "${genesis_path}" || die "Failed to download genesis file"
   fi
 
-  # Validate
-  if ! zeroned validate-genesis --home "${ZERONED_HOME}" 2>/dev/null; then
-    # Try alternate command name
-    zeroned validate --home "${ZERONED_HOME}" 2>/dev/null || die "Genesis file validation failed"
+  # Validate (SDK v0.50 uses 'genesis validate', older uses 'validate-genesis')
+  if ! zeroned genesis validate --home "${ZERONED_HOME}" 2>/dev/null; then
+    zeroned validate-genesis --home "${ZERONED_HOME}" 2>/dev/null || die "Genesis file validation failed"
   fi
 
   ok "Genesis file installed and validated"

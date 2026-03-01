@@ -4,6 +4,7 @@ package zerone.knowledge.v1;
 option go_package = "github.com/zerone-chain/zerone/x/knowledge/types";
 
 import "cosmos/msg/v1/msg.proto";
+import "zerone/knowledge/v1/types.proto";
 import "zerone/knowledge/v1/genesis.proto";
 
 // Msg defines the knowledge module's transaction service.
@@ -74,6 +75,24 @@ service Msg {
 
   // ExecuteResearchProposal executes an approved research fund proposal.
   rpc ExecuteResearchProposal(MsgExecuteResearchProposal) returns (MsgExecuteResearchProposalResponse);
+
+  // ─── Common knowledge registry governance ──────────────────────────────
+
+  // AddCommonKnowledge adds an entry to the common knowledge registry (authority-only).
+  rpc AddCommonKnowledge(MsgAddCommonKnowledge) returns (MsgAddCommonKnowledgeResponse);
+
+  // RemoveCommonKnowledge removes an entry from the common knowledge registry (authority-only).
+  rpc RemoveCommonKnowledge(MsgRemoveCommonKnowledge) returns (MsgRemoveCommonKnowledgeResponse);
+
+  // ─── Agent demand ──────────────────────────────────────────────────
+
+  // ReportDemand reports agent query demand (authorized reporters only).
+  rpc ReportDemand(MsgReportDemand) returns (MsgReportDemandResponse);
+
+  // ─── Query satisfaction ──────────────────────────────────────────────
+
+  // RateFact allows a querier to provide relevance feedback on a fact.
+  rpc RateFact(MsgRateFact) returns (MsgRateFactResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -88,6 +107,13 @@ message MsgSubmitClaim {
   string          stake         = 5; // uzrn amount
   repeated string references    = 6; // fact IDs cited
   string          partnership_id = 7;
+  ClaimType       claim_type    = 8; // Optional — defaults to ASSERTION if unset
+  // Typed relationships to existing facts.
+  // Replaces untyped `references` for new claims (references kept for backward compat).
+  repeated ClaimRelation relations = 9;
+  ClaimStructure structure = 10;  // Optional structured decomposition
+  string canonical_form    = 11;  // Optional — auto-derived from structure if omitted
+  bool   sponsored         = 12;  // Request bootstrap fund sponsorship for review fee
 }
 
 message MsgSubmitClaimResponse {
@@ -296,3 +322,62 @@ message MsgExecuteResearchProposal {
 }
 
 message MsgExecuteResearchProposalResponse {}
+
+// ─── Common knowledge registry governance messages ──────────────────────────
+
+message MsgAddCommonKnowledge {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority   = 1;
+  string domain      = 2;
+  string subject     = 3;
+  string description = 4;
+  uint64 penalty_bps = 5;
+}
+
+message MsgAddCommonKnowledgeResponse {
+  string id = 1;
+}
+
+message MsgRemoveCommonKnowledge {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1;
+  string id        = 2;  // Common knowledge entry ID
+}
+
+message MsgRemoveCommonKnowledgeResponse {}
+
+// ─── Agent demand messages ───────────────────────────────────────────────────
+
+message MsgReportDemand {
+    option (cosmos.msg.v1.signer) = "reporter";
+
+    string reporter = 1;  // Context server address (whitelisted)
+    repeated DemandReport reports = 2;
+}
+
+message DemandReport {
+    string domain     = 1;
+    string subject    = 2;
+    uint64 queries    = 3;  // Total queries in this batch
+    uint64 fulfilled  = 4;  // How many returned results
+    uint64 unfulfilled = 5;
+}
+
+message MsgReportDemandResponse {}
+
+// ─── Query satisfaction messages ────────────────────────────────────────────
+
+// MsgRateFact allows a querier to provide relevance feedback on a fact.
+// The querier must have previously queried this fact (enforced by query receipt).
+message MsgRateFact {
+    option (cosmos.msg.v1.signer) = "rater";
+
+    string rater   = 1;  // Address of the rating agent
+    string fact_id = 2;  // Fact being rated
+    bool   useful  = 3;  // true = satisfied, false = dissatisfied
+    string memo    = 4;  // Optional: brief reason (max 256 chars)
+}
+
+message MsgRateFactResponse {}

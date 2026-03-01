@@ -218,3 +218,104 @@ func TestVoteExtensionJSONRoundTrip(t *testing.T) {
 	require.Len(t, decoded.Reveals, 1)
 	require.Equal(t, uint64(750_000), decoded.Reveals[0].Confidence)
 }
+
+// TestCountUserTxs verifies that user tx counting correctly excludes injection pseudo-txs.
+// This is the logic used in PrepareProposal, ProcessProposal, and PotPreBlocker
+// to set the block tx count for reward calculation.
+func TestCountUserTxs(t *testing.T) {
+	injTx, err := zeroneapp.EncodeVoteExtInjection(zeroneapp.VoteExtInjection{
+		Commitments: []zeroneapp.InjectedCommitment{
+			{RoundID: "r1", Validator: "v1", CommitmentHash: "abc"},
+		},
+	})
+	require.NoError(t, err)
+
+	regularTx1 := []byte(`{"body":{"messages":[]},"auth_info":{},"signatures":[]}`)
+	regularTx2 := []byte(`{"body":{"messages":[{"@type":"/cosmos.bank.v1beta1.MsgSend"}]},"auth_info":{},"signatures":[]}`)
+
+	tests := []struct {
+		name     string
+		txs      [][]byte
+		expected int
+	}{
+		{
+			name:     "empty block",
+			txs:      nil,
+			expected: 0,
+		},
+		{
+			name:     "injection only — no user txs",
+			txs:      [][]byte{injTx},
+			expected: 0,
+		},
+		{
+			name:     "injection + 1 user tx",
+			txs:      [][]byte{injTx, regularTx1},
+			expected: 1,
+		},
+		{
+			name:     "injection + 2 user txs",
+			txs:      [][]byte{injTx, regularTx1, regularTx2},
+			expected: 2,
+		},
+		{
+			name:     "2 user txs, no injection",
+			txs:      [][]byte{regularTx1, regularTx2},
+			expected: 2,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Count user txs using the same logic as PotPreBlocker/ProcessProposal
+			userTxCount := 0
+			for _, txBytes := range tc.txs {
+				if !zeroneapp.IsVoteExtInjectionTx(txBytes) {
+					userTxCount++
+				}
+			}
+			require.Equal(t, tc.expected, userTxCount)
+		})
+	}
+}
+
+// TestCountUserTxs_PrepareProposalStyle verifies the PrepareProposal counting style
+// (subtract 1 if first tx is injection) produces the same result.
+func TestCountUserTxs_PrepareProposalStyle(t *testing.T) {
+	injTx, err := zeroneapp.EncodeVoteExtInjection(zeroneapp.VoteExtInjection{})
+	require.NoError(t, err)
+
+	regularTx := []byte(`{"body":{}}`)
+
+	tests := []struct {
+		name string
+		txs  [][]byte
+	}{
+		{"empty", nil},
+		{"injection only", [][]byte{injTx}},
+		{"injection + user", [][]byte{injTx, regularTx}},
+		{"user only", [][]byte{regularTx}},
+		{"injection + 3 users", [][]byte{injTx, regularTx, regularTx, regularTx}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// PrepareProposal style: subtract 1 if first is injection
+			ppCount := len(tc.txs)
+			if len(tc.txs) > 0 && zeroneapp.IsVoteExtInjectionTx(tc.txs[0]) {
+				ppCount = len(tc.txs) - 1
+			}
+
+			// ProcessProposal/PreBlocker style: iterate and count non-injection
+			iterCount := 0
+			for _, txBytes := range tc.txs {
+				if !zeroneapp.IsVoteExtInjectionTx(txBytes) {
+					iterCount++
+				}
+			}
+
+			require.Equal(t, iterCount, ppCount,
+				"PrepareProposal and ProcessProposal counting must agree")
+		})
+	}
+}

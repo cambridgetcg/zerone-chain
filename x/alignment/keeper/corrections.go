@@ -2,7 +2,7 @@ package keeper
 
 import (
 	"context"
-	"time"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -14,7 +14,7 @@ func (k Keeper) GenerateCorrections(ctx context.Context, scores *types.Dimension
 	params := k.GetParams(ctx)
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	height := uint64(sdkCtx.BlockHeight())
-	now := time.Now().Unix()
+	now := sdkCtx.BlockTime().Unix()
 
 	var corrections []*types.CorrectionRecord
 
@@ -92,10 +92,75 @@ func (k Keeper) GenerateCorrections(ctx context.Context, scores *types.Dimension
 	return corrections
 }
 
-// ApplyCorrections dispatches corrections to autopoiesis if available.
+// ApplyCorrections dispatches corrections to autopoiesis if within bounds.
+// Uses dynamic effective max magnitude based on correction confidence (R29-4).
 // Nil-safe: if autopoiesisKeeper is nil, corrections are stored with applied=false.
 func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.CorrectionRecord) {
+	params := k.GetParams(ctx)
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+
+	// Get current scores for outcome tracking (R29-4).
+	currentScores, _ := k.GetScores(ctx, height)
+
+	// Use dynamic effective max magnitude based on correction confidence (R29-4).
+	effectiveMax := k.GetEffectiveMaxMagnitude(ctx)
+
 	for _, c := range corrections {
+		// Record pre-correction outcome for tracking (R29-4).
+		if currentScores != nil {
+			outcome := &types.CorrectionOutcome{
+				Height:      height,
+				Dimension:   c.Dimension,
+				Magnitude:   c.Magnitude,
+				Direction:   c.Direction,
+				ScoreBefore: types.GetDimensionScore(currentScores, c.Dimension),
+			}
+			k.SetCorrectionOutcome(ctx, outcome)
+		}
+
+		// Check magnitude bounds (dynamic via correction confidence).
+		if effectiveMax > 0 && c.Magnitude > effectiveMax {
+			k.Logger(ctx).Info("correction exceeds auto-apply bounds, requires governance",
+				"dimension", c.Dimension,
+				"parameter", c.Parameter,
+				"magnitude", c.Magnitude,
+				"effective_max", effectiveMax,
+			)
+			sdkCtx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.alignment.correction_governance_required",
+					sdk.NewAttribute("dimension", c.Dimension),
+					sdk.NewAttribute("parameter", c.Parameter),
+					sdk.NewAttribute("direction", c.Direction),
+					sdk.NewAttribute("magnitude", fmt.Sprintf("%d", c.Magnitude)),
+					sdk.NewAttribute("effective_max", fmt.Sprintf("%d", effectiveMax)),
+				),
+			)
+			c.Applied = false
+			k.AddCorrection(ctx, c)
+			continue
+		} else if effectiveMax == 0 && params.MaxAutoApplyMagnitudeBps > 0 {
+			// Confidence too low — all corrections require governance (R29-4).
+			k.Logger(ctx).Info("correction confidence too low, all corrections require governance",
+				"dimension", c.Dimension,
+				"parameter", c.Parameter,
+				"magnitude", c.Magnitude,
+			)
+			sdkCtx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.alignment.correction_governance_required",
+					sdk.NewAttribute("dimension", c.Dimension),
+					sdk.NewAttribute("parameter", c.Parameter),
+					sdk.NewAttribute("direction", c.Direction),
+					sdk.NewAttribute("magnitude", fmt.Sprintf("%d", c.Magnitude)),
+					sdk.NewAttribute("effective_max", "0"),
+					sdk.NewAttribute("reason", "low_confidence"),
+				),
+			)
+			c.Applied = false
+			k.AddCorrection(ctx, c)
+			continue
+		}
+
 		if k.autopoiesisKeeper != nil {
 			err := k.autopoiesisKeeper.SuggestAdjustment(ctx, c.Parameter, c.Direction, c.Magnitude)
 			if err == nil {

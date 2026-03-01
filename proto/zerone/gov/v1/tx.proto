@@ -19,6 +19,10 @@ service Msg {
   rpc VoteResearchSpend(MsgVoteResearchSpend) returns (MsgVoteResearchSpendResponse);
   rpc SetResearchVoters(MsgSetResearchVoters) returns (MsgSetResearchVotersResponse);
   rpc AttachUpgradePlan(MsgAttachUpgradePlan) returns (MsgAttachUpgradePlanResponse);
+  rpc NominateSeatElection(MsgNominateSeatElection) returns (MsgNominateSeatElectionResponse);
+  rpc AcceptSeatNomination(MsgAcceptSeatNomination) returns (MsgAcceptSeatNominationResponse);
+  rpc VoteSeatElection(MsgVoteSeatElection) returns (MsgVoteSeatElectionResponse);
+  rpc DomainFormationFreeze(MsgDomainFormationFreeze) returns (MsgDomainFormationFreezeResponse);
 }
 
 // MsgSubmitLIP creates a new LIP proposal.
@@ -134,3 +138,49 @@ message MsgAttachUpgradePlan {
 }
 
 message MsgAttachUpgradePlanResponse {}
+
+// MsgNominateSeatElection nominates a candidate for a community seat.
+message MsgNominateSeatElection {
+  option (cosmos.msg.v1.signer) = "proposer";
+  string proposer   = 1;  // nominator bech32
+  string candidate  = 2;  // candidate bech32
+  uint32 seat_index = 3;
+  string statement  = 4;  // max 2000 chars
+}
+
+message MsgNominateSeatElectionResponse {
+  uint64 proposal_id = 1;
+}
+
+// MsgAcceptSeatNomination accepts a pending seat election nomination.
+message MsgAcceptSeatNomination {
+  option (cosmos.msg.v1.signer) = "candidate";
+  string candidate   = 1;
+  uint64 proposal_id = 2;
+}
+
+message MsgAcceptSeatNominationResponse {}
+
+// MsgVoteSeatElection casts a stake-weighted vote on a seat election.
+message MsgVoteSeatElection {
+  option (cosmos.msg.v1.signer) = "voter";
+  string voter       = 1;
+  uint64 proposal_id = 2;
+  string option      = 3;  // "yes", "no", "abstain"
+}
+
+message MsgVoteSeatElectionResponse {
+  string effective_weight = 1;
+}
+
+// MsgDomainFormationFreeze imposes a formation cooldown on a domain.
+// Only executable via governance (authority-gated).
+message MsgDomainFormationFreeze {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority       = 1;
+  string domain          = 2;
+  uint64 duration_blocks = 3;
+  string reason          = 4;
+}
+
+message MsgDomainFormationFreezeResponse {}

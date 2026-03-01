@@ -49,3 +49,46 @@ func (a *GovStakingKeeperAdapter) GetDelegatorTotalBonded(ctx context.Context, a
 
 	return total.String(), nil
 }
+
+// CountActiveGuardians returns the number of active Guardian-tier validators.
+func (a *GovStakingKeeperAdapter) CountActiveGuardians(ctx context.Context) (uint64, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	var count uint64
+	a.k.IterateValidators(sdkCtx, func(val *types.Validator) bool {
+		if val.Tier == types.TierGuardian && val.IsActive {
+			count++
+		}
+		return false
+	})
+	return count, nil
+}
+
+// IsGuardian returns true if the address is a Guardian-tier active validator.
+func (a *GovStakingKeeperAdapter) IsGuardian(ctx context.Context, addr string) (bool, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	val, found := a.k.GetValidator(sdkCtx, addr)
+	if !found {
+		return false, nil
+	}
+	return val.Tier == types.TierGuardian && val.IsActive, nil
+}
+
+// IsJailed returns true if the validator at the given address is jailed.
+func (a *GovStakingKeeperAdapter) IsJailed(ctx context.Context, addr string) (bool, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	val, found := a.k.GetValidator(sdkCtx, addr)
+	if !found {
+		return false, nil
+	}
+	return val.Jailed, nil
+}
+
+// GetSlashCount returns the number of times a validator has been slashed.
+func (a *GovStakingKeeperAdapter) GetSlashCount(ctx context.Context, addr string) (uint64, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	val, found := a.k.GetValidator(sdkCtx, addr)
+	if !found {
+		return 0, nil
+	}
+	return val.SlashCount, nil
+}

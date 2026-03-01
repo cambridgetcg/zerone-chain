@@ -2,14 +2,18 @@ package keeper
 
 import (
 	"context"
+	"fmt"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/crypto"
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
-// GetEligibleValidators returns all validators eligible for verification selection.
-// If DomainQualificationKeeper is available (R6-5), it filters by domain qualification.
-func (k Keeper) GetEligibleValidators(ctx context.Context) ([]types.ValidatorInfo, error) {
+// GetEligibleValidators returns validators eligible for verification of a given domain.
+// When domainQualificationKeeper is set, it filters by domain qualification and falls
+// back to all active validators if fewer than MinVerifiers are qualified.
+func (k Keeper) GetEligibleValidators(ctx context.Context, domain string) ([]types.ValidatorInfo, error) {
 	if k.stakingKeeper == nil {
 		return nil, nil
 	}
@@ -19,13 +23,43 @@ func (k Keeper) GetEligibleValidators(ctx context.Context) ([]types.ValidatorInf
 		return nil, err
 	}
 
-	// DomainQualificationKeeper is nil until R6-5 — return all active validators
-	if k.domainQualificationKeeper == nil {
+	// No qualification keeper — return all active validators
+	if k.domainQualificationKeeper == nil || domain == "" {
 		return validators, nil
 	}
 
-	// Future: filter by domain qualification
-	return validators, nil
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return validators, nil // non-fatal: fall back to all
+	}
+
+	var qualified []types.ValidatorInfo
+	for _, v := range validators {
+		ok, err := k.domainQualificationKeeper.IsQualified(ctx, v.Address, domain)
+		if err != nil {
+			k.Logger(ctx).Warn("qualification check failed", "validator", v.Address, "error", err)
+			continue
+		}
+		if ok {
+			qualified = append(qualified, v)
+		}
+	}
+
+	// Fallback: if fewer than MinVerifiers are qualified, allow all validators
+	if uint64(len(qualified)) < params.MinVerifiers {
+		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.qualification_fallback",
+			sdk.NewAttribute("domain", domain),
+			sdk.NewAttribute("qualified_count", fmt.Sprintf("%d", len(qualified))),
+			sdk.NewAttribute("min_verifiers", fmt.Sprintf("%d", params.MinVerifiers)),
+		))
+		k.Logger(ctx).Warn("insufficient qualified verifiers, falling back to all",
+			"qualified", len(qualified), "min", params.MinVerifiers, "domain", domain)
+		return validators, nil
+	}
+
+	return qualified, nil
 }
 
 // VerifyValidatorVRFSelection verifies that a validator was properly selected

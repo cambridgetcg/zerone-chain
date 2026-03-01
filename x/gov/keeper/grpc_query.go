@@ -172,3 +172,71 @@ func (qs *queryServer) ResearchVoters(goCtx context.Context, _ *types.QueryResea
 	voters := qs.GetResearchFundVoters(ctx)
 	return &types.QueryResearchVotersResponse{Voters: voters}, nil
 }
+
+// ResearchFundGovernance returns the current governance state and a live snapshot of exit conditions.
+func (qs *queryServer) ResearchFundGovernance(goCtx context.Context, _ *types.QueryResearchFundGovernanceRequest) (*types.QueryResearchFundGovernanceResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	state := qs.GetResearchFundGovernanceState(ctx)
+	conditions, _ := qs.CheckPhaseExitConditions(ctx)
+
+	return &types.QueryResearchFundGovernanceResponse{
+		State:             state,
+		CurrentConditions: conditions,
+	}, nil
+}
+
+// --- Seat Election Query Handlers ---
+
+// SeatElection returns a seat election proposal by ID with its votes.
+func (qs *queryServer) SeatElection(goCtx context.Context, req *types.QuerySeatElectionRequest) (*types.QuerySeatElectionResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	prop, found := qs.GetSeatElection(ctx, req.ProposalId)
+	if !found {
+		return nil, types.ErrSeatElectionNotFound
+	}
+	votes := qs.GetVotesForSeatElection(ctx, req.ProposalId)
+	return &types.QuerySeatElectionResponse{Proposal: prop, Votes: votes}, nil
+}
+
+// SeatElections returns seat election proposals filtered by stage.
+func (qs *queryServer) SeatElections(goCtx context.Context, req *types.QuerySeatElectionsRequest) (*types.QuerySeatElectionsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+
+	var all []*types.SeatElectionProposal
+	if req.Stage != "" {
+		all = qs.GetSeatElectionsByStage(ctx, req.Stage)
+	} else {
+		all = qs.GetAllSeatElections(ctx)
+	}
+
+	total := uint64(len(all))
+	limit := req.Limit
+	if limit == 0 || limit > 100 {
+		limit = 100
+	}
+	offset := req.Offset
+	if offset >= total {
+		return &types.QuerySeatElectionsResponse{Total: total}, nil
+	}
+	end := offset + limit
+	if end > total {
+		end = total
+	}
+
+	return &types.QuerySeatElectionsResponse{
+		Proposals: all[offset:end],
+		Total:     total,
+	}, nil
+}
+
+// ResearchFundSeats returns the current community seat state.
+func (qs *queryServer) ResearchFundSeats(goCtx context.Context, _ *types.QueryResearchFundSeatsRequest) (*types.QueryResearchFundSeatsResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	state := qs.GetResearchFundGovernanceState(ctx)
+	activeCount := qs.GetActiveCommunitySeatCount(ctx)
+	return &types.QueryResearchFundSeatsResponse{
+		CommunitySeats:    state.CommunitySeats,
+		SeatTermEndBlocks: state.SeatTermEndBlocks,
+		ActiveSeatCount:   activeCount,
+	}, nil
+}

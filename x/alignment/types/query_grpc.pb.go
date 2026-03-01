@@ -19,12 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Params_FullMethodName            = "/zerone.alignment.v1.Query/Params"
-	Query_State_FullMethodName             = "/zerone.alignment.v1.Query/State"
-	Query_Observation_FullMethodName       = "/zerone.alignment.v1.Query/Observation"
-	Query_Scores_FullMethodName            = "/zerone.alignment.v1.Query/Scores"
-	Query_HealthIndex_FullMethodName       = "/zerone.alignment.v1.Query/HealthIndex"
-	Query_CorrectionHistory_FullMethodName = "/zerone.alignment.v1.Query/CorrectionHistory"
+	Query_Params_FullMethodName               = "/zerone.alignment.v1.Query/Params"
+	Query_State_FullMethodName                = "/zerone.alignment.v1.Query/State"
+	Query_Observation_FullMethodName          = "/zerone.alignment.v1.Query/Observation"
+	Query_Scores_FullMethodName               = "/zerone.alignment.v1.Query/Scores"
+	Query_HealthIndex_FullMethodName          = "/zerone.alignment.v1.Query/HealthIndex"
+	Query_CorrectionHistory_FullMethodName    = "/zerone.alignment.v1.Query/CorrectionHistory"
+	Query_HealthHistory_FullMethodName        = "/zerone.alignment.v1.Query/HealthHistory"
+	Query_CorrectionConfidence_FullMethodName = "/zerone.alignment.v1.Query/CorrectionConfidence"
+	Query_GlobalPacing_FullMethodName         = "/zerone.alignment.v1.Query/GlobalPacing"
 )
 
 // QueryClient is the client API for Query service.
@@ -39,6 +42,9 @@ type QueryClient interface {
 	Scores(ctx context.Context, in *QueryScoresRequest, opts ...grpc.CallOption) (*QueryScoresResponse, error)
 	HealthIndex(ctx context.Context, in *QueryHealthIndexRequest, opts ...grpc.CallOption) (*QueryHealthIndexResponse, error)
 	CorrectionHistory(ctx context.Context, in *QueryCorrectionHistoryRequest, opts ...grpc.CallOption) (*QueryCorrectionHistoryResponse, error)
+	HealthHistory(ctx context.Context, in *QueryHealthHistoryRequest, opts ...grpc.CallOption) (*QueryHealthHistoryResponse, error)
+	CorrectionConfidence(ctx context.Context, in *QueryCorrectionConfidenceRequest, opts ...grpc.CallOption) (*QueryCorrectionConfidenceResponse, error)
+	GlobalPacing(ctx context.Context, in *QueryGlobalPacingRequest, opts ...grpc.CallOption) (*QueryGlobalPacingResponse, error)
 }
 
 type queryClient struct {
@@ -109,6 +115,36 @@ func (c *queryClient) CorrectionHistory(ctx context.Context, in *QueryCorrection
 	return out, nil
 }
 
+func (c *queryClient) HealthHistory(ctx context.Context, in *QueryHealthHistoryRequest, opts ...grpc.CallOption) (*QueryHealthHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryHealthHistoryResponse)
+	err := c.cc.Invoke(ctx, Query_HealthHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) CorrectionConfidence(ctx context.Context, in *QueryCorrectionConfidenceRequest, opts ...grpc.CallOption) (*QueryCorrectionConfidenceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryCorrectionConfidenceResponse)
+	err := c.cc.Invoke(ctx, Query_CorrectionConfidence_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) GlobalPacing(ctx context.Context, in *QueryGlobalPacingRequest, opts ...grpc.CallOption) (*QueryGlobalPacingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryGlobalPacingResponse)
+	err := c.cc.Invoke(ctx, Query_GlobalPacing_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -121,6 +157,9 @@ type QueryServer interface {
 	Scores(context.Context, *QueryScoresRequest) (*QueryScoresResponse, error)
 	HealthIndex(context.Context, *QueryHealthIndexRequest) (*QueryHealthIndexResponse, error)
 	CorrectionHistory(context.Context, *QueryCorrectionHistoryRequest) (*QueryCorrectionHistoryResponse, error)
+	HealthHistory(context.Context, *QueryHealthHistoryRequest) (*QueryHealthHistoryResponse, error)
+	CorrectionConfidence(context.Context, *QueryCorrectionConfidenceRequest) (*QueryCorrectionConfidenceResponse, error)
+	GlobalPacing(context.Context, *QueryGlobalPacingRequest) (*QueryGlobalPacingResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -148,6 +187,15 @@ func (UnimplementedQueryServer) HealthIndex(context.Context, *QueryHealthIndexRe
 }
 func (UnimplementedQueryServer) CorrectionHistory(context.Context, *QueryCorrectionHistoryRequest) (*QueryCorrectionHistoryResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CorrectionHistory not implemented")
+}
+func (UnimplementedQueryServer) HealthHistory(context.Context, *QueryHealthHistoryRequest) (*QueryHealthHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method HealthHistory not implemented")
+}
+func (UnimplementedQueryServer) CorrectionConfidence(context.Context, *QueryCorrectionConfidenceRequest) (*QueryCorrectionConfidenceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CorrectionConfidence not implemented")
+}
+func (UnimplementedQueryServer) GlobalPacing(context.Context, *QueryGlobalPacingRequest) (*QueryGlobalPacingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GlobalPacing not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -278,6 +326,60 @@ func _Query_CorrectionHistory_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_HealthHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryHealthHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).HealthHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_HealthHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).HealthHistory(ctx, req.(*QueryHealthHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_CorrectionConfidence_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryCorrectionConfidenceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).CorrectionConfidence(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_CorrectionConfidence_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).CorrectionConfidence(ctx, req.(*QueryCorrectionConfidenceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_GlobalPacing_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryGlobalPacingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).GlobalPacing(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_GlobalPacing_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).GlobalPacing(ctx, req.(*QueryGlobalPacingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -308,6 +410,18 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CorrectionHistory",
 			Handler:    _Query_CorrectionHistory_Handler,
+		},
+		{
+			MethodName: "HealthHistory",
+			Handler:    _Query_HealthHistory_Handler,
+		},
+		{
+			MethodName: "CorrectionConfidence",
+			Handler:    _Query_CorrectionConfidence_Handler,
+		},
+		{
+			MethodName: "GlobalPacing",
+			Handler:    _Query_GlobalPacing_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

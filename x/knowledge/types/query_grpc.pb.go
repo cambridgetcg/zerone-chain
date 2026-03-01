@@ -19,18 +19,42 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Params_FullMethodName            = "/zerone.knowledge.v1.Query/Params"
-	Query_Fact_FullMethodName              = "/zerone.knowledge.v1.Query/Fact"
-	Query_Facts_FullMethodName             = "/zerone.knowledge.v1.Query/Facts"
-	Query_FactsByDomain_FullMethodName     = "/zerone.knowledge.v1.Query/FactsByDomain"
-	Query_FactsBySubmitter_FullMethodName  = "/zerone.knowledge.v1.Query/FactsBySubmitter"
-	Query_Claim_FullMethodName             = "/zerone.knowledge.v1.Query/Claim"
-	Query_PendingClaims_FullMethodName     = "/zerone.knowledge.v1.Query/PendingClaims"
-	Query_VerificationRound_FullMethodName = "/zerone.knowledge.v1.Query/VerificationRound"
-	Query_Domain_FullMethodName            = "/zerone.knowledge.v1.Query/Domain"
-	Query_Domains_FullMethodName           = "/zerone.knowledge.v1.Query/Domains"
-	Query_FactConfidence_FullMethodName    = "/zerone.knowledge.v1.Query/FactConfidence"
-	Query_FactCitationCount_FullMethodName = "/zerone.knowledge.v1.Query/FactCitationCount"
+	Query_Params_FullMethodName                 = "/zerone.knowledge.v1.Query/Params"
+	Query_Fact_FullMethodName                   = "/zerone.knowledge.v1.Query/Fact"
+	Query_Facts_FullMethodName                  = "/zerone.knowledge.v1.Query/Facts"
+	Query_FactsByDomain_FullMethodName          = "/zerone.knowledge.v1.Query/FactsByDomain"
+	Query_FactsBySubmitter_FullMethodName       = "/zerone.knowledge.v1.Query/FactsBySubmitter"
+	Query_Claim_FullMethodName                  = "/zerone.knowledge.v1.Query/Claim"
+	Query_PendingClaims_FullMethodName          = "/zerone.knowledge.v1.Query/PendingClaims"
+	Query_VerificationRound_FullMethodName      = "/zerone.knowledge.v1.Query/VerificationRound"
+	Query_Domain_FullMethodName                 = "/zerone.knowledge.v1.Query/Domain"
+	Query_Domains_FullMethodName                = "/zerone.knowledge.v1.Query/Domains"
+	Query_FactConfidence_FullMethodName         = "/zerone.knowledge.v1.Query/FactConfidence"
+	Query_FactCitationCount_FullMethodName      = "/zerone.knowledge.v1.Query/FactCitationCount"
+	Query_FactRelations_FullMethodName          = "/zerone.knowledge.v1.Query/FactRelations"
+	Query_FactsBySubject_FullMethodName         = "/zerone.knowledge.v1.Query/FactsBySubject"
+	Query_FactsByTag_FullMethodName             = "/zerone.knowledge.v1.Query/FactsByTag"
+	Query_FactByCanonical_FullMethodName        = "/zerone.knowledge.v1.Query/FactByCanonical"
+	Query_FactsByFitness_FullMethodName         = "/zerone.knowledge.v1.Query/FactsByFitness"
+	Query_BootstrapFundStatus_FullMethodName    = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
+	Query_FactsAtRisk_FullMethodName            = "/zerone.knowledge.v1.Query/FactsAtRisk"
+	Query_FactLineage_FullMethodName            = "/zerone.knowledge.v1.Query/FactLineage"
+	Query_FactProgeny_FullMethodName            = "/zerone.knowledge.v1.Query/FactProgeny"
+	Query_CommonKnowledge_FullMethodName        = "/zerone.knowledge.v1.Query/CommonKnowledge"
+	Query_CheckNovelty_FullMethodName           = "/zerone.knowledge.v1.Query/CheckNovelty"
+	Query_ActiveBounties_FullMethodName         = "/zerone.knowledge.v1.Query/ActiveBounties"
+	Query_DemandSignals_FullMethodName          = "/zerone.knowledge.v1.Query/DemandSignals"
+	Query_TopDemandGaps_FullMethodName          = "/zerone.knowledge.v1.Query/TopDemandGaps"
+	Query_NicheInfo_FullMethodName              = "/zerone.knowledge.v1.Query/NicheInfo"
+	Query_NichesByDomain_FullMethodName         = "/zerone.knowledge.v1.Query/NichesByDomain"
+	Query_DomainDiversity_FullMethodName        = "/zerone.knowledge.v1.Query/DomainDiversity"
+	Query_DomainDiversityHistory_FullMethodName = "/zerone.knowledge.v1.Query/DomainDiversityHistory"
+	Query_ValidatorIndependence_FullMethodName  = "/zerone.knowledge.v1.Query/ValidatorIndependence"
+	Query_ConformityAlerts_FullMethodName       = "/zerone.knowledge.v1.Query/ConformityAlerts"
+	Query_MetabolismStatus_FullMethodName       = "/zerone.knowledge.v1.Query/MetabolismStatus"
+	Query_DomainCapacity_FullMethodName         = "/zerone.knowledge.v1.Query/DomainCapacity"
+	Query_EpistemicTemperature_FullMethodName   = "/zerone.knowledge.v1.Query/EpistemicTemperature"
+	Query_RoleElasticity_FullMethodName         = "/zerone.knowledge.v1.Query/RoleElasticity"
 )
 
 // QueryClient is the client API for Query service.
@@ -63,6 +87,53 @@ type QueryClient interface {
 	FactConfidence(ctx context.Context, in *QueryFactConfidenceRequest, opts ...grpc.CallOption) (*QueryFactConfidenceResponse, error)
 	// FactCitationCount queries the citation count of a fact.
 	FactCitationCount(ctx context.Context, in *QueryFactCitationCountRequest, opts ...grpc.CallOption) (*QueryFactCitationCountResponse, error)
+	// FactRelations queries typed relations for a fact (knowledge graph edges).
+	FactRelations(ctx context.Context, in *QueryFactRelationsRequest, opts ...grpc.CallOption) (*QueryFactRelationsResponse, error)
+	// FactsBySubject queries facts by structured subject within a domain.
+	FactsBySubject(ctx context.Context, in *QueryFactsBySubjectRequest, opts ...grpc.CallOption) (*QueryFactsBySubjectResponse, error)
+	// FactsByTag queries facts by a searchable tag.
+	FactsByTag(ctx context.Context, in *QueryFactsByTagRequest, opts ...grpc.CallOption) (*QueryFactsByTagResponse, error)
+	// FactByCanonical queries a fact by its canonical form hash.
+	FactByCanonical(ctx context.Context, in *QueryFactByCanonicalRequest, opts ...grpc.CallOption) (*QueryFactByCanonicalResponse, error)
+	// FactsByFitness queries facts sorted by fitness score.
+	FactsByFitness(ctx context.Context, in *QueryFactsByFitnessRequest, opts ...grpc.CallOption) (*QueryFactsByFitnessResponse, error)
+	// BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
+	BootstrapFundStatus(ctx context.Context, in *QueryBootstrapFundStatusRequest, opts ...grpc.CallOption) (*QueryBootstrapFundStatusResponse, error)
+	// FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
+	FactsAtRisk(ctx context.Context, in *QueryFactsAtRiskRequest, opts ...grpc.CallOption) (*QueryFactsAtRiskResponse, error)
+	// FactLineage traces a fact's ancestry up to the root.
+	FactLineage(ctx context.Context, in *QueryFactLineageRequest, opts ...grpc.CallOption) (*QueryFactLineageResponse, error)
+	// FactProgeny returns a fact's descendant tree.
+	FactProgeny(ctx context.Context, in *QueryFactProgenyRequest, opts ...grpc.CallOption) (*QueryFactProgenyResponse, error)
+	// CommonKnowledge queries the common knowledge registry.
+	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
+	// CheckNovelty previews the novelty score a claim would receive before submission.
+	CheckNovelty(ctx context.Context, in *QueryCheckNoveltyRequest, opts ...grpc.CallOption) (*QueryCheckNoveltyResponse, error)
+	// ActiveBounties queries active (unclaimed) knowledge bounties.
+	ActiveBounties(ctx context.Context, in *QueryActiveBountiesRequest, opts ...grpc.CallOption) (*QueryActiveBountiesResponse, error)
+	// DemandSignals queries demand signal data for a domain.
+	DemandSignals(ctx context.Context, in *QueryDemandSignalsRequest, opts ...grpc.CallOption) (*QueryDemandSignalsResponse, error)
+	// TopDemandGaps queries the top unfulfilled demand gaps.
+	TopDemandGaps(ctx context.Context, in *QueryTopDemandGapsRequest, opts ...grpc.CallOption) (*QueryTopDemandGapsResponse, error)
+	// NicheInfo queries members and metadata for a specific niche.
+	NicheInfo(ctx context.Context, in *QueryNicheInfoRequest, opts ...grpc.CallOption) (*QueryNicheInfoResponse, error)
+	// NichesByDomain queries all niches within a domain.
+	NichesByDomain(ctx context.Context, in *QueryNichesByDomainRequest, opts ...grpc.CallOption) (*QueryNichesByDomainResponse, error)
+	// DomainDiversity queries consensus diversity for a domain (current epoch).
+	DomainDiversity(ctx context.Context, in *QueryDomainDiversityRequest, opts ...grpc.CallOption) (*QueryDomainDiversityResponse, error)
+	// DomainDiversityHistory queries historical diversity for a domain.
+	DomainDiversityHistory(ctx context.Context, in *QueryDomainDiversityHistoryRequest, opts ...grpc.CallOption) (*QueryDomainDiversityHistoryResponse, error)
+	// ValidatorIndependence queries a validator's independence score.
+	ValidatorIndependence(ctx context.Context, in *QueryValidatorIndependenceRequest, opts ...grpc.CallOption) (*QueryValidatorIndependenceResponse, error)
+	// ConformityAlerts queries domains with active conformity alerts.
+	ConformityAlerts(ctx context.Context, in *QueryConformityAlertsRequest, opts ...grpc.CallOption) (*QueryConformityAlertsResponse, error)
+	MetabolismStatus(ctx context.Context, in *QueryMetabolismStatusRequest, opts ...grpc.CallOption) (*QueryMetabolismStatusResponse, error)
+	// DomainCapacity queries carrying capacity and pressure for a domain.
+	DomainCapacity(ctx context.Context, in *QueryDomainCapacityRequest, opts ...grpc.CallOption) (*QueryDomainCapacityResponse, error)
+	// EpistemicTemperature queries a domain's epistemic temperature state (R29-2).
+	EpistemicTemperature(ctx context.Context, in *QueryEpistemicTemperatureRequest, opts ...grpc.CallOption) (*QueryEpistemicTemperatureResponse, error)
+	// RoleElasticity queries domain role elasticity and track record (R29-3).
+	RoleElasticity(ctx context.Context, in *QueryRoleElasticityRequest, opts ...grpc.CallOption) (*QueryRoleElasticityResponse, error)
 }
 
 type queryClient struct {
@@ -193,6 +264,246 @@ func (c *queryClient) FactCitationCount(ctx context.Context, in *QueryFactCitati
 	return out, nil
 }
 
+func (c *queryClient) FactRelations(ctx context.Context, in *QueryFactRelationsRequest, opts ...grpc.CallOption) (*QueryFactRelationsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactRelationsResponse)
+	err := c.cc.Invoke(ctx, Query_FactRelations_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactsBySubject(ctx context.Context, in *QueryFactsBySubjectRequest, opts ...grpc.CallOption) (*QueryFactsBySubjectResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactsBySubjectResponse)
+	err := c.cc.Invoke(ctx, Query_FactsBySubject_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactsByTag(ctx context.Context, in *QueryFactsByTagRequest, opts ...grpc.CallOption) (*QueryFactsByTagResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactsByTagResponse)
+	err := c.cc.Invoke(ctx, Query_FactsByTag_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactByCanonical(ctx context.Context, in *QueryFactByCanonicalRequest, opts ...grpc.CallOption) (*QueryFactByCanonicalResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactByCanonicalResponse)
+	err := c.cc.Invoke(ctx, Query_FactByCanonical_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactsByFitness(ctx context.Context, in *QueryFactsByFitnessRequest, opts ...grpc.CallOption) (*QueryFactsByFitnessResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactsByFitnessResponse)
+	err := c.cc.Invoke(ctx, Query_FactsByFitness_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) BootstrapFundStatus(ctx context.Context, in *QueryBootstrapFundStatusRequest, opts ...grpc.CallOption) (*QueryBootstrapFundStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryBootstrapFundStatusResponse)
+	err := c.cc.Invoke(ctx, Query_BootstrapFundStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactsAtRisk(ctx context.Context, in *QueryFactsAtRiskRequest, opts ...grpc.CallOption) (*QueryFactsAtRiskResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactsAtRiskResponse)
+	err := c.cc.Invoke(ctx, Query_FactsAtRisk_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactLineage(ctx context.Context, in *QueryFactLineageRequest, opts ...grpc.CallOption) (*QueryFactLineageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactLineageResponse)
+	err := c.cc.Invoke(ctx, Query_FactLineage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactProgeny(ctx context.Context, in *QueryFactProgenyRequest, opts ...grpc.CallOption) (*QueryFactProgenyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactProgenyResponse)
+	err := c.cc.Invoke(ctx, Query_FactProgeny_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryCommonKnowledgeResponse)
+	err := c.cc.Invoke(ctx, Query_CommonKnowledge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) CheckNovelty(ctx context.Context, in *QueryCheckNoveltyRequest, opts ...grpc.CallOption) (*QueryCheckNoveltyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryCheckNoveltyResponse)
+	err := c.cc.Invoke(ctx, Query_CheckNovelty_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ActiveBounties(ctx context.Context, in *QueryActiveBountiesRequest, opts ...grpc.CallOption) (*QueryActiveBountiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryActiveBountiesResponse)
+	err := c.cc.Invoke(ctx, Query_ActiveBounties_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) DemandSignals(ctx context.Context, in *QueryDemandSignalsRequest, opts ...grpc.CallOption) (*QueryDemandSignalsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDemandSignalsResponse)
+	err := c.cc.Invoke(ctx, Query_DemandSignals_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TopDemandGaps(ctx context.Context, in *QueryTopDemandGapsRequest, opts ...grpc.CallOption) (*QueryTopDemandGapsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTopDemandGapsResponse)
+	err := c.cc.Invoke(ctx, Query_TopDemandGaps_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) NicheInfo(ctx context.Context, in *QueryNicheInfoRequest, opts ...grpc.CallOption) (*QueryNicheInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryNicheInfoResponse)
+	err := c.cc.Invoke(ctx, Query_NicheInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) NichesByDomain(ctx context.Context, in *QueryNichesByDomainRequest, opts ...grpc.CallOption) (*QueryNichesByDomainResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryNichesByDomainResponse)
+	err := c.cc.Invoke(ctx, Query_NichesByDomain_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) DomainDiversity(ctx context.Context, in *QueryDomainDiversityRequest, opts ...grpc.CallOption) (*QueryDomainDiversityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDomainDiversityResponse)
+	err := c.cc.Invoke(ctx, Query_DomainDiversity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) DomainDiversityHistory(ctx context.Context, in *QueryDomainDiversityHistoryRequest, opts ...grpc.CallOption) (*QueryDomainDiversityHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDomainDiversityHistoryResponse)
+	err := c.cc.Invoke(ctx, Query_DomainDiversityHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ValidatorIndependence(ctx context.Context, in *QueryValidatorIndependenceRequest, opts ...grpc.CallOption) (*QueryValidatorIndependenceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryValidatorIndependenceResponse)
+	err := c.cc.Invoke(ctx, Query_ValidatorIndependence_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ConformityAlerts(ctx context.Context, in *QueryConformityAlertsRequest, opts ...grpc.CallOption) (*QueryConformityAlertsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryConformityAlertsResponse)
+	err := c.cc.Invoke(ctx, Query_ConformityAlerts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) MetabolismStatus(ctx context.Context, in *QueryMetabolismStatusRequest, opts ...grpc.CallOption) (*QueryMetabolismStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMetabolismStatusResponse)
+	err := c.cc.Invoke(ctx, Query_MetabolismStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) DomainCapacity(ctx context.Context, in *QueryDomainCapacityRequest, opts ...grpc.CallOption) (*QueryDomainCapacityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDomainCapacityResponse)
+	err := c.cc.Invoke(ctx, Query_DomainCapacity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) EpistemicTemperature(ctx context.Context, in *QueryEpistemicTemperatureRequest, opts ...grpc.CallOption) (*QueryEpistemicTemperatureResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryEpistemicTemperatureResponse)
+	err := c.cc.Invoke(ctx, Query_EpistemicTemperature_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) RoleElasticity(ctx context.Context, in *QueryRoleElasticityRequest, opts ...grpc.CallOption) (*QueryRoleElasticityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryRoleElasticityResponse)
+	err := c.cc.Invoke(ctx, Query_RoleElasticity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -223,6 +534,53 @@ type QueryServer interface {
 	FactConfidence(context.Context, *QueryFactConfidenceRequest) (*QueryFactConfidenceResponse, error)
 	// FactCitationCount queries the citation count of a fact.
 	FactCitationCount(context.Context, *QueryFactCitationCountRequest) (*QueryFactCitationCountResponse, error)
+	// FactRelations queries typed relations for a fact (knowledge graph edges).
+	FactRelations(context.Context, *QueryFactRelationsRequest) (*QueryFactRelationsResponse, error)
+	// FactsBySubject queries facts by structured subject within a domain.
+	FactsBySubject(context.Context, *QueryFactsBySubjectRequest) (*QueryFactsBySubjectResponse, error)
+	// FactsByTag queries facts by a searchable tag.
+	FactsByTag(context.Context, *QueryFactsByTagRequest) (*QueryFactsByTagResponse, error)
+	// FactByCanonical queries a fact by its canonical form hash.
+	FactByCanonical(context.Context, *QueryFactByCanonicalRequest) (*QueryFactByCanonicalResponse, error)
+	// FactsByFitness queries facts sorted by fitness score.
+	FactsByFitness(context.Context, *QueryFactsByFitnessRequest) (*QueryFactsByFitnessResponse, error)
+	// BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
+	BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error)
+	// FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
+	FactsAtRisk(context.Context, *QueryFactsAtRiskRequest) (*QueryFactsAtRiskResponse, error)
+	// FactLineage traces a fact's ancestry up to the root.
+	FactLineage(context.Context, *QueryFactLineageRequest) (*QueryFactLineageResponse, error)
+	// FactProgeny returns a fact's descendant tree.
+	FactProgeny(context.Context, *QueryFactProgenyRequest) (*QueryFactProgenyResponse, error)
+	// CommonKnowledge queries the common knowledge registry.
+	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
+	// CheckNovelty previews the novelty score a claim would receive before submission.
+	CheckNovelty(context.Context, *QueryCheckNoveltyRequest) (*QueryCheckNoveltyResponse, error)
+	// ActiveBounties queries active (unclaimed) knowledge bounties.
+	ActiveBounties(context.Context, *QueryActiveBountiesRequest) (*QueryActiveBountiesResponse, error)
+	// DemandSignals queries demand signal data for a domain.
+	DemandSignals(context.Context, *QueryDemandSignalsRequest) (*QueryDemandSignalsResponse, error)
+	// TopDemandGaps queries the top unfulfilled demand gaps.
+	TopDemandGaps(context.Context, *QueryTopDemandGapsRequest) (*QueryTopDemandGapsResponse, error)
+	// NicheInfo queries members and metadata for a specific niche.
+	NicheInfo(context.Context, *QueryNicheInfoRequest) (*QueryNicheInfoResponse, error)
+	// NichesByDomain queries all niches within a domain.
+	NichesByDomain(context.Context, *QueryNichesByDomainRequest) (*QueryNichesByDomainResponse, error)
+	// DomainDiversity queries consensus diversity for a domain (current epoch).
+	DomainDiversity(context.Context, *QueryDomainDiversityRequest) (*QueryDomainDiversityResponse, error)
+	// DomainDiversityHistory queries historical diversity for a domain.
+	DomainDiversityHistory(context.Context, *QueryDomainDiversityHistoryRequest) (*QueryDomainDiversityHistoryResponse, error)
+	// ValidatorIndependence queries a validator's independence score.
+	ValidatorIndependence(context.Context, *QueryValidatorIndependenceRequest) (*QueryValidatorIndependenceResponse, error)
+	// ConformityAlerts queries domains with active conformity alerts.
+	ConformityAlerts(context.Context, *QueryConformityAlertsRequest) (*QueryConformityAlertsResponse, error)
+	MetabolismStatus(context.Context, *QueryMetabolismStatusRequest) (*QueryMetabolismStatusResponse, error)
+	// DomainCapacity queries carrying capacity and pressure for a domain.
+	DomainCapacity(context.Context, *QueryDomainCapacityRequest) (*QueryDomainCapacityResponse, error)
+	// EpistemicTemperature queries a domain's epistemic temperature state (R29-2).
+	EpistemicTemperature(context.Context, *QueryEpistemicTemperatureRequest) (*QueryEpistemicTemperatureResponse, error)
+	// RoleElasticity queries domain role elasticity and track record (R29-3).
+	RoleElasticity(context.Context, *QueryRoleElasticityRequest) (*QueryRoleElasticityResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -268,6 +626,78 @@ func (UnimplementedQueryServer) FactConfidence(context.Context, *QueryFactConfid
 }
 func (UnimplementedQueryServer) FactCitationCount(context.Context, *QueryFactCitationCountRequest) (*QueryFactCitationCountResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FactCitationCount not implemented")
+}
+func (UnimplementedQueryServer) FactRelations(context.Context, *QueryFactRelationsRequest) (*QueryFactRelationsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactRelations not implemented")
+}
+func (UnimplementedQueryServer) FactsBySubject(context.Context, *QueryFactsBySubjectRequest) (*QueryFactsBySubjectResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactsBySubject not implemented")
+}
+func (UnimplementedQueryServer) FactsByTag(context.Context, *QueryFactsByTagRequest) (*QueryFactsByTagResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactsByTag not implemented")
+}
+func (UnimplementedQueryServer) FactByCanonical(context.Context, *QueryFactByCanonicalRequest) (*QueryFactByCanonicalResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactByCanonical not implemented")
+}
+func (UnimplementedQueryServer) FactsByFitness(context.Context, *QueryFactsByFitnessRequest) (*QueryFactsByFitnessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactsByFitness not implemented")
+}
+func (UnimplementedQueryServer) BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BootstrapFundStatus not implemented")
+}
+func (UnimplementedQueryServer) FactsAtRisk(context.Context, *QueryFactsAtRiskRequest) (*QueryFactsAtRiskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactsAtRisk not implemented")
+}
+func (UnimplementedQueryServer) FactLineage(context.Context, *QueryFactLineageRequest) (*QueryFactLineageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactLineage not implemented")
+}
+func (UnimplementedQueryServer) FactProgeny(context.Context, *QueryFactProgenyRequest) (*QueryFactProgenyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactProgeny not implemented")
+}
+func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
+}
+func (UnimplementedQueryServer) CheckNovelty(context.Context, *QueryCheckNoveltyRequest) (*QueryCheckNoveltyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckNovelty not implemented")
+}
+func (UnimplementedQueryServer) ActiveBounties(context.Context, *QueryActiveBountiesRequest) (*QueryActiveBountiesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ActiveBounties not implemented")
+}
+func (UnimplementedQueryServer) DemandSignals(context.Context, *QueryDemandSignalsRequest) (*QueryDemandSignalsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DemandSignals not implemented")
+}
+func (UnimplementedQueryServer) TopDemandGaps(context.Context, *QueryTopDemandGapsRequest) (*QueryTopDemandGapsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TopDemandGaps not implemented")
+}
+func (UnimplementedQueryServer) NicheInfo(context.Context, *QueryNicheInfoRequest) (*QueryNicheInfoResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method NicheInfo not implemented")
+}
+func (UnimplementedQueryServer) NichesByDomain(context.Context, *QueryNichesByDomainRequest) (*QueryNichesByDomainResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method NichesByDomain not implemented")
+}
+func (UnimplementedQueryServer) DomainDiversity(context.Context, *QueryDomainDiversityRequest) (*QueryDomainDiversityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DomainDiversity not implemented")
+}
+func (UnimplementedQueryServer) DomainDiversityHistory(context.Context, *QueryDomainDiversityHistoryRequest) (*QueryDomainDiversityHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DomainDiversityHistory not implemented")
+}
+func (UnimplementedQueryServer) ValidatorIndependence(context.Context, *QueryValidatorIndependenceRequest) (*QueryValidatorIndependenceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ValidatorIndependence not implemented")
+}
+func (UnimplementedQueryServer) ConformityAlerts(context.Context, *QueryConformityAlertsRequest) (*QueryConformityAlertsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConformityAlerts not implemented")
+}
+func (UnimplementedQueryServer) MetabolismStatus(context.Context, *QueryMetabolismStatusRequest) (*QueryMetabolismStatusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MetabolismStatus not implemented")
+}
+func (UnimplementedQueryServer) DomainCapacity(context.Context, *QueryDomainCapacityRequest) (*QueryDomainCapacityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DomainCapacity not implemented")
+}
+func (UnimplementedQueryServer) EpistemicTemperature(context.Context, *QueryEpistemicTemperatureRequest) (*QueryEpistemicTemperatureResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EpistemicTemperature not implemented")
+}
+func (UnimplementedQueryServer) RoleElasticity(context.Context, *QueryRoleElasticityRequest) (*QueryRoleElasticityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RoleElasticity not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -506,6 +936,438 @@ func _Query_FactCitationCount_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_FactRelations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactRelationsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactRelations(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactRelations_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactRelations(ctx, req.(*QueryFactRelationsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactsBySubject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactsBySubjectRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactsBySubject(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactsBySubject_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactsBySubject(ctx, req.(*QueryFactsBySubjectRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactsByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactsByTagRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactsByTag(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactsByTag_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactsByTag(ctx, req.(*QueryFactsByTagRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactByCanonical_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactByCanonicalRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactByCanonical(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactByCanonical_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactByCanonical(ctx, req.(*QueryFactByCanonicalRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactsByFitness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactsByFitnessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactsByFitness(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactsByFitness_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactsByFitness(ctx, req.(*QueryFactsByFitnessRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_BootstrapFundStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryBootstrapFundStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).BootstrapFundStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_BootstrapFundStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).BootstrapFundStatus(ctx, req.(*QueryBootstrapFundStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactsAtRisk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactsAtRiskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactsAtRisk(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactsAtRisk_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactsAtRisk(ctx, req.(*QueryFactsAtRiskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactLineage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactLineageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactLineage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactLineage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactLineage(ctx, req.(*QueryFactLineageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactProgeny_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactProgenyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactProgeny(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactProgeny_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactProgeny(ctx, req.(*QueryFactProgenyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryCommonKnowledgeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).CommonKnowledge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_CommonKnowledge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).CommonKnowledge(ctx, req.(*QueryCommonKnowledgeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_CheckNovelty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryCheckNoveltyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).CheckNovelty(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_CheckNovelty_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).CheckNovelty(ctx, req.(*QueryCheckNoveltyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ActiveBounties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryActiveBountiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ActiveBounties(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ActiveBounties_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ActiveBounties(ctx, req.(*QueryActiveBountiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_DemandSignals_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDemandSignalsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DemandSignals(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DemandSignals_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DemandSignals(ctx, req.(*QueryDemandSignalsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TopDemandGaps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTopDemandGapsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TopDemandGaps(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TopDemandGaps_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TopDemandGaps(ctx, req.(*QueryTopDemandGapsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_NicheInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryNicheInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).NicheInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_NicheInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).NicheInfo(ctx, req.(*QueryNicheInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_NichesByDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryNichesByDomainRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).NichesByDomain(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_NichesByDomain_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).NichesByDomain(ctx, req.(*QueryNichesByDomainRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_DomainDiversity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDomainDiversityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DomainDiversity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DomainDiversity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DomainDiversity(ctx, req.(*QueryDomainDiversityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_DomainDiversityHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDomainDiversityHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DomainDiversityHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DomainDiversityHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DomainDiversityHistory(ctx, req.(*QueryDomainDiversityHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ValidatorIndependence_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryValidatorIndependenceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ValidatorIndependence(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ValidatorIndependence_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ValidatorIndependence(ctx, req.(*QueryValidatorIndependenceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ConformityAlerts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryConformityAlertsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ConformityAlerts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ConformityAlerts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ConformityAlerts(ctx, req.(*QueryConformityAlertsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_MetabolismStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMetabolismStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).MetabolismStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_MetabolismStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).MetabolismStatus(ctx, req.(*QueryMetabolismStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_DomainCapacity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDomainCapacityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DomainCapacity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DomainCapacity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DomainCapacity(ctx, req.(*QueryDomainCapacityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_EpistemicTemperature_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryEpistemicTemperatureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).EpistemicTemperature(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_EpistemicTemperature_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).EpistemicTemperature(ctx, req.(*QueryEpistemicTemperatureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_RoleElasticity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryRoleElasticityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).RoleElasticity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_RoleElasticity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).RoleElasticity(ctx, req.(*QueryRoleElasticityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -560,6 +1422,102 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FactCitationCount",
 			Handler:    _Query_FactCitationCount_Handler,
+		},
+		{
+			MethodName: "FactRelations",
+			Handler:    _Query_FactRelations_Handler,
+		},
+		{
+			MethodName: "FactsBySubject",
+			Handler:    _Query_FactsBySubject_Handler,
+		},
+		{
+			MethodName: "FactsByTag",
+			Handler:    _Query_FactsByTag_Handler,
+		},
+		{
+			MethodName: "FactByCanonical",
+			Handler:    _Query_FactByCanonical_Handler,
+		},
+		{
+			MethodName: "FactsByFitness",
+			Handler:    _Query_FactsByFitness_Handler,
+		},
+		{
+			MethodName: "BootstrapFundStatus",
+			Handler:    _Query_BootstrapFundStatus_Handler,
+		},
+		{
+			MethodName: "FactsAtRisk",
+			Handler:    _Query_FactsAtRisk_Handler,
+		},
+		{
+			MethodName: "FactLineage",
+			Handler:    _Query_FactLineage_Handler,
+		},
+		{
+			MethodName: "FactProgeny",
+			Handler:    _Query_FactProgeny_Handler,
+		},
+		{
+			MethodName: "CommonKnowledge",
+			Handler:    _Query_CommonKnowledge_Handler,
+		},
+		{
+			MethodName: "CheckNovelty",
+			Handler:    _Query_CheckNovelty_Handler,
+		},
+		{
+			MethodName: "ActiveBounties",
+			Handler:    _Query_ActiveBounties_Handler,
+		},
+		{
+			MethodName: "DemandSignals",
+			Handler:    _Query_DemandSignals_Handler,
+		},
+		{
+			MethodName: "TopDemandGaps",
+			Handler:    _Query_TopDemandGaps_Handler,
+		},
+		{
+			MethodName: "NicheInfo",
+			Handler:    _Query_NicheInfo_Handler,
+		},
+		{
+			MethodName: "NichesByDomain",
+			Handler:    _Query_NichesByDomain_Handler,
+		},
+		{
+			MethodName: "DomainDiversity",
+			Handler:    _Query_DomainDiversity_Handler,
+		},
+		{
+			MethodName: "DomainDiversityHistory",
+			Handler:    _Query_DomainDiversityHistory_Handler,
+		},
+		{
+			MethodName: "ValidatorIndependence",
+			Handler:    _Query_ValidatorIndependence_Handler,
+		},
+		{
+			MethodName: "ConformityAlerts",
+			Handler:    _Query_ConformityAlerts_Handler,
+		},
+		{
+			MethodName: "MetabolismStatus",
+			Handler:    _Query_MetabolismStatus_Handler,
+		},
+		{
+			MethodName: "DomainCapacity",
+			Handler:    _Query_DomainCapacity_Handler,
+		},
+		{
+			MethodName: "EpistemicTemperature",
+			Handler:    _Query_EpistemicTemperature_Handler,
+		},
+		{
+			MethodName: "RoleElasticity",
+			Handler:    _Query_RoleElasticity_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

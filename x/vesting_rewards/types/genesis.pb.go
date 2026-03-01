@@ -96,7 +96,7 @@ type Params struct {
 	// Founder share
 	FounderShareBps            uint64 `protobuf:"varint,6,opt,name=founder_share_bps,json=founderShareBps,proto3" json:"founder_share_bps,omitempty"`                                  // founder's share of research fund (default: 70,000 = 7% on 1M scale)
 	FounderAddress             string `protobuf:"bytes,7,opt,name=founder_address,json=founderAddress,proto3" json:"founder_address,omitempty"`                                        // bech32, empty = disabled
-	GovernanceActivationHeight uint64 `protobuf:"varint,8,opt,name=governance_activation_height,json=governanceActivationHeight,proto3" json:"governance_activation_height,omitempty"` // block when founder share sunsets (0 = never)
+	GovernanceActivationHeight uint64 `protobuf:"varint,8,opt,name=governance_activation_height,json=governanceActivationHeight,proto3" json:"governance_activation_height,omitempty"` // DEPRECATED — founder share is governance-immune
 	// Category reward multipliers
 	CategoryRewardConfigs []*CategoryRewardConfig `protobuf:"bytes,9,rep,name=category_reward_configs,json=categoryRewardConfigs,proto3" json:"category_reward_configs,omitempty"`
 	// Research fund

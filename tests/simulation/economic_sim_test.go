@@ -58,6 +58,7 @@ func TestEconomicSimulation(t *testing.T) {
 		vestingtypes.ResearchFundModuleName,
 		vestingtypes.KnowledgeModuleName,
 		vestingtypes.ComputePoolModuleName,
+		vestingtypes.DevelopmentFundModuleName,
 		authtypes.FeeCollectorName,
 		"staking",
 		"toolbox",
@@ -141,7 +142,7 @@ func TestEconomicSimulation(t *testing.T) {
 	csvW := csv.NewWriter(csvFile)
 	defer csvW.Flush()
 	_ = csvW.Write([]string{
-		"block", "epoch", "block_reward", "total_minted", "total_burned",
+		"block", "epoch", "block_reward", "total_minted", "total_development",
 		"supply", "research_fund", "knowledge_pool", "compute_pool",
 		"activity_count", "facts_total",
 	})
@@ -190,10 +191,10 @@ func TestEconomicSimulation(t *testing.T) {
 			producer.totalEarned = producer.totalEarned.Add(sdkmath.NewIntFromBigInt(producerBig))
 		}
 
-		burnedBig := new(big.Int)
-		burnedBig.SetString(dist.BurnAmount, 10)
-		if burnedBig.Sign() > 0 {
-			state.totalBurned = state.totalBurned.Add(sdkmath.NewIntFromBigInt(burnedBig))
+		devBig := new(big.Int)
+		devBig.SetString(dist.DevelopmentAmount, 10)
+		if devBig.Sign() > 0 {
+			state.totalBurned = state.totalBurned.Add(sdkmath.NewIntFromBigInt(devBig))
 		}
 
 		// ---- Route accumulated fees ----
@@ -212,7 +213,7 @@ func TestEconomicSimulation(t *testing.T) {
 				t.Fatal(err)
 			}
 			state.lastEpochReward = state.currentBlockReward
-			t.Logf("epoch %d (block %d): supply=%s, minted=%s, burned=%s, facts=%d",
+			t.Logf("epoch %d (block %d): supply=%s, minted=%s, dev_fund=%s, facts=%d",
 				state.currentEpoch, height,
 				bank.GetSupply(nil, "uzrn").Amount,
 				state.totalMinted, state.totalBurned, state.factsAdded)
@@ -254,11 +255,12 @@ func TestEconomicSimulation(t *testing.T) {
 	t.Logf("Duration:        %v", elapsed)
 	t.Logf("Initial supply:  %s uzrn (%.2f ZRN)", state.initialSupply, uzrnToZrn(state.initialSupply))
 	t.Logf("Total minted:    %s uzrn (%.2f ZRN)", state.totalMinted, uzrnToZrn(state.totalMinted))
-	t.Logf("Total burned:    %s uzrn (%.2f ZRN)", state.totalBurned, uzrnToZrn(state.totalBurned))
+	t.Logf("Development:     %s uzrn (%.2f ZRN)", state.totalBurned, uzrnToZrn(state.totalBurned))
 	t.Logf("Final supply:    %s uzrn (%.2f ZRN)", supply, uzrnToZrn(supply))
 	t.Logf("Research fund:   %s uzrn", bank.moduleBalance("research_fund", "uzrn"))
 	t.Logf("Knowledge pool:  %s uzrn", bank.moduleBalance("knowledge", "uzrn"))
 	t.Logf("Compute pool:    %s uzrn", bank.moduleBalance("compute_pool", "uzrn"))
+	t.Logf("Dev fund:        %s uzrn", bank.moduleBalance("development_fund", "uzrn"))
 	t.Logf("Facts total:     %d (initial: %d, added: %d)", state.factsAdded, simInitialFactCount, state.factsAdded-simInitialFactCount)
 	t.Logf("Tool revenue:    %s uzrn", state.toolRevenue)
 

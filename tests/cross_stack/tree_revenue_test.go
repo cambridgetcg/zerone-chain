@@ -10,7 +10,7 @@ import (
 )
 
 // TestScenario4_TreeRevenueDistribution verifies the tree module's revenue
-// calculation splits correctly across contributors, treasury, research, and burn.
+// calculation splits correctly across contributors, treasury, research, and development.
 func TestScenario4_TreeRevenueDistribution(t *testing.T) {
 	// CalculateRevenue is a pure function — no harness needed for the core math.
 	// We still create a harness to verify the keeper is wired correctly.
@@ -20,11 +20,11 @@ func TestScenario4_TreeRevenueDistribution(t *testing.T) {
 	total := int64(1_000_000)
 
 	// Standard Zerone revenue split:
-	//   55% contributors, 22% treasury, 13% research, 10% burn
+	//   55% contributors, 22% treasury, 3.33% research, 19.67% development
 	contributorsBp := uint32(550_000) // 55%
 	treasuryBp := uint32(220_000)     // 22%
-	researchBp := uint32(130_000)     // 13%
-	burnBp := uint32(100_000)         // 10%
+	researchBp := uint32(33_300)      // 3.33%
+	developmentBp := uint32(196_700)  // 19.67%
 
 	contributors := []*treetypes.ContributorRecord{
 		{
@@ -43,22 +43,22 @@ func TestScenario4_TreeRevenueDistribution(t *testing.T) {
 		},
 	}
 
-	dist := treekeeper.CalculateRevenue(total, contributorsBp, treasuryBp, researchBp, burnBp, contributors)
+	dist := treekeeper.CalculateRevenue(total, contributorsBp, treasuryBp, researchBp, developmentBp, contributors)
 
 	// --- Verify top-level splits ---
 
 	// ContributorPool: 1,000,000 * 550,000 / 1,000,000 = 550,000
 	require.Equal(t, int64(550_000), dist.ContributorPool, "contributor pool")
 
-	// ResearchFund: 1,000,000 * 130,000 / 1,000,000 = 130,000
-	require.Equal(t, int64(130_000), dist.ResearchFund, "research fund")
+	// ResearchFund: 1,000,000 * 33,300 / 1,000,000 = 33,300
+	require.Equal(t, int64(33_300), dist.ResearchFund, "research fund")
 
-	// Burn: 1,000,000 * 100,000 / 1,000,000 = 100,000
-	require.Equal(t, int64(100_000), dist.Burn, "burn")
+	// DevelopmentFund: 1,000,000 * 196,700 / 1,000,000 = 196,700
+	require.Equal(t, int64(196_700), dist.DevelopmentFund, "development fund")
 
-	// Protocol allocation = total - contributors - research - burn
-	// = 1,000,000 - 550,000 - 130,000 - 100,000 = 220,000
-	protocolAllocation := total - dist.ContributorPool - dist.ResearchFund - dist.Burn
+	// Protocol allocation = total - contributors - research - development
+	// = 1,000,000 - 550,000 - 33,300 - 196,700 = 220,000
+	protocolAllocation := total - dist.ContributorPool - dist.ResearchFund - dist.DevelopmentFund
 	require.Equal(t, int64(220_000), protocolAllocation, "protocol allocation")
 
 	// VerificationPool = protocolAllocation * 300,000 / 1,000,000 = 66,000
@@ -68,7 +68,7 @@ func TestScenario4_TreeRevenueDistribution(t *testing.T) {
 	require.Equal(t, int64(154_000), dist.ProtocolTreasury, "protocol treasury")
 
 	// --- Verify conservation: all parts sum to total ---
-	totalDistributed := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.Burn
+	totalDistributed := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.DevelopmentFund
 	require.Equal(t, total, totalDistributed, "total must be conserved")
 
 	// --- Verify contributor shares (weighted by TasksCompleted) ---
@@ -98,7 +98,7 @@ func TestScenario4_TreeRevenueEqualSplit(t *testing.T) {
 		{Did: "did:zrn:bob", TasksCompleted: 0},
 	}
 
-	dist := treekeeper.CalculateRevenue(total, 550_000, 220_000, 130_000, 100_000, contributors)
+	dist := treekeeper.CalculateRevenue(total, 550_000, 220_000, 33_300, 196_700, contributors)
 
 	// With zero tasks, shares are distributed equally.
 	require.Len(t, dist.ContributorShares, 2)
@@ -113,18 +113,13 @@ func TestScenario4_TreeRevenueEqualSplit(t *testing.T) {
 func TestScenario4_TreeRevenueNoContributors(t *testing.T) {
 	total := int64(1_000_000)
 
-	dist := treekeeper.CalculateRevenue(total, 550_000, 220_000, 130_000, 100_000, nil)
+	dist := treekeeper.CalculateRevenue(total, 550_000, 220_000, 33_300, 196_700, nil)
 
 	require.Equal(t, int64(0), dist.ContributorPool, "no contributor pool when no contributors")
 	require.Empty(t, dist.ContributorShares)
 
 	// Protocol gets the contributor share redirected.
-	// Normal treasury: 220,000. With contributor redirect: 220,000 + 550,000 = 770,000.
-	// VerificationPool from the original 220,000 allocation = 66,000
-	// So ProtocolTreasury = 770,000 - 66,000 = 704,000
-	// Wait — the redirect happens after verification pool calculation.
-	// Let's verify the actual math:
-	// protocolAllocation = 1,000,000 - 550,000 - 130,000 - 100,000 = 220,000
+	// protocolAllocation = 1,000,000 - 550,000 - 33,300 - 196,700 = 220,000
 	// verification = 220,000 * 300,000 / 1,000,000 = 66,000
 	// treasury = 220,000 - 66,000 = 154,000
 	// Then: treasury += contributorPool (550,000) → 154,000 + 550,000 = 704,000
@@ -132,6 +127,6 @@ func TestScenario4_TreeRevenueNoContributors(t *testing.T) {
 	require.Equal(t, int64(704_000), dist.ProtocolTreasury)
 
 	// Conservation still holds.
-	totalDistributed := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.Burn
+	totalDistributed := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.DevelopmentFund
 	require.Equal(t, total, totalDistributed, "total must be conserved")
 }

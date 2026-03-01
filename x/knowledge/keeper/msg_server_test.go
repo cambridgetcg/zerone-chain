@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zerone-chain/zerone/x/knowledge/keeper"
@@ -89,7 +90,7 @@ func TestMsgServer_SubmitClaim_StakeBelowMinimum(t *testing.T) {
 		Submitter:   makeValidBech32Addr("submitter1"),
 		FactContent: "This claim has stake below the minimum",
 		Domain:      "physics",
-		Stake:       "100", // below MinClaimStake of 1000000
+		Stake:       "100", // below MinReviewFee of 100000
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "below minimum")
@@ -106,7 +107,7 @@ func TestMsgServer_SubmitClaim_InvalidStake(t *testing.T) {
 		Stake:       "not_a_number",
 	})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "invalid stake")
+	require.Contains(t, err.Error(), "invalid review fee")
 }
 
 func TestMsgServer_SubmitClaim_ZeroStake(t *testing.T) {
@@ -182,17 +183,20 @@ func TestMsgServer_SubmitClaim_EmptyDomainAllowed(t *testing.T) {
 // ─── SubmitCommitment ───────────────────────────────────────────────────────
 
 func TestMsgServer_SubmitCommitment_Success(t *testing.T) {
-	k, ctx := setupKnowledgeTest(t)
+	k, ctx, bk := setupKnowledgeTestWithBank(t)
 	ms := keeper.NewMsgServerImpl(k)
 
-	// Create a round with commit deadline in the future (98+4=102 > 100)
+	// Fund verifier with sufficient balance (100 ZRN = 100_000_000 uzrn)
+	verifier := makeValidBech32Addr("validator1")
+	bk.balances[verifier] = sdk.NewCoins(sdk.NewInt64Coin("uzrn", 200_000_000))
+
 	round := makeRoundInPhase("commit-round-1", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 98)
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
 	hash := computeMsgServerCommitHash("accept", []byte("salt123"))
 
 	resp, err := ms.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
-		Verifier:   "zrn1validator1",
+		Verifier:   verifier,
 		RoundId:    "commit-round-1",
 		CommitHash: hash,
 	})
@@ -203,7 +207,7 @@ func TestMsgServer_SubmitCommitment_Success(t *testing.T) {
 	updated, found := k.GetVerificationRound(ctx, "commit-round-1")
 	require.True(t, found)
 	require.Len(t, updated.Commits, 1)
-	require.Equal(t, "zrn1validator1", updated.Commits[0].Verifier)
+	require.Equal(t, verifier, updated.Commits[0].Verifier)
 }
 
 func TestMsgServer_SubmitCommitment_RoundNotFound(t *testing.T) {
@@ -239,8 +243,16 @@ func TestMsgServer_SubmitCommitment_PastDeadline(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 	ms := keeper.NewMsgServerImpl(k)
 
-	// Round with commit deadline at 90+4=94, context at block 100
-	round := makeRoundInPhase("expired-commit", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 90)
+	// Manually construct round with commit deadline in the past (94 < 100)
+	round := &types.VerificationRound{
+		Id:                  "expired-commit",
+		ClaimId:             "c1",
+		Phase:               types.VerificationPhase_VERIFICATION_PHASE_COMMIT,
+		StartedAtBlock:      90,
+		CommitDeadline:      94,
+		RevealDeadline:      298,
+		AggregationDeadline: 348,
+	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
 	_, err := ms.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
@@ -253,29 +265,53 @@ func TestMsgServer_SubmitCommitment_PastDeadline(t *testing.T) {
 }
 
 func TestMsgServer_SubmitCommitment_DuplicateVerifier(t *testing.T) {
-	k, ctx := setupKnowledgeTest(t)
+	k, ctx, bk := setupKnowledgeTestWithBank(t)
 	ms := keeper.NewMsgServerImpl(k)
 
-	// Deadline at 98+4=102 > 100
+	verifier := makeValidBech32Addr("validator1")
+	bk.balances[verifier] = sdk.NewCoins(sdk.NewInt64Coin("uzrn", 200_000_000))
+
 	round := makeRoundInPhase("dup-commit", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 98)
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
 	hash := computeMsgServerCommitHash("accept", []byte("salt1"))
 
 	_, err := ms.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
-		Verifier:   "zrn1validator1",
+		Verifier:   verifier,
 		RoundId:    "dup-commit",
 		CommitHash: hash,
 	})
 	require.NoError(t, err)
 
 	_, err = ms.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
-		Verifier:   "zrn1validator1",
+		Verifier:   verifier,
 		RoundId:    "dup-commit",
 		CommitHash: hash,
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "already committed")
+}
+
+func TestMsgServer_SubmitCommitment_InsufficientBalance(t *testing.T) {
+	k, ctx, bk := setupKnowledgeTestWithBank(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	// Verifier with only 50 ZRN (below 100 ZRN minimum)
+	verifier := makeValidBech32Addr("poorval1")
+	bk.balances[verifier] = sdk.NewCoins(sdk.NewInt64Coin("uzrn", 50_000_000))
+
+	round := makeRoundInPhase("bal-gate-round", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 98)
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	hash := computeMsgServerCommitHash("accept", []byte("salt1"))
+
+	_, err := ms.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+		Verifier:   verifier,
+		RoundId:    "bal-gate-round",
+		CommitHash: hash,
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "verifier does not meet minimum balance requirement")
 }
 
 // ─── SubmitReveal ───────────────────────────────────────────────────────────
@@ -436,7 +472,7 @@ func TestMsgServer_AddFact_Success(t *testing.T) {
 	fact, found := k.GetFact(ctx, resp.FactId)
 	require.True(t, found)
 	require.Equal(t, types.FactStatus_FACT_STATUS_VERIFIED, fact.Status)
-	require.Equal(t, uint64(900_000), fact.Confidence)
+	require.Equal(t, uint64(880_000), fact.Confidence, "900k input clamped to MaxConfidence (880,000)")
 }
 
 func TestMsgServer_AddFact_Unauthorized(t *testing.T) {
@@ -756,4 +792,111 @@ func TestMsgServer_UpdateExtendedParams_Unauthorized(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unauthorized")
+}
+
+// ─── ClaimType Tests ────────────────────────────────────────────────────────
+
+func TestMsgServer_SubmitClaim_DefaultType(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	submitter := makeValidBech32Addr("submitter1")
+
+	// Submit without specifying claim_type (should default to ASSERTION)
+	resp, err := ms.SubmitClaim(ctx, &types.MsgSubmitClaim{
+		Submitter:   submitter,
+		FactContent: "Untyped claim defaults to assertion type",
+		Domain:      "physics",
+		Category:    "empirical",
+		Stake:       "1000000",
+	})
+	require.NoError(t, err)
+
+	claim, found := k.GetClaim(ctx, resp.ClaimId)
+	require.True(t, found)
+	require.Equal(t, types.ClaimType_CLAIM_TYPE_ASSERTION, claim.ClaimType)
+}
+
+func TestMsgServer_SubmitClaim_ExplicitType(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	submitter := makeValidBech32Addr("submitter1")
+
+	testCases := []struct {
+		name      string
+		claimType types.ClaimType
+		content   string
+	}{
+		{"assertion", types.ClaimType_CLAIM_TYPE_ASSERTION, "Water freezes at zero degrees Celsius"},
+		{"relation", types.ClaimType_CLAIM_TYPE_RELATION, "Thermodynamics relates to statistical mechanics via entropy"},
+		{"definition", types.ClaimType_CLAIM_TYPE_DEFINITION, "Entropy means the measure of disorder in a system"},
+		{"constraint", types.ClaimType_CLAIM_TYPE_CONSTRAINT, "Energy must be conserved in all physical processes"},
+		{"negation", types.ClaimType_CLAIM_TYPE_NEGATION, "Perpetual motion machines are NOT possible"},
+		{"observation", types.ClaimType_CLAIM_TYPE_OBSERVATION, "BTC was observed at fifty thousand on 2026-01-01"},
+	}
+
+	for _, tc := range testCases {
+		ctx = advanceBlocks(ctx, 51) // exceed default cooldown of 50 (R29-6)
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := ms.SubmitClaim(ctx, &types.MsgSubmitClaim{
+				Submitter:   submitter,
+				FactContent: tc.content,
+				Domain:      "physics",
+				Category:    "empirical",
+				Stake:       "1000000",
+				ClaimType:   tc.claimType,
+			})
+			require.NoError(t, err)
+
+			claim, found := k.GetClaim(ctx, resp.ClaimId)
+			require.True(t, found)
+			require.Equal(t, tc.claimType, claim.ClaimType)
+		})
+	}
+}
+
+func TestMsgServer_CreateFactFromClaim_PropagatesType(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	submitter := makeValidBech32Addr("submitter1")
+
+	// Submit a definition-typed claim
+	resp, err := ms.SubmitClaim(ctx, &types.MsgSubmitClaim{
+		Submitter:   submitter,
+		FactContent: "Entropy means the measure of disorder in a thermodynamic system",
+		Domain:      "physics",
+		Category:    "empirical",
+		Stake:       "1000000",
+		ClaimType:   types.ClaimType_CLAIM_TYPE_DEFINITION,
+	})
+	require.NoError(t, err)
+
+	claim, found := k.GetClaim(ctx, resp.ClaimId)
+	require.True(t, found)
+	require.Equal(t, types.ClaimType_CLAIM_TYPE_DEFINITION, claim.ClaimType)
+
+	// Get the verification round
+	round, found := k.GetVerificationRound(ctx, claim.VerificationRoundId)
+	require.True(t, found)
+
+	// Complete the round with ACCEPT verdict
+	err = k.CompleteRound(ctx, round, &keeper.VerificationResult{
+		Verdict:    types.Verdict_VERDICT_ACCEPT,
+		Confidence: 800_000,
+	})
+	require.NoError(t, err)
+
+	// Find the fact created from this claim
+	var createdFact *types.Fact
+	k.IterateFacts(ctx, func(fact *types.Fact) bool {
+		if fact.ClaimId == claim.Id {
+			createdFact = fact
+			return true
+		}
+		return false
+	})
+	require.NotNil(t, createdFact, "expected a fact to be created from the accepted claim")
+	require.Equal(t, types.ClaimType_CLAIM_TYPE_DEFINITION, createdFact.ClaimType)
 }

@@ -44,7 +44,7 @@ message RewardRouting {
   string contributor_share = 3; // contributor's share (bigint as string)
   string protocol_share    = 4; // protocol share (bigint as string)
   string research_share    = 5; // research fund share (bigint as string)
-  string burn_amount       = 6; // burned amount (bigint as string)
+  string development_amount = 6; // development fund amount (bigint as string)
   string recipient         = 7; // bech32 recipient address
   string fact_id           = 8; // related fact
   uint64 block_number      = 9; // block height
@@ -63,7 +63,7 @@ message BlockRewardDistribution {
   uint32 validator_count    = 5; // active validators
   string fund_balance_after = 6; // remaining fund balance (bigint as string)
   string founder_share      = 7; // founder's operational share (bigint as string)
-  string burn_amount        = 8; // burned amount (bigint as string)
+  string development_amount  = 8; // development fund amount (bigint as string)
   string protocol_share     = 9; // protocol share (bigint as string)
 }
 

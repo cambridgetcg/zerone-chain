@@ -158,6 +158,11 @@ const (
 	KVERIFY byte = 0xE1
 	KCITE   byte = 0xE2
 
+	// Home bridge (Zerone-specific)
+	HQUERY   byte = 0xE3 // Query caller's home
+	HMEMORY  byte = 0xE4 // Get home memory CID
+	HPARTNER byte = 0xE5 // Get home partnership ID
+
 	// System
 	CREATE       byte = 0xF0
 	CALL         byte = 0xF1
@@ -267,6 +272,9 @@ func init() {
 		KQUERY:       {KQUERY, "KQUERY", 1, 2, GasKQuery, false, 1},
 		KVERIFY:      {KVERIFY, "KVERIFY", 2, 1, GasKVerify, true, 1},
 		KCITE:        {KCITE, "KCITE", 1, 1, GasKCite, true, 1},
+		HQUERY:       {HQUERY, "HQUERY", 1, 3, GasHQuery, false, 1},
+		HMEMORY:      {HMEMORY, "HMEMORY", 1, 1, GasHMemory, false, 1},
+		HPARTNER:     {HPARTNER, "HPARTNER", 1, 1, GasHPartner, false, 1},
 		CREATE:       {CREATE, "CREATE", 3, 1, GasCreate, true, 1},
 		CALL:         {CALL, "CALL", 7, 1, GasCallBase, false, 1},
 		CALLCODE:     {CALLCODE, "CALLCODE", 7, 1, GasCallBase, false, 1},

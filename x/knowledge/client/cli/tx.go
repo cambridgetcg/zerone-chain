@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,46 @@ import (
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
+
+// parseClaimType maps a CLI string to a ClaimType enum value.
+func parseClaimType(s string) (types.ClaimType, error) {
+	switch strings.ToLower(s) {
+	case "", "assertion":
+		return types.ClaimType_CLAIM_TYPE_ASSERTION, nil
+	case "relation":
+		return types.ClaimType_CLAIM_TYPE_RELATION, nil
+	case "definition":
+		return types.ClaimType_CLAIM_TYPE_DEFINITION, nil
+	case "constraint":
+		return types.ClaimType_CLAIM_TYPE_CONSTRAINT, nil
+	case "negation":
+		return types.ClaimType_CLAIM_TYPE_NEGATION, nil
+	case "observation":
+		return types.ClaimType_CLAIM_TYPE_OBSERVATION, nil
+	default:
+		return 0, fmt.Errorf("unknown claim type %q: must be assertion, relation, definition, constraint, negation, or observation", s)
+	}
+}
+
+// parseRelationType maps a CLI string to a RelationType enum value.
+func parseRelationType(s string) (types.RelationType, error) {
+	switch strings.ToLower(s) {
+	case "supports":
+		return types.RelationType_RELATION_TYPE_SUPPORTS, nil
+	case "contradicts":
+		return types.RelationType_RELATION_TYPE_CONTRADICTS, nil
+	case "requires":
+		return types.RelationType_RELATION_TYPE_REQUIRES, nil
+	case "refines":
+		return types.RelationType_RELATION_TYPE_REFINES, nil
+	case "generalizes":
+		return types.RelationType_RELATION_TYPE_GENERALIZES, nil
+	case "supersedes":
+		return types.RelationType_RELATION_TYPE_SUPERSEDES, nil
+	default:
+		return 0, fmt.Errorf("unknown relation type %q: must be supports, contradicts, requires, refines, generalizes, or supersedes", s)
+	}
+}
 
 // GetTxCmd returns the root transaction command for the knowledge module.
 func GetTxCmd() *cobra.Command {
@@ -48,8 +89,8 @@ func GetTxCmd() *cobra.Command {
 // NewSubmitClaimCmd creates a CLI command for MsgSubmitClaim.
 func NewSubmitClaimCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "submit-claim [fact-content] [domain] [category] [stake]",
-		Short: "Submit a knowledge claim for verification",
+		Use:   "submit-claim [fact-content] [domain] [category] [review-fee]",
+		Short: "Submit a knowledge claim for verification (review fee is non-refundable)",
 		Args:  cobra.ExactArgs(4),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
@@ -65,6 +106,60 @@ func NewSubmitClaimCmd() *cobra.Command {
 
 			partnershipId, _ := cmd.Flags().GetString("partnership-id")
 
+			claimTypeStr, _ := cmd.Flags().GetString("claim-type")
+			claimType, err := parseClaimType(claimTypeStr)
+			if err != nil {
+				return err
+			}
+
+			// Parse typed relations
+			relationsStr, _ := cmd.Flags().GetString("relations")
+			var relations []*types.ClaimRelation
+			if relationsStr != "" {
+				for _, pair := range strings.Split(relationsStr, ",") {
+					parts := strings.SplitN(pair, ":", 2)
+					if len(parts) != 2 {
+						return fmt.Errorf("invalid relation format %q: expected type:fact_id", pair)
+					}
+					relType, err := parseRelationType(parts[0])
+					if err != nil {
+						return err
+					}
+					relations = append(relations, &types.ClaimRelation{
+						TargetFactId: parts[1],
+						Relation:     relType,
+					})
+				}
+			}
+
+			// Parse structured claim fields
+			var structure *types.ClaimStructure
+			subject, _ := cmd.Flags().GetString("subject")
+			predicate, _ := cmd.Flags().GetString("predicate")
+			if subject != "" || predicate != "" {
+				object, _ := cmd.Flags().GetString("object")
+				scope, _ := cmd.Flags().GetString("scope")
+				temporalScope, _ := cmd.Flags().GetString("temporal-scope")
+				negatable, _ := cmd.Flags().GetBool("negatable")
+				tagsStr, _ := cmd.Flags().GetString("tags")
+				var tags []string
+				if tagsStr != "" {
+					tags = strings.Split(tagsStr, ",")
+				}
+				structure = &types.ClaimStructure{
+					Subject:       subject,
+					Predicate:     predicate,
+					Object:        object,
+					Scope:         scope,
+					TemporalScope: temporalScope,
+					Negatable:     negatable,
+					Tags:          tags,
+				}
+			}
+
+			canonicalForm, _ := cmd.Flags().GetString("canonical")
+			sponsored, _ := cmd.Flags().GetBool("sponsored")
+
 			msg := &types.MsgSubmitClaim{
 				Submitter:     clientCtx.GetFromAddress().String(),
 				FactContent:   args[0],
@@ -73,6 +168,11 @@ func NewSubmitClaimCmd() *cobra.Command {
 				Stake:         args[3],
 				References:    references,
 				PartnershipId: partnershipId,
+				ClaimType:     claimType,
+				Relations:     relations,
+				Structure:     structure,
+				CanonicalForm: canonicalForm,
+				Sponsored:     sponsored,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
@@ -81,6 +181,17 @@ func NewSubmitClaimCmd() *cobra.Command {
 
 	cmd.Flags().String("references", "", "Comma-separated fact IDs to reference")
 	cmd.Flags().String("partnership-id", "", "Partnership ID for collaborative claims")
+	cmd.Flags().String("claim-type", "assertion", "Claim type: assertion (default), relation, definition, constraint, negation, observation")
+	cmd.Flags().String("relations", "", "Typed relations: supports:FACT_ID,contradicts:FACT_ID,requires:FACT_ID")
+	cmd.Flags().String("subject", "", "Claim subject (structured)")
+	cmd.Flags().String("predicate", "", "Claim predicate (structured)")
+	cmd.Flags().String("object", "", "Claim object (structured, optional)")
+	cmd.Flags().String("scope", "", "Claim scope/conditions (structured, optional)")
+	cmd.Flags().String("temporal-scope", "", "Time bounds (structured, optional)")
+	cmd.Flags().Bool("negatable", true, "Mark claim as negatable (default true)")
+	cmd.Flags().String("tags", "", "Comma-separated tags")
+	cmd.Flags().String("canonical", "", "Explicit canonical form (auto-derived from structure if omitted)")
+	cmd.Flags().Bool("sponsored", false, "Request bootstrap fund sponsorship (fund pays review fee)")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
@@ -121,7 +232,7 @@ func NewSubmitRevealCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "submit-reveal [round-id] [vote] [salt-hex]",
 		Short: "Submit a verification reveal (commit-reveal phase 2)",
-		Long:  `Vote must be "accept" or "reject". Salt is the hex-encoded salt used in commitment.`,
+		Long:  `Vote must be "accept", "reject", or "malformed". Salt is the hex-encoded salt used in commitment.`,
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)

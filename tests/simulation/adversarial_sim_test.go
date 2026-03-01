@@ -819,7 +819,7 @@ func TestToolRevenueSiphoning(t *testing.T) {
 		//
 		// Revenue flow: Service revenue -> tree module split
 		// ContributorsBp = 550000 (55%), ProtocolTreasury = 220000 (22%),
-		// Research = 130000 (13%), Burn = 100000 (10%).
+		// Research = 33300 (3.33%), Development = 196700 (19.67%).
 		//
 		// The contributor pool is split proportional to tasks completed.
 		// An attacker creates many shell tasks to claim disproportionate share.
@@ -831,8 +831,8 @@ func TestToolRevenueSiphoning(t *testing.T) {
 		t.Logf("  Total revenue: %d uzrn (%.0f ZRN)", totalRevenue, float64(totalRevenue)/1e6)
 		t.Logf("  Contributor pool (55%%): %d uzrn", dist.contributorPool)
 		t.Logf("  Protocol treasury (22%%): %d uzrn", dist.protocolTreasury)
-		t.Logf("  Research fund (13%%): %d uzrn", dist.researchFund)
-		t.Logf("  Burn (10%%): %d uzrn", dist.burn)
+		t.Logf("  Research fund (3.33%%): %d uzrn", dist.researchFund)
+		t.Logf("  Development fund (19.67%%): %d uzrn", dist.developmentFund)
 
 		// Defense 1: tasks-completed proportional split.
 		// Attacker claims 20 shell tasks, honest contributor has 5 real tasks.
@@ -873,14 +873,14 @@ func TestToolRevenueSiphoning(t *testing.T) {
 		t.Logf("Revenue Cap Analysis:")
 		t.Logf("  Max extraction (100%% of tasks): %d uzrn (%.0f%% of total revenue)",
 			maxExtraction, extractionRate)
-		t.Logf("  Protocol retains: %d uzrn treasury + %d uzrn research + %d uzrn burned",
-			dist.protocolTreasury, dist.researchFund, dist.burn)
+		t.Logf("  Protocol retains: %d uzrn treasury + %d uzrn research + %d uzrn development",
+			dist.protocolTreasury, dist.researchFund, dist.developmentFund)
 
 		// Total protocol-retained percentage
-		protocolRetained := float64(dist.protocolTreasury+dist.researchFund+dist.burn) * 100 / float64(totalRevenue)
+		protocolRetained := float64(dist.protocolTreasury+dist.researchFund+dist.developmentFund) * 100 / float64(totalRevenue)
 		t.Logf("  Protocol retention: %.0f%% guaranteed regardless of task distribution", protocolRetained)
 
-		// 45% of revenue always goes to protocol/research/burn — cannot be siphoned
+		// 45% of revenue always goes to protocol/research/development — cannot be siphoned
 		if protocolRetained < 40 {
 			t.Error("Protocol should retain at least 40% of revenue")
 		}
@@ -995,10 +995,10 @@ func TestResearchFundDrain(t *testing.T) {
 
 	t.Run("pnl_drain_efficiency", func(t *testing.T) {
 		// Even with colluding reviewers, how much can the attacker drain?
-		// Research fund receives 13% of tree revenue (ResearchFundBp=130000).
-		// Monthly tree revenue estimate: 10,000 ZRN -> fund gets 1,300 ZRN/month.
+		// Research fund receives 3.33% of tree revenue (ResearchFundBp=33300).
+		// Monthly tree revenue estimate: 10,000 ZRN -> fund gets 333 ZRN/month.
 
-		monthlyFundIncome := int64(1_300_000_000) // 1300 ZRN in uzrn
+		monthlyFundIncome := int64(333_000_000) // 333 ZRN in uzrn
 		proposalsPerMonth := uint64(20) // limited by review period (2 days each)
 
 		// Each accepted proposal gets funded from the research fund.

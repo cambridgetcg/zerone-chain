@@ -1,0 +1,116 @@
+{
+  "chain_id": "zerone-testnet-1",
+  "genesis_time": "2026-03-01T00:00:00Z",
+  "consensus": {
+    "params": {
+      "block": {
+        "max_gas": "33333333",
+        "max_bytes": "4194304"
+      },
+      "abci": {
+        "vote_extensions_enable_height": "1"
+      }
+    }
+  },
+  "app_state": {
+    "vesting_rewards": {
+      "params": {
+        "block_reward": "10000000",
+        "founder_share_bps": "70000",
+        "founder_address": "zrn1qypqxpq9qcrsszg2pvxq6rs0zqg3yyc5d9pmh",
+        "revenue_split": {
+          "contributor_bps": "550000",
+          "protocol_bps": "220000",
+          "research_bps": "33300",
+          "development_bps": "196700"
+        },
+        "protocol_sub_split": {
+          "citation_bps": "500000",
+          "verification_bps": "300000",
+          "treasury_bps": "200000"
+        }
+      }
+    },
+    "knowledge": {
+      "params": {
+        "fitness_epoch_blocks": "100",
+        "fitness_weight_query_bps": "150000",
+        "fitness_weight_citation_bps": "250000",
+        "fitness_weight_bridge_bps": "100000",
+        "fitness_weight_depth_bps": "100000",
+        "fitness_weight_patron_bps": "50000",
+        "fitness_weight_unique_bps": "100000",
+        "fitness_weight_age_bps": "100000",
+        "fitness_weight_satisfaction_bps": "150000",
+        "demand_tracking_enabled": true,
+        "demand_bounty_threshold": "5",
+        "demand_bounty_expiry_epochs": "10",
+        "demand_bounty_base_reward": "10000000",
+        "metabolism_base_cost": "100",
+        "metabolism_energy_cap": "10000",
+        "metabolism_initial_energy": "5000",
+        "competition_redundancy_threshold_bps": "300000",
+        "competition_max_niche_size": "50",
+        "bootstrap_fund_enabled": true,
+        "bootstrap_fund_epoch_blocks": "1000",
+        "bootstrap_fund_max_per_epoch": "50000000"
+      },
+      "facts": [
+        {
+          "id": "fact-001",
+          "domain": "physics",
+          "category": "axiomatic",
+          "status": "FACT_STATUS_VERIFIED",
+          "energy": "5000",
+          "structure": {
+            "subject": "entropy of a closed system"
+          }
+        },
+        {
+          "id": "fact-002",
+          "domain": "mathematics",
+          "category": "formal_proof",
+          "status": "FACT_STATUS_ACTIVE",
+          "energy": "3000",
+          "structure": {
+            "subject": "fundamental theorem of calculus"
+          }
+        }
+      ]
+    },
+    "zerone_staking": {
+      "params": {
+        "tier_configs": [
+          {"name": "Apprentice", "min_stake": "111000"},
+          {"name": "Verified", "min_stake": "1110000"},
+          {"name": "Scholar", "min_stake": "1111000000"},
+          {"name": "Guardian", "min_stake": "11111000000"}
+        ]
+      }
+    },
+    "zerone_gov": {
+      "params": {
+        "voting_period_blocks": "34272",
+        "discussion_period_blocks": "17136",
+        "quorum_threshold_bps": "334000",
+        "support_threshold_bps": "500000",
+        "research_fund_voters": {
+          "voter1": "zrn1qypqxpq9qcrsszg2pvxq6rs0zqg3yyc5d9pmh",
+          "voter2": "zrn1z7sg8dxq0fccxj2ms2xuvffcgp8lzf3xyrtkre"
+        }
+      }
+    },
+    "bank": {
+      "balances": [
+        {
+          "address": "zrn1qypqxpq9qcrsszg2pvxq6rs0zqg3yyc5d9pmh",
+          "coins": [{"denom": "uzrn", "amount": "1000000000000"}]
+        },
+        {
+          "address": "zrn1z7sg8dxq0fccxj2ms2xuvffcgp8lzf3xyrtkre",
+          "coins": [{"denom": "uzrn", "amount": "500000000000"}]
+        }
+      ]
+    }
+  }
+}

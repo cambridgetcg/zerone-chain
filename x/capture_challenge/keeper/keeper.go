@@ -22,6 +22,8 @@ type Keeper struct {
 	authority            string
 	bankKeeper           types.BankKeeper
 	captureDefenseKeeper types.CaptureDefenseKeeper
+	qualificationKeeper  types.DomainQualificationKeeper // nil-safe, set post-init
+	knowledgeKeeper      types.KnowledgeKeeper           // nil-safe, set post-init
 }
 
 // NewKeeper creates a new capture_challenge module Keeper.
@@ -51,6 +53,16 @@ func (k Keeper) GetAuthority() string { return k.authority }
 // SetCaptureDefenseKeeper sets the capture defense keeper post-initialization.
 func (k *Keeper) SetCaptureDefenseKeeper(cdk types.CaptureDefenseKeeper) {
 	k.captureDefenseKeeper = cdk
+}
+
+// SetQualificationKeeper sets the domain qualification keeper post-initialization.
+func (k *Keeper) SetQualificationKeeper(qk types.DomainQualificationKeeper) {
+	k.qualificationKeeper = qk
+}
+
+// SetKnowledgeKeeper sets the knowledge keeper post-initialization.
+func (k *Keeper) SetKnowledgeKeeper(kk types.KnowledgeKeeper) {
+	k.knowledgeKeeper = kk
 }
 
 // GenerateChallengeID creates a deterministic ID from challenger + domain + block.

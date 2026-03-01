@@ -1,0 +1,10 @@
+build/
+.git/
+prompts/
+cosmovisor/
+*.log
+scripts/
+.github/
+.claude/
+docs/*.md
+docs/home-e2e-report.md

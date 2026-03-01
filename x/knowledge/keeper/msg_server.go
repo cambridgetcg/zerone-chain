@@ -49,14 +49,84 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		}
 	}
 
-	// Validate stake
+	// Validate partnership_id if provided (R26-4)
+	if msg.PartnershipId != "" {
+		if m.keeper.partnershipKeeper == nil {
+			return nil, types.ErrInvalidPartnership.Wrap("partnership module not available")
+		}
+		// Check partnership exists and is active
+		active, err := m.keeper.partnershipKeeper.IsActive(ctx, msg.PartnershipId)
+		if err != nil || !active {
+			return nil, types.ErrInvalidPartnership.Wrapf(
+				"partnership %s is not active", msg.PartnershipId)
+		}
+		// Check submitter is a participant
+		isParticipant, err := m.keeper.partnershipKeeper.IsParticipant(ctx, msg.PartnershipId, msg.Submitter)
+		if err != nil || !isParticipant {
+			return nil, types.ErrInvalidPartnership.Wrapf(
+				"%s is not a participant in partnership %s", msg.Submitter, msg.PartnershipId)
+		}
+		// Reject claims through frozen/suspended partnerships
+		suspended, err := m.keeper.partnershipKeeper.IsSuspended(ctx, msg.PartnershipId)
+		if err == nil && suspended {
+			return nil, types.ErrPartnershipFrozen.Wrapf(
+				"partnership %s is frozen due to coercion signal", msg.PartnershipId)
+		}
+	}
+
+	// Validate review fee
 	stakeAmt, ok := new(big.Int).SetString(msg.Stake, 10)
 	if !ok || stakeAmt.Sign() <= 0 {
-		return nil, fmt.Errorf("invalid stake amount: %s", msg.Stake)
+		return nil, fmt.Errorf("invalid review fee amount: %s", msg.Stake)
 	}
-	minStake, _ := new(big.Int).SetString(params.MinClaimStake, 10)
-	if minStake != nil && stakeAmt.Cmp(minStake) < 0 {
-		return nil, fmt.Errorf("stake %s below minimum %s", msg.Stake, params.MinClaimStake)
+	effectiveMinFee := m.keeper.GetEffectiveMinReviewFee(ctx)
+	minFee, _ := new(big.Int).SetString(effectiveMinFee, 10)
+	if minFee != nil && stakeAmt.Cmp(minFee) < 0 {
+		return nil, fmt.Errorf("review fee %s below minimum %s (effective)", msg.Stake, effectiveMinFee)
+	}
+
+	// Validate typed relations — target facts must exist
+	for _, rel := range msg.Relations {
+		if rel.Relation == types.RelationType_RELATION_TYPE_UNSPECIFIED {
+			return nil, fmt.Errorf("relation type must be specified")
+		}
+		if _, found := m.keeper.GetFact(ctx, rel.TargetFactId); !found {
+			return nil, fmt.Errorf("relation target fact %s not found", rel.TargetFactId)
+		}
+	}
+
+	// Validate structure if provided
+	if msg.Structure != nil {
+		if msg.Structure.Subject == "" {
+			return nil, fmt.Errorf("claim structure: subject is required when structure is provided")
+		}
+		if msg.Structure.Predicate == "" {
+			return nil, fmt.Errorf("claim structure: predicate is required when structure is provided")
+		}
+		if len(msg.Structure.Tags) > 10 {
+			return nil, fmt.Errorf("claim structure: max 10 tags allowed")
+		}
+		for _, tag := range msg.Structure.Tags {
+			if len(tag) > 50 {
+				return nil, fmt.Errorf("claim structure: tag too long (max 50 chars): %s", tag)
+			}
+		}
+	}
+
+	// Auto-derive or normalize canonical form
+	canonicalForm := msg.CanonicalForm
+	if canonicalForm == "" && msg.Structure != nil {
+		canonicalForm = types.BuildCanonicalForm(msg.ClaimType, msg.Structure, msg.Domain)
+	}
+	var canonicalHash string
+	if canonicalForm != "" {
+		canonicalForm = types.NormalizeCanonicalForm(canonicalForm)
+		canonicalHash = types.HashCanonicalForm(canonicalForm)
+
+		// Dedup against canonical hash (stronger than content_hash)
+		if existingID, exists := m.keeper.GetClaimByCanonicalHash(ctx, canonicalHash); exists {
+			return nil, fmt.Errorf("canonical duplicate: matches existing claim %s", existingID)
+		}
 	}
 
 	// Check content hash dedup
@@ -65,20 +135,64 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		return nil, fmt.Errorf("duplicate claim: content hash matches existing claim %s", existingID)
 	}
 
-	// Lock stake via BankKeeper
-	if m.keeper.bankKeeper != nil {
-		submitterAddr, err := sdk.AccAddressFromBech32(msg.Submitter)
-		if err != nil {
-			return nil, fmt.Errorf("invalid submitter address: %w", err)
+	// Subject-based dedup warning (structured claims only)
+	if msg.Structure != nil && msg.Structure.Subject != "" {
+		if existingFactID := m.keeper.FindFactBySubjectPredicate(ctx, msg.Domain, msg.Structure.Subject, msg.Structure.Predicate); existingFactID != "" {
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"zerone.knowledge.duplicate_subject_warning",
+				sdk.NewAttribute("existing_fact_id", existingFactID),
+				sdk.NewAttribute("subject", msg.Structure.Subject),
+			))
 		}
-		coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(stakeAmt)))
-		if err := m.keeper.bankKeeper.SendCoinsFromAccountToModule(ctx, submitterAddr, types.ModuleName, coins); err != nil {
-			return nil, fmt.Errorf("failed to lock stake: %w", err)
+	}
+
+	// Adaptive cooldown check (R29-6)
+	effectiveCooldown := m.keeper.GetEffectiveCooldown(ctx, msg.Domain)
+	if effectiveCooldown > 0 {
+		lastClaimHeight := m.keeper.GetLastClaimHeight(ctx, msg.Submitter)
+		if lastClaimHeight > 0 && height-lastClaimHeight < effectiveCooldown {
+			return nil, fmt.Errorf("claim cooldown active: %d blocks remaining (effective cooldown: %d)",
+				effectiveCooldown-(height-lastClaimHeight), effectiveCooldown)
+		}
+	}
+
+	// Collect non-refundable review fee and distribute immediately via revenue split.
+	sponsored := msg.Sponsored
+	feeAmount := stakeAmt.Uint64()
+
+	if m.keeper.bankKeeper != nil {
+		feeCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(stakeAmt)))
+
+		if sponsored {
+			// ─── Bootstrap fund sponsored path (R19-7) ──────────────────────
+			if err := m.keeper.validateAndPayFromBootstrapFund(ctx, msg.Submitter, stakeAmt, feeCoins, params); err != nil {
+				return nil, err
+			}
+		} else {
+			// ─── Normal path: submitter pays fee directly ───────────────────
+			submitterAddr, err := sdk.AccAddressFromBech32(msg.Submitter)
+			if err != nil {
+				return nil, fmt.Errorf("invalid submitter address: %w", err)
+			}
+			if err := m.keeper.bankKeeper.SendCoinsFromAccountToModule(ctx, submitterAddr, types.ModuleName, feeCoins); err != nil {
+				return nil, fmt.Errorf("failed to collect review fee: %w", err)
+			}
+		}
+
+		// Distribute fee via revenue split (same path regardless of who paid)
+		if err := m.keeper.distributeReviewFee(ctx, feeAmount); err != nil {
+			m.keeper.Logger(ctx).Error("failed to distribute review fee", "error", err)
 		}
 	}
 
 	// Generate claim ID
 	claimID := GenerateClaimID(msg.Submitter, contentHash, height)
+
+	// Default unspecified to assertion (backward compat)
+	claimType := msg.ClaimType
+	if claimType == types.ClaimType_CLAIM_TYPE_UNSPECIFIED {
+		claimType = types.ClaimType_CLAIM_TYPE_ASSERTION
+	}
 
 	claim := &types.Claim{
 		Id:               claimID,
@@ -92,10 +206,30 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 		Stake:            msg.Stake,
 		PartnershipId:    msg.PartnershipId,
 		ContentHash:      contentHash,
+		ClaimType:        claimType,
+		Relations:        msg.Relations,
+		Structure:        msg.Structure,
+		CanonicalForm:    canonicalForm,
+		CanonicalHash:    canonicalHash,
 	}
 
 	if err := m.keeper.SetClaim(ctx, claim); err != nil {
 		return nil, err
+	}
+
+	// Record last claim height for adaptive cooldown (R29-6)
+	m.keeper.SetLastClaimHeight(ctx, msg.Submitter, height)
+
+	// Contradiction detection: auto-mark target facts as CONTESTED
+	for _, rel := range msg.Relations {
+		if rel.Relation == types.RelationType_RELATION_TYPE_CONTRADICTS {
+			targetFact, found := m.keeper.GetFact(ctx, rel.TargetFactId)
+			if found && (targetFact.Status == types.FactStatus_FACT_STATUS_VERIFIED ||
+				targetFact.Status == types.FactStatus_FACT_STATUS_ACTIVE) {
+				targetFact.Status = types.FactStatus_FACT_STATUS_CONTESTED
+				_ = m.keeper.SetFact(ctx, targetFact)
+			}
+		}
 	}
 
 	// Create verification round
@@ -108,10 +242,35 @@ func (m *msgServer) SubmitClaim(ctx context.Context, msg *types.MsgSubmitClaim) 
 			sdk.NewAttribute("claim_id", claimID),
 			sdk.NewAttribute("submitter", msg.Submitter),
 			sdk.NewAttribute("domain", msg.Domain),
-			sdk.NewAttribute("stake", msg.Stake),
+			sdk.NewAttribute("review_fee", msg.Stake),
 			sdk.NewAttribute("content_hash", contentHash),
+			sdk.NewAttribute("claim_type", claimType.String()),
+			sdk.NewAttribute("sponsored", fmt.Sprintf("%t", sponsored)),
 		),
 	)
+	sdkCtx.EventManager().EmitEvent(
+		sdk.NewEvent("zerone.knowledge.review_fee_distributed",
+			sdk.NewAttribute("claim_id", claimID),
+			sdk.NewAttribute("fee_amount", msg.Stake),
+			sdk.NewAttribute("verifier_pool", fmt.Sprintf("%d", verifierPoolFromFee(feeAmount))),
+			sdk.NewAttribute("protocol", fmt.Sprintf("%d", safeMulDiv(feeAmount, reviewFeeProtocolBps, 1_000_000))),
+			sdk.NewAttribute("development", fmt.Sprintf("%d", safeMulDiv(feeAmount, reviewFeeDevelopmentBps, 1_000_000))),
+			sdk.NewAttribute("research", fmt.Sprintf("%d", feeAmount-verifierPoolFromFee(feeAmount)-safeMulDiv(feeAmount, reviewFeeProtocolBps, 1_000_000)-safeMulDiv(feeAmount, reviewFeeDevelopmentBps, 1_000_000))),
+		),
+	)
+
+	if sponsored {
+		addressCount := m.keeper.GetBootstrapClaimCount(ctx, msg.Submitter)
+		fundBalance := m.keeper.GetBootstrapFundBalance(ctx)
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.bootstrap_sponsored",
+			sdk.NewAttribute("claim_id", claimID),
+			sdk.NewAttribute("submitter", msg.Submitter),
+			sdk.NewAttribute("fee_amount", msg.Stake),
+			sdk.NewAttribute("fund_balance_after", fundBalance.Amount.String()),
+			sdk.NewAttribute("address_claims_used", fmt.Sprintf("%d", addressCount)),
+		))
+	}
 
 	return &types.MsgSubmitClaimResponse{ClaimId: claimID}, nil
 }
@@ -135,9 +294,50 @@ func (m *msgServer) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCo
 		return nil, fmt.Errorf("commit phase has ended at block %d", round.CommitDeadline)
 	}
 
+	// Verifier minimum balance gate (stopgap until full qualification module)
+	if m.keeper.bankKeeper != nil {
+		verifierAddr, err := sdk.AccAddressFromBech32(msg.Verifier)
+		if err != nil {
+			return nil, fmt.Errorf("invalid verifier address: %w", err)
+		}
+		bal := m.keeper.bankKeeper.GetBalance(ctx, verifierAddr, "uzrn")
+		minBalance := sdkmath.NewInt(100_000_000) // 100 ZRN
+		if bal.Amount.LT(minBalance) {
+			return nil, fmt.Errorf("verifier does not meet minimum balance requirement")
+		}
+	}
+
 	// Check for duplicate commitment
 	if existing := findCommitByVerifier(round.Commits, msg.Verifier); existing != nil {
 		return nil, fmt.Errorf("verifier %s already committed to round %s", msg.Verifier, msg.RoundId)
+	}
+
+	// Check domain qualification
+	if m.keeper.domainQualificationKeeper != nil {
+		claim, found := m.keeper.GetClaim(ctx, round.ClaimId)
+		if !found {
+			return nil, fmt.Errorf("claim %s not found for round %s", round.ClaimId, msg.RoundId)
+		}
+		if claim.Domain != "" {
+			qualified, err := m.keeper.domainQualificationKeeper.IsQualified(ctx, msg.Verifier, claim.Domain)
+			if err != nil {
+				return nil, fmt.Errorf("qualification check failed: %w", err)
+			}
+			if !qualified {
+				// Check if fallback applies: if no qualified validators exist for this domain,
+				// allow unqualified ones through
+				qualifiedVals, _ := m.keeper.domainQualificationKeeper.GetQualifiedValidators(ctx, claim.Domain)
+				params, _ := m.keeper.GetParams(ctx)
+				if uint64(len(qualifiedVals)) >= params.MinVerifiers {
+					return nil, types.ErrUnqualifiedVerifier.Wrapf(
+						"validator %s is not qualified for domain %s", msg.Verifier, claim.Domain)
+				}
+				// Insufficient qualified validators — allow through with warning
+				m.keeper.Logger(ctx).Warn("allowing unqualified verifier due to insufficient qualified validators",
+					"verifier", msg.Verifier, "domain", claim.Domain,
+					"qualified_count", len(qualifiedVals), "min_verifiers", params.MinVerifiers)
+			}
+		}
 	}
 
 	// Add commitment
@@ -202,8 +402,8 @@ func (m *msgServer) SubmitReveal(ctx context.Context, msg *types.MsgSubmitReveal
 	}
 
 	// Validate vote value
-	if msg.Vote != "accept" && msg.Vote != "reject" {
-		return nil, fmt.Errorf("invalid vote: must be 'accept' or 'reject'")
+	if msg.Vote != "accept" && msg.Vote != "reject" && msg.Vote != "malformed" {
+		return nil, fmt.Errorf("invalid vote: must be 'accept', 'reject', or 'malformed'")
 	}
 
 	// Check for duplicate reveal
@@ -246,23 +446,38 @@ func (m *msgServer) AddFact(ctx context.Context, msg *types.MsgAddFact) (*types.
 
 	factID := GenerateFactID(msg.Content, height)
 
-	fact := &types.Fact{
-		Id:               factID,
-		Content:          msg.Content,
-		Domain:           msg.Domain,
-		Category:         msg.Category,
-		Confidence:       msg.Confidence,
-		Submitter:        msg.Authority,
-		SubmittedAtBlock: height,
-		VerifiedAtBlock:  height,
-		LastVerifiedBlock: height,
-		References:       msg.References,
-		Status:           types.FactStatus_FACT_STATUS_VERIFIED,
+	params, err := m.keeper.GetParams(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get params: %w", err)
 	}
+
+	fact := &types.Fact{
+		Id:                factID,
+		Content:           msg.Content,
+		Domain:            msg.Domain,
+		Category:          msg.Category,
+		Confidence:        m.keeper.ClampConfidence(ctx, msg.Confidence, msg.Domain),
+		Submitter:         msg.Authority,
+		SubmittedAtBlock:  height,
+		VerifiedAtBlock:   height,
+		LastVerifiedBlock: height,
+		References:        msg.References,
+		Status:            types.FactStatus_FACT_STATUS_VERIFIED,
+		// Initialize metabolism fields
+		Energy:            params.MetabolismInitialEnergy,
+		EnergyCap:         params.MetabolismEnergyCap,
+		EnergyLastUpdated: height,
+	}
+
+	// Apply domain carrying capacity birth pressure (R29-1)
+	fact.Energy = m.keeper.ApplyBirthPressure(ctx, msg.Domain, fact.Energy)
 
 	if err := m.keeper.SetFact(ctx, fact); err != nil {
 		return nil, err
 	}
+
+	// Update domain stats for carrying capacity (R29-1)
+	m.keeper.IncrementDomainFactCount(ctx, fact.Domain, true, fact.Energy)
 
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.knowledge.add_fact",
@@ -365,14 +580,15 @@ func (m *msgServer) ChallengeFact(ctx context.Context, msg *types.MsgChallengeFa
 	// Create a challenge claim and round
 	challengeClaimID := GenerateClaimID(msg.Challenger, msg.FactId, height)
 	challengeClaim := &types.Claim{
-		Id:               challengeClaimID,
-		FactContent:      fmt.Sprintf("Challenge of fact %s: %s", msg.FactId, msg.Reason),
-		Domain:           fact.Domain,
-		Category:         fact.Category,
-		Submitter:        msg.Challenger,
-		SubmittedAtBlock: height,
-		Status:           types.ClaimStatus_CLAIM_STATUS_PENDING,
-		Stake:            msg.Stake,
+		Id:                challengeClaimID,
+		FactContent:       fmt.Sprintf("Challenge of fact %s: %s", msg.FactId, msg.Reason),
+		Domain:            fact.Domain,
+		Category:          fact.Category,
+		Submitter:         msg.Challenger,
+		SubmittedAtBlock:  height,
+		Status:            types.ClaimStatus_CLAIM_STATUS_PENDING,
+		Stake:             msg.Stake,
+		ProvisionalFactId: msg.FactId, // Track challenged fact for resolution
 	}
 	if err := m.keeper.SetClaim(ctx, challengeClaim); err != nil {
 		return nil, err
@@ -430,14 +646,15 @@ func (m *msgServer) ChallengeProvisionalFact(ctx context.Context, msg *types.Msg
 
 	challengeClaimID := GenerateClaimID(msg.Challenger, msg.FactId, height)
 	challengeClaim := &types.Claim{
-		Id:               challengeClaimID,
-		FactContent:      fmt.Sprintf("Provisional challenge of fact %s: %s", msg.FactId, msg.Reason),
-		Domain:           fact.Domain,
-		Category:         fact.Category,
-		Submitter:        msg.Challenger,
-		SubmittedAtBlock: height,
-		Status:           types.ClaimStatus_CLAIM_STATUS_PENDING,
-		Stake:            msg.Stake,
+		Id:                challengeClaimID,
+		FactContent:       fmt.Sprintf("Provisional challenge of fact %s: %s", msg.FactId, msg.Reason),
+		Domain:            fact.Domain,
+		Category:          fact.Category,
+		Submitter:         msg.Challenger,
+		SubmittedAtBlock:  height,
+		Status:            types.ClaimStatus_CLAIM_STATUS_PENDING,
+		Stake:             msg.Stake,
+		ProvisionalFactId: msg.FactId, // Track challenged fact for resolution
 	}
 	_ = m.keeper.SetClaim(ctx, challengeClaim)
 	round, err := m.keeper.CreateVerificationRound(ctx, challengeClaim)
@@ -683,7 +900,9 @@ func (m *msgServer) PatronizeFact(ctx context.Context, msg *types.MsgPatronizeFa
 	height := uint64(sdkCtx.BlockHeight())
 	fact.PatronageAmount = msg.Amount
 	fact.PatronageExpiryBlock = height + msg.DurationBlocks
-	_ = m.keeper.SetFact(ctx, fact)
+
+	// Apply immediate energy boost (saves fact internally)
+	m.keeper.ApplyPatronageEnergyBoost(ctx, fact, msg.DurationBlocks, msg.Patron)
 
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.knowledge.patronize_fact",
@@ -765,4 +984,158 @@ func (m *msgServer) ExecuteResearchProposal(ctx context.Context, msg *types.MsgE
 	))
 
 	return &types.MsgExecuteResearchProposalResponse{}, nil
+}
+
+// ─── Common knowledge registry governance ─────────────────────────────────────
+
+func (m msgServer) AddCommonKnowledge(ctx context.Context, msg *types.MsgAddCommonKnowledge) (*types.MsgAddCommonKnowledgeResponse, error) {
+	if msg.Authority != m.keeper.GetAuthority() {
+		return nil, fmt.Errorf("unauthorized: expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
+	}
+
+	if msg.Domain == "" {
+		return nil, fmt.Errorf("domain is required")
+	}
+	if msg.Subject == "" {
+		return nil, fmt.Errorf("subject is required")
+	}
+	if msg.PenaltyBps > 1_000_000 {
+		return nil, fmt.Errorf("penalty_bps must be <= 1,000,000")
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	id := commonKnowledgeID(msg.Domain, msg.Subject)
+
+	entry := &types.CommonKnowledgeEntry{
+		Id:          id,
+		Domain:      msg.Domain,
+		Subject:     msg.Subject,
+		Description: msg.Description,
+		PenaltyBps:  msg.PenaltyBps,
+		AddedBlock:  uint64(sdkCtx.BlockHeight()),
+	}
+
+	if err := m.keeper.SetCommonKnowledgeEntry(ctx, entry); err != nil {
+		return nil, fmt.Errorf("failed to set common knowledge entry: %w", err)
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.common_knowledge_added",
+		sdk.NewAttribute("id", id),
+		sdk.NewAttribute("domain", msg.Domain),
+		sdk.NewAttribute("subject", msg.Subject),
+		sdk.NewAttribute("penalty_bps", fmt.Sprintf("%d", msg.PenaltyBps)),
+	))
+
+	return &types.MsgAddCommonKnowledgeResponse{Id: id}, nil
+}
+
+func (m msgServer) RemoveCommonKnowledge(ctx context.Context, msg *types.MsgRemoveCommonKnowledge) (*types.MsgRemoveCommonKnowledgeResponse, error) {
+	if msg.Authority != m.keeper.GetAuthority() {
+		return nil, fmt.Errorf("unauthorized: expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
+	}
+
+	if msg.Id == "" {
+		return nil, fmt.Errorf("id is required")
+	}
+
+	// Find entry by ID to get domain/subject for store key
+	entry, found := m.keeper.FindCommonKnowledgeByID(ctx, msg.Id)
+	if !found {
+		return nil, fmt.Errorf("common knowledge entry not found: %s", msg.Id)
+	}
+
+	if err := m.keeper.DeleteCommonKnowledgeEntry(ctx, entry.Domain, entry.Subject); err != nil {
+		return nil, fmt.Errorf("failed to delete common knowledge entry: %w", err)
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.common_knowledge_removed",
+		sdk.NewAttribute("id", msg.Id),
+		sdk.NewAttribute("domain", entry.Domain),
+		sdk.NewAttribute("subject", entry.Subject),
+	))
+
+	return &types.MsgRemoveCommonKnowledgeResponse{}, nil
+}
+
+// ─── Agent demand handlers ───────────────────────────────────────────────────
+
+func (m *msgServer) ReportDemand(ctx context.Context, msg *types.MsgReportDemand) (*types.MsgReportDemandResponse, error) {
+	if !m.keeper.IsAuthorizedDemandReporter(ctx, msg.Reporter) {
+		return nil, fmt.Errorf("unauthorized demand reporter: %s", msg.Reporter)
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+
+	for _, report := range msg.Reports {
+		signal, _ := m.keeper.GetOrCreateDemandSignal(ctx, report.Domain, report.Subject)
+		signal.QueryCount += report.Queries
+		signal.FulfilledCount += report.Fulfilled
+		signal.UnfulfilledCount += report.Unfulfilled
+		signal.EpochQueryCount += report.Queries
+		signal.EpochUnfulfilled += report.Unfulfilled
+		signal.LastQueryBlock = height
+		if err := m.keeper.SetDemandSignal(ctx, signal); err != nil {
+			return nil, fmt.Errorf("failed to store demand signal: %w", err)
+		}
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.demand_reported",
+		sdk.NewAttribute("reporter", msg.Reporter),
+		sdk.NewAttribute("report_count", fmt.Sprintf("%d", len(msg.Reports))),
+	))
+
+	return &types.MsgReportDemandResponse{}, nil
+}
+
+// ─── Query satisfaction handlers ────────────────────────────────────────────
+
+func (m *msgServer) RateFact(ctx context.Context, msg *types.MsgRateFact) (*types.MsgRateFactResponse, error) {
+	// Validate memo length
+	if len(msg.Memo) > 256 {
+		return nil, fmt.Errorf("memo exceeds 256 characters")
+	}
+
+	// Verify fact exists
+	fact, found := m.keeper.GetFact(ctx, msg.FactId)
+	if !found {
+		return nil, fmt.Errorf("fact not found: %s", msg.FactId)
+	}
+
+	// Verify query receipt (proof-of-query)
+	if !m.keeper.HasQueryReceipt(ctx, msg.Rater, msg.FactId) {
+		return nil, fmt.Errorf("no query receipt: you must query a fact before rating it")
+	}
+
+	// Prevent double-rating: consume the receipt
+	if err := m.keeper.ConsumeQueryReceipt(ctx, msg.Rater, msg.FactId); err != nil {
+		return nil, fmt.Errorf("failed to consume receipt: %w", err)
+	}
+
+	// Apply rating
+	if msg.Useful {
+		fact.SatisfactionUp++
+		fact.SatisfactionUpEpoch++
+	} else {
+		fact.SatisfactionDown++
+		fact.SatisfactionDownEpoch++
+	}
+
+	if err := m.keeper.SetFact(ctx, fact); err != nil {
+		return nil, fmt.Errorf("failed to update fact: %w", err)
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.fact_rated",
+		sdk.NewAttribute("fact_id", msg.FactId),
+		sdk.NewAttribute("rater", msg.Rater),
+		sdk.NewAttribute("useful", fmt.Sprintf("%t", msg.Useful)),
+	))
+
+	return &types.MsgRateFactResponse{}, nil
 }

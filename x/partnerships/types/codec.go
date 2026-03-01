@@ -18,6 +18,12 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgJoinFormationPool{}, "partnerships/JoinFormationPool", nil)
 	cdc.RegisterConcrete(&MsgLeaveFormationPool{}, "partnerships/LeaveFormationPool", nil)
 	cdc.RegisterConcrete(&MsgUpdateParams{}, "partnerships/UpdateParams", nil)
+	cdc.RegisterConcrete(&MsgProposeMentorship{}, "partnerships/ProposeMentorship", nil)
+	cdc.RegisterConcrete(&MsgAcceptMentorship{}, "partnerships/AcceptMentorship", nil)
+	cdc.RegisterConcrete(&MsgGraduateMentee{}, "partnerships/GraduateMentee", nil)
+	cdc.RegisterConcrete(&MsgEndMentorship{}, "partnerships/EndMentorship", nil)
+	cdc.RegisterConcrete(&MsgAcceptFormationMatch{}, "partnerships/AcceptFormationMatch", nil)
+	cdc.RegisterConcrete(&MsgDeclineFormationMatch{}, "partnerships/DeclineFormationMatch", nil)
 }
 
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
@@ -33,5 +39,11 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgJoinFormationPool{},
 		&MsgLeaveFormationPool{},
 		&MsgUpdateParams{},
+		&MsgProposeMentorship{},
+		&MsgAcceptMentorship{},
+		&MsgGraduateMentee{},
+		&MsgEndMentorship{},
+		&MsgAcceptFormationMatch{},
+		&MsgDeclineFormationMatch{},
 	)
 }

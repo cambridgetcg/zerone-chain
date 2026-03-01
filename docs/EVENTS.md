@@ -66,6 +66,52 @@ Module enabled or disabled.
 
 ---
 
+### zerone.alignment.correction_confidence_updated
+Correction confidence recalculated for a category after an observation cycle.
+- `category` -- alignment category
+- `confidence_bps` -- updated confidence in basis points
+- `effective_max_magnitude` -- effective max magnitude based on confidence
+
+### zerone.alignment.correction_governance_required
+Correction magnitude exceeds auto-apply threshold; governance proposal required.
+- `dimension` -- alignment dimension
+- `direction` -- correction direction
+- `effective_max` -- effective maximum magnitude
+- `magnitude` -- proposed magnitude
+- `parameter` -- target parameter
+- `reason` -- why governance is required
+
+### zerone.alignment.correction_outcome_recorded
+Result of a correction recorded for confidence tracking.
+- `dimension` -- alignment dimension
+- `height` -- block height of observation
+- `magnitude` -- correction magnitude applied
+- `score_after` -- score after correction
+- `score_before` -- score before correction
+- `successful` -- `"true"` or `"false"`
+
+### zerone.alignment.network_health_critical
+Network health composite dropped to critical level; defensive pacing activated.
+- `analysis_multiplier_bps` -- pacing multiplier for analysis in BPS
+- `composite` -- composite health score
+- `creation_multiplier_bps` -- pacing multiplier for creation in BPS
+- `height` -- block height
+
+### zerone.alignment.network_health_degraded
+Network health composite dropped below degraded threshold.
+- `analysis_multiplier_bps` -- pacing multiplier for analysis in BPS
+- `composite` -- composite health score
+- `creation_multiplier_bps` -- pacing multiplier for creation in BPS
+- `height` -- block height
+
+### zerone.alignment.network_health_recovered
+Network health composite returned to healthy range.
+- `analysis_multiplier_bps` -- pacing multiplier for analysis in BPS
+- `composite` -- composite health score
+- `creation_multiplier_bps` -- pacing multiplier for creation in BPS
+- `height` -- block height
+
+
 ## auth
 
 ### zerone.auth.account_registered
@@ -296,6 +342,23 @@ Bounty pool funded.
 
 ---
 
+### zerone.capture_challenge.auto_challenge_submitted
+Automatic capture challenge triggered by detection module.
+- `challenge_id` -- unique challenge identifier
+- `domain` -- flagged domain
+- `hhi` -- Herfindahl-Hirschman Index value
+- `risk_score` -- capture risk score
+
+### zerone.capture_challenge.capture_confirmed
+Capture challenge resolved with capture confirmed.
+- `challenge_id` -- unique challenge identifier
+- `domain` -- confirmed-captured domain
+
+### zerone.capture_challenge.params_updated
+Governance parameter update.
+- `authority` -- governance address
+
+
 ## capture_defense
 
 ### zerone.capture_defense.verification_recorded
@@ -313,6 +376,26 @@ Domain analysis completed.
 - `flagged` -- `"true"` or `"false"`
 
 ---
+
+### zerone.capture_defense.domain_formation_bonus_set
+Partnership formation bonus applied to a flagged domain to encourage decentralisation.
+- `bonus_bps` -- bonus in basis points
+- `domain` -- target domain
+- `expiry_height` -- block height when bonus expires
+- `reason` -- why bonus was set
+
+### zerone.capture_defense.params_updated
+Governance parameter update.
+- `authority` -- governance address
+
+### zerone.capture_defense.structural_immunity_updated
+Domain structural immunity recalculated based on partnership density.
+- `adjusted_hhi` -- HHI after immunity adjustment
+- `domain` -- target domain
+- `formation_bonus_active` -- `"true"` or `"false"`
+- `partnership_density` -- partnership count in domain
+- `raw_hhi` -- HHI before adjustment
+
 
 ## channels
 
@@ -518,6 +601,11 @@ Dispute settled.
 
 ---
 
+### zerone.disputes.params_updated
+Governance parameter update.
+- `authority` -- governance address
+
+
 ## emergency
 
 ### zerone.emergency.halt_proposed
@@ -695,6 +783,132 @@ Research voter set updated.
 
 ---
 
+### zerone.gov.community_seat_expired
+Community seat term ended.
+- `previous_holder` -- outgoing seat holder address
+- `seat_index` -- seat position index
+
+### zerone.gov.community_seat_installed
+New community seat holder installed.
+- `address` -- new seat holder address
+- `seat_index` -- seat position index
+- `term_end_block` -- block height when term ends
+
+### zerone.gov.community_seat_removed
+Community seat holder removed before term end.
+- `reason` -- removal reason
+- `removed_address` -- removed seat holder address
+- `seat_index` -- seat position index
+
+### zerone.gov.community_seat_vacant
+Community seat declared vacant.
+- `phase` -- current governance phase
+- `seat_index` -- seat position index
+
+### zerone.gov.param_change_applied
+Governance parameter change successfully applied from LIP.
+- `key` -- parameter key
+- `lip_id` -- originating LIP identifier
+- `module` -- target module
+- `value` -- new parameter value
+
+### zerone.gov.param_change_failed
+Governance parameter change from LIP failed to apply.
+- `key` -- parameter key
+- `lip_id` -- originating LIP identifier
+- `module` -- target module
+- `reason` -- failure reason
+
+### zerone.gov.phase_transition_cancelled
+Governance phase transition proposal cancelled.
+- `lip_id` -- originating LIP identifier
+- `reason` -- cancellation reason
+
+### zerone.gov.phase_transition_passed
+Governance phase transition approved and scheduled.
+- `activation_block` -- block height for activation
+- `is_rollback` -- `"true"` or `"false"`
+- `lip_id` -- originating LIP identifier
+- `target_phase` -- destination governance phase
+
+### zerone.gov.research_fund_phase_rollback
+Research fund governance phase rolled back.
+- `block` -- current block height
+- `cooldown_until` -- block height until which rollback cooldown applies
+- `from_phase` -- phase before rollback
+- `to_phase` -- phase after rollback
+
+### zerone.gov.research_fund_phase_transition
+Research fund governance phase transitioned.
+- `block` -- current block height
+- `block_height` -- transition block height
+- `from_phase` -- previous phase
+- `to_phase` -- new phase
+
+### zerone.gov.seat_election_contested_resolved
+Contested seat election resolved with a winner.
+- `seat_index` -- seat position index
+- `winner` -- winning candidate address
+- `winner_stake` -- winning candidate stake
+
+### zerone.gov.seat_election_nominated
+Candidate nominated for community seat election.
+- `candidate` -- nominee address
+- `proposal_id` -- election proposal identifier
+- `proposer` -- nominator address
+- `seat_index` -- seat position index
+
+### zerone.gov.seat_election_runoff_created
+Runoff election created between top two candidates.
+- `candidate_1` -- first candidate address
+- `candidate_2` -- second candidate address
+- `runoff_proposal_1` -- first runoff proposal ID
+- `runoff_proposal_2` -- second runoff proposal ID
+- `seat_index` -- seat position index
+
+### zerone.gov.seat_election_tallied
+Seat election votes tallied.
+- `no_stake` -- total stake against
+- `outcome` -- election result
+- `proposal_id` -- election proposal identifier
+- `yes_stake` -- total stake in favour
+
+### zerone.gov.seat_election_voted
+Vote cast in a seat election.
+- `option` -- vote option
+- `proposal_id` -- election proposal identifier
+- `stake` -- voter stake weight
+- `voter` -- voter address
+
+### zerone.gov.seat_election_voting_started
+Seat election voting period opened.
+- `proposal_id` -- election proposal identifier
+- `voting_end_block` -- block height when voting closes
+
+### zerone.gov.seat_nomination_accepted
+Seat nomination accepted by candidate.
+- `candidate` -- candidate address
+- `discussion_end_block` -- block height when discussion period ends
+- `proposal_id` -- election proposal identifier
+
+### zerone.gov.seat_nomination_expired
+Seat nomination expired without acceptance.
+- `candidate` -- candidate address
+- `proposal_id` -- election proposal identifier
+
+### zerone.gov.upgrade_plan_attached
+Software upgrade plan attached to a LIP.
+- `height` -- scheduled upgrade height
+- `lip_id` -- originating LIP identifier
+- `upgrade_name` -- upgrade plan name
+
+### zerone.gov.upgrade_scheduled
+Software upgrade scheduled for execution.
+- `height` -- scheduled upgrade height
+- `lip_id` -- originating LIP identifier
+- `upgrade_name` -- upgrade plan name
+
+
 ## home
 
 ### zerone.home.home_created
@@ -762,6 +976,11 @@ Spending limit configured.
 - `period_blocks` -- period length in blocks
 
 ---
+
+### zerone.home.params_updated
+Governance parameter update.
+- `authority` -- governance address
+
 
 ## ibcratelimit
 
@@ -948,6 +1167,204 @@ Research fund proposal executed.
 - `reveals` -- number of reveals received
 
 ---
+
+### zerone.knowledge.bootstrap_sponsored
+Claim sponsored via bootstrap fund (gas-free).
+- `address_claims_used` -- number of claims used by this address
+- `claim_id` -- sponsored claim identifier
+- `fee_amount` -- fee deducted from bootstrap fund
+- `fund_balance_after` -- bootstrap fund balance after sponsorship
+- `submitter` -- claim submitter address
+
+### zerone.knowledge.bounty_claimed
+Knowledge bounty successfully claimed by a fact submission.
+- `bounty_id` -- bounty identifier
+- `domain` -- knowledge domain
+- `fact_id` -- fulfilling fact identifier
+- `reward_amount` -- reward paid
+- `subject` -- bounty subject
+- `submitter` -- claimant address
+
+### zerone.knowledge.bounty_created
+New knowledge bounty posted for a domain.
+- `bounty_id` -- bounty identifier
+- `demand_count` -- number of demand reports aggregated
+- `domain` -- knowledge domain
+- `reward_amount` -- reward offered
+- `subject` -- bounty subject
+
+### zerone.knowledge.bounty_expired
+Knowledge bounty expired without fulfilment.
+- `bounty_id` -- bounty identifier
+- `domain` -- knowledge domain
+- `returned_amount` -- reward returned to creator
+- `subject` -- bounty subject
+
+### zerone.knowledge.common_knowledge_added
+Common knowledge entry registered for a domain.
+- `domain` -- knowledge domain
+- `id` -- common knowledge entry identifier
+- `penalty_bps` -- novelty penalty in basis points for matching claims
+- `subject` -- common knowledge subject
+
+### zerone.knowledge.common_knowledge_removed
+Common knowledge entry removed from a domain.
+- `domain` -- knowledge domain
+- `id` -- common knowledge entry identifier
+- `subject` -- common knowledge subject
+
+### zerone.knowledge.conformity_alert
+Epistemic diversity alert: domain showing excessive conformity.
+- `avg_entropy` -- average entropy score
+- `consecutive_epochs` -- number of consecutive low-diversity epochs
+- `domain` -- knowledge domain
+- `threshold` -- conformity alert threshold
+
+### zerone.knowledge.demand_reported
+User reported demand for knowledge in a topic.
+- `report_count` -- total reports from this reporter
+- `reporter` -- reporter address
+
+### zerone.knowledge.domain_pressure_changed
+Carrying capacity pressure updated for a domain.
+- `active_count` -- number of active facts
+- `capacity` -- domain carrying capacity
+- `category` -- pressure category
+- `domain` -- knowledge domain
+- `pressure_bps` -- pressure in basis points
+
+### zerone.knowledge.duplicate_subject_warning
+Claim subject matches an existing fact.
+- `existing_fact_id` -- identifier of the existing fact
+- `subject` -- duplicate subject text
+
+### zerone.knowledge.epistemic_temperature_changed
+Domain epistemic temperature recalculated.
+- `category` -- temperature category (hot/neutral/cold)
+- `conformity_streak` -- consecutive conformity epochs
+- `domain` -- knowledge domain
+- `recent_vindications` -- recent vindication count
+- `temperature_bps` -- temperature in basis points
+
+### zerone.knowledge.fact_disproven
+Established fact disproven via vindication.
+- `challenge_claim_id` -- claim ID that disproved the fact
+- `disproven_by` -- address that submitted disproving claim
+- `fact_id` -- disproven fact identifier
+
+### zerone.knowledge.fact_rated
+User rated a fact as useful or not.
+- `fact_id` -- rated fact identifier
+- `rater` -- rater address
+- `useful` -- `"true"` or `"false"`
+
+### zerone.knowledge.fact_relation_created
+Semantic relation created between two facts.
+- `relation` -- relation type
+- `source` -- source fact identifier
+- `target` -- target fact identifier
+
+### zerone.knowledge.fact_status_changed
+Fact lifecycle status changed (e.g. active to dormant).
+- `energy` -- current metabolism energy
+- `epoch` -- metabolism epoch
+- `fact_id` -- fact identifier
+- `new_status` -- new lifecycle status
+- `old_status` -- previous lifecycle status
+- `reason` -- reason for status change
+
+### zerone.knowledge.fitness_updated
+Fact fitness score recalculated.
+- `epoch` -- metabolism epoch
+- `fact_id` -- fact identifier
+- `fitness_label` -- fitness category label
+- `fitness_score` -- numeric fitness score
+- `query_count_epoch` -- queries received this epoch
+
+### zerone.knowledge.lineage_cascade
+Disproven parent fact triggered cascade to child facts.
+- `child_at_risk` -- `"true"` or `"false"`
+- `child_energy` -- child fact current energy
+- `parent_disproven` -- disproven parent fact identifier
+
+### zerone.knowledge.lineage_created
+Fact lineage relationship established (child inherits from parent).
+- `child_fact_id` -- child fact identifier
+- `inherited_fitness` -- fitness inherited from parent
+- `lineage_depth` -- depth in lineage tree
+- `parent_fact_id` -- parent fact identifier
+
+### zerone.knowledge.lineage_royalty
+Royalty payment distributed up the lineage tree.
+- `ancestor_fact_id` -- ancestor fact identifier
+- `ancestor_submitter` -- ancestor submitter address
+- `child_fact_id` -- child fact identifier
+- `depth` -- lineage depth from child
+- `royalty_amount` -- royalty amount paid
+
+### zerone.knowledge.niche_challenger
+New fact challenges the current niche leader.
+- `current_leader` -- current niche leader fact ID
+- `domain` -- knowledge domain
+- `new_fact` -- challenging fact ID
+- `niche` -- niche key
+
+### zerone.knowledge.niche_displacement
+Niche leader displaced by a fitter fact.
+- `displaced_fact` -- displaced leader fact ID
+- `domain` -- knowledge domain
+- `new_leader` -- new niche leader fact ID
+- `niche_key` -- niche identifier
+
+### zerone.knowledge.niche_pruned
+Low-fitness fact pruned from niche.
+- `fitness` -- fact fitness score at pruning
+- `niche_key` -- niche identifier
+- `niche_leader_id` -- niche leader fact ID
+- `pruned_fact_id` -- pruned fact identifier
+
+### zerone.knowledge.novelty_scored
+Claim novelty assessment completed.
+- `common_knowledge_match` -- `"true"` or `"false"` — matches common knowledge
+- `fact_id` -- assessed fact identifier
+- `novelty_score` -- computed novelty score
+
+### zerone.knowledge.qualification_fallback
+Insufficient qualified verifiers for a domain; fallback used.
+- `domain` -- knowledge domain
+- `min_verifiers` -- minimum verifiers required
+- `qualified_count` -- number of qualified verifiers found
+
+### zerone.knowledge.review_fee_distributed
+Claim review fee split across protocol components.
+- `claim_id` -- claim identifier
+- `development` -- development fund share
+- `fee_amount` -- total fee
+- `protocol` -- protocol share
+- `research` -- research fund share
+- `verifier_pool` -- verifier pool share
+
+### zerone.knowledge.role_elasticity_updated
+Human/agent role elasticity recalculated for a domain.
+- `agent_accuracy_bps` -- agent verification accuracy in BPS
+- `agent_bonus_bps` -- agent vote weight bonus in BPS
+- `domain` -- knowledge domain
+- `human_accuracy_bps` -- human verification accuracy in BPS
+- `human_bonus_bps` -- human vote weight bonus in BPS
+
+### zerone.knowledge.vindication_executed
+Vindication process completed; majority slashed, minority rewarded.
+- `bonus_pool` -- total bonus pool distributed
+- `disproven_by` -- address that disproved the fact
+- `fact_id` -- vindicated fact identifier
+- `majority_slashed` -- total stake slashed from majority
+- `minority_count` -- number of minority verifiers rewarded
+
+### zerone.knowledge.vindication_expired
+Vindication window expired without resolution.
+- `entry_count` -- number of entries in vindication queue
+- `fact_id` -- fact identifier
+
 
 ## liquiditypool
 
@@ -1146,6 +1563,62 @@ Partnership exit (dissolution) initiated.
 
 ---
 
+### zerone.partnerships.formation_match_accepted
+Formation match accepted by both parties; partnership created.
+- `match_id` -- formation match identifier
+- `partnership_id` -- created partnership identifier
+
+### zerone.partnerships.formation_match_declined
+Formation match declined by a party.
+- `declined_by` -- declining party address
+- `match_id` -- formation match identifier
+
+### zerone.partnerships.formation_match_partial_accept
+Formation match accepted by one party; awaiting other.
+- `accepter` -- accepting party address
+- `match_id` -- formation match identifier
+
+### zerone.partnerships.formation_match_proposed
+Formation matching algorithm proposed a new match.
+- `addr1` -- first candidate address
+- `addr2` -- second candidate address
+- `match_id` -- formation match identifier
+- `score` -- compatibility score
+
+### zerone.partnerships.mentorship_accepted
+Mentorship proposal accepted by mentee.
+- `mentee` -- mentee address
+- `mentor` -- mentor address
+- `mentorship_id` -- mentorship identifier
+
+### zerone.partnerships.mentorship_graduated
+Mentee graduated from mentorship; partnership proposed.
+- `domain` -- mentorship domain
+- `mentee` -- graduated mentee address
+- `mentor` -- mentor address
+- `mentorship_id` -- mentorship identifier
+
+### zerone.partnerships.mentorship_proposed
+New mentorship proposed between mentor and mentee.
+- `domain` -- mentorship domain
+- `mentee` -- mentee address
+- `mentor` -- mentor address
+- `mentorship_id` -- mentorship identifier
+
+### zerone.partnerships.mentorship_terminated
+Mentorship terminated by a party.
+- `mentorship_id` -- mentorship identifier
+- `terminated_by` -- terminating party address
+
+### zerone.partnerships.reward_distributed
+Reward distributed to partnership members.
+- `agent_share` -- agent member share
+- `gross_amount` -- total gross reward
+- `human_share` -- human member share
+- `partnership_id` -- partnership identifier
+- `source` -- reward source module
+
+
 ## qualification
 
 ### zerone.qualification.qualification_granted
@@ -1264,6 +1737,19 @@ Governance parameter update.
 - `former_claimer` -- claimer whose claim expired
 
 ---
+
+### zerone.research.bounty_auto_fulfilled
+Research bounty automatically fulfilled by system matching.
+- `bounty_id` -- bounty identifier
+- `fulfilled_by` -- fulfilling submission identifier
+- `reward` -- reward paid
+
+### zerone.research.research_auto_resolved
+Research submission automatically resolved after review period.
+- `aggregate_score` -- aggregate reviewer score
+- `outcome` -- resolution outcome
+- `research_id` -- research submission identifier
+
 
 ## schedule
 
@@ -1796,6 +2282,13 @@ Research fund deposit via revenue routing.
 - `active_validators` -- active validator count
 
 ---
+
+### zerone.vesting_rewards.vesting_paused_misbehavior
+Vesting paused due to validator misbehaviour.
+- `count` -- number of misbehaviours
+- `recipient` -- vesting recipient address
+
+
 
 ## WebSocket Subscriptions
 

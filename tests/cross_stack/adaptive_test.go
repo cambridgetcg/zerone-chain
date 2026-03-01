@@ -65,6 +65,11 @@ func TestScenario2_AlignmentCorrections(t *testing.T) {
 		Activated: true,
 	})
 
+	// 1b. Raise auto-apply magnitude cap so large corrections are applied in this test.
+	alignParamsInit := h.AlignmentKeeper.GetParams(h.Ctx)
+	alignParamsInit.MaxAutoApplyMagnitudeBps = 1_000_000
+	h.AlignmentKeeper.SetParams(h.Ctx, alignParamsInit)
+
 	// 2. Observe — sensors will return NeutralBPS (500,000) for nil cross-module
 	// keepers. Knowledge quality depends on the KnowledgeKeeper wired in the app.
 	obs := h.AlignmentKeeper.ObserveAll(h.Ctx)

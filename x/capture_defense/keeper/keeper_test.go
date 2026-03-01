@@ -17,6 +17,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/runtime"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/stretchr/testify/require"
 	"github.com/zerone-chain/zerone/x/capture_defense/keeper"
 	"github.com/zerone-chain/zerone/x/capture_defense/types"
 )
@@ -48,6 +49,10 @@ func (m *mockKnowledgeKeeper) GetFactDomain(_ context.Context, factId string) (s
 func (m *mockKnowledgeKeeper) GetFactSubmitter(_ context.Context, factId string) (string, bool) {
 	s, ok := m.submitters[factId]
 	return s, ok
+}
+
+func (m *mockKnowledgeKeeper) GetDomainVerificationActivity(_ context.Context, _ string) uint64 {
+	return 0
 }
 
 // ---------- Mock StakingKeeper ----------
@@ -1224,4 +1229,37 @@ func TestBeginBlocker(t *testing.T) {
 	if !found {
 		t.Error("expected capture metrics to exist after auto-analysis")
 	}
+}
+
+// ---------- Tests: GetDomainCapturePenalty (R31-1) ----------
+
+func TestGetDomainCapturePenalty_NotFlagged(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	flagged, penalty := k.GetDomainCapturePenalty(ctx, "physics")
+	require.False(t, flagged)
+	require.Equal(t, uint64(0), penalty)
+}
+
+func TestGetDomainCapturePenalty_Flagged(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	k.SetCaptureMetrics(ctx, &types.CaptureMetrics{
+		Domain:          "physics",
+		HerfindahlIndex: 400_000,
+		Flagged:         true,
+	})
+	flagged, penalty := k.GetDomainCapturePenalty(ctx, "physics")
+	require.True(t, flagged)
+	require.Equal(t, uint64(400_000), penalty)
+}
+
+func TestGetDomainCapturePenalty_FlaggedMonopoly(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	k.SetCaptureMetrics(ctx, &types.CaptureMetrics{
+		Domain:          "physics",
+		HerfindahlIndex: 1_000_000,
+		Flagged:         true,
+	})
+	flagged, penalty := k.GetDomainCapturePenalty(ctx, "physics")
+	require.True(t, flagged)
+	require.Equal(t, uint64(1_000_000), penalty)
 }

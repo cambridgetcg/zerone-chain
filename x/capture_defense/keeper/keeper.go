@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	"cosmossdk.io/core/store"
 	"cosmossdk.io/log"
@@ -14,11 +15,15 @@ import (
 
 // Keeper manages the capture_defense module's state.
 type Keeper struct {
-	storeService    store.KVStoreService
-	cdc             codec.BinaryCodec
-	authority       string
-	knowledgeKeeper types.KnowledgeKeeper
-	stakingKeeper   types.StakingKeeper
+	storeService       store.KVStoreService
+	cdc                codec.BinaryCodec
+	authority          string
+	knowledgeKeeper    types.KnowledgeKeeper
+	stakingKeeper      types.StakingKeeper
+	ontologyKeeper     types.OntologyKeeper          // nil-safe, set post-init
+	challengeKeeper    types.CaptureChallengeKeeper   // nil-safe, set post-init
+	partnershipsKeeper types.PartnershipsKeeper       // nil-safe, set post-init (R29-5)
+	pacingKeeper       types.PacingKeeper             // nil-safe, set post-init (R29-6)
 }
 
 // NewKeeper creates a new capture_defense module Keeper.
@@ -48,6 +53,18 @@ func (k *Keeper) SetKnowledgeKeeper(kk types.KnowledgeKeeper) { k.knowledgeKeepe
 
 // SetStakingKeeper sets the staking keeper post-initialization.
 func (k *Keeper) SetStakingKeeper(sk types.StakingKeeper) { k.stakingKeeper = sk }
+
+// SetOntologyKeeper sets the ontology keeper post-initialization.
+func (k *Keeper) SetOntologyKeeper(ok types.OntologyKeeper) { k.ontologyKeeper = ok }
+
+// SetChallengeKeeper sets the capture challenge keeper post-initialization.
+func (k *Keeper) SetChallengeKeeper(ck types.CaptureChallengeKeeper) { k.challengeKeeper = ck }
+
+// SetPartnershipsKeeper sets the partnerships keeper post-initialization (R29-5).
+func (k *Keeper) SetPartnershipsKeeper(pk types.PartnershipsKeeper) { k.partnershipsKeeper = pk }
+
+// SetPacingKeeper sets the pacing keeper post-initialization (R29-6).
+func (k *Keeper) SetPacingKeeper(pk types.PacingKeeper) { k.pacingKeeper = pk }
 
 // InitGenesis sets initial state from genesis.
 func (k Keeper) InitGenesis(ctx sdk.Context, gs *types.GenesisState) {
@@ -93,8 +110,15 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		k.DecayAllReputations(sdkCtx, params)
 	}
 
-	// Auto risk analysis
-	if height > 0 && params.RiskAnalysisInterval > 0 && height%params.RiskAnalysisInterval == 0 {
+	// Auto risk analysis — adaptive interval (R29-6)
+	effectiveInterval := params.RiskAnalysisInterval
+	if k.pacingKeeper != nil {
+		_, analysisPacing := k.pacingKeeper.GetGlobalPacingMultiplier(ctx)
+		if analysisPacing > 0 && analysisPacing != 1_000_000 {
+			effectiveInterval = params.RiskAnalysisInterval * 1_000_000 / analysisPacing
+		}
+	}
+	if height > 0 && effectiveInterval > 0 && height%effectiveInterval == 0 {
 		k.RunAutoAnalysis(sdkCtx, params)
 	}
 
@@ -102,9 +126,47 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 }
 
 // RunAutoAnalysis runs capture detection on all domains with recent history.
+// When a domain is flagged, it auto-submits a challenge to capture_challenge.
 func (k Keeper) RunAutoAnalysis(ctx sdk.Context, params *types.Params) {
 	domains := k.GetDomainsWithHistory(ctx)
 	for _, domain := range domains {
-		k.AnalyzeCaptureRisk(ctx, domain, params)
+		metrics := k.AnalyzeCaptureRisk(ctx, domain, params)
+		if metrics == nil {
+			continue
+		}
+		if metrics.Flagged {
+			// R29-5: Signal partnerships module to boost formation in flagged domains.
+			k.OnDomainFlagged(ctx, domain)
+
+			if k.challengeKeeper != nil {
+				evidence := formatMetricsAsEvidence(metrics)
+				if err := k.challengeKeeper.AutoSubmitChallenge(ctx, domain, metrics.RiskScore, metrics.HerfindahlIndex, evidence); err != nil {
+					k.Logger(ctx).Error("auto-challenge submission failed", "domain", domain, "err", err)
+				}
+			}
+		}
 	}
+}
+
+// formatMetricsAsEvidence creates a human-readable evidence string from capture metrics.
+func formatMetricsAsEvidence(m *types.CaptureMetrics) string {
+	return fmt.Sprintf(
+		"Auto-detected capture risk: HHI=%d, timing_correlation=%d, verdict_correlation=%d, top3_share=%d, risk_score=%d, analyzed_at_block=%d",
+		m.HerfindahlIndex, m.TimingCorrelation, m.VerdictCorrelation, m.Top3Share, m.RiskScore, m.AnalyzedAtBlock,
+	)
+}
+
+// RecordVerificationFromKnowledge records verification history from the knowledge module.
+// This is the internal method called by the adapter — it writes directly to state
+// without requiring a message transaction.
+func (k Keeper) RecordVerificationFromKnowledge(ctx sdk.Context, domain, roundId string, validators []string, verdicts []bool, submitBlocks []uint64) {
+	entry := &types.VerificationHistoryEntry{
+		Domain:       domain,
+		RoundId:      roundId,
+		Validators:   validators,
+		Verdicts:     verdicts,
+		SubmitBlocks: submitBlocks,
+		BlockHeight:  uint64(ctx.BlockHeight()),
+	}
+	k.SetVerificationHistory(ctx, entry)
 }

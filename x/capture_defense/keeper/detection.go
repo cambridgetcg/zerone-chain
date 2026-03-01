@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"math"
 	"sort"
 
@@ -49,7 +50,19 @@ func (k Keeper) AnalyzeCaptureRisk(ctx sdk.Context, domain string, params *types
 	// 6. Composite risk score: weighted average
 	riskScore := (hhi*40 + timing*20 + verdict*20 + top3*20) / 100
 
-	flagged := hhi > params.HhiThreshold
+	// R29-5: Adjust HHI based on partnership density (structural immunity).
+	// Distributed social structure reduces effective HHI.
+	adjustedHHI := k.CalculateAdjustedHHI(ctx, domain, hhi)
+
+	adjustedThreshold := k.getEffectiveHHIThreshold(ctx, domain, params)
+
+	// R29-5: Check for accelerated clearing — if domain has enough partnership
+	// density while flagged, unflag it.
+	if k.ShouldAccelerateClearFlag(ctx, domain) {
+		adjustedHHI = adjustedHHI * 80 / 100 // additional 20% reduction for accelerated clearing
+	}
+
+	flagged := adjustedHHI > adjustedThreshold
 
 	metrics := &types.CaptureMetrics{
 		Domain:              domain,
@@ -63,12 +76,67 @@ func (k Keeper) AnalyzeCaptureRisk(ctx sdk.Context, domain string, params *types
 		Flagged:             flagged,
 	}
 	k.SetCaptureMetrics(ctx, metrics)
+
+	// R29-5: Emit structural immunity event when partnership density affects HHI.
+	if k.partnershipsKeeper != nil {
+		density := k.partnershipsKeeper.GetDomainPartnershipDensity(ctx, domain)
+		formationBonusActive := false
+		if flagged {
+			formationBonusActive = true
+		}
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent("zerone.capture_defense.structural_immunity_updated",
+				sdk.NewAttribute("domain", domain),
+				sdk.NewAttribute("partnership_density", fmt.Sprintf("%d", density)),
+				sdk.NewAttribute("raw_hhi", fmt.Sprintf("%d", hhi)),
+				sdk.NewAttribute("adjusted_hhi", fmt.Sprintf("%d", adjustedHHI)),
+				sdk.NewAttribute("formation_bonus_active", fmt.Sprintf("%t", formationBonusActive)),
+			),
+		)
+	}
+
 	return metrics
 }
 
 // RunCaptureDetection is a convenience wrapper that calls AnalyzeCaptureRisk.
 func (k Keeper) RunCaptureDetection(ctx sdk.Context, domain string, params *types.Params) *types.CaptureMetrics {
 	return k.AnalyzeCaptureRisk(ctx, domain, params)
+}
+
+// getEffectiveHHIThreshold computes the HHI threshold adjusted for domain depth
+// and verification activity (R31-4: Fire controls Metal).
+func (k Keeper) getEffectiveHHIThreshold(ctx sdk.Context, domain string, params *types.Params) uint64 {
+	baseThreshold := params.HhiThreshold
+
+	// Depth adjustment: deeper domains get more lenient threshold
+	if k.ontologyKeeper != nil {
+		if depth, err := k.ontologyKeeper.GetDepthForDomain(ctx, domain); err == nil && depth > 1 {
+			baseThreshold += uint64(depth-1) * 50000
+		}
+	}
+
+	// R31-4: Fire controls Metal -- active verification relaxes defense sensitivity
+	if k.knowledgeKeeper != nil {
+		siParams := k.GetStructuralImmunityParams(ctx)
+		activity := k.knowledgeKeeper.GetDomainVerificationActivity(ctx, domain)
+		// At full activity (BPS): threshold increases by ActivityThresholdRelaxationBps
+		// At zero activity: threshold stays at base
+		thresholdBonus := baseThreshold * activity * siParams.ActivityThresholdRelaxationBps / (types.BPSScale * types.BPSScale)
+		baseThreshold += thresholdBonus
+
+		// Emit event when activity affects threshold
+		if activity > 0 {
+			ctx.EventManager().EmitEvent(sdk.NewEvent(
+				"zerone.capture_defense.activity_threshold_relaxation",
+				sdk.NewAttribute("domain", domain),
+				sdk.NewAttribute("base_hhi_threshold", fmt.Sprintf("%d", params.HhiThreshold)),
+				sdk.NewAttribute("effective_hhi_threshold", fmt.Sprintf("%d", baseThreshold)),
+				sdk.NewAttribute("verification_activity_bps", fmt.Sprintf("%d", activity)),
+			))
+		}
+	}
+
+	return baseThreshold
 }
 
 // top3Share returns the BPS fraction of the top 3 validators' combined share.

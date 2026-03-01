@@ -204,7 +204,184 @@ func TestEventAudit_AttributeValuesAreStrings(t *testing.T) {
 	}
 }
 
+// TestEventAudit_DocumentationCompleteness verifies that every event type
+// in the codebase has a corresponding entry in docs/EVENTS.md.
+func TestEventAudit_DocumentationCompleteness(t *testing.T) {
+	root := findProjectRoot(t)
+	modulesDir := filepath.Join(root, "x")
+	eventsDocPath := filepath.Join(root, "docs", "EVENTS.md")
+
+	// Collect all event types from the codebase.
+	// Handles both inline sdk.NewEvent("type" and multiline sdk.NewEvent(\n"type"
+	codebaseEvents := make(map[string]bool)
+
+	err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.Contains(path, ".pb.go") {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		for _, eventType := range extractEventTypes(string(data)) {
+			codebaseEvents[eventType] = true
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to walk modules directory: %v", err)
+	}
+
+	// Parse documented events from EVENTS.md (### zerone.module.action headings).
+	docData, err := os.ReadFile(eventsDocPath)
+	if err != nil {
+		t.Fatalf("failed to read %s: %v", eventsDocPath, err)
+	}
+
+	docHeadingRe := regexp.MustCompile(`(?m)^### (zerone\.\w+\.\w+)`)
+	documentedEvents := make(map[string]bool)
+	for _, match := range docHeadingRe.FindAllStringSubmatch(string(docData), -1) {
+		documentedEvents[match[1]] = true
+	}
+
+	// Check for undocumented events.
+	var undocumented []string
+	for event := range codebaseEvents {
+		if !documentedEvents[event] {
+			undocumented = append(undocumented, event)
+		}
+	}
+
+	if len(undocumented) > 0 {
+		t.Errorf("events in codebase but missing from docs/EVENTS.md (%d):\n  %s",
+			len(undocumented), strings.Join(undocumented, "\n  "))
+	}
+
+	// Check for phantom docs (documented but not in codebase).
+	var phantom []string
+	for event := range documentedEvents {
+		if !codebaseEvents[event] {
+			phantom = append(phantom, event)
+		}
+	}
+
+	if len(phantom) > 0 {
+		t.Errorf("events in docs/EVENTS.md but not found in codebase (%d):\n  %s",
+			len(phantom), strings.Join(phantom, "\n  "))
+	}
+}
+
+// TestEventAudit_AttributeCompleteness verifies minimum required attributes
+// for all events based on their context.
+func TestEventAudit_AttributeCompleteness(t *testing.T) {
+	root := findProjectRoot(t)
+	modulesDir := filepath.Join(root, "x")
+
+	attrRe := regexp.MustCompile(`sdk\.NewAttribute\("([^"]+)"`)
+	strQuoteRe := regexp.MustCompile(`"(zerone\.[a-z_]+\.[a-z_]+)"`)
+
+	type eventInfo struct {
+		eventType string
+		attrs     map[string]bool
+		file      string
+	}
+
+	var allEvents []eventInfo
+
+	err := filepath.Walk(modulesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.Contains(path, ".pb.go") {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		content := string(data)
+		relPath, _ := filepath.Rel(root, path)
+
+		// Split by sdk.NewEvent to find each event block.
+		parts := strings.Split(content, "sdk.NewEvent(")
+		for i := 1; i < len(parts); i++ {
+			part := parts[i]
+			if len(part) > 1000 {
+				part = part[:1000]
+			}
+
+			// Extract event type from the first quoted string after sdk.NewEvent(
+			typeMatch := strQuoteRe.FindStringSubmatch(part[:min(200, len(part))])
+			if typeMatch == nil {
+				continue
+			}
+
+			attrs := make(map[string]bool)
+			for _, am := range attrRe.FindAllStringSubmatch(part, -1) {
+				attrs[am[1]] = true
+			}
+
+			allEvents = append(allEvents, eventInfo{
+				eventType: typeMatch[1],
+				attrs:     attrs,
+				file:      relPath,
+			})
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to walk modules directory: %v", err)
+	}
+
+	var violations []string
+
+	for _, ev := range allEvents {
+		// Rule 1: Every event must have at least one attribute.
+		if len(ev.attrs) == 0 {
+			violations = append(violations, fmt.Sprintf(
+				"%s: %s has no attributes", ev.file, ev.eventType))
+		}
+	}
+
+	if len(violations) > 0 {
+		t.Errorf("event attribute completeness violations (%d):\n  %s",
+			len(violations), strings.Join(violations, "\n  "))
+	}
+}
+
 // --- helpers ---
+
+// extractEventTypes finds all event type strings in Go source, handling both
+// inline sdk.NewEvent("type" and multiline sdk.NewEvent(\n\t"type" patterns.
+func extractEventTypes(content string) []string {
+	eventTypeRe := regexp.MustCompile(`"(zerone\.[a-z_]+\.[a-z_]+)"`)
+	var types []string
+
+	// Split by sdk.NewEvent( and look for the first quoted zerone.* string
+	// in the ~200 chars after it.
+	parts := strings.Split(content, "sdk.NewEvent(")
+	for i := 1; i < len(parts); i++ {
+		snippet := parts[i]
+		if len(snippet) > 200 {
+			snippet = snippet[:200]
+		}
+		if m := eventTypeRe.FindStringSubmatch(snippet); m != nil {
+			types = append(types, m[1])
+		}
+	}
+	return types
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
 
 type handlerInfo struct {
 	name     string
@@ -222,7 +399,7 @@ func extractHandlers(t *testing.T, path string, handlerRe, emitRe *regexp.Regexp
 
 	// Delegation pattern: handlers that delegate to keeper methods which
 	// emit events internally (e.g., return ms.Keeper.Foo(ctx, msg)).
-	delegateRe := regexp.MustCompile(`\.\w+\.\w+\(|\.Handle\w+\(|\.VoteProposal\(`)
+	delegateRe := regexp.MustCompile(`\.\w+\.\w+\(|\.Handle\w+\(|\.VoteProposal\(|\.graduateMentorship\(`)
 
 	var handlers []handlerInfo
 	braceDepth := 0

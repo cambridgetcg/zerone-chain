@@ -183,7 +183,7 @@ Proof of Truth knowledge verification parameters — the largest parameter set.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `research_fund_share_bps` | uint64 | 130,000 (13%) | Share of knowledge rewards to research fund |
+| `research_fund_share_bps` | uint64 | 130,000 (13%) | Share of knowledge rewards to research fund (knowledge module only; global research split is 3.33%) |
 
 ---
 
@@ -215,11 +215,10 @@ Block rewards, vesting curves, and revenue distribution.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `block_reward` | string | "10000000" (10 ZRN) | Base block reward |
-| `reward_decay_bps` | uint64 | 850,000 (0.85x) | Reward decay per epoch |
+| `reward_decay_bps` | uint64 | 994,478 (~1-year half-life) | Reward decay per epoch (0.994478x) |
 | `blocks_per_reward_epoch` | uint64 | 100,000 (~2.9 days) | Blocks per reward epoch |
-| `founder_share_bps` | uint64 | 70,000 (7%) | Founder share of research fund |
-| `founder_address` | string | "" (disabled) | Founder address for share distribution |
-| `governance_activation_height` | uint64 | 0 | Height at which governance takes over |
+| `founder_share_bps` | uint64 | 70,000 (7%) | Founder share of research fund (**governance-immune**) |
+| `founder_address` | string | "" (disabled) | Founder address for share distribution (**governance-immune**) |
 | `vesting_enabled` | bool | true | Enable vesting mechanics |
 | `released_clawback_rate` | uint64 | 3,300 (33%) | Clawback rate on released vesting |
 | `min_validators_for_full_reward` | uint32 | 22 | Minimum validators for full block reward |
@@ -233,8 +232,10 @@ Block rewards, vesting curves, and revenue distribution.
 |-----------|---------|-------------|
 | `contributor_bps` | 550,000 (55%) | Share to fact contributors |
 | `protocol_bps` | 220,000 (22%) | Share to protocol |
-| `research_bps` | 130,000 (13%) | Share to research fund |
-| `burn_bps` | 100,000 (10%) | Share burned |
+| `research_bps` | 33,300 (3.33%) | Share to research fund |
+| `development_bps` | 196,700 (19.67%) | Share to development fund |
+
+> No burn — every ZRN does productive work.
 
 ### Protocol Sub-Split
 
@@ -265,6 +266,10 @@ Block rewards, vesting curves, and revenue distribution.
 
 Governance and Living Improvement Proposals (LIPs).
 
+**Governance-immune parameters** (cannot be modified via `MsgUpdateParams`):
+- `vesting_rewards.founder_share_bps`
+- `vesting_rewards.founder_address`
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `voting_period_blocks` | uint64 | 102,816 (~3 days) | Voting period duration |
@@ -284,6 +289,58 @@ Governance and Living Improvement Proposals (LIPs).
 | Upgrade | 800 ZRN | ~1 day (34,272 blocks) |
 | Text | 400 ZRN | ~12h (17,136 blocks) |
 | Research Spend | 200 ZRN | ~12h (17,136 blocks) |
+
+### Governance Migration Parameters
+
+Phase transition thresholds, community seat election mechanics, and rollback safety.
+
+#### Phase Exit Conditions
+
+| Phase | Min Voters | Min Guardians | Min Balance | Min Chain Age | Min Proposals | Min Seat Votes | Max Halts |
+|-------|-----------|---------------|-------------|---------------|---------------|----------------|-----------|
+| 0 → 1 | 10 | 5 | 100,000 ZRN | ~6mo (2,200,000 blocks) | 0 | 0 | 0 |
+| 1 → 2 | 25 | 10 | 0 | ~18mo (5,700,000 blocks) | 3 | 2 | 0 |
+| 2 → 3 | 50 | 22 | 0 | ~3yr (12,600,000 blocks) | 10 | 0 | 0 |
+
+#### Transition Proposal Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `transition_stake` | 1,000 ZRN | Stake required to propose a phase transition |
+| `transition_discussion_blocks` | 1,030,000 (~30 days) | Discussion period before voting |
+| `transition_activation_delay` | 240,000 (~7 days) | Delay after vote passes before activation |
+| `transition_supermajority_bps` | 667,000 (66.7%) | Supermajority threshold for transition votes |
+
+#### Rollback Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `rollback_stake` | 500 ZRN | Stake required to propose a rollback |
+| `rollback_review_blocks` | 240,000 (~7 days) | Faster review than forward transitions |
+| `rollback_cooldown_blocks` | 3,700,000 (~3 months) | Cooldown before re-attempting forward transition |
+| `rollback_gridlock_threshold` | 3 | Consecutive expired proposals to trigger gridlock |
+
+#### Community Seat Election Parameters
+
+| Parameter | Value | Description |
+|-----------|-------|-------------|
+| `seat_acceptance_blocks` | 34,272 (~1 day) | Deadline for candidate to accept nomination |
+| `seat_discussion_blocks` | 34,272 (~1 day) | Discussion period after acceptance |
+| `seat_voting_blocks` | 102,816 (~3 days) | Voting period for seat elections |
+| `seat_term_blocks` | 6,400,000 (~6 months) | Term length for community seats |
+| `seat_vacancy_warning_blocks` | 1,030,000 (~30 days) | Warning emitted after this long vacant |
+| `seat_vacancy_notice_blocks` | 3,090,000 (~90 days) | Auto-submit governance notice |
+| `seat_runoff_threshold_bps` | 50,000 (5%) | Margin within which runoff is triggered |
+| `seat_election_stake` | 500 ZRN | Stake required to nominate a candidate |
+| `min_candidate_lip_votes` | 5 | Minimum LIP votes required for candidacy |
+
+#### Phase 2 Stagger Offsets
+
+| Seat | Offset | Description |
+|------|--------|-------------|
+| Seat 0 | 2,133,333 (~2 months) | First term expires earliest |
+| Seat 1 | 4,266,666 (~4 months) | Second term |
+| Seat 2 | 6,400,000 (~6 months) | Third term — full cycle |
 
 ---
 
@@ -599,8 +656,8 @@ Tree of Life — project, task, and service management.
 |-----------|---------|-------------|
 | `contributors_bp` | 550,000 (55%) | Contributor share |
 | `protocol_treasury_bp` | 220,000 (22%) | Protocol treasury share |
-| `research_fund_bp` | 130,000 (13%) | Research fund share |
-| `burn_bp` | 100,000 (10%) | Burn share |
+| `research_fund_bp` | 33,300 (3.33%) | Research fund share |
+| `development_bp` | 196,700 (19.67%) | Development fund share |
 | `evidence_tax_bp` | 220,000 (22%) | Evidence tax on deliverables |
 
 ---
@@ -637,8 +694,8 @@ Tool registry and marketplace.
 |-----------|---------|-------------|
 | `tool_revenue_bps` | 550,000 (55%) | Tool creator share |
 | `protocol_bps` | 220,000 (22%) | Protocol share |
-| `research_bps` | 130,000 (13%) | Research fund share |
-| `burn_bps` | 100,000 (10%) | Burn share |
+| `research_bps` | 33,300 (3.33%) | Research fund share |
+| `development_bps` | 196,700 (19.67%) | Development fund share |
 
 ---
 

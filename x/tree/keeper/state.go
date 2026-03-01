@@ -9,11 +9,18 @@ import (
 	"github.com/zerone-chain/zerone/x/tree/types"
 )
 
+// marshalDeterministic marshals a protobuf message with deterministic output.
+// This is critical for consensus: validators must produce identical bytes for
+// the same state, especially for types containing proto map fields (e.g.
+// DemandSignal.Evidence). Without Deterministic:true, proto.Marshal does not
+// guarantee stable ordering of map keys across Go/protobuf versions.
+var marshalDeterministic = proto.MarshalOptions{Deterministic: true}.Marshal
+
 // ======================== Project CRUD ========================
 
 func (k Keeper) SetProject(ctx sdk.Context, project *types.ProductProject) {
 	store := k.storeService.OpenKVStore(ctx)
-	bz, err := proto.Marshal(project)
+	bz, err := marshalDeterministic(project)
 	if err != nil {
 		panic(err)
 	}
@@ -122,7 +129,7 @@ func (k Keeper) GetNextProjectId(ctx sdk.Context) uint64 {
 
 func (k Keeper) SetTask(ctx sdk.Context, task *types.ProjectTask) {
 	store := k.storeService.OpenKVStore(ctx)
-	bz, err := proto.Marshal(task)
+	bz, err := marshalDeterministic(task)
 	if err != nil {
 		panic(err)
 	}
@@ -231,7 +238,7 @@ func (k Keeper) GetNextTaskId(ctx sdk.Context) uint64 {
 
 func (k Keeper) SetService(ctx sdk.Context, service *types.ServiceLeaf) {
 	store := k.storeService.OpenKVStore(ctx)
-	bz, err := proto.Marshal(service)
+	bz, err := marshalDeterministic(service)
 	if err != nil {
 		panic(err)
 	}
@@ -301,7 +308,7 @@ func (k Keeper) GetNextServiceId(ctx sdk.Context) uint64 {
 
 func (k Keeper) SetSeed(ctx sdk.Context, seed *types.OpportunitySeed) {
 	store := k.storeService.OpenKVStore(ctx)
-	bz, err := proto.Marshal(seed)
+	bz, err := marshalDeterministic(seed)
 	if err != nil {
 		panic(err)
 	}
@@ -458,7 +465,7 @@ func (k Keeper) HasActiveSubscription(ctx sdk.Context, serviceId, subscriber str
 
 func (k Keeper) SetParams(ctx sdk.Context, params *types.Params) {
 	store := k.storeService.OpenKVStore(ctx)
-	bz, err := proto.Marshal(params)
+	bz, err := marshalDeterministic(params)
 	if err != nil {
 		panic(err)
 	}

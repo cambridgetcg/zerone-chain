@@ -27,6 +27,9 @@ func NewQueryCmd() *cobra.Command {
 		NewQueryPendingOpsCmd(),
 		NewQueryFormationPoolCmd(),
 		NewQueryParamsCmd(),
+		NewQueryMentorshipCmd(),
+		NewQueryMentorshipsByAddressCmd(),
+		NewQueryFormationMatchesCmd(),
 	)
 
 	return queryCmd
@@ -158,6 +161,75 @@ func NewQueryParamsCmd() *cobra.Command {
 		},
 	}
 
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryMentorshipCmd returns the command to query a mentorship by ID.
+func NewQueryMentorshipCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mentorship [id]",
+		Short: "Query a mentorship by ID",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryMentorshipRequest{Id: args[0]}
+			resp := &types.QueryMentorshipResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.partnerships.v1.Query/Mentorship", req, resp); err != nil {
+				return fmt.Errorf("failed to query mentorship: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryMentorshipsByAddressCmd returns the command to query mentorships by address.
+func NewQueryMentorshipsByAddressCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mentorships-by-address [address]",
+		Short: "Query mentorships by participant address",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryMentorshipsByAddressRequest{Address: args[0]}
+			resp := &types.QueryMentorshipsByAddressResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.partnerships.v1.Query/MentorshipsByAddress", req, resp); err != nil {
+				return fmt.Errorf("failed to query mentorships: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
+	flags.AddQueryFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewQueryFormationMatchesCmd returns the command to query all formation matches.
+func NewQueryFormationMatchesCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "formation-matches",
+		Short: "Query all formation matches",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			req := &types.QueryFormationMatchesRequest{}
+			resp := &types.QueryFormationMatchesResponse{}
+			if err := clientCtx.Invoke(cmd.Context(), "/zerone.partnerships.v1.Query/FormationMatches", req, resp); err != nil {
+				return fmt.Errorf("failed to query formation matches: %w", err)
+			}
+			return clientCtx.PrintObjectLegacy(resp)
+		},
+	}
 	flags.AddQueryFlagsToCmd(cmd)
 	return cmd
 }

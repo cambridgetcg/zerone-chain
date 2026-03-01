@@ -1064,6 +1064,419 @@ func (*MsgAttachUpgradePlanResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{19}
 }
 
+// MsgNominateSeatElection nominates a candidate for a community seat.
+type MsgNominateSeatElection struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Proposer      string                 `protobuf:"bytes,1,opt,name=proposer,proto3" json:"proposer,omitempty"`   // nominator bech32
+	Candidate     string                 `protobuf:"bytes,2,opt,name=candidate,proto3" json:"candidate,omitempty"` // candidate bech32
+	SeatIndex     uint32                 `protobuf:"varint,3,opt,name=seat_index,json=seatIndex,proto3" json:"seat_index,omitempty"`
+	Statement     string                 `protobuf:"bytes,4,opt,name=statement,proto3" json:"statement,omitempty"` // max 2000 chars
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgNominateSeatElection) Reset() {
+	*x = MsgNominateSeatElection{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgNominateSeatElection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgNominateSeatElection) ProtoMessage() {}
+
+func (x *MsgNominateSeatElection) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgNominateSeatElection.ProtoReflect.Descriptor instead.
+func (*MsgNominateSeatElection) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *MsgNominateSeatElection) GetProposer() string {
+	if x != nil {
+		return x.Proposer
+	}
+	return ""
+}
+
+func (x *MsgNominateSeatElection) GetCandidate() string {
+	if x != nil {
+		return x.Candidate
+	}
+	return ""
+}
+
+func (x *MsgNominateSeatElection) GetSeatIndex() uint32 {
+	if x != nil {
+		return x.SeatIndex
+	}
+	return 0
+}
+
+func (x *MsgNominateSeatElection) GetStatement() string {
+	if x != nil {
+		return x.Statement
+	}
+	return ""
+}
+
+type MsgNominateSeatElectionResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProposalId    uint64                 `protobuf:"varint,1,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgNominateSeatElectionResponse) Reset() {
+	*x = MsgNominateSeatElectionResponse{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgNominateSeatElectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgNominateSeatElectionResponse) ProtoMessage() {}
+
+func (x *MsgNominateSeatElectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgNominateSeatElectionResponse.ProtoReflect.Descriptor instead.
+func (*MsgNominateSeatElectionResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *MsgNominateSeatElectionResponse) GetProposalId() uint64 {
+	if x != nil {
+		return x.ProposalId
+	}
+	return 0
+}
+
+// MsgAcceptSeatNomination accepts a pending seat election nomination.
+type MsgAcceptSeatNomination struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Candidate     string                 `protobuf:"bytes,1,opt,name=candidate,proto3" json:"candidate,omitempty"`
+	ProposalId    uint64                 `protobuf:"varint,2,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAcceptSeatNomination) Reset() {
+	*x = MsgAcceptSeatNomination{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAcceptSeatNomination) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptSeatNomination) ProtoMessage() {}
+
+func (x *MsgAcceptSeatNomination) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAcceptSeatNomination.ProtoReflect.Descriptor instead.
+func (*MsgAcceptSeatNomination) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *MsgAcceptSeatNomination) GetCandidate() string {
+	if x != nil {
+		return x.Candidate
+	}
+	return ""
+}
+
+func (x *MsgAcceptSeatNomination) GetProposalId() uint64 {
+	if x != nil {
+		return x.ProposalId
+	}
+	return 0
+}
+
+type MsgAcceptSeatNominationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAcceptSeatNominationResponse) Reset() {
+	*x = MsgAcceptSeatNominationResponse{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAcceptSeatNominationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptSeatNominationResponse) ProtoMessage() {}
+
+func (x *MsgAcceptSeatNominationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAcceptSeatNominationResponse.ProtoReflect.Descriptor instead.
+func (*MsgAcceptSeatNominationResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{23}
+}
+
+// MsgVoteSeatElection casts a stake-weighted vote on a seat election.
+type MsgVoteSeatElection struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Voter         string                 `protobuf:"bytes,1,opt,name=voter,proto3" json:"voter,omitempty"`
+	ProposalId    uint64                 `protobuf:"varint,2,opt,name=proposal_id,json=proposalId,proto3" json:"proposal_id,omitempty"`
+	Option        string                 `protobuf:"bytes,3,opt,name=option,proto3" json:"option,omitempty"` // "yes", "no", "abstain"
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgVoteSeatElection) Reset() {
+	*x = MsgVoteSeatElection{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgVoteSeatElection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgVoteSeatElection) ProtoMessage() {}
+
+func (x *MsgVoteSeatElection) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgVoteSeatElection.ProtoReflect.Descriptor instead.
+func (*MsgVoteSeatElection) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *MsgVoteSeatElection) GetVoter() string {
+	if x != nil {
+		return x.Voter
+	}
+	return ""
+}
+
+func (x *MsgVoteSeatElection) GetProposalId() uint64 {
+	if x != nil {
+		return x.ProposalId
+	}
+	return 0
+}
+
+func (x *MsgVoteSeatElection) GetOption() string {
+	if x != nil {
+		return x.Option
+	}
+	return ""
+}
+
+type MsgVoteSeatElectionResponse struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	EffectiveWeight string                 `protobuf:"bytes,1,opt,name=effective_weight,json=effectiveWeight,proto3" json:"effective_weight,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *MsgVoteSeatElectionResponse) Reset() {
+	*x = MsgVoteSeatElectionResponse{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgVoteSeatElectionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgVoteSeatElectionResponse) ProtoMessage() {}
+
+func (x *MsgVoteSeatElectionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgVoteSeatElectionResponse.ProtoReflect.Descriptor instead.
+func (*MsgVoteSeatElectionResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *MsgVoteSeatElectionResponse) GetEffectiveWeight() string {
+	if x != nil {
+		return x.EffectiveWeight
+	}
+	return ""
+}
+
+// MsgDomainFormationFreeze imposes a formation cooldown on a domain.
+// Only executable via governance (authority-gated).
+type MsgDomainFormationFreeze struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Authority      string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	Domain         string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	DurationBlocks uint64                 `protobuf:"varint,3,opt,name=duration_blocks,json=durationBlocks,proto3" json:"duration_blocks,omitempty"`
+	Reason         string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *MsgDomainFormationFreeze) Reset() {
+	*x = MsgDomainFormationFreeze{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgDomainFormationFreeze) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgDomainFormationFreeze) ProtoMessage() {}
+
+func (x *MsgDomainFormationFreeze) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgDomainFormationFreeze.ProtoReflect.Descriptor instead.
+func (*MsgDomainFormationFreeze) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *MsgDomainFormationFreeze) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
+func (x *MsgDomainFormationFreeze) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *MsgDomainFormationFreeze) GetDurationBlocks() uint64 {
+	if x != nil {
+		return x.DurationBlocks
+	}
+	return 0
+}
+
+func (x *MsgDomainFormationFreeze) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type MsgDomainFormationFreezeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgDomainFormationFreezeResponse) Reset() {
+	*x = MsgDomainFormationFreezeResponse{}
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgDomainFormationFreezeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgDomainFormationFreezeResponse) ProtoMessage() {}
+
+func (x *MsgDomainFormationFreezeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_gov_v1_tx_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgDomainFormationFreezeResponse.ProtoReflect.Descriptor instead.
+func (*MsgDomainFormationFreezeResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_gov_v1_tx_proto_rawDescGZIP(), []int{27}
+}
+
 var File_zerone_gov_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_gov_v1_tx_proto_rawDesc = "" +
@@ -1131,7 +1544,36 @@ const file_zerone_gov_v1_tx_proto_rawDesc = "" +
 	"\fupgrade_name\x18\x03 \x01(\tR\vupgradeName\x12\x16\n" +
 	"\x06height\x18\x04 \x01(\x03R\x06height\x12\x12\n" +
 	"\x04info\x18\x05 \x01(\tR\x04info:\r\x82\xe7\xb0*\bproposer\"\x1e\n" +
-	"\x1cMsgAttachUpgradePlanResponse2\x9c\a\n" +
+	"\x1cMsgAttachUpgradePlanResponse\"\x9f\x01\n" +
+	"\x17MsgNominateSeatElection\x12\x1a\n" +
+	"\bproposer\x18\x01 \x01(\tR\bproposer\x12\x1c\n" +
+	"\tcandidate\x18\x02 \x01(\tR\tcandidate\x12\x1d\n" +
+	"\n" +
+	"seat_index\x18\x03 \x01(\rR\tseatIndex\x12\x1c\n" +
+	"\tstatement\x18\x04 \x01(\tR\tstatement:\r\x82\xe7\xb0*\bproposer\"B\n" +
+	"\x1fMsgNominateSeatElectionResponse\x12\x1f\n" +
+	"\vproposal_id\x18\x01 \x01(\x04R\n" +
+	"proposalId\"h\n" +
+	"\x17MsgAcceptSeatNomination\x12\x1c\n" +
+	"\tcandidate\x18\x01 \x01(\tR\tcandidate\x12\x1f\n" +
+	"\vproposal_id\x18\x02 \x01(\x04R\n" +
+	"proposalId:\x0e\x82\xe7\xb0*\tcandidate\"!\n" +
+	"\x1fMsgAcceptSeatNominationResponse\"p\n" +
+	"\x13MsgVoteSeatElection\x12\x14\n" +
+	"\x05voter\x18\x01 \x01(\tR\x05voter\x12\x1f\n" +
+	"\vproposal_id\x18\x02 \x01(\x04R\n" +
+	"proposalId\x12\x16\n" +
+	"\x06option\x18\x03 \x01(\tR\x06option:\n" +
+	"\x82\xe7\xb0*\x05voter\"H\n" +
+	"\x1bMsgVoteSeatElectionResponse\x12)\n" +
+	"\x10effective_weight\x18\x01 \x01(\tR\x0feffectiveWeight\"\xa1\x01\n" +
+	"\x18MsgDomainFormationFreeze\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x12\x16\n" +
+	"\x06domain\x18\x02 \x01(\tR\x06domain\x12'\n" +
+	"\x0fduration_blocks\x18\x03 \x01(\x04R\x0edurationBlocks\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason:\x0e\x82\xe7\xb0*\tauthority\"\"\n" +
+	" MsgDomainFormationFreezeResponse2\xd3\n" +
+	"\n" +
 	"\x03Msg\x12M\n" +
 	"\tSubmitLIP\x12\x1b.zerone.gov.v1.MsgSubmitLIP\x1a#.zerone.gov.v1.MsgSubmitLIPResponse\x12J\n" +
 	"\bStakeLIP\x12\x1a.zerone.gov.v1.MsgStakeLIP\x1a\".zerone.gov.v1.MsgStakeLIPResponse\x12_\n" +
@@ -1142,7 +1584,11 @@ const file_zerone_gov_v1_tx_proto_rawDesc = "" +
 	"\x13SubmitResearchSpend\x12%.zerone.gov.v1.MsgSubmitResearchSpend\x1a-.zerone.gov.v1.MsgSubmitResearchSpendResponse\x12e\n" +
 	"\x11VoteResearchSpend\x12#.zerone.gov.v1.MsgVoteResearchSpend\x1a+.zerone.gov.v1.MsgVoteResearchSpendResponse\x12e\n" +
 	"\x11SetResearchVoters\x12#.zerone.gov.v1.MsgSetResearchVoters\x1a+.zerone.gov.v1.MsgSetResearchVotersResponse\x12e\n" +
-	"\x11AttachUpgradePlan\x12#.zerone.gov.v1.MsgAttachUpgradePlan\x1a+.zerone.gov.v1.MsgAttachUpgradePlanResponseB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
+	"\x11AttachUpgradePlan\x12#.zerone.gov.v1.MsgAttachUpgradePlan\x1a+.zerone.gov.v1.MsgAttachUpgradePlanResponse\x12n\n" +
+	"\x14NominateSeatElection\x12&.zerone.gov.v1.MsgNominateSeatElection\x1a..zerone.gov.v1.MsgNominateSeatElectionResponse\x12n\n" +
+	"\x14AcceptSeatNomination\x12&.zerone.gov.v1.MsgAcceptSeatNomination\x1a..zerone.gov.v1.MsgAcceptSeatNominationResponse\x12b\n" +
+	"\x10VoteSeatElection\x12\".zerone.gov.v1.MsgVoteSeatElection\x1a*.zerone.gov.v1.MsgVoteSeatElectionResponse\x12q\n" +
+	"\x15DomainFormationFreeze\x12'.zerone.gov.v1.MsgDomainFormationFreeze\x1a/.zerone.gov.v1.MsgDomainFormationFreezeResponseB,Z*github.com/zerone-chain/zerone/x/gov/typesb\x06proto3"
 
 var (
 	file_zerone_gov_v1_tx_proto_rawDescOnce sync.Once
@@ -1156,36 +1602,44 @@ func file_zerone_gov_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_gov_v1_tx_proto_rawDescData
 }
 
-var file_zerone_gov_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_zerone_gov_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_zerone_gov_v1_tx_proto_goTypes = []any{
-	(*MsgSubmitLIP)(nil),                   // 0: zerone.gov.v1.MsgSubmitLIP
-	(*MsgSubmitLIPResponse)(nil),           // 1: zerone.gov.v1.MsgSubmitLIPResponse
-	(*MsgStakeLIP)(nil),                    // 2: zerone.gov.v1.MsgStakeLIP
-	(*MsgStakeLIPResponse)(nil),            // 3: zerone.gov.v1.MsgStakeLIPResponse
-	(*MsgAdvanceLIPStage)(nil),             // 4: zerone.gov.v1.MsgAdvanceLIPStage
-	(*MsgAdvanceLIPStageResponse)(nil),     // 5: zerone.gov.v1.MsgAdvanceLIPStageResponse
-	(*MsgCastVote)(nil),                    // 6: zerone.gov.v1.MsgCastVote
-	(*MsgCastVoteResponse)(nil),            // 7: zerone.gov.v1.MsgCastVoteResponse
-	(*MsgWithdrawLIP)(nil),                 // 8: zerone.gov.v1.MsgWithdrawLIP
-	(*MsgWithdrawLIPResponse)(nil),         // 9: zerone.gov.v1.MsgWithdrawLIPResponse
-	(*MsgUpdateParams)(nil),                // 10: zerone.gov.v1.MsgUpdateParams
-	(*MsgUpdateParamsResponse)(nil),        // 11: zerone.gov.v1.MsgUpdateParamsResponse
-	(*MsgSubmitResearchSpend)(nil),         // 12: zerone.gov.v1.MsgSubmitResearchSpend
-	(*MsgSubmitResearchSpendResponse)(nil), // 13: zerone.gov.v1.MsgSubmitResearchSpendResponse
-	(*MsgVoteResearchSpend)(nil),           // 14: zerone.gov.v1.MsgVoteResearchSpend
-	(*MsgVoteResearchSpendResponse)(nil),   // 15: zerone.gov.v1.MsgVoteResearchSpendResponse
-	(*MsgSetResearchVoters)(nil),           // 16: zerone.gov.v1.MsgSetResearchVoters
-	(*MsgSetResearchVotersResponse)(nil),   // 17: zerone.gov.v1.MsgSetResearchVotersResponse
-	(*MsgAttachUpgradePlan)(nil),           // 18: zerone.gov.v1.MsgAttachUpgradePlan
-	(*MsgAttachUpgradePlanResponse)(nil),   // 19: zerone.gov.v1.MsgAttachUpgradePlanResponse
-	(*ParamChange)(nil),                    // 20: zerone.gov.v1.ParamChange
-	(*Params)(nil),                         // 21: zerone.gov.v1.Params
-	(*ResearchFundVoters)(nil),             // 22: zerone.gov.v1.ResearchFundVoters
+	(*MsgSubmitLIP)(nil),                     // 0: zerone.gov.v1.MsgSubmitLIP
+	(*MsgSubmitLIPResponse)(nil),             // 1: zerone.gov.v1.MsgSubmitLIPResponse
+	(*MsgStakeLIP)(nil),                      // 2: zerone.gov.v1.MsgStakeLIP
+	(*MsgStakeLIPResponse)(nil),              // 3: zerone.gov.v1.MsgStakeLIPResponse
+	(*MsgAdvanceLIPStage)(nil),               // 4: zerone.gov.v1.MsgAdvanceLIPStage
+	(*MsgAdvanceLIPStageResponse)(nil),       // 5: zerone.gov.v1.MsgAdvanceLIPStageResponse
+	(*MsgCastVote)(nil),                      // 6: zerone.gov.v1.MsgCastVote
+	(*MsgCastVoteResponse)(nil),              // 7: zerone.gov.v1.MsgCastVoteResponse
+	(*MsgWithdrawLIP)(nil),                   // 8: zerone.gov.v1.MsgWithdrawLIP
+	(*MsgWithdrawLIPResponse)(nil),           // 9: zerone.gov.v1.MsgWithdrawLIPResponse
+	(*MsgUpdateParams)(nil),                  // 10: zerone.gov.v1.MsgUpdateParams
+	(*MsgUpdateParamsResponse)(nil),          // 11: zerone.gov.v1.MsgUpdateParamsResponse
+	(*MsgSubmitResearchSpend)(nil),           // 12: zerone.gov.v1.MsgSubmitResearchSpend
+	(*MsgSubmitResearchSpendResponse)(nil),   // 13: zerone.gov.v1.MsgSubmitResearchSpendResponse
+	(*MsgVoteResearchSpend)(nil),             // 14: zerone.gov.v1.MsgVoteResearchSpend
+	(*MsgVoteResearchSpendResponse)(nil),     // 15: zerone.gov.v1.MsgVoteResearchSpendResponse
+	(*MsgSetResearchVoters)(nil),             // 16: zerone.gov.v1.MsgSetResearchVoters
+	(*MsgSetResearchVotersResponse)(nil),     // 17: zerone.gov.v1.MsgSetResearchVotersResponse
+	(*MsgAttachUpgradePlan)(nil),             // 18: zerone.gov.v1.MsgAttachUpgradePlan
+	(*MsgAttachUpgradePlanResponse)(nil),     // 19: zerone.gov.v1.MsgAttachUpgradePlanResponse
+	(*MsgNominateSeatElection)(nil),          // 20: zerone.gov.v1.MsgNominateSeatElection
+	(*MsgNominateSeatElectionResponse)(nil),  // 21: zerone.gov.v1.MsgNominateSeatElectionResponse
+	(*MsgAcceptSeatNomination)(nil),          // 22: zerone.gov.v1.MsgAcceptSeatNomination
+	(*MsgAcceptSeatNominationResponse)(nil),  // 23: zerone.gov.v1.MsgAcceptSeatNominationResponse
+	(*MsgVoteSeatElection)(nil),              // 24: zerone.gov.v1.MsgVoteSeatElection
+	(*MsgVoteSeatElectionResponse)(nil),      // 25: zerone.gov.v1.MsgVoteSeatElectionResponse
+	(*MsgDomainFormationFreeze)(nil),         // 26: zerone.gov.v1.MsgDomainFormationFreeze
+	(*MsgDomainFormationFreezeResponse)(nil), // 27: zerone.gov.v1.MsgDomainFormationFreezeResponse
+	(*ParamChange)(nil),                      // 28: zerone.gov.v1.ParamChange
+	(*Params)(nil),                           // 29: zerone.gov.v1.Params
+	(*ResearchFundVoters)(nil),               // 30: zerone.gov.v1.ResearchFundVoters
 }
 var file_zerone_gov_v1_tx_proto_depIdxs = []int32{
-	20, // 0: zerone.gov.v1.MsgSubmitLIP.param_changes:type_name -> zerone.gov.v1.ParamChange
-	21, // 1: zerone.gov.v1.MsgUpdateParams.params:type_name -> zerone.gov.v1.Params
-	22, // 2: zerone.gov.v1.MsgSetResearchVoters.voters:type_name -> zerone.gov.v1.ResearchFundVoters
+	28, // 0: zerone.gov.v1.MsgSubmitLIP.param_changes:type_name -> zerone.gov.v1.ParamChange
+	29, // 1: zerone.gov.v1.MsgUpdateParams.params:type_name -> zerone.gov.v1.Params
+	30, // 2: zerone.gov.v1.MsgSetResearchVoters.voters:type_name -> zerone.gov.v1.ResearchFundVoters
 	0,  // 3: zerone.gov.v1.Msg.SubmitLIP:input_type -> zerone.gov.v1.MsgSubmitLIP
 	2,  // 4: zerone.gov.v1.Msg.StakeLIP:input_type -> zerone.gov.v1.MsgStakeLIP
 	4,  // 5: zerone.gov.v1.Msg.AdvanceLIPStage:input_type -> zerone.gov.v1.MsgAdvanceLIPStage
@@ -1196,18 +1650,26 @@ var file_zerone_gov_v1_tx_proto_depIdxs = []int32{
 	14, // 10: zerone.gov.v1.Msg.VoteResearchSpend:input_type -> zerone.gov.v1.MsgVoteResearchSpend
 	16, // 11: zerone.gov.v1.Msg.SetResearchVoters:input_type -> zerone.gov.v1.MsgSetResearchVoters
 	18, // 12: zerone.gov.v1.Msg.AttachUpgradePlan:input_type -> zerone.gov.v1.MsgAttachUpgradePlan
-	1,  // 13: zerone.gov.v1.Msg.SubmitLIP:output_type -> zerone.gov.v1.MsgSubmitLIPResponse
-	3,  // 14: zerone.gov.v1.Msg.StakeLIP:output_type -> zerone.gov.v1.MsgStakeLIPResponse
-	5,  // 15: zerone.gov.v1.Msg.AdvanceLIPStage:output_type -> zerone.gov.v1.MsgAdvanceLIPStageResponse
-	7,  // 16: zerone.gov.v1.Msg.CastVote:output_type -> zerone.gov.v1.MsgCastVoteResponse
-	9,  // 17: zerone.gov.v1.Msg.WithdrawLIP:output_type -> zerone.gov.v1.MsgWithdrawLIPResponse
-	11, // 18: zerone.gov.v1.Msg.UpdateParams:output_type -> zerone.gov.v1.MsgUpdateParamsResponse
-	13, // 19: zerone.gov.v1.Msg.SubmitResearchSpend:output_type -> zerone.gov.v1.MsgSubmitResearchSpendResponse
-	15, // 20: zerone.gov.v1.Msg.VoteResearchSpend:output_type -> zerone.gov.v1.MsgVoteResearchSpendResponse
-	17, // 21: zerone.gov.v1.Msg.SetResearchVoters:output_type -> zerone.gov.v1.MsgSetResearchVotersResponse
-	19, // 22: zerone.gov.v1.Msg.AttachUpgradePlan:output_type -> zerone.gov.v1.MsgAttachUpgradePlanResponse
-	13, // [13:23] is the sub-list for method output_type
-	3,  // [3:13] is the sub-list for method input_type
+	20, // 13: zerone.gov.v1.Msg.NominateSeatElection:input_type -> zerone.gov.v1.MsgNominateSeatElection
+	22, // 14: zerone.gov.v1.Msg.AcceptSeatNomination:input_type -> zerone.gov.v1.MsgAcceptSeatNomination
+	24, // 15: zerone.gov.v1.Msg.VoteSeatElection:input_type -> zerone.gov.v1.MsgVoteSeatElection
+	26, // 16: zerone.gov.v1.Msg.DomainFormationFreeze:input_type -> zerone.gov.v1.MsgDomainFormationFreeze
+	1,  // 17: zerone.gov.v1.Msg.SubmitLIP:output_type -> zerone.gov.v1.MsgSubmitLIPResponse
+	3,  // 18: zerone.gov.v1.Msg.StakeLIP:output_type -> zerone.gov.v1.MsgStakeLIPResponse
+	5,  // 19: zerone.gov.v1.Msg.AdvanceLIPStage:output_type -> zerone.gov.v1.MsgAdvanceLIPStageResponse
+	7,  // 20: zerone.gov.v1.Msg.CastVote:output_type -> zerone.gov.v1.MsgCastVoteResponse
+	9,  // 21: zerone.gov.v1.Msg.WithdrawLIP:output_type -> zerone.gov.v1.MsgWithdrawLIPResponse
+	11, // 22: zerone.gov.v1.Msg.UpdateParams:output_type -> zerone.gov.v1.MsgUpdateParamsResponse
+	13, // 23: zerone.gov.v1.Msg.SubmitResearchSpend:output_type -> zerone.gov.v1.MsgSubmitResearchSpendResponse
+	15, // 24: zerone.gov.v1.Msg.VoteResearchSpend:output_type -> zerone.gov.v1.MsgVoteResearchSpendResponse
+	17, // 25: zerone.gov.v1.Msg.SetResearchVoters:output_type -> zerone.gov.v1.MsgSetResearchVotersResponse
+	19, // 26: zerone.gov.v1.Msg.AttachUpgradePlan:output_type -> zerone.gov.v1.MsgAttachUpgradePlanResponse
+	21, // 27: zerone.gov.v1.Msg.NominateSeatElection:output_type -> zerone.gov.v1.MsgNominateSeatElectionResponse
+	23, // 28: zerone.gov.v1.Msg.AcceptSeatNomination:output_type -> zerone.gov.v1.MsgAcceptSeatNominationResponse
+	25, // 29: zerone.gov.v1.Msg.VoteSeatElection:output_type -> zerone.gov.v1.MsgVoteSeatElectionResponse
+	27, // 30: zerone.gov.v1.Msg.DomainFormationFreeze:output_type -> zerone.gov.v1.MsgDomainFormationFreezeResponse
+	17, // [17:31] is the sub-list for method output_type
+	3,  // [3:17] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -1226,7 +1688,7 @@ func file_zerone_gov_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_gov_v1_tx_proto_rawDesc), len(file_zerone_gov_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -30,6 +30,12 @@ const (
 	Msg_JoinFormationPool_FullMethodName     = "/zerone.partnerships.v1.Msg/JoinFormationPool"
 	Msg_LeaveFormationPool_FullMethodName    = "/zerone.partnerships.v1.Msg/LeaveFormationPool"
 	Msg_UpdateParams_FullMethodName          = "/zerone.partnerships.v1.Msg/UpdateParams"
+	Msg_ProposeMentorship_FullMethodName     = "/zerone.partnerships.v1.Msg/ProposeMentorship"
+	Msg_AcceptMentorship_FullMethodName      = "/zerone.partnerships.v1.Msg/AcceptMentorship"
+	Msg_GraduateMentee_FullMethodName        = "/zerone.partnerships.v1.Msg/GraduateMentee"
+	Msg_EndMentorship_FullMethodName         = "/zerone.partnerships.v1.Msg/EndMentorship"
+	Msg_AcceptFormationMatch_FullMethodName  = "/zerone.partnerships.v1.Msg/AcceptFormationMatch"
+	Msg_DeclineFormationMatch_FullMethodName = "/zerone.partnerships.v1.Msg/DeclineFormationMatch"
 )
 
 // MsgClient is the client API for Msg service.
@@ -47,6 +53,12 @@ type MsgClient interface {
 	JoinFormationPool(ctx context.Context, in *MsgJoinFormationPool, opts ...grpc.CallOption) (*MsgJoinFormationPoolResponse, error)
 	LeaveFormationPool(ctx context.Context, in *MsgLeaveFormationPool, opts ...grpc.CallOption) (*MsgLeaveFormationPoolResponse, error)
 	UpdateParams(ctx context.Context, in *MsgUpdateParams, opts ...grpc.CallOption) (*MsgUpdateParamsResponse, error)
+	ProposeMentorship(ctx context.Context, in *MsgProposeMentorship, opts ...grpc.CallOption) (*MsgProposeMentorshipResponse, error)
+	AcceptMentorship(ctx context.Context, in *MsgAcceptMentorship, opts ...grpc.CallOption) (*MsgAcceptMentorshipResponse, error)
+	GraduateMentee(ctx context.Context, in *MsgGraduateMentee, opts ...grpc.CallOption) (*MsgGraduateMenteeResponse, error)
+	EndMentorship(ctx context.Context, in *MsgEndMentorship, opts ...grpc.CallOption) (*MsgEndMentorshipResponse, error)
+	AcceptFormationMatch(ctx context.Context, in *MsgAcceptFormationMatch, opts ...grpc.CallOption) (*MsgAcceptFormationMatchResponse, error)
+	DeclineFormationMatch(ctx context.Context, in *MsgDeclineFormationMatch, opts ...grpc.CallOption) (*MsgDeclineFormationMatchResponse, error)
 }
 
 type msgClient struct {
@@ -167,6 +179,66 @@ func (c *msgClient) UpdateParams(ctx context.Context, in *MsgUpdateParams, opts 
 	return out, nil
 }
 
+func (c *msgClient) ProposeMentorship(ctx context.Context, in *MsgProposeMentorship, opts ...grpc.CallOption) (*MsgProposeMentorshipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgProposeMentorshipResponse)
+	err := c.cc.Invoke(ctx, Msg_ProposeMentorship_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) AcceptMentorship(ctx context.Context, in *MsgAcceptMentorship, opts ...grpc.CallOption) (*MsgAcceptMentorshipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAcceptMentorshipResponse)
+	err := c.cc.Invoke(ctx, Msg_AcceptMentorship_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) GraduateMentee(ctx context.Context, in *MsgGraduateMentee, opts ...grpc.CallOption) (*MsgGraduateMenteeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgGraduateMenteeResponse)
+	err := c.cc.Invoke(ctx, Msg_GraduateMentee_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) EndMentorship(ctx context.Context, in *MsgEndMentorship, opts ...grpc.CallOption) (*MsgEndMentorshipResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgEndMentorshipResponse)
+	err := c.cc.Invoke(ctx, Msg_EndMentorship_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) AcceptFormationMatch(ctx context.Context, in *MsgAcceptFormationMatch, opts ...grpc.CallOption) (*MsgAcceptFormationMatchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAcceptFormationMatchResponse)
+	err := c.cc.Invoke(ctx, Msg_AcceptFormationMatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) DeclineFormationMatch(ctx context.Context, in *MsgDeclineFormationMatch, opts ...grpc.CallOption) (*MsgDeclineFormationMatchResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgDeclineFormationMatchResponse)
+	err := c.cc.Invoke(ctx, Msg_DeclineFormationMatch_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -182,6 +254,12 @@ type MsgServer interface {
 	JoinFormationPool(context.Context, *MsgJoinFormationPool) (*MsgJoinFormationPoolResponse, error)
 	LeaveFormationPool(context.Context, *MsgLeaveFormationPool) (*MsgLeaveFormationPoolResponse, error)
 	UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error)
+	ProposeMentorship(context.Context, *MsgProposeMentorship) (*MsgProposeMentorshipResponse, error)
+	AcceptMentorship(context.Context, *MsgAcceptMentorship) (*MsgAcceptMentorshipResponse, error)
+	GraduateMentee(context.Context, *MsgGraduateMentee) (*MsgGraduateMenteeResponse, error)
+	EndMentorship(context.Context, *MsgEndMentorship) (*MsgEndMentorshipResponse, error)
+	AcceptFormationMatch(context.Context, *MsgAcceptFormationMatch) (*MsgAcceptFormationMatchResponse, error)
+	DeclineFormationMatch(context.Context, *MsgDeclineFormationMatch) (*MsgDeclineFormationMatchResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -224,6 +302,24 @@ func (UnimplementedMsgServer) LeaveFormationPool(context.Context, *MsgLeaveForma
 }
 func (UnimplementedMsgServer) UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateParams not implemented")
+}
+func (UnimplementedMsgServer) ProposeMentorship(context.Context, *MsgProposeMentorship) (*MsgProposeMentorshipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ProposeMentorship not implemented")
+}
+func (UnimplementedMsgServer) AcceptMentorship(context.Context, *MsgAcceptMentorship) (*MsgAcceptMentorshipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptMentorship not implemented")
+}
+func (UnimplementedMsgServer) GraduateMentee(context.Context, *MsgGraduateMentee) (*MsgGraduateMenteeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GraduateMentee not implemented")
+}
+func (UnimplementedMsgServer) EndMentorship(context.Context, *MsgEndMentorship) (*MsgEndMentorshipResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method EndMentorship not implemented")
+}
+func (UnimplementedMsgServer) AcceptFormationMatch(context.Context, *MsgAcceptFormationMatch) (*MsgAcceptFormationMatchResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptFormationMatch not implemented")
+}
+func (UnimplementedMsgServer) DeclineFormationMatch(context.Context, *MsgDeclineFormationMatch) (*MsgDeclineFormationMatchResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DeclineFormationMatch not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -444,6 +540,114 @@ func _Msg_UpdateParams_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_ProposeMentorship_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgProposeMentorship)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).ProposeMentorship(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_ProposeMentorship_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).ProposeMentorship(ctx, req.(*MsgProposeMentorship))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_AcceptMentorship_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAcceptMentorship)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AcceptMentorship(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AcceptMentorship_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AcceptMentorship(ctx, req.(*MsgAcceptMentorship))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_GraduateMentee_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgGraduateMentee)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).GraduateMentee(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_GraduateMentee_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).GraduateMentee(ctx, req.(*MsgGraduateMentee))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_EndMentorship_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgEndMentorship)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).EndMentorship(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_EndMentorship_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).EndMentorship(ctx, req.(*MsgEndMentorship))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_AcceptFormationMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAcceptFormationMatch)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AcceptFormationMatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AcceptFormationMatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AcceptFormationMatch(ctx, req.(*MsgAcceptFormationMatch))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_DeclineFormationMatch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgDeclineFormationMatch)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).DeclineFormationMatch(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_DeclineFormationMatch_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).DeclineFormationMatch(ctx, req.(*MsgDeclineFormationMatch))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -494,6 +698,30 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateParams",
 			Handler:    _Msg_UpdateParams_Handler,
+		},
+		{
+			MethodName: "ProposeMentorship",
+			Handler:    _Msg_ProposeMentorship_Handler,
+		},
+		{
+			MethodName: "AcceptMentorship",
+			Handler:    _Msg_AcceptMentorship_Handler,
+		},
+		{
+			MethodName: "GraduateMentee",
+			Handler:    _Msg_GraduateMentee_Handler,
+		},
+		{
+			MethodName: "EndMentorship",
+			Handler:    _Msg_EndMentorship_Handler,
+		},
+		{
+			MethodName: "AcceptFormationMatch",
+			Handler:    _Msg_AcceptFormationMatch_Handler,
+		},
+		{
+			MethodName: "DeclineFormationMatch",
+			Handler:    _Msg_DeclineFormationMatch_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

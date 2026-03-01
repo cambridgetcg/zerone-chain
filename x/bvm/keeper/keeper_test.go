@@ -142,6 +142,40 @@ func (m *mockKnowledgeKeeper) GetFactConfidence(_ context.Context, factId string
 	return conf, found
 }
 
+// ---------- Mock AuthKeeper ----------
+
+type mockAuthKeeper struct {
+	dids     map[string]string      // address -> DID
+	sessions map[string]mockSession // address -> session capabilities
+}
+
+type mockSession struct {
+	caps           types.SessionCapabilities
+	expiresAtBlock uint64
+}
+
+func newMockAuthKeeper() *mockAuthKeeper {
+	return &mockAuthKeeper{
+		dids:     make(map[string]string),
+		sessions: make(map[string]mockSession),
+	}
+}
+
+func (m *mockAuthKeeper) GetAccountDID(_ context.Context, address string) (string, bool) {
+	did, ok := m.dids[address]
+	return did, ok
+}
+
+func (m *mockAuthKeeper) GetSessionCapabilities(_ context.Context, owner string, blockHeight uint64) (types.SessionCapabilities, bool) {
+	sess, ok := m.sessions[owner]
+	if !ok || sess.expiresAtBlock <= blockHeight {
+		return types.SessionCapabilities{}, false
+	}
+	return sess.caps, true
+}
+
+var _ types.AuthKeeper = (*mockAuthKeeper)(nil)
+
 // ---------- Test Setup ----------
 
 func setupKeeper(t *testing.T) (keeper.Keeper, sdk.Context, *mockBankKeeper) {
@@ -176,6 +210,39 @@ func setupMsgServer(t *testing.T) (types.MsgServer, keeper.Keeper, sdk.Context, 
 	t.Helper()
 	k, ctx, bk := setupKeeper(t)
 	return keeper.NewMsgServerImpl(k), k, ctx, bk
+}
+
+func setupKeeperWithAuth(t *testing.T) (keeper.Keeper, sdk.Context, *mockBankKeeper, *mockAuthKeeper) {
+	t.Helper()
+
+	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
+
+	db := dbm.NewMemDB()
+	stateStore := store.NewCommitMultiStore(db, log.NewNopLogger(), storemetrics.NewNoOpMetrics())
+	stateStore.MountStoreWithDB(storeKey, storetypes.StoreTypeIAVL, db)
+	if err := stateStore.LoadLatestVersion(); err != nil {
+		t.Fatalf("failed to load latest version: %v", err)
+	}
+
+	registry := codectypes.NewInterfaceRegistry()
+	cdc := codec.NewProtoCodec(registry)
+
+	mockBK := newMockBankKeeper()
+	mockAuth := newMockAuthKeeper()
+
+	storeService := runtime.NewKVStoreService(storeKey)
+	k := keeper.NewKeeper(cdc, storeService, mockBK, testAuthority)
+	k.SetAuthKeeper(mockAuth)
+
+	ctx := sdk.NewContext(stateStore, cmtproto.Header{Height: 100, ChainID: testChainID}, false, log.NewNopLogger())
+
+	p := types.DefaultParams()
+	k.SetParams(ctx, &p)
+
+	// Fund deployer for deploy cost (all auth tests need to deploy contracts)
+	mockBK.setBalance(testDeployer, "uzrn", 100000000)
+
+	return k, ctx, mockBK, mockAuth
 }
 
 // ---------- Bytecode Helpers ----------
@@ -2012,5 +2079,103 @@ func TestCountContractSchedules(t *testing.T) {
 	count := k.CountContractSchedules(ctx, "c1")
 	if count != 2 {
 		t.Fatalf("expected 2 active schedules for c1, got %d", count)
+	}
+}
+
+// =========================================================================
+// Section 18: Ported from Prototype — Genesis + Lifecycle Edge Cases
+// =========================================================================
+
+func TestGenesisRoundtrip_IncludesState(t *testing.T) {
+	k, ctx, bk := setupKeeper(t)
+	bk.setBalance(testDeployer, "uzrn", 10000000)
+
+	srv := keeper.NewMsgServerImpl(k)
+	deployResp, _ := srv.DeployContract(ctx, &types.MsgDeployContract{
+		Deployer: testDeployer,
+		Bytecode: simpleBytecode(),
+	})
+
+	k.SetContractState(ctx, deployResp.ContractAddress, "counter", "42")
+	k.SetContractState(ctx, deployResp.ContractAddress, "owner", testDeployer)
+
+	gs := k.ExportGenesis(ctx)
+	if len(gs.State) != 2 {
+		t.Fatalf("expected 2 state entries in genesis, got %d", len(gs.State))
+	}
+
+	k2, ctx2, _ := setupKeeper(t)
+	k2.InitGenesis(ctx2, gs)
+
+	val, found := k2.GetContractState(ctx2, deployResp.ContractAddress, "counter")
+	if !found || val != "42" {
+		t.Fatalf("expected counter=42, got %s (found=%v)", val, found)
+	}
+	val, found = k2.GetContractState(ctx2, deployResp.ContractAddress, "owner")
+	if !found || val != testDeployer {
+		t.Fatalf("expected owner=%s, got %s (found=%v)", testDeployer, val, found)
+	}
+}
+
+func TestDeleteContract_DecrRefCount(t *testing.T) {
+	srv, k, ctx, bk := setupMsgServer(t)
+	bk.setBalance(testDeployer, "uzrn", 100000000)
+	bk.setBalance(testUser3, "uzrn", 100000000)
+
+	bytecode := returnBytecode(42)
+
+	resp1, _ := srv.DeployContract(ctx, &types.MsgDeployContract{
+		Deployer: testDeployer,
+		Bytecode: bytecode,
+	})
+	resp2, _ := srv.DeployContract(ctx, &types.MsgDeployContract{
+		Deployer: testUser3,
+		Bytecode: bytecode,
+	})
+
+	contract1, _ := k.GetContract(ctx, resp1.ContractAddress)
+	code, _ := k.GetCode(ctx, contract1.CodeHash)
+	if code.RefCount != 2 {
+		t.Fatalf("expected refcount 2, got %d", code.RefCount)
+	}
+
+	// Delete first — refcount should drop to 1
+	k.DeleteContract(ctx, contract1)
+	code, found := k.GetCode(ctx, contract1.CodeHash)
+	if !found {
+		t.Fatal("code should still exist with refcount 1")
+	}
+	if code.RefCount != 1 {
+		t.Fatalf("expected refcount 1 after delete, got %d", code.RefCount)
+	}
+
+	// Delete second — code should be garbage collected
+	contract2, _ := k.GetContract(ctx, resp2.ContractAddress)
+	k.DeleteContract(ctx, contract2)
+	_, found = k.GetCode(ctx, contract1.CodeHash)
+	if found {
+		t.Fatal("code should be garbage collected when refcount reaches 0")
+	}
+}
+
+func TestCallContract_ZeroValueNoTransfer(t *testing.T) {
+	srv, _, ctx, bk := setupMsgServer(t)
+	bk.setBalance(testDeployer, "uzrn", 10000000)
+	bk.setBalance(testCaller, "uzrn", 50000)
+
+	addr := deployContract(t, srv, ctx, testDeployer, simpleBytecode())
+
+	_, err := srv.CallContract(ctx, &types.MsgCallContract{
+		Caller:          testCaller,
+		ContractAddress: addr,
+		GasLimit:        100000,
+		Value:           "0",
+	})
+	if err != nil {
+		t.Fatalf("zero value call: %v", err)
+	}
+
+	if bk.balances[testCaller]["uzrn"] != 50000 {
+		t.Fatalf("expected no change in balance, got %d", bk.balances[testCaller]["uzrn"])
 	}
 }

@@ -12,6 +12,8 @@ message GenesisState {
   repeated CoercionSignal coercion_signals = 5;
   repeated SeedPartnership seed_partnerships = 6;
   repeated PoolEntry pool_entries = 7;
+  repeated Mentorship mentorships = 8;
+  repeated FormationMatch formation_matches = 9;
 }
 
 message Params {
@@ -28,4 +30,12 @@ message Params {
   string min_partnership_stake = 11;
   uint64 seed_partnership_duration = 12;
   string seed_common_pot_cap = 13;
+  uint64 human_coercion_freeze_multiplier_bps = 14;
+  uint64 graduation_verifications = 15;
+  uint64 graduation_claims = 16;
+  uint64 max_mentorships_per_mentor = 17;
+  uint64 formation_match_interval_blocks = 18;
+  uint64 match_acceptance_blocks = 19;
+  bool   auto_propose_partnership_on_graduation = 20;
+  uint64 social_saturation_threshold = 21; // Min unique participants for social benefit (R31-5, default: 4)
 }

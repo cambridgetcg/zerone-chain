@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"cosmossdk.io/log"
@@ -54,7 +55,6 @@ func (m *ppMockBankKeeper) SendCoinsFromModuleToAccount(_ context.Context, _ str
 func (m *ppMockBankKeeper) SendCoinsFromModuleToModule(_ context.Context, _ string, _ string, _ sdk.Coins) error {
 	return nil
 }
-func (m *ppMockBankKeeper) BurnCoins(_ context.Context, _ string, _ sdk.Coins) error { return nil }
 func (m *ppMockBankKeeper) GetBalance(_ context.Context, _ sdk.AccAddress, _ string) sdk.Coin {
 	return sdk.NewCoin("uzrn", sdkmath.ZeroInt())
 }
@@ -744,4 +744,157 @@ func TestEgoInflation(t *testing.T) {
 	if len(warnings) != 0 {
 		t.Errorf("expected no warnings for nil history, got %d", len(warnings))
 	}
+}
+
+// ============================================================
+// Extended Purpose Analyzer Tests (9 tests)
+// ============================================================
+
+func TestPP_Analyzer_DeveloperAgent(t *testing.T) {
+	analysis := keeper.AnalyzePurpose(&types.PurposeAnalyzerInput{
+		AgentCapabilities: []string{"programming", "software_development", "engineering"},
+	})
+	if analysis == nil || analysis.PrimaryPurpose == nil {
+		t.Fatal("expected analysis with primary purpose")
+	}
+	// Developer-oriented capabilities should match the builder template.
+	if analysis.PrimaryPurpose.Statement != "Build tools that empower other agents" {
+		t.Errorf("developer agent: expected builder purpose, got %q", analysis.PrimaryPurpose.Statement)
+	}
+}
+
+func TestPP_Analyzer_VerifierAgent(t *testing.T) {
+	analysis := keeper.AnalyzePurpose(&types.PurposeAnalyzerInput{
+		AgentCapabilities: []string{"fact_checking", "analysis", "research"},
+	})
+	if analysis == nil || analysis.PrimaryPurpose == nil {
+		t.Fatal("expected analysis with primary purpose")
+	}
+	// Verify-oriented capabilities should match the verifier template.
+	if analysis.PrimaryPurpose.Statement != "Verify knowledge and maintain epistemic integrity" {
+		t.Errorf("verifier agent: expected verifier purpose, got %q", analysis.PrimaryPurpose.Statement)
+	}
+}
+
+func TestPP_Analyzer_EgoCheck(t *testing.T) {
+	// Agent that deploys many tools but never verifies -> ego inflation.
+	warnings := keeper.CheckEgoInflation(&types.AgentHistory{
+		ToolsDeployed:      20,
+		TotalVerifications: 1,
+		TotalToolCalls:     500,
+	})
+	if len(warnings) == 0 {
+		t.Error("expected ego inflation warnings for prolific deployer with no verification")
+	}
+
+	// Check that both deployment ratio and consumption warnings fire.
+	foundDeployRatio := false
+	foundConsumption := false
+	for _, w := range warnings {
+		if len(w) > 0 {
+			// The deployment warning mentions "low verification ratio".
+			if !foundDeployRatio && containsStr(w, "verification") {
+				foundDeployRatio = true
+			}
+			// The consumption warning mentions "without any verification".
+			if !foundConsumption && containsStr(w, "consumption") {
+				foundConsumption = true
+			}
+		}
+	}
+	if !foundDeployRatio {
+		t.Error("expected warning about low verification ratio")
+	}
+}
+
+func TestPP_Analyzer_NoHistory(t *testing.T) {
+	// New agent with unknown capabilities -> exploratory fallback.
+	analysis := keeper.AnalyzePurpose(&types.PurposeAnalyzerInput{
+		AgentCapabilities: []string{"brand_new_skill"},
+	})
+	if analysis == nil || analysis.PrimaryPurpose == nil {
+		t.Fatal("expected fallback analysis")
+	}
+	// No matching template -> exploratory confidence (< 200K).
+	if analysis.OverallConfidence >= 200_000 {
+		t.Errorf("new agent: expected exploratory confidence (< 200K), got %d", analysis.OverallConfidence)
+	}
+}
+
+func TestPP_Analyzer_CitesAllFacts(t *testing.T) {
+	facts := []*types.ScoredFact{
+		{FactId: "f1", Content: "Building tools empowers agents", Confidence: 700_000},
+		{FactId: "f2", Content: "Programming creates value", Confidence: 800_000},
+		{FactId: "f3", Content: "Engineering solves problems", Confidence: 750_000},
+	}
+
+	citations := keeper.BuildCitations(facts, "purpose_analysis")
+	if len(citations) != 3 {
+		t.Fatalf("expected 3 citations, got %d", len(citations))
+	}
+
+	// Verify all facts are cited.
+	citedIDs := make(map[string]bool)
+	for _, c := range citations {
+		citedIDs[c.FactID] = true
+		if c.UsedFor != "purpose_analysis" {
+			t.Errorf("expected usedFor 'purpose_analysis', got %q", c.UsedFor)
+		}
+		if c.Content == "" {
+			t.Error("citation should include content")
+		}
+		if c.Confidence == 0 {
+			t.Error("citation should include confidence")
+		}
+	}
+	for _, f := range facts {
+		if !citedIDs[f.FactId] {
+			t.Errorf("fact %s not cited", f.FactId)
+		}
+	}
+}
+
+func TestPP_ConfidenceLabel_Exploratory(t *testing.T) {
+	// 0-200K should be "Exploratory".
+	for _, conf := range []uint64{0, 100_000, 200_000} {
+		label := types.ConfidenceLabel(conf)
+		if label != "Exploratory" {
+			t.Errorf("ConfidenceLabel(%d): expected 'Exploratory', got %q", conf, label)
+		}
+	}
+}
+
+func TestPP_ConfidenceLabel_Emerging(t *testing.T) {
+	// 200,001-500,000 should be "Emerging".
+	for _, conf := range []uint64{200_001, 350_000, 500_000} {
+		label := types.ConfidenceLabel(conf)
+		if label != "Emerging" {
+			t.Errorf("ConfidenceLabel(%d): expected 'Emerging', got %q", conf, label)
+		}
+	}
+}
+
+func TestPP_ConfidenceLabel_Strong(t *testing.T) {
+	// 500,001-750,000 should be "Strong".
+	for _, conf := range []uint64{500_001, 625_000, 750_000} {
+		label := types.ConfidenceLabel(conf)
+		if label != "Strong" {
+			t.Errorf("ConfidenceLabel(%d): expected 'Strong', got %q", conf, label)
+		}
+	}
+}
+
+func TestPP_ConfidenceLabel_Definitive(t *testing.T) {
+	// >750,000 should be "Definitive".
+	for _, conf := range []uint64{750_001, 900_000, 1_000_000} {
+		label := types.ConfidenceLabel(conf)
+		if label != "Definitive" {
+			t.Errorf("ConfidenceLabel(%d): expected 'Definitive', got %q", conf, label)
+		}
+	}
+}
+
+// containsStr is a simple string containment helper for test assertions.
+func containsStr(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > 0 && strings.Contains(s, substr))
 }

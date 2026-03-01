@@ -83,6 +83,14 @@ func (msg *MsgSubmitEvidence) ValidateBasic() error {
 	if msg.ContentHash == "" {
 		return fmt.Errorf("content_hash cannot be empty")
 	}
+	if len(msg.ContentHash) != 64 {
+		return fmt.Errorf("content_hash must be exactly 64 hex characters (SHA-256 digest), got %d", len(msg.ContentHash))
+	}
+	for _, c := range msg.ContentHash {
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return fmt.Errorf("content_hash contains invalid hex character: %c", c)
+		}
+	}
 	return nil
 }
 

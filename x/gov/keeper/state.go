@@ -3,6 +3,7 @@ package keeper
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 
 	storetypes "cosmossdk.io/store/types"
 
@@ -244,6 +245,246 @@ func (k Keeper) IterateUpgradePlans(ctx sdk.Context, cb func(lipID string, plan 
 	}
 }
 
+// ---------- Research Fund Governance State ----------
+
+// SetResearchFundGovernanceState stores the research fund governance state.
+func (k Keeper) SetResearchFundGovernanceState(ctx sdk.Context, state *types.ResearchFundGovernanceState) {
+	store := ctx.KVStore(k.storeKey)
+	bz, err := json.Marshal(state)
+	if err != nil {
+		panic(err)
+	}
+	store.Set(types.ResearchFundGovernanceKey, bz)
+}
+
+// GetResearchFundGovernanceState retrieves the research fund governance state.
+func (k Keeper) GetResearchFundGovernanceState(ctx sdk.Context) *types.ResearchFundGovernanceState {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.ResearchFundGovernanceKey)
+	if bz == nil {
+		return types.DefaultResearchFundGovernanceState()
+	}
+	var state types.ResearchFundGovernanceState
+	if err := json.Unmarshal(bz, &state); err != nil {
+		panic(err)
+	}
+	return &state
+}
+
+// GetResearchFundPhase returns the current research fund governance phase.
+func (k Keeper) GetResearchFundPhase(ctx sdk.Context) types.ResearchFundPhase {
+	state := k.GetResearchFundGovernanceState(ctx)
+	return state.CurrentPhase
+}
+
+// SetResearchFundPhase stores the current phase, resets the proposals counter,
+// records the transition block, and emits a transition event.
+func (k Keeper) SetResearchFundPhase(ctx sdk.Context, phase types.ResearchFundPhase) {
+	state := k.GetResearchFundGovernanceState(ctx)
+	oldPhase := state.CurrentPhase
+	state.CurrentPhase = phase
+	state.PhaseStartedAtBlock = uint64(ctx.BlockHeight())
+	state.LastTransitionBlock = uint64(ctx.BlockHeight())
+	state.ProposalsExecutedInPhase = 0
+	k.SetResearchFundGovernanceState(ctx, state)
+
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			"zerone.gov.research_fund_phase_transition",
+			sdk.NewAttribute("from_phase", oldPhase.String()),
+			sdk.NewAttribute("to_phase", phase.String()),
+			sdk.NewAttribute("block_height", fmt.Sprintf("%d", ctx.BlockHeight())),
+		),
+	)
+}
+
+// IncrementProposalsExecuted increments the executed proposal counter for the current phase.
+func (k Keeper) IncrementProposalsExecuted(ctx sdk.Context) {
+	state := k.GetResearchFundGovernanceState(ctx)
+	state.ProposalsExecutedInPhase++
+	k.SetResearchFundGovernanceState(ctx, state)
+}
+
+// ---------- Seat Election Proposal CRUD ----------
+
+// GetSeatElection retrieves a seat election proposal by ID.
+func (k Keeper) GetSeatElection(ctx sdk.Context, id uint64) (*types.SeatElectionProposal, bool) {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.SeatElectionKey(id))
+	if bz == nil {
+		return nil, false
+	}
+	var prop types.SeatElectionProposal
+	if err := json.Unmarshal(bz, &prop); err != nil {
+		return nil, false
+	}
+	return &prop, true
+}
+
+// SetSeatElection stores a seat election proposal.
+func (k Keeper) SetSeatElection(ctx sdk.Context, prop *types.SeatElectionProposal) {
+	store := ctx.KVStore(k.storeKey)
+	bz, err := json.Marshal(prop)
+	if err != nil {
+		panic("failed to marshal seat election proposal: " + err.Error())
+	}
+	store.Set(types.SeatElectionKey(prop.ProposalId), bz)
+}
+
+// GetNextSeatElectionID returns the next seat election proposal ID.
+func (k Keeper) GetNextSeatElectionID(ctx sdk.Context) uint64 {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.SeatElectionCounterKey)
+	if bz == nil {
+		return 1
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+// SetNextSeatElectionID sets the next seat election proposal ID.
+func (k Keeper) SetNextSeatElectionID(ctx sdk.Context, id uint64) {
+	store := ctx.KVStore(k.storeKey)
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, id)
+	store.Set(types.SeatElectionCounterKey, bz)
+}
+
+// IterateSeatElections iterates over all seat election proposals.
+func (k Keeper) IterateSeatElections(ctx sdk.Context, cb func(*types.SeatElectionProposal) bool) {
+	store := ctx.KVStore(k.storeKey)
+	iter := storetypes.KVStorePrefixIterator(store, types.SeatElectionKeyPrefix)
+	defer iter.Close()
+
+	for ; iter.Valid(); iter.Next() {
+		var prop types.SeatElectionProposal
+		if err := json.Unmarshal(iter.Value(), &prop); err != nil {
+			continue
+		}
+		if cb(&prop) {
+			break
+		}
+	}
+}
+
+// GetSeatElectionsByStage returns all seat election proposals with the given stage.
+func (k Keeper) GetSeatElectionsByStage(ctx sdk.Context, stage string) []*types.SeatElectionProposal {
+	var result []*types.SeatElectionProposal
+	k.IterateSeatElections(ctx, func(prop *types.SeatElectionProposal) bool {
+		if prop.Stage == stage {
+			result = append(result, prop)
+		}
+		return false
+	})
+	return result
+}
+
+// GetAllSeatElections returns all seat election proposals.
+func (k Keeper) GetAllSeatElections(ctx sdk.Context) []*types.SeatElectionProposal {
+	var result []*types.SeatElectionProposal
+	k.IterateSeatElections(ctx, func(prop *types.SeatElectionProposal) bool {
+		result = append(result, prop)
+		return false
+	})
+	return result
+}
+
+// ---------- Seat Election Vote CRUD ----------
+
+// SetSeatElectionVote stores a seat election vote and sets the dedupe key.
+func (k Keeper) SetSeatElectionVote(ctx sdk.Context, vote *types.SeatElectionVote) {
+	store := ctx.KVStore(k.storeKey)
+	bz, err := json.Marshal(vote)
+	if err != nil {
+		panic("failed to marshal seat election vote: " + err.Error())
+	}
+	store.Set(types.SeatElectionVoteKey(vote.ProposalId, vote.Voter), bz)
+	// Set dedupe key.
+	store.Set(types.SeatElectionVoteDedupeKey(vote.ProposalId, vote.Voter), []byte{1})
+}
+
+// GetSeatElectionVote retrieves a seat election vote by proposal ID and voter.
+func (k Keeper) GetSeatElectionVote(ctx sdk.Context, proposalID uint64, voter string) (*types.SeatElectionVote, bool) {
+	store := ctx.KVStore(k.storeKey)
+	bz := store.Get(types.SeatElectionVoteKey(proposalID, voter))
+	if bz == nil {
+		return nil, false
+	}
+	var vote types.SeatElectionVote
+	if err := json.Unmarshal(bz, &vote); err != nil {
+		return nil, false
+	}
+	return &vote, true
+}
+
+// HasSeatElectionVoted checks if a voter has already voted on a seat election.
+func (k Keeper) HasSeatElectionVoted(ctx sdk.Context, proposalID uint64, voter string) bool {
+	store := ctx.KVStore(k.storeKey)
+	return store.Has(types.SeatElectionVoteDedupeKey(proposalID, voter))
+}
+
+// GetVotesForSeatElection returns all votes for a given seat election proposal.
+func (k Keeper) GetVotesForSeatElection(ctx sdk.Context, proposalID uint64) []*types.SeatElectionVote {
+	store := ctx.KVStore(k.storeKey)
+	prefix := types.SeatElectionVotePrefixForProposal(proposalID)
+	iter := storetypes.KVStorePrefixIterator(store, prefix)
+	defer iter.Close()
+
+	var result []*types.SeatElectionVote
+	for ; iter.Valid(); iter.Next() {
+		var vote types.SeatElectionVote
+		if err := json.Unmarshal(iter.Value(), &vote); err != nil {
+			continue
+		}
+		result = append(result, &vote)
+	}
+	return result
+}
+
+// GetAllSeatElectionVotes returns all seat election votes in the store.
+func (k Keeper) GetAllSeatElectionVotes(ctx sdk.Context) []*types.SeatElectionVote {
+	store := ctx.KVStore(k.storeKey)
+	iter := storetypes.KVStorePrefixIterator(store, types.SeatElectionVoteKeyPrefix)
+	defer iter.Close()
+
+	var result []*types.SeatElectionVote
+	for ; iter.Valid(); iter.Next() {
+		var vote types.SeatElectionVote
+		if err := json.Unmarshal(iter.Value(), &vote); err != nil {
+			continue
+		}
+		result = append(result, &vote)
+	}
+	return result
+}
+
+// ---------- Distinct Voter Tracking ----------
+
+// RecordDistinctVoter records a unique governance participant. Append-only:
+// once a voter is recorded, they are counted forever.
+func (k Keeper) RecordDistinctVoter(ctx sdk.Context, voter string) {
+	store := ctx.KVStore(k.storeKey)
+	key := types.DistinctVoterKey(voter)
+	if store.Has(key) {
+		return
+	}
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, uint64(ctx.BlockHeight()))
+	store.Set(key, bz)
+}
+
+// CountDistinctVoters iterates the distinct voter prefix and counts entries.
+func (k Keeper) CountDistinctVoters(ctx sdk.Context) uint64 {
+	store := ctx.KVStore(k.storeKey)
+	iter := storetypes.KVStorePrefixIterator(store, types.DistinctVoterKeyPrefix)
+	defer iter.Close()
+
+	var count uint64
+	for ; iter.Valid(); iter.Next() {
+		count++
+	}
+	return count
+}
+
 // ---------- Genesis ----------
 
 // InitGenesis initializes the module's state from a genesis state.
@@ -268,6 +509,24 @@ func (k Keeper) InitGenesis(ctx sdk.Context, gs *types.GenesisState) {
 		if v.Voter1 != "" && v.Voter2 != "" {
 			k.SetResearchFundVoters(ctx, v)
 		}
+	}
+
+	// Restore research fund governance state.
+	if gs.ResearchFundGovernance != nil {
+		k.SetResearchFundGovernanceState(ctx, gs.ResearchFundGovernance)
+	} else {
+		k.SetResearchFundGovernanceState(ctx, types.DefaultResearchFundGovernanceState())
+	}
+
+	// Restore seat elections.
+	for _, se := range gs.SeatElections {
+		k.SetSeatElection(ctx, se)
+	}
+	for _, v := range gs.SeatElectionVotes {
+		k.SetSeatElectionVote(ctx, v)
+	}
+	if gs.NextSeatElectionNumber > 0 {
+		k.SetNextSeatElectionID(ctx, gs.NextSeatElectionNumber)
 	}
 }
 
@@ -297,10 +556,14 @@ func (k Keeper) ExportGenesis(ctx sdk.Context) *types.GenesisState {
 	})
 
 	return &types.GenesisState{
-		Params:        params,
-		Lips:          allLIPs,
-		Votes:         k.GetAllVotes(ctx),
-		NextLipNumber: k.GetNextLIPNumber(ctx),
-		UpgradePlans:  upgradePlans,
+		Params:                 params,
+		Lips:                   allLIPs,
+		Votes:                  k.GetAllVotes(ctx),
+		NextLipNumber:          k.GetNextLIPNumber(ctx),
+		UpgradePlans:           upgradePlans,
+		ResearchFundGovernance: k.GetResearchFundGovernanceState(ctx),
+		SeatElections:          k.GetAllSeatElections(ctx),
+		SeatElectionVotes:      k.GetAllSeatElectionVotes(ctx),
+		NextSeatElectionNumber: k.GetNextSeatElectionID(ctx),
 	}
 }

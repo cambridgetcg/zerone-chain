@@ -67,8 +67,8 @@ const (
 	// ---- Tree revenue (x/tree) ----
 	treeContributorsBp     = uint32(550_000) // 55%
 	treeProtocolTreasuryBp = uint32(220_000) // 22%
-	treeResearchFundBp     = uint32(130_000) // 13%
-	treeBurnBp             = uint32(100_000) // 10%
+	treeResearchFundBp     = uint32(33_300)  // 3.33%
+	treeDevelopmentBp      = uint32(196_700) // 19.67%
 
 	// ---- Research (x/research) ----
 	researchMinStake              = uint64(1_000_000)  // 1 ZRN in uzrn
@@ -244,7 +244,7 @@ type treeRevenueDistribution struct {
 	contributorPool  int64
 	researchFund     int64
 	protocolTreasury int64
-	burn             int64
+	developmentFund  int64
 }
 
 // calculateTreeRevenue computes revenue split per tree module params.
@@ -257,7 +257,7 @@ func calculateTreeRevenue(totalRevenue int64) treeRevenueDistribution {
 		contributorPool:  totalRevenue * int64(treeContributorsBp) / bpDenom,
 		researchFund:     totalRevenue * int64(treeResearchFundBp) / bpDenom,
 		protocolTreasury: totalRevenue * int64(treeProtocolTreasuryBp) / bpDenom,
-		burn:             totalRevenue * int64(treeBurnBp) / bpDenom,
+		developmentFund:  totalRevenue * int64(treeDevelopmentBp) / bpDenom,
 	}
 }
 

@@ -72,8 +72,8 @@ type RevenueSplit struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	ContributorBps uint64                 `protobuf:"varint,1,opt,name=contributor_bps,json=contributorBps,proto3" json:"contributor_bps,omitempty"` // default 550,000 (55%)
 	ProtocolBps    uint64                 `protobuf:"varint,2,opt,name=protocol_bps,json=protocolBps,proto3" json:"protocol_bps,omitempty"`          // default 220,000 (22%)
-	ResearchBps    uint64                 `protobuf:"varint,3,opt,name=research_bps,json=researchBps,proto3" json:"research_bps,omitempty"`          // default 130,000 (13%)
-	BurnBps        uint64                 `protobuf:"varint,4,opt,name=burn_bps,json=burnBps,proto3" json:"burn_bps,omitempty"`                      // default 100,000 (10%)
+	ResearchBps    uint64                 `protobuf:"varint,3,opt,name=research_bps,json=researchBps,proto3" json:"research_bps,omitempty"`          // default  33,300 (3.33%)
+	DevelopmentBps uint64                 `protobuf:"varint,4,opt,name=development_bps,json=developmentBps,proto3" json:"development_bps,omitempty"` // default 196,700 (19.67%) — bug bounties, truth discovery, protocol development
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -129,9 +129,9 @@ func (x *RevenueSplit) GetResearchBps() uint64 {
 	return 0
 }
 
-func (x *RevenueSplit) GetBurnBps() uint64 {
+func (x *RevenueSplit) GetDevelopmentBps() uint64 {
 	if x != nil {
-		return x.BurnBps
+		return x.DevelopmentBps
 	}
 	return 0
 }
@@ -203,12 +203,12 @@ const file_zerone_common_v1_common_proto_rawDesc = "" +
 	"\n" +
 	"\x1dzerone/common/v1/common.proto\x12\x10zerone.common.v1\"#\n" +
 	"\vBasisPoints\x12\x14\n" +
-	"\x05value\x18\x01 \x01(\x04R\x05value\"\x98\x01\n" +
+	"\x05value\x18\x01 \x01(\x04R\x05value\"\xa6\x01\n" +
 	"\fRevenueSplit\x12'\n" +
 	"\x0fcontributor_bps\x18\x01 \x01(\x04R\x0econtributorBps\x12!\n" +
 	"\fprotocol_bps\x18\x02 \x01(\x04R\vprotocolBps\x12!\n" +
-	"\fresearch_bps\x18\x03 \x01(\x04R\vresearchBps\x12\x19\n" +
-	"\bburn_bps\x18\x04 \x01(\x04R\aburnBps\"\x83\x01\n" +
+	"\fresearch_bps\x18\x03 \x01(\x04R\vresearchBps\x12'\n" +
+	"\x0fdevelopment_bps\x18\x04 \x01(\x04R\x0edevelopmentBps\"\x83\x01\n" +
 	"\x10ProtocolSubSplit\x12!\n" +
 	"\fcitation_bps\x18\x01 \x01(\x04R\vcitationBps\x12)\n" +
 	"\x10verification_bps\x18\x02 \x01(\x04R\x0fverificationBps\x12!\n" +

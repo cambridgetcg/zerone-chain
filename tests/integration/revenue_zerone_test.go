@@ -83,7 +83,7 @@ func TestToolboxRevenueCascade(t *testing.T) {
 		t.Fatalf("toolbox DistributeRevenue failed: %v", err)
 	}
 
-	// Default toolbox params: ToolRevenueBps=550000, ProtocolBps=220000, ResearchBps=130000, BurnBps=100000
+	// Default toolbox params: ToolRevenueBps=550000, ProtocolBps=220000, ResearchBps=33300, DevelopmentBps=196700
 	totalAmt := uint64(1000000)
 
 	// Contributor share: 55% of 1M = 550,000
@@ -98,8 +98,8 @@ func TestToolboxRevenueCascade(t *testing.T) {
 		t.Errorf("contrib2 got %s, want %d", contrib2Got, expectedContrib)
 	}
 
-	// Research fund: 13% of 1M = 130,000 → DepositToResearchFund (with 7% founder split)
-	researchTotal := totalAmt * 130000 / 1000000 // 130,000
+	// Research fund: 3.33% of 1M = 33,300 → DepositToResearchFund (with 7% founder split)
+	researchTotal := totalAmt * 33300 / 1000000 // 33,300
 	expectedFounder := researchTotal * 70000 / 1000000
 	expectedResearchNet := researchTotal - expectedFounder
 	researchGot := bk.totalSentToModule("research_fund")
@@ -111,11 +111,17 @@ func TestToolboxRevenueCascade(t *testing.T) {
 		t.Errorf("founder got %s, want %d", founderGot, expectedFounder)
 	}
 
-	// Burn: 10% of 1M = 100,000
-	expectedBurn := totalAmt * 100000 / 1000000
+	// Development fund: 19.67% of 1M = 196,700 (sent to development_fund, not burned)
+	expectedDev := totalAmt * 196700 / 1000000
+	devGot := bk.totalSentToModule("development_fund")
+	if !devGot.Equal(sdkmath.NewInt(int64(expectedDev))) {
+		t.Errorf("development_fund got %s, want %d", devGot, expectedDev)
+	}
+
+	// No tokens should be burned
 	burnGot := bk.totalBurned()
-	if !burnGot.Equal(sdkmath.NewInt(int64(expectedBurn))) {
-		t.Errorf("burn got %s, want %d", burnGot, expectedBurn)
+	if burnGot.IsPositive() {
+		t.Errorf("expected no burn, got %s", burnGot)
 	}
 
 	// Protocol: 22% of 1M = 220,000
@@ -130,7 +136,7 @@ func TestToolboxRevenueCascade(t *testing.T) {
 		t.Errorf("citation pool got %s, want %d", citationGot, citationAmt)
 	}
 
-	// vesting_rewards receives BOTH verification pool (66k) AND research escrow (130k)
+	// vesting_rewards receives BOTH verification pool (66k) AND research escrow (33.3k)
 	// because DepositToResearchFund escrows from toolbox→vesting_rewards first.
 	expectedVestingTotal := verificationAmt + researchTotal
 	verificationGot := bk.totalSentToModule("vesting_rewards")
@@ -145,13 +151,13 @@ func TestToolboxRevenueCascade(t *testing.T) {
 	}
 
 	// Conservation invariant: outflows from toolbox module == total.
-	// The toolbox module sends: contributors + citation + vesting_rewards (verification+research escrow) + treasury + burn
+	// The toolbox module sends: contributors + citation + vesting_rewards (verification+research escrow) + treasury + development_fund
 	// The vesting_rewards module then forwards research to research_fund+founder, but those are internal.
 	toolboxOut := contrib1Got.Add(contrib2Got).
 		Add(citationGot).
 		Add(verificationGot).
 		Add(treasuryGot).
-		Add(burnGot)
+		Add(devGot)
 	if !toolboxOut.Equal(sdkmath.NewInt(int64(totalAmt))) {
 		t.Errorf("conservation violated: toolbox outflows %s != total %d (dust: %s)",
 			toolboxOut, totalAmt, sdkmath.NewInt(int64(totalAmt)).Sub(toolboxOut))
@@ -166,7 +172,7 @@ func TestTreeRevenueRouting(t *testing.T) {
 	t.Run("proportional_split", func(t *testing.T) {
 		dist := treekeeper.CalculateRevenue(
 			total,
-			550000, 100000, 130000, 100000,
+			550000, 100000, 33300, 196700,
 			[]*treetypes.ContributorRecord{
 				{Did: "did:zrn:alice", TasksCompleted: 10},
 				{Did: "did:zrn:bob", TasksCompleted: 20},
@@ -210,7 +216,7 @@ func TestTreeRevenueRouting(t *testing.T) {
 	t.Run("no_contributors_redirect", func(t *testing.T) {
 		dist := treekeeper.CalculateRevenue(
 			total,
-			550000, 100000, 130000, 100000,
+			550000, 100000, 33300, 196700,
 			[]*treetypes.ContributorRecord{},
 		)
 
@@ -220,7 +226,7 @@ func TestTreeRevenueRouting(t *testing.T) {
 		}
 
 		// Verify all sums to total
-		sum := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.Burn
+		sum := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.DevelopmentFund
 		if sum != total {
 			t.Errorf("sum %d != total %d", sum, total)
 		}
@@ -229,7 +235,7 @@ func TestTreeRevenueRouting(t *testing.T) {
 	t.Run("zero_tasks_equal_split", func(t *testing.T) {
 		dist := treekeeper.CalculateRevenue(
 			total,
-			550000, 100000, 130000, 100000,
+			550000, 100000, 33300, 196700,
 			[]*treetypes.ContributorRecord{
 				{Did: "did:zrn:x", TasksCompleted: 0},
 				{Did: "did:zrn:y", TasksCompleted: 0},
@@ -260,12 +266,12 @@ func TestTreeRevenueRouting(t *testing.T) {
 		for _, amount := range []int64{1, 100, 999999, 1000000, 7777777} {
 			dist := treekeeper.CalculateRevenue(
 				amount,
-				550000, 100000, 130000, 100000,
+				550000, 100000, 33300, 196700,
 				[]*treetypes.ContributorRecord{
 					{Did: "did:zrn:solo", TasksCompleted: 5},
 				},
 			)
-			sum := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.Burn
+			sum := dist.ContributorPool + dist.ResearchFund + dist.ProtocolTreasury + dist.VerificationPool + dist.DevelopmentFund
 			if sum != amount {
 				t.Errorf("conservation violated for amount %d: sum %d", amount, sum)
 			}
@@ -461,10 +467,10 @@ func TestFeeRouterSplit(t *testing.T) {
 		t.Fatalf("RouteFees failed: %v", err)
 	}
 
-	// RevenueSplit defaults: Research=130000 (13%), Burn=100000 (10%)
-	// Research share: 13% of 1M = 130,000 → DepositToResearchFund (with 7% founder split)
-	expectedResearchTotal := int64(130000)
-	expectedFounderFromFees := expectedResearchTotal * 70000 / 1000000 // 9,100
+	// RevenueSplit defaults: Research=33300 (3.33%), Development=196700 (19.67%)
+	// Research share: 3.33% of 1M = 33,300 → DepositToResearchFund (with 7% founder split)
+	expectedResearchTotal := int64(33300)
+	expectedFounderFromFees := expectedResearchTotal * 70000 / 1000000 // 2,331
 	expectedResearchNet := expectedResearchTotal - expectedFounderFromFees
 
 	// Verify research fund received net research (after founder split)
@@ -479,23 +485,28 @@ func TestFeeRouterSplit(t *testing.T) {
 		t.Errorf("founder got %s from fees, want %d", founderGot, expectedFounderFromFees)
 	}
 
-	// Verify burn share: 10% of 1M = 100,000
-	expectedBurn := int64(100000)
+	// Development fund: 19.67% of 1M = 196,700 (no burn)
+	expectedDev := int64(196700)
+	devGot := bk.totalSentToModule("development_fund")
+	if !devGot.Equal(sdkmath.NewInt(expectedDev)) {
+		t.Errorf("development_fund got %s, want %d", devGot, expectedDev)
+	}
+
+	// No tokens should be burned
 	burnGot := bk.totalBurned()
-	if !burnGot.Equal(sdkmath.NewInt(expectedBurn)) {
-		t.Errorf("burned %s, want %d", burnGot, expectedBurn)
+	if burnGot.IsPositive() {
+		t.Errorf("expected no burn, got %s", burnGot)
 	}
 
 	// Verify remainder stays in fee_collector for x/distribution
-	// RouteFees only extracts research + burn; the rest (77%) stays for validators
-	totalExtracted := expectedResearchTotal + expectedBurn // 230,000
-	remaining := int64(1000000) - totalExtracted           // 770,000
+	// RouteFees extracts research + development; the rest (77%) stays for validators
+	totalExtracted := expectedResearchTotal + expectedDev // 230,000
+	remaining := int64(1000000) - totalExtracted          // 770,000
 
-	// The mock doesn't track fee_collector deductions directly, but we verify
-	// the total sent to vesting_rewards module (escrow for research + burn)
+	// Research is escrowed through vesting_rewards (for founder split routing)
 	vestingSent := bk.totalSentToModule("vesting_rewards")
-	if !vestingSent.Equal(sdkmath.NewInt(totalExtracted)) {
-		t.Errorf("vesting_rewards received %s, want %d (research+burn escrow)", vestingSent, totalExtracted)
+	if !vestingSent.Equal(sdkmath.NewInt(expectedResearchTotal)) {
+		t.Errorf("vesting_rewards received %s, want %d (research escrow only)", vestingSent, expectedResearchTotal)
 	}
 
 	_ = remaining // 770,000 stays in fee_collector for validators via x/distribution

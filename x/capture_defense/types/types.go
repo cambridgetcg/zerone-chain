@@ -19,6 +19,8 @@ func DefaultParams() *Params {
 		HistoryRetentionBlocks:   50000,  // ~35 hours
 		BaseReputationScore:      500000, // 50% floor
 		MaxHistoryPerDomain:      100,
+		BaseReputationRecoveryBps:   50_000,  // 5% recovery per decay epoch
+		ActivityRecoveryBonusMaxBps: 500_000, // max 50% acceleration from activity
 	}
 }
 
@@ -33,6 +35,33 @@ func (p *Params) Validate() error {
 		return fmt.Errorf("base_reputation_score must be <= %d", BPSScale)
 	}
 	return nil
+}
+
+// StructuralImmunityParams holds parameters for the partnership-based HHI adjustment (R29-5).
+// Stored separately from proto-generated Params to avoid proto regeneration.
+type StructuralImmunityParams struct {
+	PartnershipHHIReductionPerParticipantBps uint64 // HHI reduction per unique participant (default: 10,000 = 1%)
+	MaxPartnershipHHIReductionBps            uint64 // Max total HHI reduction (default: 200,000 = 20%)
+	PartnershipReputationBonusBps            uint64 // Rep bonus per active partnership (default: 20,000 = 2%)
+	MaxPartnershipReputationBonusBps         uint64 // Max total rep bonus (default: 100,000 = 10%)
+	MinDensityForAcceleratedClear            uint64 // Min participants for accelerated flag clearing (default: 10)
+	CapturedDomainFormationBonusBps          uint64 // Match priority boost for flagged domains (default: 300,000 = 30%)
+	FormationBonusDurationBlocks             uint64 // How long formation bonus lasts (default: 50,000 = ~35 hours)
+	ActivityThresholdRelaxationBps           uint64 // max HHI threshold relaxation from verification activity (R31-4, default: 200,000 = 20%)
+}
+
+// DefaultStructuralImmunityParams returns default structural immunity parameters.
+func DefaultStructuralImmunityParams() *StructuralImmunityParams {
+	return &StructuralImmunityParams{
+		PartnershipHHIReductionPerParticipantBps: 10_000,  // 1% per participant
+		MaxPartnershipHHIReductionBps:            200_000, // max 20%
+		PartnershipReputationBonusBps:            20_000,  // 2% per partnership
+		MaxPartnershipReputationBonusBps:         100_000, // max 10%
+		MinDensityForAcceleratedClear:            10,
+		CapturedDomainFormationBonusBps:          300_000, // 30% match priority boost
+		FormationBonusDurationBlocks:             50_000,  // ~35 hours
+		ActivityThresholdRelaxationBps:           200_000, // max 20% HHI threshold relaxation (R31-4)
+	}
 }
 
 func DefaultCrossStratumRules() []*CrossStratumRequirement {

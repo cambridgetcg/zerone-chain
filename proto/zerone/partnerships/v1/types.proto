@@ -106,3 +106,35 @@ message MentorshipConfig {
   bool   graduated             = 9;
   uint64 sponsor_verifications = 10;
 }
+
+message Mentorship {
+  string id                      = 1;
+  string mentor_addr             = 2;
+  string mentee_addr             = 3;
+  string domain                  = 4;
+  string status                  = 5;
+  uint64 start_block             = 6;
+  uint64 duration_blocks         = 7;
+  uint64 mentee_verifications    = 8;
+  uint64 mentee_claims_submitted = 9;
+  uint64 graduation_threshold    = 10;
+  uint64 graduation_claims_req   = 11;
+}
+
+message FormationMatch {
+  string id             = 1;
+  string addr1          = 2;
+  string addr2          = 3;
+  uint64 score          = 4;
+  uint64 proposed_at    = 5;
+  uint64 expires_at     = 6;
+  string status         = 7;
+  bool   addr1_accepted = 8;
+  bool   addr2_accepted = 9;
+}
+
+message DomainFormationFreeze {
+  string domain        = 1;
+  uint64 expiry_height = 2;
+  string reason        = 3;
+}

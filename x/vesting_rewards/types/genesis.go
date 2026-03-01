@@ -9,13 +9,13 @@ import (
 )
 
 // DefaultRevenueSplit returns the default 4-way revenue split.
-// contributor 55%, protocol 22%, research 13%, burn 10%.
+// contributor 55%, protocol 22%, research 3.33%, development 19.67%.
 func DefaultRevenueSplit() *commontypes.RevenueSplit {
 	return &commontypes.RevenueSplit{
-		ContributorBps: 550000,
-		ProtocolBps:    220000,
-		ResearchBps:    130000,
-		BurnBps:        100000,
+		ContributorBps: 550000,  // 55%
+		ProtocolBps:    220000,  // 22%
+		ResearchBps:    33300,   // 3.33%
+		DevelopmentBps: 196700,  // 19.67%
 	}
 }
 
@@ -33,7 +33,7 @@ func DefaultProtocolSubSplit() *commontypes.ProtocolSubSplit {
 func DefaultParams() *Params {
 	return &Params{
 		BlockReward:                "10000000",             // 10 ZRN base
-		RewardDecayBps:             850000,                 // 0.85x per epoch
+		RewardDecayBps:             994478,                 // ~1-year half-life (0.994478x per 100K-block epoch)
 		BlocksPerRewardEpoch:       100000,                 // ~2.9 days at 2521ms
 		RevenueSplit:               DefaultRevenueSplit(),
 		ProtocolSubSplit:           DefaultProtocolSubSplit(),
@@ -144,12 +144,33 @@ func ValidateParams(p *Params) error {
 	return nil
 }
 
+// ValidateFounderShareImmutability ensures governance cannot modify founder share parameters.
+// The founder share is a permanent protocol commitment — once set, it cannot be changed.
+// Only the initial setting (from empty/zero to a value) is allowed.
+func ValidateFounderShareImmutability(current *Params, proposed *Params) error {
+	if current == nil || proposed == nil {
+		return nil
+	}
+
+	// If founder share BPS was already set (>0), it cannot be changed
+	if current.FounderShareBps > 0 && proposed.FounderShareBps != current.FounderShareBps {
+		return ErrFounderShareImmutable
+	}
+
+	// If founder address was already set (non-empty), it cannot be changed
+	if current.FounderAddress != "" && proposed.FounderAddress != current.FounderAddress {
+		return ErrFounderShareImmutable
+	}
+
+	return nil
+}
+
 // validateRevenueSplit checks that the revenue split sums to 1,000,000.
 func validateRevenueSplit(split *commontypes.RevenueSplit) error {
 	if split == nil {
 		return nil // defaults used
 	}
-	total := split.ContributorBps + split.ProtocolBps + split.ResearchBps + split.BurnBps
+	total := split.ContributorBps + split.ProtocolBps + split.ResearchBps + split.DevelopmentBps
 	if total != 1000000 {
 		return fmt.Errorf("revenue split must sum to 1000000, got %d", total)
 	}

@@ -446,6 +446,262 @@ func (x *QueryParamsResponse) GetParams() *Params {
 	return nil
 }
 
+type QueryMentorshipRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryMentorshipRequest) Reset() {
+	*x = QueryMentorshipRequest{}
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryMentorshipRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryMentorshipRequest) ProtoMessage() {}
+
+func (x *QueryMentorshipRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryMentorshipRequest.ProtoReflect.Descriptor instead.
+func (*QueryMentorshipRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_query_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *QueryMentorshipRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type QueryMentorshipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mentorship    *Mentorship            `protobuf:"bytes,1,opt,name=mentorship,proto3" json:"mentorship,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryMentorshipResponse) Reset() {
+	*x = QueryMentorshipResponse{}
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryMentorshipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryMentorshipResponse) ProtoMessage() {}
+
+func (x *QueryMentorshipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryMentorshipResponse.ProtoReflect.Descriptor instead.
+func (*QueryMentorshipResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_query_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *QueryMentorshipResponse) GetMentorship() *Mentorship {
+	if x != nil {
+		return x.Mentorship
+	}
+	return nil
+}
+
+type QueryMentorshipsByAddressRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Address       string                 `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryMentorshipsByAddressRequest) Reset() {
+	*x = QueryMentorshipsByAddressRequest{}
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryMentorshipsByAddressRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryMentorshipsByAddressRequest) ProtoMessage() {}
+
+func (x *QueryMentorshipsByAddressRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryMentorshipsByAddressRequest.ProtoReflect.Descriptor instead.
+func (*QueryMentorshipsByAddressRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_query_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *QueryMentorshipsByAddressRequest) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+type QueryMentorshipsByAddressResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mentorships   []*Mentorship          `protobuf:"bytes,1,rep,name=mentorships,proto3" json:"mentorships,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryMentorshipsByAddressResponse) Reset() {
+	*x = QueryMentorshipsByAddressResponse{}
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryMentorshipsByAddressResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryMentorshipsByAddressResponse) ProtoMessage() {}
+
+func (x *QueryMentorshipsByAddressResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryMentorshipsByAddressResponse.ProtoReflect.Descriptor instead.
+func (*QueryMentorshipsByAddressResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_query_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *QueryMentorshipsByAddressResponse) GetMentorships() []*Mentorship {
+	if x != nil {
+		return x.Mentorships
+	}
+	return nil
+}
+
+type QueryFormationMatchesRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryFormationMatchesRequest) Reset() {
+	*x = QueryFormationMatchesRequest{}
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryFormationMatchesRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryFormationMatchesRequest) ProtoMessage() {}
+
+func (x *QueryFormationMatchesRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryFormationMatchesRequest.ProtoReflect.Descriptor instead.
+func (*QueryFormationMatchesRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_query_proto_rawDescGZIP(), []int{14}
+}
+
+type QueryFormationMatchesResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Matches       []*FormationMatch      `protobuf:"bytes,1,rep,name=matches,proto3" json:"matches,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryFormationMatchesResponse) Reset() {
+	*x = QueryFormationMatchesResponse{}
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryFormationMatchesResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryFormationMatchesResponse) ProtoMessage() {}
+
+func (x *QueryFormationMatchesResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_query_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryFormationMatchesResponse.ProtoReflect.Descriptor instead.
+func (*QueryFormationMatchesResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_query_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *QueryFormationMatchesResponse) GetMatches() []*FormationMatch {
+	if x != nil {
+		return x.Matches
+	}
+	return nil
+}
+
 var File_zerone_partnerships_v1_query_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_query_proto_rawDesc = "" +
@@ -470,14 +726,32 @@ const file_zerone_partnerships_v1_query_proto_rawDesc = "" +
 	"\aentries\x18\x01 \x03(\v2!.zerone.partnerships.v1.PoolEntryR\aentries\"\x14\n" +
 	"\x12QueryParamsRequest\"M\n" +
 	"\x13QueryParamsResponse\x126\n" +
-	"\x06params\x18\x01 \x01(\v2\x1e.zerone.partnerships.v1.ParamsR\x06params2\xac\x06\n" +
+	"\x06params\x18\x01 \x01(\v2\x1e.zerone.partnerships.v1.ParamsR\x06params\"(\n" +
+	"\x16QueryMentorshipRequest\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"]\n" +
+	"\x17QueryMentorshipResponse\x12B\n" +
+	"\n" +
+	"mentorship\x18\x01 \x01(\v2\".zerone.partnerships.v1.MentorshipR\n" +
+	"mentorship\"<\n" +
+	" QueryMentorshipsByAddressRequest\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\"i\n" +
+	"!QueryMentorshipsByAddressResponse\x12D\n" +
+	"\vmentorships\x18\x01 \x03(\v2\".zerone.partnerships.v1.MentorshipR\vmentorships\"\x1e\n" +
+	"\x1cQueryFormationMatchesRequest\"a\n" +
+	"\x1dQueryFormationMatchesResponse\x12@\n" +
+	"\amatches\x18\x01 \x03(\v2&.zerone.partnerships.v1.FormationMatchR\amatches2\xbd\n" +
+	"\n" +
 	"\x05Query\x12\xa2\x01\n" +
 	"\vPartnership\x12/.zerone.partnerships.v1.QueryPartnershipRequest\x1a0.zerone.partnerships.v1.QueryPartnershipResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/partnerships/v1/partnership/{id}\x12\xac\x01\n" +
 	"\x15PartnershipsByAddress\x12-.zerone.partnerships.v1.QueryByAddressRequest\x1a..zerone.partnerships.v1.QueryByAddressResponse\"4\x82\xd3\xe4\x93\x02.\x12,/zerone/partnerships/v1/by_address/{address}\x12\xa3\x01\n" +
 	"\n" +
 	"PendingOps\x12..zerone.partnerships.v1.QueryPendingOpsRequest\x1a/.zerone.partnerships.v1.QueryPendingOpsResponse\"4\x82\xd3\xe4\x93\x02.\x12,/zerone/partnerships/v1/ops/{partnership_id}\x12\x9c\x01\n" +
 	"\rFormationPool\x121.zerone.partnerships.v1.QueryFormationPoolRequest\x1a2.zerone.partnerships.v1.QueryFormationPoolResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/zerone/partnerships/v1/pool\x12\x89\x01\n" +
-	"\x06Params\x12*.zerone.partnerships.v1.QueryParamsRequest\x1a+.zerone.partnerships.v1.QueryParamsResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/zerone/partnerships/v1/paramsB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
+	"\x06Params\x12*.zerone.partnerships.v1.QueryParamsRequest\x1a+.zerone.partnerships.v1.QueryParamsResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/zerone/partnerships/v1/params\x12\x9e\x01\n" +
+	"\n" +
+	"Mentorship\x12..zerone.partnerships.v1.QueryMentorshipRequest\x1a/.zerone.partnerships.v1.QueryMentorshipResponse\"/\x82\xd3\xe4\x93\x02)\x12'/zerone/partnerships/v1/mentorship/{id}\x12\xc2\x01\n" +
+	"\x14MentorshipsByAddress\x128.zerone.partnerships.v1.QueryMentorshipsByAddressRequest\x1a9.zerone.partnerships.v1.QueryMentorshipsByAddressResponse\"5\x82\xd3\xe4\x93\x02/\x12-/zerone/partnerships/v1/mentorships/{address}\x12\xa8\x01\n" +
+	"\x10FormationMatches\x124.zerone.partnerships.v1.QueryFormationMatchesRequest\x1a5.zerone.partnerships.v1.QueryFormationMatchesResponse\"'\x82\xd3\xe4\x93\x02!\x12\x1f/zerone/partnerships/v1/matchesB5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
 
 var (
 	file_zerone_partnerships_v1_query_proto_rawDescOnce sync.Once
@@ -491,44 +765,61 @@ func file_zerone_partnerships_v1_query_proto_rawDescGZIP() []byte {
 	return file_zerone_partnerships_v1_query_proto_rawDescData
 }
 
-var file_zerone_partnerships_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_zerone_partnerships_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_zerone_partnerships_v1_query_proto_goTypes = []any{
-	(*QueryPartnershipRequest)(nil),    // 0: zerone.partnerships.v1.QueryPartnershipRequest
-	(*QueryPartnershipResponse)(nil),   // 1: zerone.partnerships.v1.QueryPartnershipResponse
-	(*QueryByAddressRequest)(nil),      // 2: zerone.partnerships.v1.QueryByAddressRequest
-	(*QueryByAddressResponse)(nil),     // 3: zerone.partnerships.v1.QueryByAddressResponse
-	(*QueryPendingOpsRequest)(nil),     // 4: zerone.partnerships.v1.QueryPendingOpsRequest
-	(*QueryPendingOpsResponse)(nil),    // 5: zerone.partnerships.v1.QueryPendingOpsResponse
-	(*QueryFormationPoolRequest)(nil),  // 6: zerone.partnerships.v1.QueryFormationPoolRequest
-	(*QueryFormationPoolResponse)(nil), // 7: zerone.partnerships.v1.QueryFormationPoolResponse
-	(*QueryParamsRequest)(nil),         // 8: zerone.partnerships.v1.QueryParamsRequest
-	(*QueryParamsResponse)(nil),        // 9: zerone.partnerships.v1.QueryParamsResponse
-	(*Partnership)(nil),                // 10: zerone.partnerships.v1.Partnership
-	(*ConsensusOperation)(nil),         // 11: zerone.partnerships.v1.ConsensusOperation
-	(*PoolEntry)(nil),                  // 12: zerone.partnerships.v1.PoolEntry
-	(*Params)(nil),                     // 13: zerone.partnerships.v1.Params
+	(*QueryPartnershipRequest)(nil),           // 0: zerone.partnerships.v1.QueryPartnershipRequest
+	(*QueryPartnershipResponse)(nil),          // 1: zerone.partnerships.v1.QueryPartnershipResponse
+	(*QueryByAddressRequest)(nil),             // 2: zerone.partnerships.v1.QueryByAddressRequest
+	(*QueryByAddressResponse)(nil),            // 3: zerone.partnerships.v1.QueryByAddressResponse
+	(*QueryPendingOpsRequest)(nil),            // 4: zerone.partnerships.v1.QueryPendingOpsRequest
+	(*QueryPendingOpsResponse)(nil),           // 5: zerone.partnerships.v1.QueryPendingOpsResponse
+	(*QueryFormationPoolRequest)(nil),         // 6: zerone.partnerships.v1.QueryFormationPoolRequest
+	(*QueryFormationPoolResponse)(nil),        // 7: zerone.partnerships.v1.QueryFormationPoolResponse
+	(*QueryParamsRequest)(nil),                // 8: zerone.partnerships.v1.QueryParamsRequest
+	(*QueryParamsResponse)(nil),               // 9: zerone.partnerships.v1.QueryParamsResponse
+	(*QueryMentorshipRequest)(nil),            // 10: zerone.partnerships.v1.QueryMentorshipRequest
+	(*QueryMentorshipResponse)(nil),           // 11: zerone.partnerships.v1.QueryMentorshipResponse
+	(*QueryMentorshipsByAddressRequest)(nil),  // 12: zerone.partnerships.v1.QueryMentorshipsByAddressRequest
+	(*QueryMentorshipsByAddressResponse)(nil), // 13: zerone.partnerships.v1.QueryMentorshipsByAddressResponse
+	(*QueryFormationMatchesRequest)(nil),      // 14: zerone.partnerships.v1.QueryFormationMatchesRequest
+	(*QueryFormationMatchesResponse)(nil),     // 15: zerone.partnerships.v1.QueryFormationMatchesResponse
+	(*Partnership)(nil),                       // 16: zerone.partnerships.v1.Partnership
+	(*ConsensusOperation)(nil),                // 17: zerone.partnerships.v1.ConsensusOperation
+	(*PoolEntry)(nil),                         // 18: zerone.partnerships.v1.PoolEntry
+	(*Params)(nil),                            // 19: zerone.partnerships.v1.Params
+	(*Mentorship)(nil),                        // 20: zerone.partnerships.v1.Mentorship
+	(*FormationMatch)(nil),                    // 21: zerone.partnerships.v1.FormationMatch
 }
 var file_zerone_partnerships_v1_query_proto_depIdxs = []int32{
-	10, // 0: zerone.partnerships.v1.QueryPartnershipResponse.partnership:type_name -> zerone.partnerships.v1.Partnership
-	10, // 1: zerone.partnerships.v1.QueryByAddressResponse.partnerships:type_name -> zerone.partnerships.v1.Partnership
-	11, // 2: zerone.partnerships.v1.QueryPendingOpsResponse.operations:type_name -> zerone.partnerships.v1.ConsensusOperation
-	12, // 3: zerone.partnerships.v1.QueryFormationPoolResponse.entries:type_name -> zerone.partnerships.v1.PoolEntry
-	13, // 4: zerone.partnerships.v1.QueryParamsResponse.params:type_name -> zerone.partnerships.v1.Params
-	0,  // 5: zerone.partnerships.v1.Query.Partnership:input_type -> zerone.partnerships.v1.QueryPartnershipRequest
-	2,  // 6: zerone.partnerships.v1.Query.PartnershipsByAddress:input_type -> zerone.partnerships.v1.QueryByAddressRequest
-	4,  // 7: zerone.partnerships.v1.Query.PendingOps:input_type -> zerone.partnerships.v1.QueryPendingOpsRequest
-	6,  // 8: zerone.partnerships.v1.Query.FormationPool:input_type -> zerone.partnerships.v1.QueryFormationPoolRequest
-	8,  // 9: zerone.partnerships.v1.Query.Params:input_type -> zerone.partnerships.v1.QueryParamsRequest
-	1,  // 10: zerone.partnerships.v1.Query.Partnership:output_type -> zerone.partnerships.v1.QueryPartnershipResponse
-	3,  // 11: zerone.partnerships.v1.Query.PartnershipsByAddress:output_type -> zerone.partnerships.v1.QueryByAddressResponse
-	5,  // 12: zerone.partnerships.v1.Query.PendingOps:output_type -> zerone.partnerships.v1.QueryPendingOpsResponse
-	7,  // 13: zerone.partnerships.v1.Query.FormationPool:output_type -> zerone.partnerships.v1.QueryFormationPoolResponse
-	9,  // 14: zerone.partnerships.v1.Query.Params:output_type -> zerone.partnerships.v1.QueryParamsResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	16, // 0: zerone.partnerships.v1.QueryPartnershipResponse.partnership:type_name -> zerone.partnerships.v1.Partnership
+	16, // 1: zerone.partnerships.v1.QueryByAddressResponse.partnerships:type_name -> zerone.partnerships.v1.Partnership
+	17, // 2: zerone.partnerships.v1.QueryPendingOpsResponse.operations:type_name -> zerone.partnerships.v1.ConsensusOperation
+	18, // 3: zerone.partnerships.v1.QueryFormationPoolResponse.entries:type_name -> zerone.partnerships.v1.PoolEntry
+	19, // 4: zerone.partnerships.v1.QueryParamsResponse.params:type_name -> zerone.partnerships.v1.Params
+	20, // 5: zerone.partnerships.v1.QueryMentorshipResponse.mentorship:type_name -> zerone.partnerships.v1.Mentorship
+	20, // 6: zerone.partnerships.v1.QueryMentorshipsByAddressResponse.mentorships:type_name -> zerone.partnerships.v1.Mentorship
+	21, // 7: zerone.partnerships.v1.QueryFormationMatchesResponse.matches:type_name -> zerone.partnerships.v1.FormationMatch
+	0,  // 8: zerone.partnerships.v1.Query.Partnership:input_type -> zerone.partnerships.v1.QueryPartnershipRequest
+	2,  // 9: zerone.partnerships.v1.Query.PartnershipsByAddress:input_type -> zerone.partnerships.v1.QueryByAddressRequest
+	4,  // 10: zerone.partnerships.v1.Query.PendingOps:input_type -> zerone.partnerships.v1.QueryPendingOpsRequest
+	6,  // 11: zerone.partnerships.v1.Query.FormationPool:input_type -> zerone.partnerships.v1.QueryFormationPoolRequest
+	8,  // 12: zerone.partnerships.v1.Query.Params:input_type -> zerone.partnerships.v1.QueryParamsRequest
+	10, // 13: zerone.partnerships.v1.Query.Mentorship:input_type -> zerone.partnerships.v1.QueryMentorshipRequest
+	12, // 14: zerone.partnerships.v1.Query.MentorshipsByAddress:input_type -> zerone.partnerships.v1.QueryMentorshipsByAddressRequest
+	14, // 15: zerone.partnerships.v1.Query.FormationMatches:input_type -> zerone.partnerships.v1.QueryFormationMatchesRequest
+	1,  // 16: zerone.partnerships.v1.Query.Partnership:output_type -> zerone.partnerships.v1.QueryPartnershipResponse
+	3,  // 17: zerone.partnerships.v1.Query.PartnershipsByAddress:output_type -> zerone.partnerships.v1.QueryByAddressResponse
+	5,  // 18: zerone.partnerships.v1.Query.PendingOps:output_type -> zerone.partnerships.v1.QueryPendingOpsResponse
+	7,  // 19: zerone.partnerships.v1.Query.FormationPool:output_type -> zerone.partnerships.v1.QueryFormationPoolResponse
+	9,  // 20: zerone.partnerships.v1.Query.Params:output_type -> zerone.partnerships.v1.QueryParamsResponse
+	11, // 21: zerone.partnerships.v1.Query.Mentorship:output_type -> zerone.partnerships.v1.QueryMentorshipResponse
+	13, // 22: zerone.partnerships.v1.Query.MentorshipsByAddress:output_type -> zerone.partnerships.v1.QueryMentorshipsByAddressResponse
+	15, // 23: zerone.partnerships.v1.Query.FormationMatches:output_type -> zerone.partnerships.v1.QueryFormationMatchesResponse
+	16, // [16:24] is the sub-list for method output_type
+	8,  // [8:16] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_zerone_partnerships_v1_query_proto_init() }
@@ -544,7 +835,7 @@ func file_zerone_partnerships_v1_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_partnerships_v1_query_proto_rawDesc), len(file_zerone_partnerships_v1_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

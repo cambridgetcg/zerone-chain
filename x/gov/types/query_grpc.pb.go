@@ -19,15 +19,19 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_LIP_FullMethodName            = "/zerone.gov.v1.Query/LIP"
-	Query_LIPs_FullMethodName           = "/zerone.gov.v1.Query/LIPs"
-	Query_Vote_FullMethodName           = "/zerone.gov.v1.Query/Vote"
-	Query_Votes_FullMethodName          = "/zerone.gov.v1.Query/Votes"
-	Query_TallyResult_FullMethodName    = "/zerone.gov.v1.Query/TallyResult"
-	Query_Params_FullMethodName         = "/zerone.gov.v1.Query/Params"
-	Query_ResearchSpend_FullMethodName  = "/zerone.gov.v1.Query/ResearchSpend"
-	Query_ResearchSpends_FullMethodName = "/zerone.gov.v1.Query/ResearchSpends"
-	Query_ResearchVoters_FullMethodName = "/zerone.gov.v1.Query/ResearchVoters"
+	Query_LIP_FullMethodName                    = "/zerone.gov.v1.Query/LIP"
+	Query_LIPs_FullMethodName                   = "/zerone.gov.v1.Query/LIPs"
+	Query_Vote_FullMethodName                   = "/zerone.gov.v1.Query/Vote"
+	Query_Votes_FullMethodName                  = "/zerone.gov.v1.Query/Votes"
+	Query_TallyResult_FullMethodName            = "/zerone.gov.v1.Query/TallyResult"
+	Query_Params_FullMethodName                 = "/zerone.gov.v1.Query/Params"
+	Query_ResearchSpend_FullMethodName          = "/zerone.gov.v1.Query/ResearchSpend"
+	Query_ResearchSpends_FullMethodName         = "/zerone.gov.v1.Query/ResearchSpends"
+	Query_ResearchVoters_FullMethodName         = "/zerone.gov.v1.Query/ResearchVoters"
+	Query_ResearchFundGovernance_FullMethodName = "/zerone.gov.v1.Query/ResearchFundGovernance"
+	Query_SeatElection_FullMethodName           = "/zerone.gov.v1.Query/SeatElection"
+	Query_SeatElections_FullMethodName          = "/zerone.gov.v1.Query/SeatElections"
+	Query_ResearchFundSeats_FullMethodName      = "/zerone.gov.v1.Query/ResearchFundSeats"
 )
 
 // QueryClient is the client API for Query service.
@@ -45,6 +49,10 @@ type QueryClient interface {
 	ResearchSpend(ctx context.Context, in *QueryResearchSpendRequest, opts ...grpc.CallOption) (*QueryResearchSpendResponse, error)
 	ResearchSpends(ctx context.Context, in *QueryResearchSpendsRequest, opts ...grpc.CallOption) (*QueryResearchSpendsResponse, error)
 	ResearchVoters(ctx context.Context, in *QueryResearchVotersRequest, opts ...grpc.CallOption) (*QueryResearchVotersResponse, error)
+	ResearchFundGovernance(ctx context.Context, in *QueryResearchFundGovernanceRequest, opts ...grpc.CallOption) (*QueryResearchFundGovernanceResponse, error)
+	SeatElection(ctx context.Context, in *QuerySeatElectionRequest, opts ...grpc.CallOption) (*QuerySeatElectionResponse, error)
+	SeatElections(ctx context.Context, in *QuerySeatElectionsRequest, opts ...grpc.CallOption) (*QuerySeatElectionsResponse, error)
+	ResearchFundSeats(ctx context.Context, in *QueryResearchFundSeatsRequest, opts ...grpc.CallOption) (*QueryResearchFundSeatsResponse, error)
 }
 
 type queryClient struct {
@@ -145,6 +153,46 @@ func (c *queryClient) ResearchVoters(ctx context.Context, in *QueryResearchVoter
 	return out, nil
 }
 
+func (c *queryClient) ResearchFundGovernance(ctx context.Context, in *QueryResearchFundGovernanceRequest, opts ...grpc.CallOption) (*QueryResearchFundGovernanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResearchFundGovernanceResponse)
+	err := c.cc.Invoke(ctx, Query_ResearchFundGovernance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) SeatElection(ctx context.Context, in *QuerySeatElectionRequest, opts ...grpc.CallOption) (*QuerySeatElectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QuerySeatElectionResponse)
+	err := c.cc.Invoke(ctx, Query_SeatElection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) SeatElections(ctx context.Context, in *QuerySeatElectionsRequest, opts ...grpc.CallOption) (*QuerySeatElectionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QuerySeatElectionsResponse)
+	err := c.cc.Invoke(ctx, Query_SeatElections_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ResearchFundSeats(ctx context.Context, in *QueryResearchFundSeatsRequest, opts ...grpc.CallOption) (*QueryResearchFundSeatsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryResearchFundSeatsResponse)
+	err := c.cc.Invoke(ctx, Query_ResearchFundSeats_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -160,6 +208,10 @@ type QueryServer interface {
 	ResearchSpend(context.Context, *QueryResearchSpendRequest) (*QueryResearchSpendResponse, error)
 	ResearchSpends(context.Context, *QueryResearchSpendsRequest) (*QueryResearchSpendsResponse, error)
 	ResearchVoters(context.Context, *QueryResearchVotersRequest) (*QueryResearchVotersResponse, error)
+	ResearchFundGovernance(context.Context, *QueryResearchFundGovernanceRequest) (*QueryResearchFundGovernanceResponse, error)
+	SeatElection(context.Context, *QuerySeatElectionRequest) (*QuerySeatElectionResponse, error)
+	SeatElections(context.Context, *QuerySeatElectionsRequest) (*QuerySeatElectionsResponse, error)
+	ResearchFundSeats(context.Context, *QueryResearchFundSeatsRequest) (*QueryResearchFundSeatsResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -196,6 +248,18 @@ func (UnimplementedQueryServer) ResearchSpends(context.Context, *QueryResearchSp
 }
 func (UnimplementedQueryServer) ResearchVoters(context.Context, *QueryResearchVotersRequest) (*QueryResearchVotersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ResearchVoters not implemented")
+}
+func (UnimplementedQueryServer) ResearchFundGovernance(context.Context, *QueryResearchFundGovernanceRequest) (*QueryResearchFundGovernanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResearchFundGovernance not implemented")
+}
+func (UnimplementedQueryServer) SeatElection(context.Context, *QuerySeatElectionRequest) (*QuerySeatElectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SeatElection not implemented")
+}
+func (UnimplementedQueryServer) SeatElections(context.Context, *QuerySeatElectionsRequest) (*QuerySeatElectionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SeatElections not implemented")
+}
+func (UnimplementedQueryServer) ResearchFundSeats(context.Context, *QueryResearchFundSeatsRequest) (*QueryResearchFundSeatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResearchFundSeats not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -380,6 +444,78 @@ func _Query_ResearchVoters_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_ResearchFundGovernance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryResearchFundGovernanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ResearchFundGovernance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ResearchFundGovernance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ResearchFundGovernance(ctx, req.(*QueryResearchFundGovernanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_SeatElection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySeatElectionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).SeatElection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_SeatElection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).SeatElection(ctx, req.(*QuerySeatElectionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_SeatElections_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySeatElectionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).SeatElections(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_SeatElections_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).SeatElections(ctx, req.(*QuerySeatElectionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ResearchFundSeats_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryResearchFundSeatsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ResearchFundSeats(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ResearchFundSeats_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ResearchFundSeats(ctx, req.(*QueryResearchFundSeatsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -422,6 +558,22 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResearchVoters",
 			Handler:    _Query_ResearchVoters_Handler,
+		},
+		{
+			MethodName: "ResearchFundGovernance",
+			Handler:    _Query_ResearchFundGovernance_Handler,
+		},
+		{
+			MethodName: "SeatElection",
+			Handler:    _Query_SeatElection_Handler,
+		},
+		{
+			MethodName: "SeatElections",
+			Handler:    _Query_SeatElections_Handler,
+		},
+		{
+			MethodName: "ResearchFundSeats",
+			Handler:    _Query_ResearchFundSeats_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

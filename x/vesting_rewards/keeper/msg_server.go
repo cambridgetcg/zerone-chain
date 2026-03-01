@@ -280,6 +280,10 @@ func (m msgServer) CompleteVesting(
 
 // UpdateParams updates the module parameters.
 // Only callable by module authority (governance).
+//
+// INVARIANT: Founder share fields (FounderShareBps, FounderAddress) are
+// governance-immune. UpdateParams enforces that these fields cannot be
+// changed once set. The founder share is a permanent protocol commitment.
 func (m msgServer) UpdateParams(
 	goCtx context.Context,
 	msg *types.MsgUpdateParams,
@@ -291,6 +295,12 @@ func (m msgServer) UpdateParams(
 	}
 
 	if msg.Params != nil {
+		// Enforce founder share immutability
+		current := m.Keeper.GetParams(ctx)
+		if err := types.ValidateFounderShareImmutability(current, msg.Params); err != nil {
+			return nil, err
+		}
+
 		m.Keeper.SetParams(ctx, msg.Params)
 	}
 

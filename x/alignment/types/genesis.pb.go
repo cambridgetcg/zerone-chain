@@ -122,9 +122,17 @@ type Params struct {
 	DegradedThreshold uint64 `protobuf:"varint,8,opt,name=degraded_threshold,json=degradedThreshold,proto3" json:"degraded_threshold,omitempty"`
 	HealthyThreshold  uint64 `protobuf:"varint,9,opt,name=healthy_threshold,json=healthyThreshold,proto3" json:"healthy_threshold,omitempty"`
 	// Module enabled flag.
-	Enabled       bool `protobuf:"varint,10,opt,name=enabled,proto3" json:"enabled,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Enabled bool `protobuf:"varint,10,opt,name=enabled,proto3" json:"enabled,omitempty"`
+	// Maximum correction magnitude (BPS) for auto-apply. Above this requires governance.
+	MaxAutoApplyMagnitudeBps uint64 `protobuf:"varint,11,opt,name=max_auto_apply_magnitude_bps,json=maxAutoApplyMagnitudeBps,proto3" json:"max_auto_apply_magnitude_bps,omitempty"`
+	// Correction confidence params (R29-4).
+	CorrectionConfidenceWindowSize   uint64 `protobuf:"varint,12,opt,name=correction_confidence_window_size,json=correctionConfidenceWindowSize,proto3" json:"correction_confidence_window_size,omitempty"`
+	CorrectionConfidenceMinSamples   uint64 `protobuf:"varint,13,opt,name=correction_confidence_min_samples,json=correctionConfidenceMinSamples,proto3" json:"correction_confidence_min_samples,omitempty"`
+	MinConfidenceForAutoApply        uint64 `protobuf:"varint,14,opt,name=min_confidence_for_auto_apply,json=minConfidenceForAutoApply,proto3" json:"min_confidence_for_auto_apply,omitempty"`
+	CorrectionBoundsMinMultiplierBps uint64 `protobuf:"varint,15,opt,name=correction_bounds_min_multiplier_bps,json=correctionBoundsMinMultiplierBps,proto3" json:"correction_bounds_min_multiplier_bps,omitempty"`
+	CorrectionBoundsMaxMultiplierBps uint64 `protobuf:"varint,16,opt,name=correction_bounds_max_multiplier_bps,json=correctionBoundsMaxMultiplierBps,proto3" json:"correction_bounds_max_multiplier_bps,omitempty"`
+	unknownFields                    protoimpl.UnknownFields
+	sizeCache                        protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -227,6 +235,48 @@ func (x *Params) GetEnabled() bool {
 	return false
 }
 
+func (x *Params) GetMaxAutoApplyMagnitudeBps() uint64 {
+	if x != nil {
+		return x.MaxAutoApplyMagnitudeBps
+	}
+	return 0
+}
+
+func (x *Params) GetCorrectionConfidenceWindowSize() uint64 {
+	if x != nil {
+		return x.CorrectionConfidenceWindowSize
+	}
+	return 0
+}
+
+func (x *Params) GetCorrectionConfidenceMinSamples() uint64 {
+	if x != nil {
+		return x.CorrectionConfidenceMinSamples
+	}
+	return 0
+}
+
+func (x *Params) GetMinConfidenceForAutoApply() uint64 {
+	if x != nil {
+		return x.MinConfidenceForAutoApply
+	}
+	return 0
+}
+
+func (x *Params) GetCorrectionBoundsMinMultiplierBps() uint64 {
+	if x != nil {
+		return x.CorrectionBoundsMinMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetCorrectionBoundsMaxMultiplierBps() uint64 {
+	if x != nil {
+		return x.CorrectionBoundsMaxMultiplierBps
+	}
+	return 0
+}
+
 var File_zerone_alignment_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_alignment_v1_genesis_proto_rawDesc = "" +
@@ -238,7 +288,7 @@ const file_zerone_alignment_v1_genesis_proto_rawDesc = "" +
 	"\fobservations\x18\x03 \x03(\v2).zerone.alignment.v1.AlignmentObservationR\fobservations\x12<\n" +
 	"\x06scores\x18\x04 \x03(\v2$.zerone.alignment.v1.DimensionScoresR\x06scores\x12P\n" +
 	"\x0ehealth_indices\x18\x05 \x03(\v2).zerone.alignment.v1.AlignmentHealthIndexR\rhealthIndices\x12G\n" +
-	"\vcorrections\x18\x06 \x03(\v2%.zerone.alignment.v1.CorrectionRecordR\vcorrections\"\x95\x04\n" +
+	"\vcorrections\x18\x06 \x03(\v2%.zerone.alignment.v1.CorrectionRecordR\vcorrections\"\xcd\a\n" +
 	"\x06Params\x12>\n" +
 	"\x1bobservation_interval_blocks\x18\x01 \x01(\x04R\x19observationIntervalBlocks\x128\n" +
 	"\x18weight_knowledge_quality\x18\x02 \x01(\x04R\x16weightKnowledgeQuality\x12:\n" +
@@ -250,7 +300,13 @@ const file_zerone_alignment_v1_genesis_proto_rawDesc = "" +
 	"\x12degraded_threshold\x18\b \x01(\x04R\x11degradedThreshold\x12+\n" +
 	"\x11healthy_threshold\x18\t \x01(\x04R\x10healthyThreshold\x12\x18\n" +
 	"\aenabled\x18\n" +
-	" \x01(\bR\aenabledB2Z0github.com/zerone-chain/zerone/x/alignment/typesb\x06proto3"
+	" \x01(\bR\aenabled\x12>\n" +
+	"\x1cmax_auto_apply_magnitude_bps\x18\v \x01(\x04R\x18maxAutoApplyMagnitudeBps\x12I\n" +
+	"!correction_confidence_window_size\x18\f \x01(\x04R\x1ecorrectionConfidenceWindowSize\x12I\n" +
+	"!correction_confidence_min_samples\x18\r \x01(\x04R\x1ecorrectionConfidenceMinSamples\x12@\n" +
+	"\x1dmin_confidence_for_auto_apply\x18\x0e \x01(\x04R\x19minConfidenceForAutoApply\x12N\n" +
+	"$correction_bounds_min_multiplier_bps\x18\x0f \x01(\x04R correctionBoundsMinMultiplierBps\x12N\n" +
+	"$correction_bounds_max_multiplier_bps\x18\x10 \x01(\x04R correctionBoundsMaxMultiplierBpsB2Z0github.com/zerone-chain/zerone/x/alignment/typesb\x06proto3"
 
 var (
 	file_zerone_alignment_v1_genesis_proto_rawDescOnce sync.Once

@@ -4,9 +4,13 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"strings"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -161,6 +165,10 @@ func (k Keeper) SetClaim(ctx context.Context, claim *types.Claim) error {
 	// Content hash dedup index
 	if claim.ContentHash != "" {
 		_ = store.Set(types.ContentHashKey(claim.ContentHash), []byte(claim.Id))
+	}
+	// Canonical hash dedup index
+	if claim.CanonicalHash != "" {
+		_ = store.Set(types.CanonicalHashKey(claim.CanonicalHash), []byte(claim.Id))
 	}
 	return nil
 }
@@ -473,10 +481,355 @@ func (k Keeper) GetActiveRounds(ctx context.Context) []*types.VerificationRound 
 	return rounds
 }
 
+// ─── Fact Relation CRUD ──────────────────────────────────────────────────────
+
+// SetFactRelation stores a fact relation with dual-write (forward + reverse index).
+func (k Keeper) SetFactRelation(ctx context.Context, rel *types.FactRelation) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(rel)
+	if err != nil {
+		return fmt.Errorf("failed to marshal fact relation: %w", err)
+	}
+	// Forward index: source → target
+	if err := store.Set(types.FactRelationKey(rel.SourceFactId, rel.TargetFactId), bz); err != nil {
+		return err
+	}
+	// Reverse index: target → source
+	return store.Set(types.FactRelationReverseKey(rel.TargetFactId, rel.SourceFactId), bz)
+}
+
+// GetFactRelations returns all outgoing relations from a fact.
+func (k Keeper) GetFactRelations(ctx context.Context, factID string) ([]*types.FactRelation, error) {
+	return k.iterateRelationsWithPrefix(ctx, types.FactRelationsBySourcePrefix(factID))
+}
+
+// GetIncomingRelations returns all incoming relations pointing to a fact.
+func (k Keeper) GetIncomingRelations(ctx context.Context, factID string) ([]*types.FactRelation, error) {
+	return k.iterateRelationsWithPrefix(ctx, types.FactRelationsByTargetPrefix(factID))
+}
+
+// GetRelationsByType returns outgoing relations from a fact filtered by type.
+func (k Keeper) GetRelationsByType(ctx context.Context, factID string, relType types.RelationType) ([]*types.FactRelation, error) {
+	all, err := k.GetFactRelations(ctx, factID)
+	if err != nil {
+		return nil, err
+	}
+	var filtered []*types.FactRelation
+	for _, rel := range all {
+		if rel.Relation == relType {
+			filtered = append(filtered, rel)
+		}
+	}
+	return filtered, nil
+}
+
+func (k Keeper) iterateRelationsWithPrefix(ctx context.Context, pfx []byte) ([]*types.FactRelation, error) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(pfx, prefixEndBytes(pfx))
+	if err != nil {
+		return nil, err
+	}
+	defer iter.Close()
+
+	var relations []*types.FactRelation
+	for ; iter.Valid(); iter.Next() {
+		var rel types.FactRelation
+		if err := proto.Unmarshal(iter.Value(), &rel); err != nil {
+			continue
+		}
+		relations = append(relations, &rel)
+	}
+	return relations, nil
+}
+
+// ─── Structured claim indexes ────────────────────────────────────────────────
+
+// normalizeSubject lowercases and trims a subject for consistent indexing.
+func normalizeSubject(subject string) string {
+	return strings.ToLower(strings.TrimSpace(subject))
+}
+
+// subjectHash returns a hex SHA-256 hash of the normalized subject for use as a store key.
+func subjectHash(subject string) string {
+	h := sha256.Sum256([]byte(normalizeSubject(subject)))
+	return hex.EncodeToString(h[:])
+}
+
+// IndexFactBySubject indexes a fact by its structured subject and tags.
+// Called after creating a fact from a claim that has structure.
+func (k Keeper) IndexFactBySubject(ctx context.Context, fact *types.Fact) error {
+	if fact.Structure == nil {
+		return nil
+	}
+	store := k.storeService.OpenKVStore(ctx)
+
+	// Subject index: domain/subject_hash → fact_id
+	if fact.Structure.Subject != "" {
+		key := types.FactSubjectKey(fact.Domain, subjectHash(fact.Structure.Subject))
+		if err := store.Set(key, []byte(fact.Id)); err != nil {
+			return err
+		}
+	}
+
+	// Tag index: tag/fact_id → 0x01
+	for _, tag := range fact.Structure.Tags {
+		normalized := strings.ToLower(strings.TrimSpace(tag))
+		if normalized == "" {
+			continue
+		}
+		key := types.FactTagKey(normalized, fact.Id)
+		if err := store.Set(key, []byte{0x01}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// FindFactBySubjectPredicate finds an existing fact with the same subject in a domain.
+// Returns the fact ID if found, empty string otherwise.
+// Note: only matches by subject hash (not predicate) since the index is subject-based.
+// Predicate matching is done by loading the fact and comparing.
+func (k Keeper) FindFactBySubjectPredicate(ctx context.Context, domain, subject, predicate string) string {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.FactSubjectKey(domain, subjectHash(subject))
+	bz, err := store.Get(key)
+	if err != nil || bz == nil {
+		return ""
+	}
+	factID := string(bz)
+
+	// If predicate matching is requested, verify the fact's predicate matches
+	if predicate != "" {
+		fact, found := k.GetFact(ctx, factID)
+		if !found || fact.Structure == nil {
+			return ""
+		}
+		if normalizeSubject(fact.Structure.Predicate) != normalizeSubject(predicate) {
+			return ""
+		}
+	}
+	return factID
+}
+
+// FindFactsByTag returns all fact IDs tagged with the given tag.
+func (k Keeper) FindFactsByTag(ctx context.Context, tag string) ([]string, error) {
+	normalized := strings.ToLower(strings.TrimSpace(tag))
+	if normalized == "" {
+		return nil, nil
+	}
+	store := k.storeService.OpenKVStore(ctx)
+	pfx := types.FactTagsByTagPrefix(normalized)
+	iter, err := store.Iterator(pfx, prefixEndBytes(pfx))
+	if err != nil {
+		return nil, err
+	}
+	defer iter.Close()
+
+	var factIDs []string
+	for ; iter.Valid(); iter.Next() {
+		factID := string(iter.Key()[len(pfx):])
+		factIDs = append(factIDs, factID)
+	}
+	return factIDs, nil
+}
+
+// ─── Canonical hash index ─────────────────────────────────────────────────
+
+// SetCanonicalHash stores a canonical hash → id mapping for dedup.
+func (k Keeper) SetCanonicalHash(ctx context.Context, hash string, id string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.CanonicalHashKey(hash), []byte(id))
+}
+
+// GetClaimByCanonicalHash looks up a claim/fact ID by its canonical hash.
+func (k Keeper) GetClaimByCanonicalHash(ctx context.Context, hash string) (string, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.CanonicalHashKey(hash))
+	if err != nil || bz == nil {
+		return "", false
+	}
+	return string(bz), true
+}
+
+// ─── Bootstrap fund tracking (R19-7) ─────────────────────────────────────────
+
+// GetBootstrapClaimCount returns the lifetime count of sponsored claims for an address.
+func (k Keeper) GetBootstrapClaimCount(ctx context.Context, address string) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	key := append(append([]byte{}, types.BootstrapClaimCountPrefix...), []byte(address)...)
+	bz, err := store.Get(key)
+	if err != nil || bz == nil || len(bz) < 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+// IncrementBootstrapClaimCount increments the lifetime sponsored claim count for an address.
+func (k Keeper) IncrementBootstrapClaimCount(ctx context.Context, address string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	key := append(append([]byte{}, types.BootstrapClaimCountPrefix...), []byte(address)...)
+	count := k.GetBootstrapClaimCount(ctx, address) + 1
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, count)
+	return store.Set(key, bz)
+}
+
+// GetBootstrapEpochCount returns the number of sponsored claims in a given epoch.
+func (k Keeper) GetBootstrapEpochCount(ctx context.Context, epoch uint64) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	epochBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(epochBz, epoch)
+	key := append(append([]byte{}, types.BootstrapEpochCountPrefix...), epochBz...)
+	bz, err := store.Get(key)
+	if err != nil || bz == nil || len(bz) < 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+// IncrementBootstrapEpochCount increments the sponsored claim count for a given epoch.
+func (k Keeper) IncrementBootstrapEpochCount(ctx context.Context, epoch uint64) error {
+	store := k.storeService.OpenKVStore(ctx)
+	epochBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(epochBz, epoch)
+	key := append(append([]byte{}, types.BootstrapEpochCountPrefix...), epochBz...)
+	count := k.GetBootstrapEpochCount(ctx, epoch) + 1
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, count)
+	return store.Set(key, bz)
+}
+
+// GetBootstrapFundBalance returns the current balance of the bootstrap fund module account.
+func (k Keeper) GetBootstrapFundBalance(ctx context.Context) sdk.Coin {
+	if k.bankKeeper == nil {
+		return sdk.NewInt64Coin("uzrn", 0)
+	}
+	addr := authtypes.NewModuleAddress(types.BootstrapFundModuleName)
+	return k.bankKeeper.GetBalance(ctx, addr, "uzrn")
+}
+
+// CurrentEpoch returns the current epoch number based on block height and epoch length.
+func (k Keeper) CurrentEpoch(ctx context.Context) uint64 {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+	params, err := k.GetParams(ctx)
+	if err != nil || params.BootstrapFundEpochBlocks == 0 {
+		return 0
+	}
+	return height / params.BootstrapFundEpochBlocks
+}
+
 // ─── Store helpers ───────────────────────────────────────────────────────────
 
 func activeRoundKey(roundID string) []byte {
 	return append(append([]byte{}, types.ActiveRoundIndexPrefix...), []byte(roundID)...)
+}
+
+// ─── Niche Index CRUD ─────────────────────────────────────────────────────────
+
+// ComputeNicheKey returns hash(domain + subject + claim_type) for a fact.
+// Facts without structure are each in their own niche (no competition).
+func (k Keeper) ComputeNicheKey(fact *types.Fact) string {
+	if fact.Structure == nil || fact.Structure.Subject == "" {
+		// Unstructured facts: solo niche keyed by fact ID
+		return "solo:" + fact.Id
+	}
+	h := sha256.New()
+	h.Write([]byte("ZRN.niche.v1:"))
+	h.Write([]byte(fact.Domain))
+	h.Write([]byte(":"))
+	h.Write([]byte(normalizeSubject(fact.Structure.Subject)))
+	h.Write([]byte(":"))
+	h.Write([]byte(fact.ClaimType.String()))
+	// Scope differentiates sub-niches
+	if fact.Structure.Scope != "" {
+		h.Write([]byte(":"))
+		h.Write([]byte(strings.ToLower(strings.TrimSpace(fact.Structure.Scope))))
+	}
+	return hex.EncodeToString(h.Sum(nil))[:32]
+}
+
+// UpdateNicheIndex registers a fact in its niche index.
+func (k Keeper) UpdateNicheIndex(ctx context.Context, fact *types.Fact) error {
+	nicheKey := k.ComputeNicheKey(fact)
+	fact.NicheKey = nicheKey
+	store := k.storeService.OpenKVStore(ctx)
+	// Register fact in niche
+	if err := store.Set(types.NicheIndexKey(nicheKey, fact.Id), []byte{0x01}); err != nil {
+		return err
+	}
+	// Register niche existence
+	if err := store.Set(types.NicheMembersKey(nicheKey), []byte{0x01}); err != nil {
+		return err
+	}
+	return nil
+}
+
+// RemoveFromNicheIndex removes a fact from its niche index.
+func (k Keeper) RemoveFromNicheIndex(ctx context.Context, nicheKey, factID string) {
+	store := k.storeService.OpenKVStore(ctx)
+	_ = store.Delete(types.NicheIndexKey(nicheKey, factID))
+}
+
+// GetNicheMembers returns all active facts in a niche, sorted by fitness descending.
+func (k Keeper) GetNicheMembers(ctx context.Context, nicheKey string) []*types.Fact {
+	store := k.storeService.OpenKVStore(ctx)
+	pfx := types.NicheIndexByNichePrefix(nicheKey)
+	iter, err := store.Iterator(pfx, prefixEndBytes(pfx))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+
+	var members []*types.Fact
+	for ; iter.Valid(); iter.Next() {
+		factID := string(iter.Key()[len(pfx):])
+		fact, found := k.GetFact(ctx, factID)
+		if !found {
+			continue
+		}
+		// Only include active/verified/provisional facts
+		if fact.Status == types.FactStatus_FACT_STATUS_VERIFIED ||
+			fact.Status == types.FactStatus_FACT_STATUS_ACTIVE ||
+			fact.Status == types.FactStatus_FACT_STATUS_PROVISIONAL ||
+			fact.Status == types.FactStatus_FACT_STATUS_AT_RISK {
+			members = append(members, fact)
+		}
+	}
+	return members
+}
+
+// GetNicheLeader returns the highest-fitness fact in a niche.
+func (k Keeper) GetNicheLeader(ctx context.Context, nicheKey string) (*types.Fact, bool) {
+	members := k.GetNicheMembers(ctx, nicheKey)
+	if len(members) == 0 {
+		return nil, false
+	}
+	// Find highest fitness
+	leader := members[0]
+	for _, m := range members[1:] {
+		if m.FitnessScore > leader.FitnessScore {
+			leader = m
+		}
+	}
+	return leader, true
+}
+
+// GetAllNiches returns all registered niche keys.
+func (k Keeper) GetAllNiches(ctx context.Context) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.NicheMembersPrefix, prefixEndBytes(types.NicheMembersPrefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+
+	var niches []string
+	for ; iter.Valid(); iter.Next() {
+		nicheKey := string(iter.Key()[len(types.NicheMembersPrefix):])
+		niches = append(niches, nicheKey)
+	}
+	return niches
 }
 
 // prefixEndBytes returns the exclusive end key for prefix iteration.

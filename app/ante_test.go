@@ -218,6 +218,127 @@ func TestIsICAMsg(t *testing.T) {
 	}
 }
 
+func TestIsClaimSubmissionMsg(t *testing.T) {
+	trueCases := []string{
+		"/zerone.knowledge.v1.MsgSubmitClaim",
+		"/zerone.knowledge.v1.MsgSubmitCommitment",
+		"/zerone.knowledge.v1.MsgSubmitReveal",
+	}
+	for _, tc := range trueCases {
+		if !isClaimSubmissionMsg(tc) {
+			t.Errorf("isClaimSubmissionMsg(%q) = false, want true", tc)
+		}
+	}
+
+	falseCases := []string{
+		"/zerone.knowledge.v1.MsgChallengeFact",
+		"/cosmos.bank.v1beta1.MsgSend",
+		"/cosmos.gov.v1.MsgVote",
+		"",
+	}
+	for _, tc := range falseCases {
+		if isClaimSubmissionMsg(tc) {
+			t.Errorf("isClaimSubmissionMsg(%q) = true, want false", tc)
+		}
+	}
+}
+
+func TestIsChallengeMsg(t *testing.T) {
+	if !isChallengeMsg("/zerone.knowledge.v1.MsgChallengeFact") {
+		t.Error("isChallengeMsg(MsgChallengeFact) = false, want true")
+	}
+
+	falseCases := []string{
+		"/zerone.knowledge.v1.MsgSubmitClaim",
+		"/zerone.knowledge.v1.MsgSubmitCommitment",
+		"/cosmos.bank.v1beta1.MsgSend",
+		"",
+	}
+	for _, tc := range falseCases {
+		if isChallengeMsg(tc) {
+			t.Errorf("isChallengeMsg(%q) = true, want false", tc)
+		}
+	}
+}
+
+func TestIsClaimMsg_BackwardCompatible(t *testing.T) {
+	// isClaimMsg must still return true for all 4 original messages
+	allClaims := []string{
+		"/zerone.knowledge.v1.MsgSubmitClaim",
+		"/zerone.knowledge.v1.MsgSubmitCommitment",
+		"/zerone.knowledge.v1.MsgSubmitReveal",
+		"/zerone.knowledge.v1.MsgChallengeFact",
+	}
+	for _, tc := range allClaims {
+		if !isClaimMsg(tc) {
+			t.Errorf("isClaimMsg(%q) = false, want true (backward compat)", tc)
+		}
+	}
+}
+
+func TestIsAuthManagementMsg(t *testing.T) {
+	trueCases := []string{
+		"/zerone.auth.v1.MsgRegisterAccount",
+		"/zerone.auth.v1.MsgRotateKey",
+		"/zerone.auth.v1.MsgCreateSession",
+		"/zerone.auth.v1.MsgRevokeSession",
+		"/zerone.auth.v1.MsgRecoverAccount",
+		"/zerone.auth.v1.MsgFreezeAccount",
+		"/zerone.auth.v1.MsgUnfreezeAccount",
+		"/zerone.auth.v1.MsgSetRecoveryConfig",
+		"/zerone.auth.v1.MsgInitiateRecovery",
+		"/zerone.auth.v1.MsgSubmitRecoveryShard",
+		"/zerone.auth.v1.MsgChallengeRecovery",
+		"/zerone.auth.v1.MsgExecuteRecovery",
+	}
+	for _, tc := range trueCases {
+		if !isAuthManagementMsg(tc) {
+			t.Errorf("isAuthManagementMsg(%q) = false, want true", tc)
+		}
+	}
+
+	falseCases := []string{
+		"/cosmos.bank.v1beta1.MsgSend",
+		"/zerone.knowledge.v1.MsgSubmitClaim",
+		"/cosmos.staking.v1beta1.MsgDelegate",
+		"",
+	}
+	for _, tc := range falseCases {
+		if isAuthManagementMsg(tc) {
+			t.Errorf("isAuthManagementMsg(%q) = true, want false", tc)
+		}
+	}
+}
+
+func TestIsZeroneSpecificMsg(t *testing.T) {
+	trueCases := []string{
+		"/zerone.knowledge.v1.MsgSubmitClaim",
+		"/zerone.knowledge.v1.MsgChallengeFact",
+		"/zerone.partnerships.v1.MsgInitiatePartnership",
+		"/zerone.research.v1.MsgSubmitResearch",
+		"/zerone.disputes.v1.MsgInitiateDispute",
+		"/zerone.icaauth.v1.MsgRegisterInterchainAccount",
+	}
+	for _, tc := range trueCases {
+		if !isZeroneSpecificMsg(tc) {
+			t.Errorf("isZeroneSpecificMsg(%q) = false, want true", tc)
+		}
+	}
+
+	falseCases := []string{
+		"/cosmos.bank.v1beta1.MsgSend",
+		"/cosmos.staking.v1beta1.MsgDelegate",
+		"/cosmos.gov.v1.MsgVote",
+		"/zerone.auth.v1.MsgRegisterAccount",
+		"",
+	}
+	for _, tc := range falseCases {
+		if isZeroneSpecificMsg(tc) {
+			t.Errorf("isZeroneSpecificMsg(%q) = true, want false", tc)
+		}
+	}
+}
+
 // ---------- Gas Constants Validation ----------
 
 func TestGasConstantsInvariant(t *testing.T) {

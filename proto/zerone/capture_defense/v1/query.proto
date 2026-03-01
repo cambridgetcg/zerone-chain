@@ -21,6 +21,9 @@ service Query {
   rpc CrossStratumRequirements(QueryCrossStratumRequirementsRequest) returns (QueryCrossStratumRequirementsResponse) {
     option (google.api.http).get = "/zerone/capture_defense/v1/cross_stratum";
   }
+  rpc FlaggedDomains(QueryFlaggedDomainsRequest) returns (QueryFlaggedDomainsResponse) {
+    option (google.api.http).get = "/zerone/capture_defense/v1/flagged_domains";
+  }
 }
 
 message QueryParamsRequest {}
@@ -49,4 +52,9 @@ message QueryCaptureMetricsResponse {
 message QueryCrossStratumRequirementsRequest {}
 message QueryCrossStratumRequirementsResponse {
   repeated CrossStratumRequirement requirements = 1;
+}
+
+message QueryFlaggedDomainsRequest {}
+message QueryFlaggedDomainsResponse {
+  repeated CaptureMetrics metrics = 1;
 }

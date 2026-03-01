@@ -28,6 +28,7 @@ type MsgProposePartnership struct {
 	Partner        string                 `protobuf:"bytes,2,opt,name=partner,proto3" json:"partner,omitempty"`
 	InitialDeposit string                 `protobuf:"bytes,3,opt,name=initial_deposit,json=initialDeposit,proto3" json:"initial_deposit,omitempty"`
 	ProposedTier   uint32                 `protobuf:"varint,4,opt,name=proposed_tier,json=proposedTier,proto3" json:"proposed_tier,omitempty"`
+	Domain         string                 `protobuf:"bytes,5,opt,name=domain,proto3" json:"domain,omitempty"` // optional: domain context for formation freeze checks
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -88,6 +89,13 @@ func (x *MsgProposePartnership) GetProposedTier() uint32 {
 		return x.ProposedTier
 	}
 	return 0
+}
+
+func (x *MsgProposePartnership) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
 }
 
 type MsgProposePartnershipResponse struct {
@@ -1142,16 +1150,569 @@ func (*MsgUpdateParamsResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{21}
 }
 
+type MsgProposeMentorship struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Mentor         string                 `protobuf:"bytes,1,opt,name=mentor,proto3" json:"mentor,omitempty"`
+	Mentee         string                 `protobuf:"bytes,2,opt,name=mentee,proto3" json:"mentee,omitempty"`
+	Domain         string                 `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
+	DurationBlocks uint64                 `protobuf:"varint,4,opt,name=duration_blocks,json=durationBlocks,proto3" json:"duration_blocks,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *MsgProposeMentorship) Reset() {
+	*x = MsgProposeMentorship{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgProposeMentorship) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgProposeMentorship) ProtoMessage() {}
+
+func (x *MsgProposeMentorship) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgProposeMentorship.ProtoReflect.Descriptor instead.
+func (*MsgProposeMentorship) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *MsgProposeMentorship) GetMentor() string {
+	if x != nil {
+		return x.Mentor
+	}
+	return ""
+}
+
+func (x *MsgProposeMentorship) GetMentee() string {
+	if x != nil {
+		return x.Mentee
+	}
+	return ""
+}
+
+func (x *MsgProposeMentorship) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *MsgProposeMentorship) GetDurationBlocks() uint64 {
+	if x != nil {
+		return x.DurationBlocks
+	}
+	return 0
+}
+
+type MsgProposeMentorshipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MentorshipId  string                 `protobuf:"bytes,1,opt,name=mentorship_id,json=mentorshipId,proto3" json:"mentorship_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgProposeMentorshipResponse) Reset() {
+	*x = MsgProposeMentorshipResponse{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgProposeMentorshipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgProposeMentorshipResponse) ProtoMessage() {}
+
+func (x *MsgProposeMentorshipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgProposeMentorshipResponse.ProtoReflect.Descriptor instead.
+func (*MsgProposeMentorshipResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *MsgProposeMentorshipResponse) GetMentorshipId() string {
+	if x != nil {
+		return x.MentorshipId
+	}
+	return ""
+}
+
+type MsgAcceptMentorship struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mentee        string                 `protobuf:"bytes,1,opt,name=mentee,proto3" json:"mentee,omitempty"`
+	MentorshipId  string                 `protobuf:"bytes,2,opt,name=mentorship_id,json=mentorshipId,proto3" json:"mentorship_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAcceptMentorship) Reset() {
+	*x = MsgAcceptMentorship{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAcceptMentorship) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptMentorship) ProtoMessage() {}
+
+func (x *MsgAcceptMentorship) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAcceptMentorship.ProtoReflect.Descriptor instead.
+func (*MsgAcceptMentorship) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *MsgAcceptMentorship) GetMentee() string {
+	if x != nil {
+		return x.Mentee
+	}
+	return ""
+}
+
+func (x *MsgAcceptMentorship) GetMentorshipId() string {
+	if x != nil {
+		return x.MentorshipId
+	}
+	return ""
+}
+
+type MsgAcceptMentorshipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAcceptMentorshipResponse) Reset() {
+	*x = MsgAcceptMentorshipResponse{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAcceptMentorshipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptMentorshipResponse) ProtoMessage() {}
+
+func (x *MsgAcceptMentorshipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAcceptMentorshipResponse.ProtoReflect.Descriptor instead.
+func (*MsgAcceptMentorshipResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{25}
+}
+
+type MsgGraduateMentee struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mentor        string                 `protobuf:"bytes,1,opt,name=mentor,proto3" json:"mentor,omitempty"`
+	MentorshipId  string                 `protobuf:"bytes,2,opt,name=mentorship_id,json=mentorshipId,proto3" json:"mentorship_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgGraduateMentee) Reset() {
+	*x = MsgGraduateMentee{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgGraduateMentee) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgGraduateMentee) ProtoMessage() {}
+
+func (x *MsgGraduateMentee) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgGraduateMentee.ProtoReflect.Descriptor instead.
+func (*MsgGraduateMentee) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *MsgGraduateMentee) GetMentor() string {
+	if x != nil {
+		return x.Mentor
+	}
+	return ""
+}
+
+func (x *MsgGraduateMentee) GetMentorshipId() string {
+	if x != nil {
+		return x.MentorshipId
+	}
+	return ""
+}
+
+type MsgGraduateMenteeResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgGraduateMenteeResponse) Reset() {
+	*x = MsgGraduateMenteeResponse{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgGraduateMenteeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgGraduateMenteeResponse) ProtoMessage() {}
+
+func (x *MsgGraduateMenteeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgGraduateMenteeResponse.ProtoReflect.Descriptor instead.
+func (*MsgGraduateMenteeResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{27}
+}
+
+type MsgEndMentorship struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sender        string                 `protobuf:"bytes,1,opt,name=sender,proto3" json:"sender,omitempty"`
+	MentorshipId  string                 `protobuf:"bytes,2,opt,name=mentorship_id,json=mentorshipId,proto3" json:"mentorship_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgEndMentorship) Reset() {
+	*x = MsgEndMentorship{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgEndMentorship) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgEndMentorship) ProtoMessage() {}
+
+func (x *MsgEndMentorship) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgEndMentorship.ProtoReflect.Descriptor instead.
+func (*MsgEndMentorship) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *MsgEndMentorship) GetSender() string {
+	if x != nil {
+		return x.Sender
+	}
+	return ""
+}
+
+func (x *MsgEndMentorship) GetMentorshipId() string {
+	if x != nil {
+		return x.MentorshipId
+	}
+	return ""
+}
+
+type MsgEndMentorshipResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgEndMentorshipResponse) Reset() {
+	*x = MsgEndMentorshipResponse{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgEndMentorshipResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgEndMentorshipResponse) ProtoMessage() {}
+
+func (x *MsgEndMentorshipResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgEndMentorshipResponse.ProtoReflect.Descriptor instead.
+func (*MsgEndMentorshipResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{29}
+}
+
+type MsgAcceptFormationMatch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Accepter      string                 `protobuf:"bytes,1,opt,name=accepter,proto3" json:"accepter,omitempty"`
+	MatchId       string                 `protobuf:"bytes,2,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAcceptFormationMatch) Reset() {
+	*x = MsgAcceptFormationMatch{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAcceptFormationMatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptFormationMatch) ProtoMessage() {}
+
+func (x *MsgAcceptFormationMatch) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAcceptFormationMatch.ProtoReflect.Descriptor instead.
+func (*MsgAcceptFormationMatch) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *MsgAcceptFormationMatch) GetAccepter() string {
+	if x != nil {
+		return x.Accepter
+	}
+	return ""
+}
+
+func (x *MsgAcceptFormationMatch) GetMatchId() string {
+	if x != nil {
+		return x.MatchId
+	}
+	return ""
+}
+
+type MsgAcceptFormationMatchResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgAcceptFormationMatchResponse) Reset() {
+	*x = MsgAcceptFormationMatchResponse{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgAcceptFormationMatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgAcceptFormationMatchResponse) ProtoMessage() {}
+
+func (x *MsgAcceptFormationMatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgAcceptFormationMatchResponse.ProtoReflect.Descriptor instead.
+func (*MsgAcceptFormationMatchResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{31}
+}
+
+type MsgDeclineFormationMatch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Decliner      string                 `protobuf:"bytes,1,opt,name=decliner,proto3" json:"decliner,omitempty"`
+	MatchId       string                 `protobuf:"bytes,2,opt,name=match_id,json=matchId,proto3" json:"match_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgDeclineFormationMatch) Reset() {
+	*x = MsgDeclineFormationMatch{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgDeclineFormationMatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgDeclineFormationMatch) ProtoMessage() {}
+
+func (x *MsgDeclineFormationMatch) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgDeclineFormationMatch.ProtoReflect.Descriptor instead.
+func (*MsgDeclineFormationMatch) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *MsgDeclineFormationMatch) GetDecliner() string {
+	if x != nil {
+		return x.Decliner
+	}
+	return ""
+}
+
+func (x *MsgDeclineFormationMatch) GetMatchId() string {
+	if x != nil {
+		return x.MatchId
+	}
+	return ""
+}
+
+type MsgDeclineFormationMatchResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgDeclineFormationMatchResponse) Reset() {
+	*x = MsgDeclineFormationMatchResponse{}
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgDeclineFormationMatchResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgDeclineFormationMatchResponse) ProtoMessage() {}
+
+func (x *MsgDeclineFormationMatchResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_partnerships_v1_tx_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgDeclineFormationMatchResponse.ProtoReflect.Descriptor instead.
+func (*MsgDeclineFormationMatchResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_partnerships_v1_tx_proto_rawDescGZIP(), []int{33}
+}
+
 var File_zerone_partnerships_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_partnerships_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\x1fzerone/partnerships/v1/tx.proto\x12\x16zerone.partnerships.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\"zerone/partnerships/v1/types.proto\x1a$zerone/partnerships/v1/genesis.proto\"\xaa\x01\n" +
+	"\x1fzerone/partnerships/v1/tx.proto\x12\x16zerone.partnerships.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\"zerone/partnerships/v1/types.proto\x1a$zerone/partnerships/v1/genesis.proto\"\xc2\x01\n" +
 	"\x15MsgProposePartnership\x12\x1a\n" +
 	"\bproposer\x18\x01 \x01(\tR\bproposer\x12\x18\n" +
 	"\apartner\x18\x02 \x01(\tR\apartner\x12'\n" +
 	"\x0finitial_deposit\x18\x03 \x01(\tR\x0einitialDeposit\x12#\n" +
-	"\rproposed_tier\x18\x04 \x01(\rR\fproposedTier:\r\x82\xe7\xb0*\bproposer\"F\n" +
+	"\rproposed_tier\x18\x04 \x01(\rR\fproposedTier\x12\x16\n" +
+	"\x06domain\x18\x05 \x01(\tR\x06domain:\r\x82\xe7\xb0*\bproposer\"F\n" +
 	"\x1dMsgProposePartnershipResponse\x12%\n" +
 	"\x0epartnership_id\x18\x01 \x01(\tR\rpartnershipId\"\x82\x01\n" +
 	"\x14MsgAcceptPartnership\x12\x1a\n" +
@@ -1212,8 +1773,34 @@ const file_zerone_partnerships_v1_tx_proto_rawDesc = "" +
 	"\x0fMsgUpdateParams\x12\x1c\n" +
 	"\tauthority\x18\x01 \x01(\tR\tauthority\x126\n" +
 	"\x06params\x18\x02 \x01(\v2\x1e.zerone.partnerships.v1.ParamsR\x06params:\x0e\x82\xe7\xb0*\tauthority\"\x19\n" +
-	"\x17MsgUpdateParamsResponse2\xbd\n" +
-	"\n" +
+	"\x17MsgUpdateParamsResponse\"\x94\x01\n" +
+	"\x14MsgProposeMentorship\x12\x16\n" +
+	"\x06mentor\x18\x01 \x01(\tR\x06mentor\x12\x16\n" +
+	"\x06mentee\x18\x02 \x01(\tR\x06mentee\x12\x16\n" +
+	"\x06domain\x18\x03 \x01(\tR\x06domain\x12'\n" +
+	"\x0fduration_blocks\x18\x04 \x01(\x04R\x0edurationBlocks:\v\x82\xe7\xb0*\x06mentor\"C\n" +
+	"\x1cMsgProposeMentorshipResponse\x12#\n" +
+	"\rmentorship_id\x18\x01 \x01(\tR\fmentorshipId\"_\n" +
+	"\x13MsgAcceptMentorship\x12\x16\n" +
+	"\x06mentee\x18\x01 \x01(\tR\x06mentee\x12#\n" +
+	"\rmentorship_id\x18\x02 \x01(\tR\fmentorshipId:\v\x82\xe7\xb0*\x06mentee\"\x1d\n" +
+	"\x1bMsgAcceptMentorshipResponse\"]\n" +
+	"\x11MsgGraduateMentee\x12\x16\n" +
+	"\x06mentor\x18\x01 \x01(\tR\x06mentor\x12#\n" +
+	"\rmentorship_id\x18\x02 \x01(\tR\fmentorshipId:\v\x82\xe7\xb0*\x06mentor\"\x1b\n" +
+	"\x19MsgGraduateMenteeResponse\"\\\n" +
+	"\x10MsgEndMentorship\x12\x16\n" +
+	"\x06sender\x18\x01 \x01(\tR\x06sender\x12#\n" +
+	"\rmentorship_id\x18\x02 \x01(\tR\fmentorshipId:\v\x82\xe7\xb0*\x06sender\"\x1a\n" +
+	"\x18MsgEndMentorshipResponse\"_\n" +
+	"\x17MsgAcceptFormationMatch\x12\x1a\n" +
+	"\baccepter\x18\x01 \x01(\tR\baccepter\x12\x19\n" +
+	"\bmatch_id\x18\x02 \x01(\tR\amatchId:\r\x82\xe7\xb0*\baccepter\"!\n" +
+	"\x1fMsgAcceptFormationMatchResponse\"`\n" +
+	"\x18MsgDeclineFormationMatch\x12\x1a\n" +
+	"\bdecliner\x18\x01 \x01(\tR\bdecliner\x12\x19\n" +
+	"\bmatch_id\x18\x02 \x01(\tR\amatchId:\r\x82\xe7\xb0*\bdecliner\"\"\n" +
+	" MsgDeclineFormationMatchResponse2\x92\x10\n" +
 	"\x03Msg\x12z\n" +
 	"\x12ProposePartnership\x12-.zerone.partnerships.v1.MsgProposePartnership\x1a5.zerone.partnerships.v1.MsgProposePartnershipResponse\x12w\n" +
 	"\x11AcceptPartnership\x12,.zerone.partnerships.v1.MsgAcceptPartnership\x1a4.zerone.partnerships.v1.MsgAcceptPartnershipResponse\x12z\n" +
@@ -1225,7 +1812,13 @@ const file_zerone_partnerships_v1_tx_proto_rawDesc = "" +
 	"\x15CreateSeedPartnership\x120.zerone.partnerships.v1.MsgCreateSeedPartnership\x1a8.zerone.partnerships.v1.MsgCreateSeedPartnershipResponse\x12w\n" +
 	"\x11JoinFormationPool\x12,.zerone.partnerships.v1.MsgJoinFormationPool\x1a4.zerone.partnerships.v1.MsgJoinFormationPoolResponse\x12z\n" +
 	"\x12LeaveFormationPool\x12-.zerone.partnerships.v1.MsgLeaveFormationPool\x1a5.zerone.partnerships.v1.MsgLeaveFormationPoolResponse\x12h\n" +
-	"\fUpdateParams\x12'.zerone.partnerships.v1.MsgUpdateParams\x1a/.zerone.partnerships.v1.MsgUpdateParamsResponse\x1a\x05\x80\xe7\xb0*\x01B5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
+	"\fUpdateParams\x12'.zerone.partnerships.v1.MsgUpdateParams\x1a/.zerone.partnerships.v1.MsgUpdateParamsResponse\x12w\n" +
+	"\x11ProposeMentorship\x12,.zerone.partnerships.v1.MsgProposeMentorship\x1a4.zerone.partnerships.v1.MsgProposeMentorshipResponse\x12t\n" +
+	"\x10AcceptMentorship\x12+.zerone.partnerships.v1.MsgAcceptMentorship\x1a3.zerone.partnerships.v1.MsgAcceptMentorshipResponse\x12n\n" +
+	"\x0eGraduateMentee\x12).zerone.partnerships.v1.MsgGraduateMentee\x1a1.zerone.partnerships.v1.MsgGraduateMenteeResponse\x12k\n" +
+	"\rEndMentorship\x12(.zerone.partnerships.v1.MsgEndMentorship\x1a0.zerone.partnerships.v1.MsgEndMentorshipResponse\x12\x80\x01\n" +
+	"\x14AcceptFormationMatch\x12/.zerone.partnerships.v1.MsgAcceptFormationMatch\x1a7.zerone.partnerships.v1.MsgAcceptFormationMatchResponse\x12\x83\x01\n" +
+	"\x15DeclineFormationMatch\x120.zerone.partnerships.v1.MsgDeclineFormationMatch\x1a8.zerone.partnerships.v1.MsgDeclineFormationMatchResponse\x1a\x05\x80\xe7\xb0*\x01B5Z3github.com/zerone-chain/zerone/x/partnerships/typesb\x06proto3"
 
 var (
 	file_zerone_partnerships_v1_tx_proto_rawDescOnce sync.Once
@@ -1239,7 +1832,7 @@ func file_zerone_partnerships_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_partnerships_v1_tx_proto_rawDescData
 }
 
-var file_zerone_partnerships_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
+var file_zerone_partnerships_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
 var file_zerone_partnerships_v1_tx_proto_goTypes = []any{
 	(*MsgProposePartnership)(nil),            // 0: zerone.partnerships.v1.MsgProposePartnership
 	(*MsgProposePartnershipResponse)(nil),    // 1: zerone.partnerships.v1.MsgProposePartnershipResponse
@@ -1263,10 +1856,22 @@ var file_zerone_partnerships_v1_tx_proto_goTypes = []any{
 	(*MsgLeaveFormationPoolResponse)(nil),    // 19: zerone.partnerships.v1.MsgLeaveFormationPoolResponse
 	(*MsgUpdateParams)(nil),                  // 20: zerone.partnerships.v1.MsgUpdateParams
 	(*MsgUpdateParamsResponse)(nil),          // 21: zerone.partnerships.v1.MsgUpdateParamsResponse
-	(*Params)(nil),                           // 22: zerone.partnerships.v1.Params
+	(*MsgProposeMentorship)(nil),             // 22: zerone.partnerships.v1.MsgProposeMentorship
+	(*MsgProposeMentorshipResponse)(nil),     // 23: zerone.partnerships.v1.MsgProposeMentorshipResponse
+	(*MsgAcceptMentorship)(nil),              // 24: zerone.partnerships.v1.MsgAcceptMentorship
+	(*MsgAcceptMentorshipResponse)(nil),      // 25: zerone.partnerships.v1.MsgAcceptMentorshipResponse
+	(*MsgGraduateMentee)(nil),                // 26: zerone.partnerships.v1.MsgGraduateMentee
+	(*MsgGraduateMenteeResponse)(nil),        // 27: zerone.partnerships.v1.MsgGraduateMenteeResponse
+	(*MsgEndMentorship)(nil),                 // 28: zerone.partnerships.v1.MsgEndMentorship
+	(*MsgEndMentorshipResponse)(nil),         // 29: zerone.partnerships.v1.MsgEndMentorshipResponse
+	(*MsgAcceptFormationMatch)(nil),          // 30: zerone.partnerships.v1.MsgAcceptFormationMatch
+	(*MsgAcceptFormationMatchResponse)(nil),  // 31: zerone.partnerships.v1.MsgAcceptFormationMatchResponse
+	(*MsgDeclineFormationMatch)(nil),         // 32: zerone.partnerships.v1.MsgDeclineFormationMatch
+	(*MsgDeclineFormationMatchResponse)(nil), // 33: zerone.partnerships.v1.MsgDeclineFormationMatchResponse
+	(*Params)(nil),                           // 34: zerone.partnerships.v1.Params
 }
 var file_zerone_partnerships_v1_tx_proto_depIdxs = []int32{
-	22, // 0: zerone.partnerships.v1.MsgUpdateParams.params:type_name -> zerone.partnerships.v1.Params
+	34, // 0: zerone.partnerships.v1.MsgUpdateParams.params:type_name -> zerone.partnerships.v1.Params
 	0,  // 1: zerone.partnerships.v1.Msg.ProposePartnership:input_type -> zerone.partnerships.v1.MsgProposePartnership
 	2,  // 2: zerone.partnerships.v1.Msg.AcceptPartnership:input_type -> zerone.partnerships.v1.MsgAcceptPartnership
 	4,  // 3: zerone.partnerships.v1.Msg.ProposeConsensusOp:input_type -> zerone.partnerships.v1.MsgProposeConsensusOp
@@ -1278,19 +1883,31 @@ var file_zerone_partnerships_v1_tx_proto_depIdxs = []int32{
 	16, // 9: zerone.partnerships.v1.Msg.JoinFormationPool:input_type -> zerone.partnerships.v1.MsgJoinFormationPool
 	18, // 10: zerone.partnerships.v1.Msg.LeaveFormationPool:input_type -> zerone.partnerships.v1.MsgLeaveFormationPool
 	20, // 11: zerone.partnerships.v1.Msg.UpdateParams:input_type -> zerone.partnerships.v1.MsgUpdateParams
-	1,  // 12: zerone.partnerships.v1.Msg.ProposePartnership:output_type -> zerone.partnerships.v1.MsgProposePartnershipResponse
-	3,  // 13: zerone.partnerships.v1.Msg.AcceptPartnership:output_type -> zerone.partnerships.v1.MsgAcceptPartnershipResponse
-	5,  // 14: zerone.partnerships.v1.Msg.ProposeConsensusOp:output_type -> zerone.partnerships.v1.MsgProposeConsensusOpResponse
-	7,  // 15: zerone.partnerships.v1.Msg.VoteConsensusOp:output_type -> zerone.partnerships.v1.MsgVoteConsensusOpResponse
-	9,  // 16: zerone.partnerships.v1.Msg.SafetyFreeze:output_type -> zerone.partnerships.v1.MsgSafetyFreezeResponse
-	11, // 17: zerone.partnerships.v1.Msg.RaiseCoercionSignal:output_type -> zerone.partnerships.v1.MsgRaiseCoercionSignalResponse
-	13, // 18: zerone.partnerships.v1.Msg.InitiateDissolution:output_type -> zerone.partnerships.v1.MsgInitiateDissolutionResponse
-	15, // 19: zerone.partnerships.v1.Msg.CreateSeedPartnership:output_type -> zerone.partnerships.v1.MsgCreateSeedPartnershipResponse
-	17, // 20: zerone.partnerships.v1.Msg.JoinFormationPool:output_type -> zerone.partnerships.v1.MsgJoinFormationPoolResponse
-	19, // 21: zerone.partnerships.v1.Msg.LeaveFormationPool:output_type -> zerone.partnerships.v1.MsgLeaveFormationPoolResponse
-	21, // 22: zerone.partnerships.v1.Msg.UpdateParams:output_type -> zerone.partnerships.v1.MsgUpdateParamsResponse
-	12, // [12:23] is the sub-list for method output_type
-	1,  // [1:12] is the sub-list for method input_type
+	22, // 12: zerone.partnerships.v1.Msg.ProposeMentorship:input_type -> zerone.partnerships.v1.MsgProposeMentorship
+	24, // 13: zerone.partnerships.v1.Msg.AcceptMentorship:input_type -> zerone.partnerships.v1.MsgAcceptMentorship
+	26, // 14: zerone.partnerships.v1.Msg.GraduateMentee:input_type -> zerone.partnerships.v1.MsgGraduateMentee
+	28, // 15: zerone.partnerships.v1.Msg.EndMentorship:input_type -> zerone.partnerships.v1.MsgEndMentorship
+	30, // 16: zerone.partnerships.v1.Msg.AcceptFormationMatch:input_type -> zerone.partnerships.v1.MsgAcceptFormationMatch
+	32, // 17: zerone.partnerships.v1.Msg.DeclineFormationMatch:input_type -> zerone.partnerships.v1.MsgDeclineFormationMatch
+	1,  // 18: zerone.partnerships.v1.Msg.ProposePartnership:output_type -> zerone.partnerships.v1.MsgProposePartnershipResponse
+	3,  // 19: zerone.partnerships.v1.Msg.AcceptPartnership:output_type -> zerone.partnerships.v1.MsgAcceptPartnershipResponse
+	5,  // 20: zerone.partnerships.v1.Msg.ProposeConsensusOp:output_type -> zerone.partnerships.v1.MsgProposeConsensusOpResponse
+	7,  // 21: zerone.partnerships.v1.Msg.VoteConsensusOp:output_type -> zerone.partnerships.v1.MsgVoteConsensusOpResponse
+	9,  // 22: zerone.partnerships.v1.Msg.SafetyFreeze:output_type -> zerone.partnerships.v1.MsgSafetyFreezeResponse
+	11, // 23: zerone.partnerships.v1.Msg.RaiseCoercionSignal:output_type -> zerone.partnerships.v1.MsgRaiseCoercionSignalResponse
+	13, // 24: zerone.partnerships.v1.Msg.InitiateDissolution:output_type -> zerone.partnerships.v1.MsgInitiateDissolutionResponse
+	15, // 25: zerone.partnerships.v1.Msg.CreateSeedPartnership:output_type -> zerone.partnerships.v1.MsgCreateSeedPartnershipResponse
+	17, // 26: zerone.partnerships.v1.Msg.JoinFormationPool:output_type -> zerone.partnerships.v1.MsgJoinFormationPoolResponse
+	19, // 27: zerone.partnerships.v1.Msg.LeaveFormationPool:output_type -> zerone.partnerships.v1.MsgLeaveFormationPoolResponse
+	21, // 28: zerone.partnerships.v1.Msg.UpdateParams:output_type -> zerone.partnerships.v1.MsgUpdateParamsResponse
+	23, // 29: zerone.partnerships.v1.Msg.ProposeMentorship:output_type -> zerone.partnerships.v1.MsgProposeMentorshipResponse
+	25, // 30: zerone.partnerships.v1.Msg.AcceptMentorship:output_type -> zerone.partnerships.v1.MsgAcceptMentorshipResponse
+	27, // 31: zerone.partnerships.v1.Msg.GraduateMentee:output_type -> zerone.partnerships.v1.MsgGraduateMenteeResponse
+	29, // 32: zerone.partnerships.v1.Msg.EndMentorship:output_type -> zerone.partnerships.v1.MsgEndMentorshipResponse
+	31, // 33: zerone.partnerships.v1.Msg.AcceptFormationMatch:output_type -> zerone.partnerships.v1.MsgAcceptFormationMatchResponse
+	33, // 34: zerone.partnerships.v1.Msg.DeclineFormationMatch:output_type -> zerone.partnerships.v1.MsgDeclineFormationMatchResponse
+	18, // [18:35] is the sub-list for method output_type
+	1,  // [1:18] is the sub-list for method input_type
 	1,  // [1:1] is the sub-list for extension type_name
 	1,  // [1:1] is the sub-list for extension extendee
 	0,  // [0:1] is the sub-list for field type_name
@@ -1309,7 +1926,7 @@ func file_zerone_partnerships_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_partnerships_v1_tx_proto_rawDesc), len(file_zerone_partnerships_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   22,
+			NumMessages:   34,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

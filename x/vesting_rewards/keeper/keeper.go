@@ -28,7 +28,9 @@ type Keeper struct {
 
 	autopoiesisKeeper types.AutopoiesisKeeper
 
-	// blockTxCount is set by PreBlocker each block with the actual transaction count.
+	// blockTxCount is set by PotPreBlocker each block with the user transaction count
+	// (excluding vote extension injection pseudo-txs). Read by BeginBlock to determine
+	// if block rewards should be minted (PoT: 0% for empty blocks).
 	blockTxCount int
 }
 
@@ -140,13 +142,15 @@ func (k Keeper) GetProtocolSubSplit(ctx sdk.Context) *commontypes.ProtocolSubSpl
 }
 
 // isFounderShareActive returns whether the founder auto-split is active.
+// The founder share is immune to governance — it cannot be disabled via parameter
+// changes. It is only inactive if the founder address is not yet set.
+// The share percentage (FounderShareBps) is enforced as immutable in UpdateParams.
 func (k Keeper) isFounderShareActive(ctx sdk.Context, params *types.Params) bool {
 	if params.FounderShareBps == 0 || params.FounderAddress == "" {
 		return false
 	}
-	if params.GovernanceActivationHeight > 0 && uint64(ctx.BlockHeight()) >= params.GovernanceActivationHeight {
-		return false
-	}
+	// NOTE: GovernanceActivationHeight sunset has been removed.
+	// The founder share is permanent and governance-immune.
 	return true
 }
 
