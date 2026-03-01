@@ -32,6 +32,9 @@ type mockKnowledgeKeeper struct {
 	totalFacts               uint64
 	consensusDiversity       uint64
 	pendingVerificationRatio uint64
+	throughputBps            uint64
+	disputeRateBps           uint64
+	avgRoundDurationBlocks   uint64
 }
 
 func (m *mockKnowledgeKeeper) GetVerificationRate(_ context.Context) uint64 {
@@ -48,6 +51,10 @@ func (m *mockKnowledgeKeeper) GetConsensusDiversity(_ context.Context) uint64 {
 
 func (m *mockKnowledgeKeeper) GetPendingVerificationRatio(_ context.Context) uint64 {
 	return m.pendingVerificationRatio
+}
+
+func (m *mockKnowledgeKeeper) GetVerificationHealth(_ context.Context) (throughputBps, disputeRateBps, avgRoundDurationBlocks uint64) {
+	return m.throughputBps, m.disputeRateBps, m.avgRoundDurationBlocks
 }
 
 type mockStakingKeeper struct {
@@ -200,9 +207,11 @@ func TestSensorReadings(t *testing.T) {
 	if obs.EconomicStability != 600_000 {
 		t.Fatalf("expected economic=600000, got %d", obs.EconomicStability)
 	}
-	// Governance: 50 domains / 100 target = 50% = 500,000 BPS
-	if obs.GovernanceParticipation != 500_000 {
-		t.Fatalf("expected governance=500000, got %d", obs.GovernanceParticipation)
+	// Governance: R31-2 formula: 70% domain count + 30% verification health.
+	// Domain: 50/100 = 500,000 BPS. Verification health: throughputBps=0 (default mock).
+	// Score: 500,000 * 700,000 / 1,000,000 + 0 * 300,000 / 1,000,000 = 350,000.
+	if obs.GovernanceParticipation != 350_000 {
+		t.Fatalf("expected governance=350000, got %d", obs.GovernanceParticipation)
 	}
 	// Security: 80 active / 111 target ≈ 72% ≈ 720,720 BPS
 	expectedSecurity := uint64(80) * types.BPS / uint64(111)

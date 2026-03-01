@@ -36,6 +36,7 @@ func TestSensorMaxValues(t *testing.T) {
 
 	mocks.knowledge.verificationRate = types.BPS
 	mocks.knowledge.consensusDiversity = types.BPS // both inputs at max → weighted output at max
+	mocks.knowledge.throughputBps = types.BPS       // max verification health (R31-2)
 	mocks.staking.totalStaked = big.NewInt(2_000_000_000_000) // > supply
 	mocks.staking.activeValidators = 200                       // > target
 	mocks.staking.targetValidators = 111
@@ -50,6 +51,7 @@ func TestSensorMaxValues(t *testing.T) {
 	if obs.EconomicStability != types.BPS {
 		t.Errorf("expected economic capped at BPS, got %d", obs.EconomicStability)
 	}
+	// Governance: 70% domain (capped at BPS) + 30% verification health (BPS) = BPS
 	if obs.GovernanceParticipation != types.BPS {
 		t.Errorf("expected governance capped at BPS, got %d", obs.GovernanceParticipation)
 	}
@@ -100,19 +102,26 @@ func TestSensorKnowledgeAboveBPS(t *testing.T) {
 func TestSensorGovernanceDomainCount(t *testing.T) {
 	k, mocks, ctx := setupKeeper(t)
 
-	// Test exact target (100 domains = 100%).
+	// R31-2: Governance = 70% domain count + 30% verification health.
+	// Set throughputBps to match domain score so blend produces consistent results.
+	mocks.knowledge.throughputBps = types.BPS // max verification health
+
+	// Test exact target (100 domains = 100% domain score).
+	// Governance = BPS * 70% + BPS * 30% = BPS.
 	mocks.ontology.domainCount = 100
 	obs := k.ObserveAll(ctx)
 	if obs.GovernanceParticipation != types.BPS {
-		t.Errorf("expected BPS for exact target, got %d", obs.GovernanceParticipation)
+		t.Errorf("expected BPS for exact target with max throughput, got %d", obs.GovernanceParticipation)
 	}
 
-	// Test partial (25 domains = 25%).
+	// Test partial (25 domains = 25% domain score) with max throughput.
+	// Governance = 250,000 * 70% + BPS * 30% = 175,000 + 300,000 = 475,000.
 	mocks.ontology.domainCount = 25
 	obs = k.ObserveAll(ctx)
-	expected := uint64(25) * types.BPS / 100
+	domainScore := uint64(25) * types.BPS / 100
+	expected := domainScore*700_000/types.BPS + types.BPS*300_000/types.BPS
 	if obs.GovernanceParticipation != expected {
-		t.Errorf("expected %d for 25 domains, got %d", expected, obs.GovernanceParticipation)
+		t.Errorf("expected %d for 25 domains with max throughput, got %d", expected, obs.GovernanceParticipation)
 	}
 }
 
