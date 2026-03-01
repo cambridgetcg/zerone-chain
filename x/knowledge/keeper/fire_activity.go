@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
@@ -59,29 +60,42 @@ func (k Keeper) GetEffectiveMinVerifiers(ctx context.Context, domain string) uin
 	}
 	base := uint32(params.MinVerifiers)
 
+	var effective uint32
+	var density uint64
+	var reason string
+
 	if k.partnershipKeeper == nil {
-		// No social structure -> tighter verification
-		return base + 1
-	}
+		effective = base + 1
+		reason = "no_social_structure"
+	} else {
+		density = k.partnershipKeeper.GetDomainPartnershipDensity(ctx, domain)
 
-	density := k.partnershipKeeper.GetDomainPartnershipDensity(ctx, domain)
+		threshold := params.SocialSaturationThreshold
+		if threshold == 0 {
+			threshold = 10
+		}
 
-	if density == 0 {
-		// No social structure in this domain -> Fire burns unchecked
-		return base + 1
-	}
-
-	threshold := params.SocialSaturationThreshold
-	if threshold == 0 {
-		threshold = 10 // fallback default
-	}
-
-	if density >= threshold {
-		// High social structure -> Water quenches excess
-		if base > 2 {
-			return base - 1
+		if density == 0 {
+			effective = base + 1
+			reason = "no_social_structure"
+		} else if density >= threshold && base > 2 {
+			effective = base - 1
+			reason = "social_saturation"
+		} else {
+			effective = base
+			reason = "default"
 		}
 	}
 
-	return base
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.social_verification_adjustment",
+		sdk.NewAttribute("domain", domain),
+		sdk.NewAttribute("base_min_verifiers", fmt.Sprintf("%d", base)),
+		sdk.NewAttribute("effective_min_verifiers", fmt.Sprintf("%d", effective)),
+		sdk.NewAttribute("partnership_density", fmt.Sprintf("%d", density)),
+		sdk.NewAttribute("reason", reason),
+	))
+
+	return effective
 }

@@ -8,6 +8,7 @@ import (
 
 	cdtypes "github.com/zerone-chain/zerone/x/capture_defense/types"
 	knowledgekeeper "github.com/zerone-chain/zerone/x/knowledge/keeper"
+	knowledgetypes "github.com/zerone-chain/zerone/x/knowledge/types"
 	ontologytypes "github.com/zerone-chain/zerone/x/ontology/types"
 	partnershipstypes "github.com/zerone-chain/zerone/x/partnerships/types"
 	qualificationtypes "github.com/zerone-chain/zerone/x/qualification/types"
@@ -192,15 +193,26 @@ func TestR31_FireMetal_HighActivityRelaxesHHIThreshold(t *testing.T) {
 		})
 	}
 
-	// Set domain diversity data with high round count (high activity)
+	// Index 15 completed rounds in the completion index so that
+	// GetDomainVerificationActivity (which reads from the completion index,
+	// not DomainDiversity) reports full activity.
+	for i := 0; i < 15; i++ {
+		require.NoError(t, h.KnowledgeKeeper.IndexCompletedRound(h.Ctx, uint64(10+i*5), fmt.Sprintf("act-round-%d", i),
+			&knowledgetypes.CompletedRoundMeta{Domain: domain, DurationBlocks: 11}))
+	}
+
+	// Also set domain diversity data for AnalyzeCaptureRisk internals
 	currentEpoch := uint64(h.Height()) / kParams.FitnessEpochBlocks
 	require.NoError(t, h.KnowledgeKeeper.SetDomainDiversity(h.Ctx, domain, currentEpoch, knowledgekeeper.DomainDiversityRecord{
 		Domain:         domain,
 		Epoch:          currentEpoch,
 		AvgEntropy:     500_000,
-		RoundCount:     15, // 15 rounds → activity = min(15 * 100_000, 1_000_000) = 1_000_000 (full)
+		RoundCount:     15,
 		UnanimousCount: 2,
 	}))
+
+	// Advance context height past all indexed rounds so they fall within the window
+	setHeight(h, 500)
 
 	// Analyze capture risk with high activity
 	cdParams := h.CaptureDefenseKeeper.GetParams(h.Ctx)
