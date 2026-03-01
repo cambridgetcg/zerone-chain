@@ -71,6 +71,18 @@ func (pk *mockPartnershipKeeper) IsSuspended(_ context.Context, partnershipId st
 	return p.suspended, nil
 }
 
+func (pk *mockPartnershipKeeper) GetDomainPartnershipDensity(_ context.Context, _ string) uint64 {
+	// Count unique participants across all active partnerships
+	unique := make(map[string]bool)
+	for _, p := range pk.partnerships {
+		if p.active {
+			unique[p.humanAddr] = true
+			unique[p.agentAddr] = true
+		}
+	}
+	return uint64(len(unique))
+}
+
 func (pk *mockPartnershipKeeper) DistributeReward(_ context.Context, partnershipId string, amount sdk.Coins, source string) error {
 	p, ok := pk.partnerships[partnershipId]
 	if !ok {

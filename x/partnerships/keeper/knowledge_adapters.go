@@ -54,6 +54,12 @@ func (a *KnowledgePartnershipAdapter) IsSuspended(ctx context.Context, partnersh
 	return p.Status == types.StatusSuspended, nil
 }
 
+// GetDomainPartnershipDensity implements knowledgetypes.PartnershipKeeper.
+func (a *KnowledgePartnershipAdapter) GetDomainPartnershipDensity(ctx context.Context, domain string) uint64 {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	return a.k.GetDomainPartnershipDensity(sdkCtx, domain)
+}
+
 func (a *KnowledgePartnershipAdapter) DistributeReward(ctx context.Context, partnershipId string, amount sdk.Coins, source string) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	p, found := a.k.GetPartnership(sdkCtx, partnershipId)

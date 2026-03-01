@@ -101,6 +101,8 @@ type PartnershipKeeper interface {
 	IsSuspended(ctx context.Context, partnershipId string) (bool, error)
 	// DistributeReward distributes a reward through the partnership split.
 	DistributeReward(ctx context.Context, partnershipId string, amount sdk.Coins, source string) error
+	// GetDomainPartnershipDensity returns the count of unique partnership participants in a domain (R31-2).
+	GetDomainPartnershipDensity(ctx context.Context, domain string) uint64
 }
 
 // ZeroneAuthKeeper defines the expected zerone auth keeper interface (R28-5).
