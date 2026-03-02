@@ -14,7 +14,7 @@ func TestKnowledge_ClaimToFact(t *testing.T) {
 	}
 
 	chain, ctx := SetupChain(t, 1)
-	valKeyName := chain.Validators[0].KeyName()
+	valKeyName := "validator"
 
 	// 1. Submit a claim
 	content := "Water boils at 100 degrees Celsius at standard atmospheric pressure"
@@ -68,7 +68,7 @@ func TestKnowledge_DomainPressure(t *testing.T) {
 	}
 
 	chain, ctx := SetupChain(t, 1)
-	valKeyName := chain.Validators[0].KeyName()
+	valKeyName := "validator"
 
 	domain := "mathematics"
 	var pressures []uint64
@@ -127,9 +127,9 @@ func TestKnowledge_Dissent(t *testing.T) {
 	// 3 validators for majority/minority voting.
 	chain, ctx := SetupChain(t, 3)
 
-	val0Key := chain.Validators[0].KeyName()
-	val1Key := chain.Validators[1].KeyName()
-	val2Key := chain.Validators[2].KeyName()
+	val0Key := "validator"
+	val1Key := "validator"
+	val2Key := "validator"
 
 	// 1. Submit claim
 	content := "The speed of light in vacuum is approximately 299792458 meters per second"
@@ -208,7 +208,7 @@ func TestKnowledge_Metabolism(t *testing.T) {
 	}
 
 	chain, ctx := SetupChain(t, 1)
-	valKeyName := chain.Validators[0].KeyName()
+	valKeyName := "validator"
 
 	// 1. Create a fact via full lifecycle
 	content := "Newtons first law states that an object at rest stays at rest unless acted upon"
@@ -266,7 +266,7 @@ func TestKnowledge_WuXing(t *testing.T) {
 	}
 
 	chain, ctx := SetupChain(t, 1)
-	valKeyName := chain.Validators[0].KeyName()
+	valKeyName := "validator"
 
 	// 1. Record the current block height for alignment observation query.
 	heightBefore, err := chain.Height(ctx)
