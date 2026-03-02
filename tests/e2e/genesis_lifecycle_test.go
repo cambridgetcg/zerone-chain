@@ -43,6 +43,7 @@ func TestGenesis_AllModulesInitialize(t *testing.T) {
 		"discovery",
 		"disputes",
 		"emergency",
+		"evidence_mgmt",
 		"home",
 		"ibcratelimit",
 		"icaauth",
