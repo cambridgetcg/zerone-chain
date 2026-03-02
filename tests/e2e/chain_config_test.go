@@ -83,6 +83,7 @@ func testGenesisKV() []cosmos.GenesisKV {
 		cosmos.NewGenesisKV("app_state.knowledge.params.commit_phase_blocks", 10),
 		cosmos.NewGenesisKV("app_state.knowledge.params.reveal_phase_blocks", 10),
 		cosmos.NewGenesisKV("app_state.knowledge.params.aggregation_blocks", 5),
+		cosmos.NewGenesisKV("app_state.knowledge.params.fitness_epoch_blocks", 10),
 
 		// ── Alignment: fast observation cycle ──
 		cosmos.NewGenesisKV("app_state.alignment.params.observation_interval_blocks", 10),
