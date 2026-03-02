@@ -97,6 +97,10 @@ func TestGenesis_ExportRoundTrip(t *testing.T) {
 	height, err := chain.Height(ctx)
 	require.NoError(t, err)
 
+	// Stop the chain so the export command can open the database.
+	err = chain.StopAllNodes(ctx)
+	require.NoError(t, err)
+
 	// Export genesis via the real CLI path (zeroned export).
 	exported, err := chain.ExportState(ctx, height)
 	require.NoError(t, err)
@@ -135,7 +139,7 @@ func TestGenesis_ExportRoundTrip(t *testing.T) {
 	verifyParamPath(t, appState, "knowledge", "params", "commit_phase_blocks", 10)
 	verifyParamPath(t, appState, "alignment", "params", "observation_interval_blocks", 10)
 	verifyParamPath(t, appState, "zerone_gov", "params", "voting_period_blocks", 10)
-	verifyParamPath(t, appState, "zerone_staking", "params", "unbonding_period_blocks", 50)
+	verifyParamPath(t, appState, "zerone_staking", "params", "unbonding_period", 50)
 	verifyParamPath(t, appState, "partnerships", "params", "formation_window_blocks", 20)
 
 	// Re-marshal to JSON and re-parse (structural round-trip).
@@ -203,15 +207,29 @@ func TestGenesis_GenesisCheckTool(t *testing.T) {
 	height, err := chain.Height(ctx)
 	require.NoError(t, err)
 
+	// Stop the chain so the export command can open the database.
+	err = chain.StopAllNodes(ctx)
+	require.NoError(t, err)
+
 	// Export genesis.
 	exported, err := chain.ExportState(ctx, height)
 	require.NoError(t, err)
 	require.NotEmpty(t, exported)
 
-	// Write exported genesis to a temp file.
+	// The SDK zeroes vote_extensions_enable_height during export (it's already
+	// active). Restore it so genesis-check passes the PoT requirement.
+	var genesis map[string]interface{}
+	err = json.Unmarshal([]byte(exported), &genesis)
+	require.NoError(t, err)
+	setNestedField(genesis, "1",
+		"consensus", "params", "abci", "vote_extensions_enable_height")
+	patched, err := json.Marshal(genesis)
+	require.NoError(t, err)
+
+	// Write patched genesis to a temp file.
 	tmpDir := t.TempDir()
 	genesisPath := filepath.Join(tmpDir, "exported_genesis.json")
-	err = os.WriteFile(genesisPath, []byte(exported), 0o644)
+	err = os.WriteFile(genesisPath, patched, 0o644)
 	require.NoError(t, err)
 
 	// Find the project root by walking up from the test directory to find go.mod.
@@ -246,5 +264,22 @@ func findProjectRoot(t *testing.T) string {
 			t.Fatal("could not find project root (no go.mod found in any parent directory)")
 		}
 		dir = parent
+	}
+}
+
+// setNestedField sets a value in a nested map[string]interface{} structure,
+// creating intermediate maps as needed.
+func setNestedField(m map[string]interface{}, value interface{}, keys ...string) {
+	for i, key := range keys {
+		if i == len(keys)-1 {
+			m[key] = value
+			return
+		}
+		next, ok := m[key].(map[string]interface{})
+		if !ok {
+			next = make(map[string]interface{})
+			m[key] = next
+		}
+		m = next
 	}
 }

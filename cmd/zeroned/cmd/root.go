@@ -175,7 +175,11 @@ func initRootCmd(rootCmd *cobra.Command, encodingConfig app.EncodingConfig) {
 
 // addModuleInitFlags adds module-specific init flags to the start command.
 func addModuleInitFlags(startCmd *cobra.Command) {
-	// Module-specific flags can be added here if needed.
+	// interchaintest v8 hardcodes --x-crisis-skip-assert-invariants in the
+	// container start command. SDK v0.50 removed this flag, so register it
+	// as a hidden no-op to keep E2E tests working.
+	startCmd.Flags().Bool("x-crisis-skip-assert-invariants", false, "deprecated no-op (kept for interchaintest compatibility)")
+	_ = startCmd.Flags().MarkHidden("x-crisis-skip-assert-invariants")
 }
 
 // genesisCommand returns the genesis subcommand tree.

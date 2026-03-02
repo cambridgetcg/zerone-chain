@@ -24,7 +24,7 @@ func ZeroneChainSpec(numValidators int) *interchaintest.ChainSpec {
 			Bin:            "zeroned",
 			Bech32Prefix:   "zrn",
 			Denom:          "uzrn",
-			GasPrices:      "0.025uzrn",
+			GasPrices:      "1uzrn",
 			GasAdjustment:  1.5,
 			TrustingPeriod: "112h",
 			NoHostMount:    false,
@@ -55,7 +55,7 @@ func ZeroneGovChainSpec(numValidators int) *interchaintest.ChainSpec {
 			Bin:            "zeroned",
 			Bech32Prefix:   "zrn",
 			Denom:          "uzrn",
-			GasPrices:      "0.025uzrn",
+			GasPrices:      "1uzrn",
 			GasAdjustment:  1.5,
 			TrustingPeriod: "112h",
 			NoHostMount:    false,
@@ -82,14 +82,14 @@ func testGenesisKV() []cosmos.GenesisKV {
 		// ── Knowledge: short verification lifecycle ──
 		cosmos.NewGenesisKV("app_state.knowledge.params.commit_phase_blocks", 10),
 		cosmos.NewGenesisKV("app_state.knowledge.params.reveal_phase_blocks", 10),
-		cosmos.NewGenesisKV("app_state.knowledge.params.aggregation_blocks", 5),
+		cosmos.NewGenesisKV("app_state.knowledge.params.aggregation_phase_blocks", 5),
 		cosmos.NewGenesisKV("app_state.knowledge.params.fitness_epoch_blocks", 10),
 
 		// ── Alignment: fast observation cycle ──
 		cosmos.NewGenesisKV("app_state.alignment.params.observation_interval_blocks", 10),
 
 		// ── Staking: fast unbonding for delegation tests ──
-		cosmos.NewGenesisKV("app_state.zerone_staking.params.unbonding_period_blocks", 50),
+		cosmos.NewGenesisKV("app_state.zerone_staking.params.unbonding_period", 50),
 
 		// ── Capture defense: shorter analysis interval ──
 		cosmos.NewGenesisKV("app_state.capture_defense.params.risk_analysis_interval", 20),
