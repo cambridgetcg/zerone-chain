@@ -127,34 +127,36 @@ func TestKnowledge_Dissent(t *testing.T) {
 	// 3 validators for majority/minority voting.
 	chain, ctx := SetupChain(t, 3)
 
-	val0Key := "validator"
-	val1Key := "validator"
-	val2Key := "validator"
+	// Each validator node has its own keyring with a key named "validator".
+	// To sign as different validators, we must target their specific nodes.
+	val0 := chain.Validators[0]
+	val1 := chain.Validators[1]
+	val2 := chain.Validators[2]
 
-	// 1. Submit claim
+	// 1. Submit claim (from val0's node)
 	content := "The speed of light in vacuum is approximately 299792458 meters per second"
-	claimID := SubmitClaim(t, chain, ctx, val0Key, content, "physics", "empirical", "1000000")
+	claimID := SubmitClaim(t, chain, ctx, "validator", content, "physics", "empirical", "1000000")
 	t.Logf("Claim ID: %s", claimID)
 
 	roundID := GetClaimRoundID(t, chain, ctx, claimID)
 	t.Logf("Round ID: %s", roundID)
 
-	// 2. Commit phase — 2 accept, 1 reject
+	// 2. Commit phase — 2 accept, 1 reject (each on their own node)
 	salt0 := []byte("dissent-salt-val0")
 	salt1 := []byte("dissent-salt-val1")
 	salt2 := []byte("dissent-salt-val2")
 
-	CommitVote(t, chain, ctx, val0Key, roundID, "accept", salt0)
-	CommitVote(t, chain, ctx, val1Key, roundID, "accept", salt1)
-	CommitVote(t, chain, ctx, val2Key, roundID, "reject", salt2)
+	CommitVoteOnNode(t, val0, ctx, roundID, "accept", salt0)
+	CommitVoteOnNode(t, val1, ctx, roundID, "accept", salt1)
+	CommitVoteOnNode(t, val2, ctx, roundID, "reject", salt2)
 
 	// 3. Wait for reveal phase
 	WaitForRoundPhase(t, chain, ctx, roundID, "VERIFICATION_PHASE_REVEAL", 15)
 
-	// 4. Reveal all votes
-	RevealVote(t, chain, ctx, val0Key, roundID, "accept", salt0)
-	RevealVote(t, chain, ctx, val1Key, roundID, "accept", salt1)
-	RevealVote(t, chain, ctx, val2Key, roundID, "reject", salt2)
+	// 4. Reveal all votes (each on their own node)
+	RevealVoteOnNode(t, val0, ctx, roundID, "accept", salt0)
+	RevealVoteOnNode(t, val1, ctx, roundID, "accept", salt1)
+	RevealVoteOnNode(t, val2, ctx, roundID, "reject", salt2)
 
 	// 5. Wait for completion
 	WaitForRoundPhase(t, chain, ctx, roundID, "VERIFICATION_PHASE_COMPLETE", 20)

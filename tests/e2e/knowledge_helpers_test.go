@@ -222,6 +222,39 @@ func DriveClaimToFact(t *testing.T, chain *cosmos.CosmosChain, ctx context.Conte
 	return claimID
 }
 
+// CommitVoteOnNode computes SHA-256(vote || salt) and submits a commitment
+// via a specific validator node. Use this when testing with multiple validators
+// since each node has its own keyring with a key named "validator".
+func CommitVoteOnNode(t *testing.T, node *cosmos.ChainNode, ctx context.Context,
+	roundID, vote string, salt []byte,
+) {
+	t.Helper()
+
+	h := sha256.New()
+	h.Write([]byte(vote))
+	h.Write(salt)
+	hashHex := hex.EncodeToString(h.Sum(nil))
+
+	txHash, err := node.ExecTx(ctx, "validator",
+		"knowledge", "submit-commitment", roundID, hashHex,
+	)
+	require.NoError(t, err, "CommitVoteOnNode failed (tx=%s)", txHash)
+}
+
+// RevealVoteOnNode submits a reveal via a specific validator node.
+func RevealVoteOnNode(t *testing.T, node *cosmos.ChainNode, ctx context.Context,
+	roundID, vote string, salt []byte,
+) {
+	t.Helper()
+
+	saltHex := hex.EncodeToString(salt)
+
+	txHash, err := node.ExecTx(ctx, "validator",
+		"knowledge", "submit-reveal", roundID, vote, saltHex,
+	)
+	require.NoError(t, err, "RevealVoteOnNode failed (tx=%s)", txHash)
+}
+
 // jsonNumber extracts a numeric value from a JSON map, handling both
 // json.Number and float64 representations.
 func jsonNumber(m map[string]interface{}, key string) (uint64, bool) {
