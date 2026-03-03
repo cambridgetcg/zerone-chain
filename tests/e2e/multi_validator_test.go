@@ -208,8 +208,17 @@ func TestMultiVal_ValidatorSetChanges(t *testing.T) {
 		require.NoError(t, err)
 		initialCount := len(vals)
 
-		// Find the newly added validator's operator address (last one)
-		newVal := vals[len(vals)-1]
+		// Find the newly added validator by moniker (ordering is not guaranteed)
+		var newVal stakingtypes.Validator
+		found := false
+		for _, v := range vals {
+			if v.GetMoniker() == "newval5" {
+				newVal = v
+				found = true
+				break
+			}
+		}
+		require.True(t, found, "should find validator with moniker newval5")
 		t.Logf("unbonding validator: %s", newVal.OperatorAddress)
 
 		// Unbond all tokens from the new validator using the full node
@@ -280,14 +289,14 @@ func TestMultiVal_DowntimeSlashing(t *testing.T) {
 		// Wait 25 blocks to be safe
 		WaitBlocks(t, chain, ctx, 25)
 		t.Log("waited 25 blocks with validator 3 offline")
+
+		// Unpause so subsequent subtests can query the node
+		err = targetVal.UnpauseContainer(ctx)
+		require.NoError(t, err)
+		WaitBlocks(t, chain, ctx, 3)
 	})
 
 	t.Run("validator is jailed", func(t *testing.T) {
-		// Unpause container first so we can query from it
-		err := targetVal.UnpauseContainer(ctx)
-		require.NoError(t, err)
-		WaitBlocks(t, chain, ctx, 3)
-
 		// Check that the validator is jailed
 		targetSDKVal, err := chain.StakingQueryValidator(ctx, targetAddr)
 		require.NoError(t, err)
@@ -522,19 +531,20 @@ func TestMultiVal_CoordinatedUpgrade(t *testing.T) {
 
 	t.Run("upgrade plan scheduled", func(t *testing.T) {
 		stdout, _, err := chain.GetNode().ExecQuery(ctx, "upgrade", "plan")
-		if err == nil && len(stdout) > 0 {
-			var planResp map[string]interface{}
-			if json.Unmarshal(stdout, &planResp) == nil {
-				if plan, ok := planResp["plan"].(map[string]interface{}); ok {
-					t.Logf("upgrade plan: name=%s height=%s",
-						jsonString(plan["name"]), jsonString(plan["height"]))
-					require.Equal(t, "v3.0.0", jsonString(plan["name"]))
-					require.Equal(t, "999999", jsonString(plan["height"]))
-				}
-			}
-		} else {
-			t.Logf("upgrade plan query returned no plan (may not be registered yet): %v", err)
-		}
+		require.NoError(t, err, "upgrade plan query should succeed")
+		require.NotEmpty(t, stdout, "upgrade plan query should return data")
+
+		var planResp map[string]interface{}
+		err = json.Unmarshal(stdout, &planResp)
+		require.NoError(t, err, "upgrade plan response should be valid JSON")
+
+		plan, ok := planResp["plan"].(map[string]interface{})
+		require.True(t, ok, "response should contain a plan object")
+
+		t.Logf("upgrade plan: name=%s height=%s",
+			jsonString(plan["name"]), jsonString(plan["height"]))
+		require.Equal(t, "v3.0.0", jsonString(plan["name"]))
+		require.Equal(t, "999999", jsonString(plan["height"]))
 	})
 }
 
