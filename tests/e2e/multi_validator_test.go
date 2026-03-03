@@ -11,6 +11,7 @@ import (
 	"github.com/strangelove-ventures/interchaintest/v8"
 	"github.com/strangelove-ventures/interchaintest/v8/chain/cosmos"
 	"github.com/strangelove-ventures/interchaintest/v8/testreporter"
+	"github.com/strangelove-ventures/interchaintest/v8/testutil"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
 
@@ -345,5 +346,107 @@ func TestMultiVal_DowntimeSlashing(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, vals, 4, "all 4 validators should be bonded after unjail")
 		t.Log("validator 3 re-entered active set")
+	})
+}
+
+// TestMultiVal_NetworkPartition tests chain behavior under validator failures:
+// - 1 of 4 down: chain continues (75% > 2/3)
+// - 2 of 4 down: chain halts (50% < 2/3)
+// - Restart: chain resumes and catches up
+func TestMultiVal_NetworkPartition(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping E2E test in short mode")
+	}
+
+	chain, ctx := SetupChain(t, 4)
+	WaitBlocks(t, chain, ctx, 5)
+
+	t.Run("1 of 4 down - chain continues", func(t *testing.T) {
+		err := chain.Validators[3].PauseContainer(ctx)
+		require.NoError(t, err)
+		t.Log("paused validator 3")
+
+		// Chain should continue: 3/4 = 75% > 66.7%
+		h1, err := chain.Height(ctx)
+		require.NoError(t, err)
+		WaitBlocks(t, chain, ctx, 5)
+		h2, err := chain.Height(ctx)
+		require.NoError(t, err)
+		require.Greater(t, h2, h1, "chain should produce blocks with 3/4 validators")
+		t.Logf("chain advanced %d→%d with 1 validator down", h1, h2)
+	})
+
+	t.Run("2 of 4 down - chain halts", func(t *testing.T) {
+		// Pause validator 2 (validator 3 is already paused)
+		err := chain.Validators[2].PauseContainer(ctx)
+		require.NoError(t, err)
+		t.Log("paused validator 2 (now 2/4 down)")
+
+		// Chain should halt: 2/4 = 50% < 66.7%
+		// Use a short timeout to detect the halt
+		h1, err := chain.Height(ctx)
+		require.NoError(t, err)
+
+		// Wait a bit and check the chain hasn't advanced much
+		// (it may produce 1-2 blocks from in-flight consensus rounds)
+		timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
+		err = testutil.WaitForBlocks(timeoutCtx, 5, chain)
+		require.Error(t, err, "chain should not produce 5 blocks with only 2/4 validators")
+		t.Log("confirmed: chain halted with 2/4 validators down")
+
+		h2, err := chain.Height(ctx)
+		if err == nil {
+			t.Logf("height stalled around %d (started at %d)", h2, h1)
+		}
+	})
+
+	t.Run("restart validators - chain resumes", func(t *testing.T) {
+		// Record height before restart
+		hBefore, _ := chain.Height(ctx)
+
+		// Unpause both validators
+		err := chain.Validators[2].UnpauseContainer(ctx)
+		require.NoError(t, err)
+		t.Log("unpaused validator 2")
+
+		err = chain.Validators[3].UnpauseContainer(ctx)
+		require.NoError(t, err)
+		t.Log("unpaused validator 3")
+
+		// Chain should resume — wait for blocks with generous timeout
+		resumeCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		defer cancel()
+		err = testutil.WaitForBlocks(resumeCtx, 5, chain)
+		require.NoError(t, err, "chain should resume producing blocks after validators restart")
+
+		hAfter, err := chain.Height(ctx)
+		require.NoError(t, err)
+		require.Greater(t, hAfter, hBefore, "chain should have advanced after restart")
+		t.Logf("chain resumed: %d → %d", hBefore, hAfter)
+	})
+
+	t.Run("all validators caught up", func(t *testing.T) {
+		// Wait a few more blocks to let all validators sync
+		WaitBlocks(t, chain, ctx, 5)
+
+		// All 4 nodes should report similar heights
+		for i, val := range chain.Validators {
+			h, err := val.Height(ctx)
+			require.NoError(t, err)
+			t.Logf("validator %d height: %d", i, h)
+		}
+
+		// Heights should be within 1-2 blocks of each other
+		h0, _ := chain.Validators[0].Height(ctx)
+		for i := 1; i < 4; i++ {
+			hi, _ := chain.Validators[i].Height(ctx)
+			diff := h0 - hi
+			if diff < 0 {
+				diff = -diff
+			}
+			require.LessOrEqual(t, diff, int64(2),
+				"validator %d should be within 2 blocks of validator 0", i)
+		}
 	})
 }
