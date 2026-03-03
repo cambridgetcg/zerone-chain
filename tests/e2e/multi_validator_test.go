@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	sdkmath "cosmossdk.io/math"
 	"github.com/strangelove-ventures/interchaintest/v8"
@@ -231,5 +232,118 @@ func TestMultiVal_ValidatorSetChanges(t *testing.T) {
 		require.NoError(t, err)
 		require.Greater(t, h2, h1, "chain continues after validator removal")
 		t.Logf("chain continues at height %d with %d validators", h2, len(vals))
+	})
+}
+
+// TestMultiVal_DowntimeSlashing tests that a validator missing blocks gets
+// jailed and slashed, and can unjail to re-enter the active set.
+// Uses fast slashing params: signed_blocks_window=20, min_signed=50%.
+func TestMultiVal_DowntimeSlashing(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping E2E test in short mode")
+	}
+
+	chain, ctx := SetupSlashingChain(t, 4)
+	WaitBlocks(t, chain, ctx, 5)
+
+	// Get the validator we'll take offline
+	targetVal := chain.Validators[3]
+	targetAddr, err := targetVal.KeyBech32(ctx, "validator", "val")
+	require.NoError(t, err)
+	t.Logf("target validator (val3) operator address: %s", targetAddr)
+
+	t.Run("pre-slashing all validators bonded", func(t *testing.T) {
+		vals, err := chain.StakingQueryValidators(ctx, stakingtypes.BondStatusBonded)
+		require.NoError(t, err)
+		require.Len(t, vals, 4)
+
+		// Record initial tokens for the target validator
+		targetSDKVal, err := chain.StakingQueryValidator(ctx, targetAddr)
+		require.NoError(t, err)
+		t.Logf("target validator tokens before: %s", targetSDKVal.Tokens)
+	})
+
+	// Record tokens before slashing
+	targetSDKVal, err := chain.StakingQueryValidator(ctx, targetAddr)
+	require.NoError(t, err)
+	tokensBefore := targetSDKVal.Tokens
+
+	t.Run("pause validator to trigger downtime", func(t *testing.T) {
+		// Pause validator 3 — it will miss blocks
+		err := targetVal.PauseContainer(ctx)
+		require.NoError(t, err)
+		t.Log("paused validator 3")
+
+		// Wait for enough blocks to exceed the signed_blocks_window (20 blocks)
+		// Validator must miss >50% of 20 = >10 blocks
+		// Wait 25 blocks to be safe
+		WaitBlocks(t, chain, ctx, 25)
+		t.Log("waited 25 blocks with validator 3 offline")
+	})
+
+	t.Run("validator is jailed", func(t *testing.T) {
+		// Unpause container first so we can query from it
+		err := targetVal.UnpauseContainer(ctx)
+		require.NoError(t, err)
+		WaitBlocks(t, chain, ctx, 3)
+
+		// Check that the validator is jailed
+		targetSDKVal, err := chain.StakingQueryValidator(ctx, targetAddr)
+		require.NoError(t, err)
+		require.True(t, targetSDKVal.Jailed, "validator should be jailed after downtime")
+		t.Logf("validator jailed: %v, status: %s", targetSDKVal.Jailed, targetSDKVal.Status)
+	})
+
+	t.Run("slashing penalty applied", func(t *testing.T) {
+		targetSDKVal, err := chain.StakingQueryValidator(ctx, targetAddr)
+		require.NoError(t, err)
+		tokensAfter := targetSDKVal.Tokens
+
+		// Tokens should have decreased (1% slash for downtime)
+		require.True(t, tokensAfter.LT(tokensBefore),
+			"tokens should decrease after slashing: before=%s after=%s",
+			tokensBefore, tokensAfter)
+		t.Logf("tokens before=%s after=%s (slashed)", tokensBefore, tokensAfter)
+	})
+
+	t.Run("jailed validator excluded from consensus", func(t *testing.T) {
+		// Only 3 validators should be bonded now
+		vals, err := chain.StakingQueryValidators(ctx, stakingtypes.BondStatusBonded)
+		require.NoError(t, err)
+
+		// Count non-jailed validators
+		activeCount := 0
+		for _, v := range vals {
+			if !v.Jailed {
+				activeCount++
+			}
+		}
+		require.Equal(t, 3, activeCount, "should have 3 active (non-jailed) validators")
+	})
+
+	t.Run("unjail after jail period", func(t *testing.T) {
+		// Wait for jail duration to pass (10s in our genesis)
+		time.Sleep(12 * time.Second)
+		WaitBlocks(t, chain, ctx, 2)
+
+		// Unjail from the target validator's node
+		err := targetVal.SlashingUnJail(ctx, "validator")
+		require.NoError(t, err)
+		t.Log("unjailed validator 3")
+
+		WaitBlocks(t, chain, ctx, 3)
+	})
+
+	t.Run("validator re-enters active set", func(t *testing.T) {
+		targetSDKVal, err := chain.StakingQueryValidator(ctx, targetAddr)
+		require.NoError(t, err)
+		require.False(t, targetSDKVal.Jailed, "validator should no longer be jailed")
+		require.Equal(t, stakingtypes.Bonded, targetSDKVal.Status,
+			"validator should be bonded again after unjail")
+
+		vals, err := chain.StakingQueryValidators(ctx, stakingtypes.BondStatusBonded)
+		require.NoError(t, err)
+		require.Len(t, vals, 4, "all 4 validators should be bonded after unjail")
+		t.Log("validator 3 re-entered active set")
 	})
 }
