@@ -142,6 +142,51 @@ func govGenesisKV() []cosmos.GenesisKV {
 	return kvs
 }
 
+// slashingGenesisKV extends testGenesisKV with fast slashing params
+// for downtime slashing tests.
+func slashingGenesisKV() []cosmos.GenesisKV {
+	kvs := testGenesisKV()
+	kvs = append(kvs,
+		// Slashing: short window so downtime is detected quickly
+		cosmos.NewGenesisKV("app_state.slashing.params.signed_blocks_window", "20"),
+		cosmos.NewGenesisKV("app_state.slashing.params.min_signed_per_window", "0.500000000000000000"),
+		cosmos.NewGenesisKV("app_state.slashing.params.downtime_jail_duration", "10s"),
+		cosmos.NewGenesisKV("app_state.slashing.params.slash_fraction_downtime", "0.010000000000000000"),
+		cosmos.NewGenesisKV("app_state.slashing.params.slash_fraction_double_sign", "0.050000000000000000"),
+	)
+	return kvs
+}
+
+// ZeroneSlashingChainSpec returns a chain spec with fast slashing params
+// for testing downtime jailing and unjailing.
+func ZeroneSlashingChainSpec(numValidators int) *interchaintest.ChainSpec {
+	numFullNodes := 0
+	return &interchaintest.ChainSpec{
+		ChainName: "zerone",
+		Version:   "local",
+		ChainConfig: ibc.ChainConfig{
+			Type:           "cosmos",
+			Name:           "zerone",
+			ChainID:        "zerone-test-1",
+			Bin:            "zeroned",
+			Bech32Prefix:   "zrn",
+			Denom:          "uzrn",
+			GasPrices:      "1uzrn",
+			GasAdjustment:  1.5,
+			TrustingPeriod: "112h",
+			NoHostMount:    false,
+			ModifyGenesis:  cosmos.ModifyGenesis(slashingGenesisKV()),
+			Images: []ibc.DockerImage{{
+				Repository: "zerone",
+				Version:    "local",
+				UIDGID:     "0:0",
+			}},
+		},
+		NumValidators: &numValidators,
+		NumFullNodes:  &numFullNodes,
+	}
+}
+
 // modifyGenesisWithCouncil wraps the standard KV-based genesis modifier with
 // an additional step that extracts validator delegator addresses from gentxs
 // and sets them as the emergency genesis council.
