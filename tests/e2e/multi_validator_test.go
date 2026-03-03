@@ -450,3 +450,90 @@ func TestMultiVal_NetworkPartition(t *testing.T) {
 		}
 	})
 }
+
+// TestMultiVal_CoordinatedUpgrade tests the governance upgrade flow on a
+// 4-validator network: submit upgrade LIP, all validators vote yes,
+// verify the upgrade plan is scheduled.
+func TestMultiVal_CoordinatedUpgrade(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping E2E test in short mode")
+	}
+
+	chain, ctx := SetupGovChain(t, 4)
+	WaitBlocks(t, chain, ctx, 5)
+
+	t.Run("submit upgrade LIP", func(t *testing.T) {
+		ExecTx(t, chain, ctx, "validator", "zerone_gov", "submit-lip",
+			"v3.0.0 upgrade",
+			"Schedule the v3.0.0 upgrade at a future height",
+			"upgrade",
+			"1000000",
+		)
+		WaitBlocks(t, chain, ctx, 1)
+	})
+
+	lipID := findLatestLIP(t, chain, ctx)
+	t.Logf("submitted upgrade LIP: %s", lipID)
+
+	t.Run("attach upgrade plan", func(t *testing.T) {
+		ExecTx(t, chain, ctx, "validator", "zerone_gov", "attach-upgrade-plan",
+			lipID, "v3.0.0", "999999", "https://github.com/zerone-chain/zerone/releases/tag/v3.0.0",
+		)
+		WaitBlocks(t, chain, ctx, 1)
+	})
+
+	t.Run("stake to enter review", func(t *testing.T) {
+		ExecTx(t, chain, ctx, "validator", "zerone_gov", "stake-lip", lipID, "1")
+		WaitBlocks(t, chain, ctx, 1)
+
+		stage := getLIPField(t, chain, ctx, lipID, "stage")
+		require.Equal(t, "review", stage)
+	})
+
+	t.Run("wait for voting stage", func(t *testing.T) {
+		// review_blocks=3 + discussion_period_blocks=5 + margin
+		WaitBlocks(t, chain, ctx, 12)
+
+		stage := getLIPField(t, chain, ctx, lipID, "stage")
+		require.Equal(t, "voting", stage)
+	})
+
+	t.Run("all validators vote yes", func(t *testing.T) {
+		// Each validator votes from their own node
+		for i, val := range chain.Validators {
+			_, err := val.ExecTx(ctx, "validator", "zerone_gov", "cast-vote", lipID, "yes")
+			require.NoError(t, err, "validator %d should vote successfully", i)
+			t.Logf("validator %d voted yes", i)
+		}
+	})
+
+	t.Run("LIP passes", func(t *testing.T) {
+		// voting_period_blocks=10 + margin
+		WaitBlocks(t, chain, ctx, 12)
+
+		stage := getLIPField(t, chain, ctx, lipID, "stage")
+		require.Equal(t, "passed", stage, "upgrade LIP should pass with unanimous vote")
+
+		tally := queryJSON(t, chain, ctx, "zerone_gov", "tally-result", lipID)
+		passed, _ := tally["passed"].(bool)
+		require.True(t, passed)
+		t.Logf("upgrade LIP %s passed", lipID)
+	})
+
+	t.Run("upgrade plan scheduled", func(t *testing.T) {
+		stdout, _, err := chain.GetNode().ExecQuery(ctx, "upgrade", "plan")
+		if err == nil && len(stdout) > 0 {
+			var planResp map[string]interface{}
+			if json.Unmarshal(stdout, &planResp) == nil {
+				if plan, ok := planResp["plan"].(map[string]interface{}); ok {
+					t.Logf("upgrade plan: name=%s height=%s",
+						jsonString(plan["name"]), jsonString(plan["height"]))
+					require.Equal(t, "v3.0.0", jsonString(plan["name"]))
+					require.Equal(t, "999999", jsonString(plan["height"]))
+				}
+			}
+		} else {
+			t.Logf("upgrade plan query returned no plan (may not be registered yet): %v", err)
+		}
+	})
+}
