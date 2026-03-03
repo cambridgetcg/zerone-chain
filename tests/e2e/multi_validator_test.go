@@ -537,3 +537,94 @@ func TestMultiVal_CoordinatedUpgrade(t *testing.T) {
 		}
 	})
 }
+
+// TestMultiVal_FullNodeSync tests that a new full node can join a running
+// 4-validator chain, catch up to the current height, and serve correct queries.
+func TestMultiVal_FullNodeSync(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping E2E test in short mode")
+	}
+
+	chain, ctx := SetupChain(t, 4)
+
+	// Let the chain run for a while to build up state
+	t.Log("waiting 50 blocks to build chain state...")
+	WaitBlocks(t, chain, ctx, 50)
+
+	validatorHeight, err := chain.Height(ctx)
+	require.NoError(t, err)
+	t.Logf("chain at height %d before adding full node", validatorHeight)
+
+	t.Run("add full node", func(t *testing.T) {
+		err := chain.AddFullNodes(ctx, nil, 1)
+		require.NoError(t, err)
+		require.Len(t, chain.FullNodes, 1)
+		t.Log("full node added successfully")
+	})
+
+	fullNode := chain.FullNodes[0]
+
+	t.Run("full node catches up", func(t *testing.T) {
+		// Wait for the full node to sync — it needs to replay all blocks
+		// Give it generous time since it's block-syncing from genesis
+		for i := 0; i < 30; i++ {
+			WaitBlocks(t, chain, ctx, 2)
+			fnHeight, err := fullNode.Height(ctx)
+			if err != nil {
+				continue
+			}
+			valHeight, _ := chain.Height(ctx)
+			if fnHeight >= valHeight-2 {
+				t.Logf("full node synced: fn=%d, validators=%d", fnHeight, valHeight)
+				return
+			}
+			t.Logf("full node catching up: fn=%d, validators=%d", fnHeight, valHeight)
+		}
+		// Final check
+		fnHeight, err := fullNode.Height(ctx)
+		require.NoError(t, err)
+		valHeight, _ := chain.Height(ctx)
+		require.InDelta(t, float64(valHeight), float64(fnHeight), 5,
+			"full node should be within 5 blocks of validators")
+	})
+
+	t.Run("full node serves correct queries", func(t *testing.T) {
+		// Query bank total supply via full node
+		stdout, _, err := fullNode.ExecQuery(ctx, "bank", "total-supply")
+		require.NoError(t, err)
+		require.NotEmpty(t, stdout)
+		t.Logf("full node bank query OK: %d bytes", len(stdout))
+
+		// Query staking validators via full node
+		stdout, _, err = fullNode.ExecQuery(ctx, "staking", "validators")
+		require.NoError(t, err)
+		require.NotEmpty(t, stdout)
+		t.Logf("full node staking query OK: %d bytes", len(stdout))
+
+		// Query knowledge params via full node
+		stdout, _, err = fullNode.ExecQuery(ctx, "knowledge", "params")
+		require.NoError(t, err)
+		require.NotEmpty(t, stdout)
+		t.Logf("full node knowledge query OK: %d bytes", len(stdout))
+
+		// Query alignment params via full node
+		stdout, _, err = fullNode.ExecQuery(ctx, "alignment", "params")
+		require.NoError(t, err)
+		require.NotEmpty(t, stdout)
+		t.Logf("full node alignment query OK: %d bytes", len(stdout))
+	})
+
+	t.Run("full node height matches validators", func(t *testing.T) {
+		WaitBlocks(t, chain, ctx, 3)
+
+		fnHeight, err := fullNode.Height(ctx)
+		require.NoError(t, err)
+		valHeight, err := chain.Height(ctx)
+		require.NoError(t, err)
+
+		require.InDelta(t, float64(valHeight), float64(fnHeight), 2,
+			"full node height (%d) should match validator height (%d) within 2 blocks",
+			fnHeight, valHeight)
+		t.Logf("final heights: full_node=%d, validators=%d", fnHeight, valHeight)
+	})
+}
