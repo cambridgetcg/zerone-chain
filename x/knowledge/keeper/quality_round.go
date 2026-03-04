@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -206,4 +208,157 @@ func (k Keeper) SubmitReveal(ctx context.Context, msg *types.MsgSubmitReveal) er
 	})
 
 	return k.SetQualityRound(ctx, round)
+}
+
+// AggregateQualityRound computes the verdict from revealed QualityVotes.
+func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return err
+	}
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	if !found {
+		return types.ErrRoundNotFound.Wrapf("round %q not found", roundID)
+	}
+
+	if len(round.Reveals) == 0 {
+		return nil
+	}
+
+	// Deserialize revealed votes
+	votes := make([]*types.QualityVote, 0, len(round.Reveals))
+	for _, reveal := range round.Reveals {
+		var vote types.QualityVote
+		if err := json.Unmarshal([]byte(reveal.Vote), &vote); err != nil {
+			continue
+		}
+		votes = append(votes, &vote)
+	}
+
+	if len(votes) == 0 {
+		return nil
+	}
+
+	// Compute aggregated scores (median per dimension)
+	aggregated := &types.QualityVote{
+		OverallQuality:  medianUint64(votes, func(v *types.QualityVote) uint64 { return v.OverallQuality }),
+		ReasoningDepth:  medianUint64(votes, func(v *types.QualityVote) uint64 { return v.ReasoningDepth }),
+		Novelty:         medianUint64(votes, func(v *types.QualityVote) uint64 { return v.Novelty }),
+		Toxicity:        medianUint64(votes, func(v *types.QualityVote) uint64 { return v.Toxicity }),
+		FactualAccuracy: medianUint64(votes, func(v *types.QualityVote) uint64 { return v.FactualAccuracy }),
+	}
+
+	// Consent consensus: majority vote
+	consentValid := majorityBool(votes, func(v *types.QualityVote) bool { return v.ConsentValid })
+	aggregated.ConsentValid = consentValid
+
+	// Duplicate consensus: majority vote
+	isDuplicate := majorityBool(votes, func(v *types.QualityVote) bool { return v.Duplicate })
+	aggregated.Duplicate = isDuplicate
+
+	// Determine verdict (priority order)
+	var verdict types.QualityVerdict
+	switch {
+	case !consentValid:
+		verdict = types.QualityVerdict_QUALITY_VERDICT_CONSENT_FAIL
+	case isDuplicate:
+		verdict = types.QualityVerdict_QUALITY_VERDICT_REJECT
+	case aggregated.Toxicity > params.MaxToxicityThreshold:
+		verdict = types.QualityVerdict_QUALITY_VERDICT_REJECT
+	case aggregated.OverallQuality >= params.GoldThreshold:
+		verdict = types.QualityVerdict_QUALITY_VERDICT_GOLD
+	case aggregated.OverallQuality >= params.SilverThreshold:
+		verdict = types.QualityVerdict_QUALITY_VERDICT_SILVER
+	case aggregated.OverallQuality >= params.BronzeThreshold:
+		verdict = types.QualityVerdict_QUALITY_VERDICT_BRONZE
+	default:
+		verdict = types.QualityVerdict_QUALITY_VERDICT_REJECT
+	}
+
+	// Update round
+	round.Verdict = verdict
+	round.VerdictBlock = uint64(sdkCtx.BlockHeight())
+	round.AggregateScores = aggregated
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_COMPLETE
+
+	if err := k.SetQualityRound(ctx, round); err != nil {
+		return err
+	}
+
+	// Remove from active index
+	if err := k.DeleteActiveRound(ctx, roundID); err != nil {
+		return err
+	}
+
+	// Get submission
+	sub, found := k.GetSubmission(ctx, round.SubmissionId)
+	if !found {
+		return types.ErrSubmissionNotFound
+	}
+
+	// Handle verdict outcomes
+	accepted := verdict == types.QualityVerdict_QUALITY_VERDICT_GOLD ||
+		verdict == types.QualityVerdict_QUALITY_VERDICT_SILVER ||
+		verdict == types.QualityVerdict_QUALITY_VERDICT_BRONZE
+
+	if accepted {
+		sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED
+	} else {
+		sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_REJECTED
+		if verdict == types.QualityVerdict_QUALITY_VERDICT_CONSENT_FAIL {
+			sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_CONSENT_FAILED
+		}
+	}
+
+	// Return stake to submitter
+	if sub.Submitter != "" && sub.Stake != "" {
+		submitterAddr, _ := sdk.AccAddressFromBech32(sub.Submitter)
+		stakeAmt, ok := sdkmath.NewIntFromString(sub.Stake)
+		if ok && stakeAmt.IsPositive() {
+			stakeCoin := sdk.NewCoin("uzrn", stakeAmt)
+			_ = k.bankKeeper.SendCoinsFromModuleToAccount(sdkCtx, types.ModuleName, submitterAddr, sdk.NewCoins(stakeCoin))
+		}
+	}
+
+	if err := k.SetSubmission(ctx, sub); err != nil {
+		return err
+	}
+
+	// Emit event
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"quality_round_completed",
+		sdk.NewAttribute("round_id", roundID),
+		sdk.NewAttribute("submission_id", round.SubmissionId),
+		sdk.NewAttribute("verdict", verdict.String()),
+		sdk.NewAttribute("overall_quality", strconv.FormatUint(aggregated.OverallQuality, 10)),
+	))
+
+	return nil
+}
+
+// medianUint64 computes the median of a uint64 field across votes.
+func medianUint64(votes []*types.QualityVote, fn func(*types.QualityVote) uint64) uint64 {
+	vals := make([]uint64, len(votes))
+	for i, v := range votes {
+		vals[i] = fn(v)
+	}
+	sort.Slice(vals, func(i, j int) bool { return vals[i] < vals[j] })
+	n := len(vals)
+	if n%2 == 1 {
+		return vals[n/2]
+	}
+	return (vals[n/2-1] + vals[n/2]) / 2
+}
+
+// majorityBool returns true if more than half of votes return true.
+func majorityBool(votes []*types.QualityVote, fn func(*types.QualityVote) bool) bool {
+	count := 0
+	for _, v := range votes {
+		if fn(v) {
+			count++
+		}
+	}
+	return count > len(votes)/2
 }

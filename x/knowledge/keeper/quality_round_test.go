@@ -345,3 +345,241 @@ func TestSubmitReveal_RoundNotFound(t *testing.T) {
 	})
 	require.ErrorIs(t, err, types.ErrRoundNotFound)
 }
+
+// ─── AggregateQualityRound tests ────────────────────────────────────────────
+
+// runFullRound runs the full commit+reveal flow for a round.
+func runFullRound(t *testing.T, k keeper.Keeper, ctx context.Context, roundID string, votes []*types.QualityVote) {
+	t.Helper()
+	salts := [][]byte{[]byte("s1"), []byte("s2"), []byte("s3")}
+	verifiers := []string{verifier1, verifier2, verifier3}
+
+	for i, v := range verifiers {
+		hash := types.ComputeQualityCommitHash(roundID, votes[i], salts[i])
+		require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+			Verifier: v, RoundId: roundID, CommitHash: hash,
+		}))
+	}
+
+	round, _ := k.GetQualityRound(ctx, roundID)
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	for i, v := range verifiers {
+		require.NoError(t, k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+			Verifier: v, RoundId: roundID, Scores: votes[i], Salt: salts[i],
+		}))
+	}
+}
+
+// setupSubmissionWithRound creates a submission with stake and initiates a quality round.
+func setupSubmissionWithRound(t *testing.T) (keeper.Keeper, context.Context, *mockBankKeeper, string) {
+	t.Helper()
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id: "s1", Domain: "technology", Submitter: testAddr,
+		Content: "test", Stake: "1000000",
+		Status:  types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+		Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, err := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+	require.NoError(t, err)
+	return k, ctx, bk, roundID
+}
+
+func TestAggregateQualityRound_GoldVerdict(t *testing.T) {
+	k, ctx, bk, roundID := setupSubmissionWithRound(t)
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 850000, ReasoningDepth: 800000, Novelty: 750000, Toxicity: 10000, FactualAccuracy: 900000, ConsentValid: true},
+		{OverallQuality: 820000, ReasoningDepth: 780000, Novelty: 700000, Toxicity: 15000, FactualAccuracy: 880000, ConsentValid: true},
+		{OverallQuality: 900000, ReasoningDepth: 850000, Novelty: 800000, Toxicity: 5000, FactualAccuracy: 950000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	err := k.AggregateQualityRound(ctx, roundID)
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_GOLD, round.Verdict)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_COMPLETE, round.Phase)
+	require.Equal(t, uint64(100), round.VerdictBlock)
+	require.NotNil(t, round.AggregateScores)
+	// Median of [820000, 850000, 900000] = 850000
+	require.Equal(t, uint64(850000), round.AggregateScores.OverallQuality)
+
+	// Active round removed
+	actives := k.GetActiveRounds(ctx)
+	require.NotContains(t, actives, roundID)
+
+	// Submission accepted
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED, sub.Status)
+
+	// Stake returned
+	require.Len(t, bk.moduleToAccountCalls, 1)
+	require.Equal(t, "knowledge", bk.moduleToAccountCalls[0].from)
+	require.Equal(t, testAddr, bk.moduleToAccountCalls[0].to)
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 1000000), bk.moduleToAccountCalls[0].amount[0])
+
+	// Event emitted
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	events := sdkCtx.EventManager().Events()
+	eventFound := false
+	for _, e := range events {
+		if e.Type == "quality_round_completed" {
+			eventFound = true
+		}
+	}
+	require.True(t, eventFound)
+}
+
+func TestAggregateQualityRound_SilverVerdict(t *testing.T) {
+	k, ctx, _, roundID := setupSubmissionWithRound(t)
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 720000, ReasoningDepth: 700000, Novelty: 650000, Toxicity: 10000, FactualAccuracy: 750000, ConsentValid: true},
+		{OverallQuality: 680000, ReasoningDepth: 650000, Novelty: 600000, Toxicity: 15000, FactualAccuracy: 700000, ConsentValid: true},
+		{OverallQuality: 650000, ReasoningDepth: 620000, Novelty: 580000, Toxicity: 20000, FactualAccuracy: 680000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	err := k.AggregateQualityRound(ctx, roundID)
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_SILVER, round.Verdict)
+	// Median of [650000, 680000, 720000] = 680000
+	require.Equal(t, uint64(680000), round.AggregateScores.OverallQuality)
+
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED, sub.Status)
+}
+
+func TestAggregateQualityRound_BronzeVerdict(t *testing.T) {
+	k, ctx, _, roundID := setupSubmissionWithRound(t)
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 500000, ReasoningDepth: 480000, Novelty: 400000, Toxicity: 10000, FactualAccuracy: 520000, ConsentValid: true},
+		{OverallQuality: 480000, ReasoningDepth: 450000, Novelty: 380000, Toxicity: 15000, FactualAccuracy: 490000, ConsentValid: true},
+		{OverallQuality: 450000, ReasoningDepth: 420000, Novelty: 350000, Toxicity: 20000, FactualAccuracy: 460000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	err := k.AggregateQualityRound(ctx, roundID)
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_BRONZE, round.Verdict)
+	// Median of [450000, 480000, 500000] = 480000
+	require.Equal(t, uint64(480000), round.AggregateScores.OverallQuality)
+
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED, sub.Status)
+}
+
+func TestAggregateQualityRound_RejectVerdict(t *testing.T) {
+	k, ctx, _, roundID := setupSubmissionWithRound(t)
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 300000, ReasoningDepth: 280000, Novelty: 200000, Toxicity: 10000, FactualAccuracy: 320000, ConsentValid: true},
+		{OverallQuality: 250000, ReasoningDepth: 230000, Novelty: 180000, Toxicity: 15000, FactualAccuracy: 260000, ConsentValid: true},
+		{OverallQuality: 200000, ReasoningDepth: 180000, Novelty: 150000, Toxicity: 20000, FactualAccuracy: 210000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	err := k.AggregateQualityRound(ctx, roundID)
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_REJECT, round.Verdict)
+	// Median of [200000, 250000, 300000] = 250000
+	require.Equal(t, uint64(250000), round.AggregateScores.OverallQuality)
+
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
+}
+
+func TestAggregateQualityRound_ConsentFail(t *testing.T) {
+	k, ctx, _, roundID := setupSubmissionWithRound(t)
+
+	// High quality but majority say consent_valid=false
+	votes := []*types.QualityVote{
+		{OverallQuality: 900000, ReasoningDepth: 850000, Novelty: 800000, Toxicity: 5000, FactualAccuracy: 950000, ConsentValid: false},
+		{OverallQuality: 880000, ReasoningDepth: 830000, Novelty: 780000, Toxicity: 8000, FactualAccuracy: 920000, ConsentValid: false},
+		{OverallQuality: 920000, ReasoningDepth: 870000, Novelty: 820000, Toxicity: 3000, FactualAccuracy: 960000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	err := k.AggregateQualityRound(ctx, roundID)
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_CONSENT_FAIL, round.Verdict)
+
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_CONSENT_FAILED, sub.Status)
+}
+
+func TestAggregateQualityRound_DuplicateOverridesQuality(t *testing.T) {
+	k, ctx, _, roundID := setupSubmissionWithRound(t)
+
+	// High quality but majority mark as duplicate
+	votes := []*types.QualityVote{
+		{OverallQuality: 900000, ReasoningDepth: 850000, Novelty: 800000, Toxicity: 5000, FactualAccuracy: 950000, ConsentValid: true, Duplicate: true},
+		{OverallQuality: 880000, ReasoningDepth: 830000, Novelty: 780000, Toxicity: 8000, FactualAccuracy: 920000, ConsentValid: true, Duplicate: true},
+		{OverallQuality: 920000, ReasoningDepth: 870000, Novelty: 820000, Toxicity: 3000, FactualAccuracy: 960000, ConsentValid: true, Duplicate: false},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	err := k.AggregateQualityRound(ctx, roundID)
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_REJECT, round.Verdict)
+
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
+}
+
+func TestAggregateQualityRound_ToxicityThreshold(t *testing.T) {
+	k, ctx, _, roundID := setupSubmissionWithRound(t)
+
+	// High quality but toxicity above threshold (200000)
+	votes := []*types.QualityVote{
+		{OverallQuality: 900000, ReasoningDepth: 850000, Novelty: 800000, Toxicity: 250000, FactualAccuracy: 950000, ConsentValid: true},
+		{OverallQuality: 880000, ReasoningDepth: 830000, Novelty: 780000, Toxicity: 300000, FactualAccuracy: 920000, ConsentValid: true},
+		{OverallQuality: 920000, ReasoningDepth: 870000, Novelty: 820000, Toxicity: 220000, FactualAccuracy: 960000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	err := k.AggregateQualityRound(ctx, roundID)
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_REJECT, round.Verdict)
+	// Median toxicity of [220000, 250000, 300000] = 250000, which is > 200000
+	require.Equal(t, uint64(250000), round.AggregateScores.Toxicity)
+
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
+}

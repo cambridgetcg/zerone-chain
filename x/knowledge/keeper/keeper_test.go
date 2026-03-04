@@ -135,6 +135,7 @@ type bankTransfer struct {
 
 type mockBankKeeper struct {
 	accountToModuleCalls []bankTransfer
+	moduleToAccountCalls []bankTransfer
 	moduleToModuleCalls  []bankTransfer
 	failNextSend         bool
 }
@@ -157,6 +158,7 @@ func (m *mockBankKeeper) SendCoinsFromAccountToModule(_ context.Context, sender 
 }
 
 func (m *mockBankKeeper) SendCoinsFromModuleToAccount(_ context.Context, module string, recipient sdk.AccAddress, amt sdk.Coins) error {
+	m.moduleToAccountCalls = append(m.moduleToAccountCalls, bankTransfer{from: module, to: recipient.String(), amount: amt})
 	return nil
 }
 
