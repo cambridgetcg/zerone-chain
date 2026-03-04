@@ -20,27 +20,21 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Query_Params_FullMethodName                 = "/zerone.knowledge.v1.Query/Params"
-	Query_Fact_FullMethodName                   = "/zerone.knowledge.v1.Query/Fact"
-	Query_Facts_FullMethodName                  = "/zerone.knowledge.v1.Query/Facts"
-	Query_FactsByDomain_FullMethodName          = "/zerone.knowledge.v1.Query/FactsByDomain"
-	Query_FactsBySubmitter_FullMethodName       = "/zerone.knowledge.v1.Query/FactsBySubmitter"
-	Query_Claim_FullMethodName                  = "/zerone.knowledge.v1.Query/Claim"
-	Query_PendingClaims_FullMethodName          = "/zerone.knowledge.v1.Query/PendingClaims"
-	Query_VerificationRound_FullMethodName      = "/zerone.knowledge.v1.Query/VerificationRound"
+	Query_Sample_FullMethodName                 = "/zerone.knowledge.v1.Query/Sample"
+	Query_Samples_FullMethodName                = "/zerone.knowledge.v1.Query/Samples"
+	Query_SamplesByDomain_FullMethodName        = "/zerone.knowledge.v1.Query/SamplesByDomain"
+	Query_SamplesBySubmitter_FullMethodName     = "/zerone.knowledge.v1.Query/SamplesBySubmitter"
+	Query_Submission_FullMethodName             = "/zerone.knowledge.v1.Query/Submission"
+	Query_PendingSubmissions_FullMethodName     = "/zerone.knowledge.v1.Query/PendingSubmissions"
+	Query_QualityRound_FullMethodName           = "/zerone.knowledge.v1.Query/QualityRound"
 	Query_Domain_FullMethodName                 = "/zerone.knowledge.v1.Query/Domain"
 	Query_Domains_FullMethodName                = "/zerone.knowledge.v1.Query/Domains"
-	Query_FactConfidence_FullMethodName         = "/zerone.knowledge.v1.Query/FactConfidence"
-	Query_FactCitationCount_FullMethodName      = "/zerone.knowledge.v1.Query/FactCitationCount"
-	Query_FactRelations_FullMethodName          = "/zerone.knowledge.v1.Query/FactRelations"
-	Query_FactsBySubject_FullMethodName         = "/zerone.knowledge.v1.Query/FactsBySubject"
-	Query_FactsByTag_FullMethodName             = "/zerone.knowledge.v1.Query/FactsByTag"
-	Query_FactByCanonical_FullMethodName        = "/zerone.knowledge.v1.Query/FactByCanonical"
-	Query_FactsByFitness_FullMethodName         = "/zerone.knowledge.v1.Query/FactsByFitness"
+	Query_SamplesByTag_FullMethodName           = "/zerone.knowledge.v1.Query/SamplesByTag"
+	Query_SamplesByFitness_FullMethodName       = "/zerone.knowledge.v1.Query/SamplesByFitness"
 	Query_BootstrapFundStatus_FullMethodName    = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
-	Query_FactsAtRisk_FullMethodName            = "/zerone.knowledge.v1.Query/FactsAtRisk"
-	Query_FactLineage_FullMethodName            = "/zerone.knowledge.v1.Query/FactLineage"
-	Query_FactProgeny_FullMethodName            = "/zerone.knowledge.v1.Query/FactProgeny"
-	Query_CommonKnowledge_FullMethodName        = "/zerone.knowledge.v1.Query/CommonKnowledge"
+	Query_SamplesAtRisk_FullMethodName          = "/zerone.knowledge.v1.Query/SamplesAtRisk"
+	Query_SampleThread_FullMethodName           = "/zerone.knowledge.v1.Query/SampleThread"
+	Query_ScrapedSources_FullMethodName         = "/zerone.knowledge.v1.Query/ScrapedSources"
 	Query_CheckNovelty_FullMethodName           = "/zerone.knowledge.v1.Query/CheckNovelty"
 	Query_ActiveBounties_FullMethodName         = "/zerone.knowledge.v1.Query/ActiveBounties"
 	Query_DemandSignals_FullMethodName          = "/zerone.knowledge.v1.Query/DemandSignals"
@@ -55,6 +49,8 @@ const (
 	Query_DomainCapacity_FullMethodName         = "/zerone.knowledge.v1.Query/DomainCapacity"
 	Query_EpistemicTemperature_FullMethodName   = "/zerone.knowledge.v1.Query/EpistemicTemperature"
 	Query_RoleElasticity_FullMethodName         = "/zerone.knowledge.v1.Query/RoleElasticity"
+	Query_DatasetInfo_FullMethodName            = "/zerone.knowledge.v1.Query/DatasetInfo"
+	Query_Datasets_FullMethodName               = "/zerone.knowledge.v1.Query/Datasets"
 )
 
 // QueryClient is the client API for Query service.
@@ -65,53 +61,41 @@ const (
 type QueryClient interface {
 	// Params queries module parameters.
 	Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error)
-	// Fact queries a single fact by ID.
-	Fact(ctx context.Context, in *QueryFactRequest, opts ...grpc.CallOption) (*QueryFactResponse, error)
-	// Facts queries facts with optional domain, status, and category filters.
-	Facts(ctx context.Context, in *QueryFactsRequest, opts ...grpc.CallOption) (*QueryFactsResponse, error)
-	// FactsByDomain queries all facts in a domain.
-	FactsByDomain(ctx context.Context, in *QueryFactsByDomainRequest, opts ...grpc.CallOption) (*QueryFactsByDomainResponse, error)
-	// FactsBySubmitter queries all facts submitted by an address.
-	FactsBySubmitter(ctx context.Context, in *QueryFactsBySubmitterRequest, opts ...grpc.CallOption) (*QueryFactsBySubmitterResponse, error)
-	// Claim queries a single claim by ID.
-	Claim(ctx context.Context, in *QueryClaimRequest, opts ...grpc.CallOption) (*QueryClaimResponse, error)
-	// PendingClaims queries all pending claims.
-	PendingClaims(ctx context.Context, in *QueryPendingClaimsRequest, opts ...grpc.CallOption) (*QueryPendingClaimsResponse, error)
-	// VerificationRound queries a verification round by ID.
-	VerificationRound(ctx context.Context, in *QueryVerificationRoundRequest, opts ...grpc.CallOption) (*QueryVerificationRoundResponse, error)
+	// Sample queries a single sample by ID.
+	Sample(ctx context.Context, in *QuerySampleRequest, opts ...grpc.CallOption) (*QuerySampleResponse, error)
+	// Samples queries samples with optional domain, status, and type filters.
+	Samples(ctx context.Context, in *QuerySamplesRequest, opts ...grpc.CallOption) (*QuerySamplesResponse, error)
+	// SamplesByDomain queries all samples in a domain.
+	SamplesByDomain(ctx context.Context, in *QuerySamplesByDomainRequest, opts ...grpc.CallOption) (*QuerySamplesByDomainResponse, error)
+	// SamplesBySubmitter queries all samples submitted by an address.
+	SamplesBySubmitter(ctx context.Context, in *QuerySamplesBySubmitterRequest, opts ...grpc.CallOption) (*QuerySamplesBySubmitterResponse, error)
+	// Submission queries a single submission by ID.
+	Submission(ctx context.Context, in *QuerySubmissionRequest, opts ...grpc.CallOption) (*QuerySubmissionResponse, error)
+	// PendingSubmissions queries all pending submissions.
+	PendingSubmissions(ctx context.Context, in *QueryPendingSubmissionsRequest, opts ...grpc.CallOption) (*QueryPendingSubmissionsResponse, error)
+	// QualityRound queries a quality round by ID.
+	QualityRound(ctx context.Context, in *QueryQualityRoundRequest, opts ...grpc.CallOption) (*QueryQualityRoundResponse, error)
 	// Domain queries a domain by name.
 	Domain(ctx context.Context, in *QueryDomainRequest, opts ...grpc.CallOption) (*QueryDomainResponse, error)
 	// Domains queries all domains with optional pagination.
 	Domains(ctx context.Context, in *QueryDomainsRequest, opts ...grpc.CallOption) (*QueryDomainsResponse, error)
-	// FactConfidence queries the current confidence score of a fact.
-	FactConfidence(ctx context.Context, in *QueryFactConfidenceRequest, opts ...grpc.CallOption) (*QueryFactConfidenceResponse, error)
-	// FactCitationCount queries the citation count of a fact.
-	FactCitationCount(ctx context.Context, in *QueryFactCitationCountRequest, opts ...grpc.CallOption) (*QueryFactCitationCountResponse, error)
-	// FactRelations queries typed relations for a fact (knowledge graph edges).
-	FactRelations(ctx context.Context, in *QueryFactRelationsRequest, opts ...grpc.CallOption) (*QueryFactRelationsResponse, error)
-	// FactsBySubject queries facts by structured subject within a domain.
-	FactsBySubject(ctx context.Context, in *QueryFactsBySubjectRequest, opts ...grpc.CallOption) (*QueryFactsBySubjectResponse, error)
-	// FactsByTag queries facts by a searchable tag.
-	FactsByTag(ctx context.Context, in *QueryFactsByTagRequest, opts ...grpc.CallOption) (*QueryFactsByTagResponse, error)
-	// FactByCanonical queries a fact by its canonical form hash.
-	FactByCanonical(ctx context.Context, in *QueryFactByCanonicalRequest, opts ...grpc.CallOption) (*QueryFactByCanonicalResponse, error)
-	// FactsByFitness queries facts sorted by fitness score.
-	FactsByFitness(ctx context.Context, in *QueryFactsByFitnessRequest, opts ...grpc.CallOption) (*QueryFactsByFitnessResponse, error)
-	// BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
+	// SamplesByTag queries samples by a searchable tag.
+	SamplesByTag(ctx context.Context, in *QuerySamplesByTagRequest, opts ...grpc.CallOption) (*QuerySamplesByTagResponse, error)
+	// SamplesByFitness queries samples sorted by fitness score.
+	SamplesByFitness(ctx context.Context, in *QuerySamplesByFitnessRequest, opts ...grpc.CallOption) (*QuerySamplesByFitnessResponse, error)
+	// BootstrapFundStatus queries the current state of the bootstrap fund.
 	BootstrapFundStatus(ctx context.Context, in *QueryBootstrapFundStatusRequest, opts ...grpc.CallOption) (*QueryBootstrapFundStatusResponse, error)
-	// FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
-	FactsAtRisk(ctx context.Context, in *QueryFactsAtRiskRequest, opts ...grpc.CallOption) (*QueryFactsAtRiskResponse, error)
-	// FactLineage traces a fact's ancestry up to the root.
-	FactLineage(ctx context.Context, in *QueryFactLineageRequest, opts ...grpc.CallOption) (*QueryFactLineageResponse, error)
-	// FactProgeny returns a fact's descendant tree.
-	FactProgeny(ctx context.Context, in *QueryFactProgenyRequest, opts ...grpc.CallOption) (*QueryFactProgenyResponse, error)
-	// CommonKnowledge queries the common knowledge registry.
-	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
-	// CheckNovelty previews the novelty score a claim would receive before submission.
+	// SamplesAtRisk queries samples whose energy has reached zero (at-risk of expiry).
+	SamplesAtRisk(ctx context.Context, in *QuerySamplesAtRiskRequest, opts ...grpc.CallOption) (*QuerySamplesAtRiskResponse, error)
+	// SampleThread traces a sample's thread context.
+	SampleThread(ctx context.Context, in *QuerySampleThreadRequest, opts ...grpc.CallOption) (*QuerySampleThreadResponse, error)
+	// ScrapedSources queries the scraped source registry.
+	ScrapedSources(ctx context.Context, in *QueryScrapedSourcesRequest, opts ...grpc.CallOption) (*QueryScrapedSourcesResponse, error)
+	// CheckNovelty previews the novelty score a submission would receive.
 	CheckNovelty(ctx context.Context, in *QueryCheckNoveltyRequest, opts ...grpc.CallOption) (*QueryCheckNoveltyResponse, error)
-	// ActiveBounties queries active (unclaimed) knowledge bounties.
+	// ActiveBounties queries active (unclaimed) data bounties.
 	ActiveBounties(ctx context.Context, in *QueryActiveBountiesRequest, opts ...grpc.CallOption) (*QueryActiveBountiesResponse, error)
-	// DemandSignals queries demand signal data for a domain.
+	// DemandSignals queries training demand data for a domain.
 	DemandSignals(ctx context.Context, in *QueryDemandSignalsRequest, opts ...grpc.CallOption) (*QueryDemandSignalsResponse, error)
 	// TopDemandGaps queries the top unfulfilled demand gaps.
 	TopDemandGaps(ctx context.Context, in *QueryTopDemandGapsRequest, opts ...grpc.CallOption) (*QueryTopDemandGapsResponse, error)
@@ -130,10 +114,14 @@ type QueryClient interface {
 	MetabolismStatus(ctx context.Context, in *QueryMetabolismStatusRequest, opts ...grpc.CallOption) (*QueryMetabolismStatusResponse, error)
 	// DomainCapacity queries carrying capacity and pressure for a domain.
 	DomainCapacity(ctx context.Context, in *QueryDomainCapacityRequest, opts ...grpc.CallOption) (*QueryDomainCapacityResponse, error)
-	// EpistemicTemperature queries a domain's epistemic temperature state (R29-2).
+	// EpistemicTemperature queries a domain's epistemic temperature state.
 	EpistemicTemperature(ctx context.Context, in *QueryEpistemicTemperatureRequest, opts ...grpc.CallOption) (*QueryEpistemicTemperatureResponse, error)
-	// RoleElasticity queries domain role elasticity and track record (R29-3).
+	// RoleElasticity queries domain role elasticity and track record.
 	RoleElasticity(ctx context.Context, in *QueryRoleElasticityRequest, opts ...grpc.CallOption) (*QueryRoleElasticityResponse, error)
+	// Dataset queries a dataset by ID.
+	DatasetInfo(ctx context.Context, in *QueryDatasetRequest, opts ...grpc.CallOption) (*QueryDatasetResponse, error)
+	// Datasets queries all datasets with optional filters.
+	Datasets(ctx context.Context, in *QueryDatasetsRequest, opts ...grpc.CallOption) (*QueryDatasetsResponse, error)
 }
 
 type queryClient struct {
@@ -154,70 +142,70 @@ func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts .
 	return out, nil
 }
 
-func (c *queryClient) Fact(ctx context.Context, in *QueryFactRequest, opts ...grpc.CallOption) (*QueryFactResponse, error) {
+func (c *queryClient) Sample(ctx context.Context, in *QuerySampleRequest, opts ...grpc.CallOption) (*QuerySampleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactResponse)
-	err := c.cc.Invoke(ctx, Query_Fact_FullMethodName, in, out, cOpts...)
+	out := new(QuerySampleResponse)
+	err := c.cc.Invoke(ctx, Query_Sample_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) Facts(ctx context.Context, in *QueryFactsRequest, opts ...grpc.CallOption) (*QueryFactsResponse, error) {
+func (c *queryClient) Samples(ctx context.Context, in *QuerySamplesRequest, opts ...grpc.CallOption) (*QuerySamplesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactsResponse)
-	err := c.cc.Invoke(ctx, Query_Facts_FullMethodName, in, out, cOpts...)
+	out := new(QuerySamplesResponse)
+	err := c.cc.Invoke(ctx, Query_Samples_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) FactsByDomain(ctx context.Context, in *QueryFactsByDomainRequest, opts ...grpc.CallOption) (*QueryFactsByDomainResponse, error) {
+func (c *queryClient) SamplesByDomain(ctx context.Context, in *QuerySamplesByDomainRequest, opts ...grpc.CallOption) (*QuerySamplesByDomainResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactsByDomainResponse)
-	err := c.cc.Invoke(ctx, Query_FactsByDomain_FullMethodName, in, out, cOpts...)
+	out := new(QuerySamplesByDomainResponse)
+	err := c.cc.Invoke(ctx, Query_SamplesByDomain_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) FactsBySubmitter(ctx context.Context, in *QueryFactsBySubmitterRequest, opts ...grpc.CallOption) (*QueryFactsBySubmitterResponse, error) {
+func (c *queryClient) SamplesBySubmitter(ctx context.Context, in *QuerySamplesBySubmitterRequest, opts ...grpc.CallOption) (*QuerySamplesBySubmitterResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactsBySubmitterResponse)
-	err := c.cc.Invoke(ctx, Query_FactsBySubmitter_FullMethodName, in, out, cOpts...)
+	out := new(QuerySamplesBySubmitterResponse)
+	err := c.cc.Invoke(ctx, Query_SamplesBySubmitter_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) Claim(ctx context.Context, in *QueryClaimRequest, opts ...grpc.CallOption) (*QueryClaimResponse, error) {
+func (c *queryClient) Submission(ctx context.Context, in *QuerySubmissionRequest, opts ...grpc.CallOption) (*QuerySubmissionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryClaimResponse)
-	err := c.cc.Invoke(ctx, Query_Claim_FullMethodName, in, out, cOpts...)
+	out := new(QuerySubmissionResponse)
+	err := c.cc.Invoke(ctx, Query_Submission_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) PendingClaims(ctx context.Context, in *QueryPendingClaimsRequest, opts ...grpc.CallOption) (*QueryPendingClaimsResponse, error) {
+func (c *queryClient) PendingSubmissions(ctx context.Context, in *QueryPendingSubmissionsRequest, opts ...grpc.CallOption) (*QueryPendingSubmissionsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryPendingClaimsResponse)
-	err := c.cc.Invoke(ctx, Query_PendingClaims_FullMethodName, in, out, cOpts...)
+	out := new(QueryPendingSubmissionsResponse)
+	err := c.cc.Invoke(ctx, Query_PendingSubmissions_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) VerificationRound(ctx context.Context, in *QueryVerificationRoundRequest, opts ...grpc.CallOption) (*QueryVerificationRoundResponse, error) {
+func (c *queryClient) QualityRound(ctx context.Context, in *QueryQualityRoundRequest, opts ...grpc.CallOption) (*QueryQualityRoundResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryVerificationRoundResponse)
-	err := c.cc.Invoke(ctx, Query_VerificationRound_FullMethodName, in, out, cOpts...)
+	out := new(QueryQualityRoundResponse)
+	err := c.cc.Invoke(ctx, Query_QualityRound_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -244,70 +232,20 @@ func (c *queryClient) Domains(ctx context.Context, in *QueryDomainsRequest, opts
 	return out, nil
 }
 
-func (c *queryClient) FactConfidence(ctx context.Context, in *QueryFactConfidenceRequest, opts ...grpc.CallOption) (*QueryFactConfidenceResponse, error) {
+func (c *queryClient) SamplesByTag(ctx context.Context, in *QuerySamplesByTagRequest, opts ...grpc.CallOption) (*QuerySamplesByTagResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactConfidenceResponse)
-	err := c.cc.Invoke(ctx, Query_FactConfidence_FullMethodName, in, out, cOpts...)
+	out := new(QuerySamplesByTagResponse)
+	err := c.cc.Invoke(ctx, Query_SamplesByTag_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) FactCitationCount(ctx context.Context, in *QueryFactCitationCountRequest, opts ...grpc.CallOption) (*QueryFactCitationCountResponse, error) {
+func (c *queryClient) SamplesByFitness(ctx context.Context, in *QuerySamplesByFitnessRequest, opts ...grpc.CallOption) (*QuerySamplesByFitnessResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactCitationCountResponse)
-	err := c.cc.Invoke(ctx, Query_FactCitationCount_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) FactRelations(ctx context.Context, in *QueryFactRelationsRequest, opts ...grpc.CallOption) (*QueryFactRelationsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactRelationsResponse)
-	err := c.cc.Invoke(ctx, Query_FactRelations_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) FactsBySubject(ctx context.Context, in *QueryFactsBySubjectRequest, opts ...grpc.CallOption) (*QueryFactsBySubjectResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactsBySubjectResponse)
-	err := c.cc.Invoke(ctx, Query_FactsBySubject_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) FactsByTag(ctx context.Context, in *QueryFactsByTagRequest, opts ...grpc.CallOption) (*QueryFactsByTagResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactsByTagResponse)
-	err := c.cc.Invoke(ctx, Query_FactsByTag_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) FactByCanonical(ctx context.Context, in *QueryFactByCanonicalRequest, opts ...grpc.CallOption) (*QueryFactByCanonicalResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactByCanonicalResponse)
-	err := c.cc.Invoke(ctx, Query_FactByCanonical_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) FactsByFitness(ctx context.Context, in *QueryFactsByFitnessRequest, opts ...grpc.CallOption) (*QueryFactsByFitnessResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactsByFitnessResponse)
-	err := c.cc.Invoke(ctx, Query_FactsByFitness_FullMethodName, in, out, cOpts...)
+	out := new(QuerySamplesByFitnessResponse)
+	err := c.cc.Invoke(ctx, Query_SamplesByFitness_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -324,40 +262,30 @@ func (c *queryClient) BootstrapFundStatus(ctx context.Context, in *QueryBootstra
 	return out, nil
 }
 
-func (c *queryClient) FactsAtRisk(ctx context.Context, in *QueryFactsAtRiskRequest, opts ...grpc.CallOption) (*QueryFactsAtRiskResponse, error) {
+func (c *queryClient) SamplesAtRisk(ctx context.Context, in *QuerySamplesAtRiskRequest, opts ...grpc.CallOption) (*QuerySamplesAtRiskResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactsAtRiskResponse)
-	err := c.cc.Invoke(ctx, Query_FactsAtRisk_FullMethodName, in, out, cOpts...)
+	out := new(QuerySamplesAtRiskResponse)
+	err := c.cc.Invoke(ctx, Query_SamplesAtRisk_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) FactLineage(ctx context.Context, in *QueryFactLineageRequest, opts ...grpc.CallOption) (*QueryFactLineageResponse, error) {
+func (c *queryClient) SampleThread(ctx context.Context, in *QuerySampleThreadRequest, opts ...grpc.CallOption) (*QuerySampleThreadResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactLineageResponse)
-	err := c.cc.Invoke(ctx, Query_FactLineage_FullMethodName, in, out, cOpts...)
+	out := new(QuerySampleThreadResponse)
+	err := c.cc.Invoke(ctx, Query_SampleThread_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *queryClient) FactProgeny(ctx context.Context, in *QueryFactProgenyRequest, opts ...grpc.CallOption) (*QueryFactProgenyResponse, error) {
+func (c *queryClient) ScrapedSources(ctx context.Context, in *QueryScrapedSourcesRequest, opts ...grpc.CallOption) (*QueryScrapedSourcesResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryFactProgenyResponse)
-	err := c.cc.Invoke(ctx, Query_FactProgeny_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(QueryCommonKnowledgeResponse)
-	err := c.cc.Invoke(ctx, Query_CommonKnowledge_FullMethodName, in, out, cOpts...)
+	out := new(QueryScrapedSourcesResponse)
+	err := c.cc.Invoke(ctx, Query_ScrapedSources_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -504,6 +432,26 @@ func (c *queryClient) RoleElasticity(ctx context.Context, in *QueryRoleElasticit
 	return out, nil
 }
 
+func (c *queryClient) DatasetInfo(ctx context.Context, in *QueryDatasetRequest, opts ...grpc.CallOption) (*QueryDatasetResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDatasetResponse)
+	err := c.cc.Invoke(ctx, Query_DatasetInfo_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) Datasets(ctx context.Context, in *QueryDatasetsRequest, opts ...grpc.CallOption) (*QueryDatasetsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDatasetsResponse)
+	err := c.cc.Invoke(ctx, Query_Datasets_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -512,53 +460,41 @@ func (c *queryClient) RoleElasticity(ctx context.Context, in *QueryRoleElasticit
 type QueryServer interface {
 	// Params queries module parameters.
 	Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error)
-	// Fact queries a single fact by ID.
-	Fact(context.Context, *QueryFactRequest) (*QueryFactResponse, error)
-	// Facts queries facts with optional domain, status, and category filters.
-	Facts(context.Context, *QueryFactsRequest) (*QueryFactsResponse, error)
-	// FactsByDomain queries all facts in a domain.
-	FactsByDomain(context.Context, *QueryFactsByDomainRequest) (*QueryFactsByDomainResponse, error)
-	// FactsBySubmitter queries all facts submitted by an address.
-	FactsBySubmitter(context.Context, *QueryFactsBySubmitterRequest) (*QueryFactsBySubmitterResponse, error)
-	// Claim queries a single claim by ID.
-	Claim(context.Context, *QueryClaimRequest) (*QueryClaimResponse, error)
-	// PendingClaims queries all pending claims.
-	PendingClaims(context.Context, *QueryPendingClaimsRequest) (*QueryPendingClaimsResponse, error)
-	// VerificationRound queries a verification round by ID.
-	VerificationRound(context.Context, *QueryVerificationRoundRequest) (*QueryVerificationRoundResponse, error)
+	// Sample queries a single sample by ID.
+	Sample(context.Context, *QuerySampleRequest) (*QuerySampleResponse, error)
+	// Samples queries samples with optional domain, status, and type filters.
+	Samples(context.Context, *QuerySamplesRequest) (*QuerySamplesResponse, error)
+	// SamplesByDomain queries all samples in a domain.
+	SamplesByDomain(context.Context, *QuerySamplesByDomainRequest) (*QuerySamplesByDomainResponse, error)
+	// SamplesBySubmitter queries all samples submitted by an address.
+	SamplesBySubmitter(context.Context, *QuerySamplesBySubmitterRequest) (*QuerySamplesBySubmitterResponse, error)
+	// Submission queries a single submission by ID.
+	Submission(context.Context, *QuerySubmissionRequest) (*QuerySubmissionResponse, error)
+	// PendingSubmissions queries all pending submissions.
+	PendingSubmissions(context.Context, *QueryPendingSubmissionsRequest) (*QueryPendingSubmissionsResponse, error)
+	// QualityRound queries a quality round by ID.
+	QualityRound(context.Context, *QueryQualityRoundRequest) (*QueryQualityRoundResponse, error)
 	// Domain queries a domain by name.
 	Domain(context.Context, *QueryDomainRequest) (*QueryDomainResponse, error)
 	// Domains queries all domains with optional pagination.
 	Domains(context.Context, *QueryDomainsRequest) (*QueryDomainsResponse, error)
-	// FactConfidence queries the current confidence score of a fact.
-	FactConfidence(context.Context, *QueryFactConfidenceRequest) (*QueryFactConfidenceResponse, error)
-	// FactCitationCount queries the citation count of a fact.
-	FactCitationCount(context.Context, *QueryFactCitationCountRequest) (*QueryFactCitationCountResponse, error)
-	// FactRelations queries typed relations for a fact (knowledge graph edges).
-	FactRelations(context.Context, *QueryFactRelationsRequest) (*QueryFactRelationsResponse, error)
-	// FactsBySubject queries facts by structured subject within a domain.
-	FactsBySubject(context.Context, *QueryFactsBySubjectRequest) (*QueryFactsBySubjectResponse, error)
-	// FactsByTag queries facts by a searchable tag.
-	FactsByTag(context.Context, *QueryFactsByTagRequest) (*QueryFactsByTagResponse, error)
-	// FactByCanonical queries a fact by its canonical form hash.
-	FactByCanonical(context.Context, *QueryFactByCanonicalRequest) (*QueryFactByCanonicalResponse, error)
-	// FactsByFitness queries facts sorted by fitness score.
-	FactsByFitness(context.Context, *QueryFactsByFitnessRequest) (*QueryFactsByFitnessResponse, error)
-	// BootstrapFundStatus queries the current state of the knowledge bootstrap fund.
+	// SamplesByTag queries samples by a searchable tag.
+	SamplesByTag(context.Context, *QuerySamplesByTagRequest) (*QuerySamplesByTagResponse, error)
+	// SamplesByFitness queries samples sorted by fitness score.
+	SamplesByFitness(context.Context, *QuerySamplesByFitnessRequest) (*QuerySamplesByFitnessResponse, error)
+	// BootstrapFundStatus queries the current state of the bootstrap fund.
 	BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error)
-	// FactsAtRisk queries facts whose energy has reached zero (at-risk of expiry).
-	FactsAtRisk(context.Context, *QueryFactsAtRiskRequest) (*QueryFactsAtRiskResponse, error)
-	// FactLineage traces a fact's ancestry up to the root.
-	FactLineage(context.Context, *QueryFactLineageRequest) (*QueryFactLineageResponse, error)
-	// FactProgeny returns a fact's descendant tree.
-	FactProgeny(context.Context, *QueryFactProgenyRequest) (*QueryFactProgenyResponse, error)
-	// CommonKnowledge queries the common knowledge registry.
-	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
-	// CheckNovelty previews the novelty score a claim would receive before submission.
+	// SamplesAtRisk queries samples whose energy has reached zero (at-risk of expiry).
+	SamplesAtRisk(context.Context, *QuerySamplesAtRiskRequest) (*QuerySamplesAtRiskResponse, error)
+	// SampleThread traces a sample's thread context.
+	SampleThread(context.Context, *QuerySampleThreadRequest) (*QuerySampleThreadResponse, error)
+	// ScrapedSources queries the scraped source registry.
+	ScrapedSources(context.Context, *QueryScrapedSourcesRequest) (*QueryScrapedSourcesResponse, error)
+	// CheckNovelty previews the novelty score a submission would receive.
 	CheckNovelty(context.Context, *QueryCheckNoveltyRequest) (*QueryCheckNoveltyResponse, error)
-	// ActiveBounties queries active (unclaimed) knowledge bounties.
+	// ActiveBounties queries active (unclaimed) data bounties.
 	ActiveBounties(context.Context, *QueryActiveBountiesRequest) (*QueryActiveBountiesResponse, error)
-	// DemandSignals queries demand signal data for a domain.
+	// DemandSignals queries training demand data for a domain.
 	DemandSignals(context.Context, *QueryDemandSignalsRequest) (*QueryDemandSignalsResponse, error)
 	// TopDemandGaps queries the top unfulfilled demand gaps.
 	TopDemandGaps(context.Context, *QueryTopDemandGapsRequest) (*QueryTopDemandGapsResponse, error)
@@ -577,10 +513,14 @@ type QueryServer interface {
 	MetabolismStatus(context.Context, *QueryMetabolismStatusRequest) (*QueryMetabolismStatusResponse, error)
 	// DomainCapacity queries carrying capacity and pressure for a domain.
 	DomainCapacity(context.Context, *QueryDomainCapacityRequest) (*QueryDomainCapacityResponse, error)
-	// EpistemicTemperature queries a domain's epistemic temperature state (R29-2).
+	// EpistemicTemperature queries a domain's epistemic temperature state.
 	EpistemicTemperature(context.Context, *QueryEpistemicTemperatureRequest) (*QueryEpistemicTemperatureResponse, error)
-	// RoleElasticity queries domain role elasticity and track record (R29-3).
+	// RoleElasticity queries domain role elasticity and track record.
 	RoleElasticity(context.Context, *QueryRoleElasticityRequest) (*QueryRoleElasticityResponse, error)
+	// Dataset queries a dataset by ID.
+	DatasetInfo(context.Context, *QueryDatasetRequest) (*QueryDatasetResponse, error)
+	// Datasets queries all datasets with optional filters.
+	Datasets(context.Context, *QueryDatasetsRequest) (*QueryDatasetsResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -594,26 +534,26 @@ type UnimplementedQueryServer struct{}
 func (UnimplementedQueryServer) Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Params not implemented")
 }
-func (UnimplementedQueryServer) Fact(context.Context, *QueryFactRequest) (*QueryFactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Fact not implemented")
+func (UnimplementedQueryServer) Sample(context.Context, *QuerySampleRequest) (*QuerySampleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Sample not implemented")
 }
-func (UnimplementedQueryServer) Facts(context.Context, *QueryFactsRequest) (*QueryFactsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Facts not implemented")
+func (UnimplementedQueryServer) Samples(context.Context, *QuerySamplesRequest) (*QuerySamplesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Samples not implemented")
 }
-func (UnimplementedQueryServer) FactsByDomain(context.Context, *QueryFactsByDomainRequest) (*QueryFactsByDomainResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactsByDomain not implemented")
+func (UnimplementedQueryServer) SamplesByDomain(context.Context, *QuerySamplesByDomainRequest) (*QuerySamplesByDomainResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SamplesByDomain not implemented")
 }
-func (UnimplementedQueryServer) FactsBySubmitter(context.Context, *QueryFactsBySubmitterRequest) (*QueryFactsBySubmitterResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactsBySubmitter not implemented")
+func (UnimplementedQueryServer) SamplesBySubmitter(context.Context, *QuerySamplesBySubmitterRequest) (*QuerySamplesBySubmitterResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SamplesBySubmitter not implemented")
 }
-func (UnimplementedQueryServer) Claim(context.Context, *QueryClaimRequest) (*QueryClaimResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method Claim not implemented")
+func (UnimplementedQueryServer) Submission(context.Context, *QuerySubmissionRequest) (*QuerySubmissionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Submission not implemented")
 }
-func (UnimplementedQueryServer) PendingClaims(context.Context, *QueryPendingClaimsRequest) (*QueryPendingClaimsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PendingClaims not implemented")
+func (UnimplementedQueryServer) PendingSubmissions(context.Context, *QueryPendingSubmissionsRequest) (*QueryPendingSubmissionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PendingSubmissions not implemented")
 }
-func (UnimplementedQueryServer) VerificationRound(context.Context, *QueryVerificationRoundRequest) (*QueryVerificationRoundResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method VerificationRound not implemented")
+func (UnimplementedQueryServer) QualityRound(context.Context, *QueryQualityRoundRequest) (*QueryQualityRoundResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method QualityRound not implemented")
 }
 func (UnimplementedQueryServer) Domain(context.Context, *QueryDomainRequest) (*QueryDomainResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Domain not implemented")
@@ -621,41 +561,23 @@ func (UnimplementedQueryServer) Domain(context.Context, *QueryDomainRequest) (*Q
 func (UnimplementedQueryServer) Domains(context.Context, *QueryDomainsRequest) (*QueryDomainsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Domains not implemented")
 }
-func (UnimplementedQueryServer) FactConfidence(context.Context, *QueryFactConfidenceRequest) (*QueryFactConfidenceResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactConfidence not implemented")
+func (UnimplementedQueryServer) SamplesByTag(context.Context, *QuerySamplesByTagRequest) (*QuerySamplesByTagResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SamplesByTag not implemented")
 }
-func (UnimplementedQueryServer) FactCitationCount(context.Context, *QueryFactCitationCountRequest) (*QueryFactCitationCountResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactCitationCount not implemented")
-}
-func (UnimplementedQueryServer) FactRelations(context.Context, *QueryFactRelationsRequest) (*QueryFactRelationsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactRelations not implemented")
-}
-func (UnimplementedQueryServer) FactsBySubject(context.Context, *QueryFactsBySubjectRequest) (*QueryFactsBySubjectResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactsBySubject not implemented")
-}
-func (UnimplementedQueryServer) FactsByTag(context.Context, *QueryFactsByTagRequest) (*QueryFactsByTagResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactsByTag not implemented")
-}
-func (UnimplementedQueryServer) FactByCanonical(context.Context, *QueryFactByCanonicalRequest) (*QueryFactByCanonicalResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactByCanonical not implemented")
-}
-func (UnimplementedQueryServer) FactsByFitness(context.Context, *QueryFactsByFitnessRequest) (*QueryFactsByFitnessResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactsByFitness not implemented")
+func (UnimplementedQueryServer) SamplesByFitness(context.Context, *QuerySamplesByFitnessRequest) (*QuerySamplesByFitnessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SamplesByFitness not implemented")
 }
 func (UnimplementedQueryServer) BootstrapFundStatus(context.Context, *QueryBootstrapFundStatusRequest) (*QueryBootstrapFundStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method BootstrapFundStatus not implemented")
 }
-func (UnimplementedQueryServer) FactsAtRisk(context.Context, *QueryFactsAtRiskRequest) (*QueryFactsAtRiskResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactsAtRisk not implemented")
+func (UnimplementedQueryServer) SamplesAtRisk(context.Context, *QuerySamplesAtRiskRequest) (*QuerySamplesAtRiskResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SamplesAtRisk not implemented")
 }
-func (UnimplementedQueryServer) FactLineage(context.Context, *QueryFactLineageRequest) (*QueryFactLineageResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactLineage not implemented")
+func (UnimplementedQueryServer) SampleThread(context.Context, *QuerySampleThreadRequest) (*QuerySampleThreadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SampleThread not implemented")
 }
-func (UnimplementedQueryServer) FactProgeny(context.Context, *QueryFactProgenyRequest) (*QueryFactProgenyResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method FactProgeny not implemented")
-}
-func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
+func (UnimplementedQueryServer) ScrapedSources(context.Context, *QueryScrapedSourcesRequest) (*QueryScrapedSourcesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ScrapedSources not implemented")
 }
 func (UnimplementedQueryServer) CheckNovelty(context.Context, *QueryCheckNoveltyRequest) (*QueryCheckNoveltyResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CheckNovelty not implemented")
@@ -699,6 +621,12 @@ func (UnimplementedQueryServer) EpistemicTemperature(context.Context, *QueryEpis
 func (UnimplementedQueryServer) RoleElasticity(context.Context, *QueryRoleElasticityRequest) (*QueryRoleElasticityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RoleElasticity not implemented")
 }
+func (UnimplementedQueryServer) DatasetInfo(context.Context, *QueryDatasetRequest) (*QueryDatasetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DatasetInfo not implemented")
+}
+func (UnimplementedQueryServer) Datasets(context.Context, *QueryDatasetsRequest) (*QueryDatasetsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Datasets not implemented")
+}
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
 
@@ -738,128 +666,128 @@ func _Query_Params_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_Fact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactRequest)
+func _Query_Sample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySampleRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).Fact(ctx, in)
+		return srv.(QueryServer).Sample(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_Fact_FullMethodName,
+		FullMethod: Query_Sample_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).Fact(ctx, req.(*QueryFactRequest))
+		return srv.(QueryServer).Sample(ctx, req.(*QuerySampleRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_Facts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactsRequest)
+func _Query_Samples_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySamplesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).Facts(ctx, in)
+		return srv.(QueryServer).Samples(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_Facts_FullMethodName,
+		FullMethod: Query_Samples_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).Facts(ctx, req.(*QueryFactsRequest))
+		return srv.(QueryServer).Samples(ctx, req.(*QuerySamplesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_FactsByDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactsByDomainRequest)
+func _Query_SamplesByDomain_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySamplesByDomainRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).FactsByDomain(ctx, in)
+		return srv.(QueryServer).SamplesByDomain(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_FactsByDomain_FullMethodName,
+		FullMethod: Query_SamplesByDomain_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactsByDomain(ctx, req.(*QueryFactsByDomainRequest))
+		return srv.(QueryServer).SamplesByDomain(ctx, req.(*QuerySamplesByDomainRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_FactsBySubmitter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactsBySubmitterRequest)
+func _Query_SamplesBySubmitter_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySamplesBySubmitterRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).FactsBySubmitter(ctx, in)
+		return srv.(QueryServer).SamplesBySubmitter(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_FactsBySubmitter_FullMethodName,
+		FullMethod: Query_SamplesBySubmitter_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactsBySubmitter(ctx, req.(*QueryFactsBySubmitterRequest))
+		return srv.(QueryServer).SamplesBySubmitter(ctx, req.(*QuerySamplesBySubmitterRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_Claim_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryClaimRequest)
+func _Query_Submission_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySubmissionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).Claim(ctx, in)
+		return srv.(QueryServer).Submission(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_Claim_FullMethodName,
+		FullMethod: Query_Submission_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).Claim(ctx, req.(*QueryClaimRequest))
+		return srv.(QueryServer).Submission(ctx, req.(*QuerySubmissionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_PendingClaims_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryPendingClaimsRequest)
+func _Query_PendingSubmissions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryPendingSubmissionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).PendingClaims(ctx, in)
+		return srv.(QueryServer).PendingSubmissions(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_PendingClaims_FullMethodName,
+		FullMethod: Query_PendingSubmissions_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).PendingClaims(ctx, req.(*QueryPendingClaimsRequest))
+		return srv.(QueryServer).PendingSubmissions(ctx, req.(*QueryPendingSubmissionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_VerificationRound_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryVerificationRoundRequest)
+func _Query_QualityRound_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryQualityRoundRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).VerificationRound(ctx, in)
+		return srv.(QueryServer).QualityRound(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_VerificationRound_FullMethodName,
+		FullMethod: Query_QualityRound_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).VerificationRound(ctx, req.(*QueryVerificationRoundRequest))
+		return srv.(QueryServer).QualityRound(ctx, req.(*QueryQualityRoundRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -900,128 +828,38 @@ func _Query_Domains_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_FactConfidence_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactConfidenceRequest)
+func _Query_SamplesByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySamplesByTagRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).FactConfidence(ctx, in)
+		return srv.(QueryServer).SamplesByTag(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_FactConfidence_FullMethodName,
+		FullMethod: Query_SamplesByTag_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactConfidence(ctx, req.(*QueryFactConfidenceRequest))
+		return srv.(QueryServer).SamplesByTag(ctx, req.(*QuerySamplesByTagRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_FactCitationCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactCitationCountRequest)
+func _Query_SamplesByFitness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySamplesByFitnessRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).FactCitationCount(ctx, in)
+		return srv.(QueryServer).SamplesByFitness(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_FactCitationCount_FullMethodName,
+		FullMethod: Query_SamplesByFitness_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactCitationCount(ctx, req.(*QueryFactCitationCountRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_FactRelations_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactRelationsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).FactRelations(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_FactRelations_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactRelations(ctx, req.(*QueryFactRelationsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_FactsBySubject_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactsBySubjectRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).FactsBySubject(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_FactsBySubject_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactsBySubject(ctx, req.(*QueryFactsBySubjectRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_FactsByTag_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactsByTagRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).FactsByTag(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_FactsByTag_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactsByTag(ctx, req.(*QueryFactsByTagRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_FactByCanonical_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactByCanonicalRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).FactByCanonical(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_FactByCanonical_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactByCanonical(ctx, req.(*QueryFactByCanonicalRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_FactsByFitness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactsByFitnessRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).FactsByFitness(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_FactsByFitness_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactsByFitness(ctx, req.(*QueryFactsByFitnessRequest))
+		return srv.(QueryServer).SamplesByFitness(ctx, req.(*QuerySamplesByFitnessRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1044,74 +882,56 @@ func _Query_BootstrapFundStatus_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_FactsAtRisk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactsAtRiskRequest)
+func _Query_SamplesAtRisk_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySamplesAtRiskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).FactsAtRisk(ctx, in)
+		return srv.(QueryServer).SamplesAtRisk(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_FactsAtRisk_FullMethodName,
+		FullMethod: Query_SamplesAtRisk_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactsAtRisk(ctx, req.(*QueryFactsAtRiskRequest))
+		return srv.(QueryServer).SamplesAtRisk(ctx, req.(*QuerySamplesAtRiskRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_FactLineage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactLineageRequest)
+func _Query_SampleThread_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySampleThreadRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).FactLineage(ctx, in)
+		return srv.(QueryServer).SampleThread(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_FactLineage_FullMethodName,
+		FullMethod: Query_SampleThread_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactLineage(ctx, req.(*QueryFactLineageRequest))
+		return srv.(QueryServer).SampleThread(ctx, req.(*QuerySampleThreadRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Query_FactProgeny_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryFactProgenyRequest)
+func _Query_ScrapedSources_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryScrapedSourcesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(QueryServer).FactProgeny(ctx, in)
+		return srv.(QueryServer).ScrapedSources(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Query_FactProgeny_FullMethodName,
+		FullMethod: Query_ScrapedSources_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).FactProgeny(ctx, req.(*QueryFactProgenyRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(QueryCommonKnowledgeRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(QueryServer).CommonKnowledge(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Query_CommonKnowledge_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(QueryServer).CommonKnowledge(ctx, req.(*QueryCommonKnowledgeRequest))
+		return srv.(QueryServer).ScrapedSources(ctx, req.(*QueryScrapedSourcesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1368,6 +1188,42 @@ func _Query_RoleElasticity_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_DatasetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDatasetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DatasetInfo(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DatasetInfo_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DatasetInfo(ctx, req.(*QueryDatasetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_Datasets_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDatasetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).Datasets(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_Datasets_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).Datasets(ctx, req.(*QueryDatasetsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1380,32 +1236,32 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Query_Params_Handler,
 		},
 		{
-			MethodName: "Fact",
-			Handler:    _Query_Fact_Handler,
+			MethodName: "Sample",
+			Handler:    _Query_Sample_Handler,
 		},
 		{
-			MethodName: "Facts",
-			Handler:    _Query_Facts_Handler,
+			MethodName: "Samples",
+			Handler:    _Query_Samples_Handler,
 		},
 		{
-			MethodName: "FactsByDomain",
-			Handler:    _Query_FactsByDomain_Handler,
+			MethodName: "SamplesByDomain",
+			Handler:    _Query_SamplesByDomain_Handler,
 		},
 		{
-			MethodName: "FactsBySubmitter",
-			Handler:    _Query_FactsBySubmitter_Handler,
+			MethodName: "SamplesBySubmitter",
+			Handler:    _Query_SamplesBySubmitter_Handler,
 		},
 		{
-			MethodName: "Claim",
-			Handler:    _Query_Claim_Handler,
+			MethodName: "Submission",
+			Handler:    _Query_Submission_Handler,
 		},
 		{
-			MethodName: "PendingClaims",
-			Handler:    _Query_PendingClaims_Handler,
+			MethodName: "PendingSubmissions",
+			Handler:    _Query_PendingSubmissions_Handler,
 		},
 		{
-			MethodName: "VerificationRound",
-			Handler:    _Query_VerificationRound_Handler,
+			MethodName: "QualityRound",
+			Handler:    _Query_QualityRound_Handler,
 		},
 		{
 			MethodName: "Domain",
@@ -1416,52 +1272,28 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Query_Domains_Handler,
 		},
 		{
-			MethodName: "FactConfidence",
-			Handler:    _Query_FactConfidence_Handler,
+			MethodName: "SamplesByTag",
+			Handler:    _Query_SamplesByTag_Handler,
 		},
 		{
-			MethodName: "FactCitationCount",
-			Handler:    _Query_FactCitationCount_Handler,
-		},
-		{
-			MethodName: "FactRelations",
-			Handler:    _Query_FactRelations_Handler,
-		},
-		{
-			MethodName: "FactsBySubject",
-			Handler:    _Query_FactsBySubject_Handler,
-		},
-		{
-			MethodName: "FactsByTag",
-			Handler:    _Query_FactsByTag_Handler,
-		},
-		{
-			MethodName: "FactByCanonical",
-			Handler:    _Query_FactByCanonical_Handler,
-		},
-		{
-			MethodName: "FactsByFitness",
-			Handler:    _Query_FactsByFitness_Handler,
+			MethodName: "SamplesByFitness",
+			Handler:    _Query_SamplesByFitness_Handler,
 		},
 		{
 			MethodName: "BootstrapFundStatus",
 			Handler:    _Query_BootstrapFundStatus_Handler,
 		},
 		{
-			MethodName: "FactsAtRisk",
-			Handler:    _Query_FactsAtRisk_Handler,
+			MethodName: "SamplesAtRisk",
+			Handler:    _Query_SamplesAtRisk_Handler,
 		},
 		{
-			MethodName: "FactLineage",
-			Handler:    _Query_FactLineage_Handler,
+			MethodName: "SampleThread",
+			Handler:    _Query_SampleThread_Handler,
 		},
 		{
-			MethodName: "FactProgeny",
-			Handler:    _Query_FactProgeny_Handler,
-		},
-		{
-			MethodName: "CommonKnowledge",
-			Handler:    _Query_CommonKnowledge_Handler,
+			MethodName: "ScrapedSources",
+			Handler:    _Query_ScrapedSources_Handler,
 		},
 		{
 			MethodName: "CheckNovelty",
@@ -1518,6 +1350,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RoleElasticity",
 			Handler:    _Query_RoleElasticity_Handler,
+		},
+		{
+			MethodName: "DatasetInfo",
+			Handler:    _Query_DatasetInfo_Handler,
+		},
+		{
+			MethodName: "Datasets",
+			Handler:    _Query_Datasets_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

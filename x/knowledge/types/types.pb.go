@@ -21,167 +21,223 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// FactStatus represents the lifecycle state of a verified fact.
-type FactStatus int32
+// SampleType classifies the discourse format of a training data sample.
+type SampleType int32
 
 const (
-	FactStatus_FACT_STATUS_UNSPECIFIED FactStatus = 0
-	FactStatus_FACT_STATUS_PENDING     FactStatus = 1
-	FactStatus_FACT_STATUS_PROVISIONAL FactStatus = 2
-	FactStatus_FACT_STATUS_VERIFIED    FactStatus = 3
-	FactStatus_FACT_STATUS_ACTIVE      FactStatus = 4
-	FactStatus_FACT_STATUS_CONTESTED   FactStatus = 5
-	FactStatus_FACT_STATUS_CHALLENGED  FactStatus = 6
-	FactStatus_FACT_STATUS_SUPERSEDED  FactStatus = 7
-	FactStatus_FACT_STATUS_EXPIRED     FactStatus = 8
-	FactStatus_FACT_STATUS_DISPROVEN   FactStatus = 9
-	FactStatus_FACT_STATUS_REVOKED     FactStatus = 10
-	FactStatus_FACT_STATUS_AT_RISK     FactStatus = 11
-	FactStatus_FACT_STATUS_PRUNED      FactStatus = 12
+	SampleType_SAMPLE_TYPE_UNSPECIFIED  SampleType = 0
+	SampleType_SAMPLE_TYPE_DISCUSSION   SampleType = 1  // Multi-party conversation
+	SampleType_SAMPLE_TYPE_DEBATE       SampleType = 2  // Opposing viewpoints argued
+	SampleType_SAMPLE_TYPE_EXPLANATION  SampleType = 3  // Someone explaining a concept
+	SampleType_SAMPLE_TYPE_TROUBLESHOOT SampleType = 4  // Problem → diagnosis → solution
+	SampleType_SAMPLE_TYPE_REVIEW       SampleType = 5  // Evaluation/critique
+	SampleType_SAMPLE_TYPE_TUTORIAL     SampleType = 6  // Step-by-step teaching
+	SampleType_SAMPLE_TYPE_OPINION      SampleType = 7  // Reasoned opinion with arguments
+	SampleType_SAMPLE_TYPE_NARRATIVE    SampleType = 8  // Storytelling, personal experience
+	SampleType_SAMPLE_TYPE_Q_AND_A      SampleType = 9  // Question and answer(s)
+	SampleType_SAMPLE_TYPE_CREATIVE     SampleType = 10 // Creative writing, poetry, humor
+	SampleType_SAMPLE_TYPE_ANNOTATION   SampleType = 11 // Human annotation/labeling
+	SampleType_SAMPLE_TYPE_CORRECTION   SampleType = 12 // Correcting misinformation
 )
 
-// Enum value maps for FactStatus.
+// Enum value maps for SampleType.
 var (
-	FactStatus_name = map[int32]string{
-		0:  "FACT_STATUS_UNSPECIFIED",
-		1:  "FACT_STATUS_PENDING",
-		2:  "FACT_STATUS_PROVISIONAL",
-		3:  "FACT_STATUS_VERIFIED",
-		4:  "FACT_STATUS_ACTIVE",
-		5:  "FACT_STATUS_CONTESTED",
-		6:  "FACT_STATUS_CHALLENGED",
-		7:  "FACT_STATUS_SUPERSEDED",
-		8:  "FACT_STATUS_EXPIRED",
-		9:  "FACT_STATUS_DISPROVEN",
-		10: "FACT_STATUS_REVOKED",
-		11: "FACT_STATUS_AT_RISK",
-		12: "FACT_STATUS_PRUNED",
+	SampleType_name = map[int32]string{
+		0:  "SAMPLE_TYPE_UNSPECIFIED",
+		1:  "SAMPLE_TYPE_DISCUSSION",
+		2:  "SAMPLE_TYPE_DEBATE",
+		3:  "SAMPLE_TYPE_EXPLANATION",
+		4:  "SAMPLE_TYPE_TROUBLESHOOT",
+		5:  "SAMPLE_TYPE_REVIEW",
+		6:  "SAMPLE_TYPE_TUTORIAL",
+		7:  "SAMPLE_TYPE_OPINION",
+		8:  "SAMPLE_TYPE_NARRATIVE",
+		9:  "SAMPLE_TYPE_Q_AND_A",
+		10: "SAMPLE_TYPE_CREATIVE",
+		11: "SAMPLE_TYPE_ANNOTATION",
+		12: "SAMPLE_TYPE_CORRECTION",
 	}
-	FactStatus_value = map[string]int32{
-		"FACT_STATUS_UNSPECIFIED": 0,
-		"FACT_STATUS_PENDING":     1,
-		"FACT_STATUS_PROVISIONAL": 2,
-		"FACT_STATUS_VERIFIED":    3,
-		"FACT_STATUS_ACTIVE":      4,
-		"FACT_STATUS_CONTESTED":   5,
-		"FACT_STATUS_CHALLENGED":  6,
-		"FACT_STATUS_SUPERSEDED":  7,
-		"FACT_STATUS_EXPIRED":     8,
-		"FACT_STATUS_DISPROVEN":   9,
-		"FACT_STATUS_REVOKED":     10,
-		"FACT_STATUS_AT_RISK":     11,
-		"FACT_STATUS_PRUNED":      12,
+	SampleType_value = map[string]int32{
+		"SAMPLE_TYPE_UNSPECIFIED":  0,
+		"SAMPLE_TYPE_DISCUSSION":   1,
+		"SAMPLE_TYPE_DEBATE":       2,
+		"SAMPLE_TYPE_EXPLANATION":  3,
+		"SAMPLE_TYPE_TROUBLESHOOT": 4,
+		"SAMPLE_TYPE_REVIEW":       5,
+		"SAMPLE_TYPE_TUTORIAL":     6,
+		"SAMPLE_TYPE_OPINION":      7,
+		"SAMPLE_TYPE_NARRATIVE":    8,
+		"SAMPLE_TYPE_Q_AND_A":      9,
+		"SAMPLE_TYPE_CREATIVE":     10,
+		"SAMPLE_TYPE_ANNOTATION":   11,
+		"SAMPLE_TYPE_CORRECTION":   12,
 	}
 )
 
-func (x FactStatus) Enum() *FactStatus {
-	p := new(FactStatus)
+func (x SampleType) Enum() *SampleType {
+	p := new(SampleType)
 	*p = x
 	return p
 }
 
-func (x FactStatus) String() string {
+func (x SampleType) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (FactStatus) Descriptor() protoreflect.EnumDescriptor {
+func (SampleType) Descriptor() protoreflect.EnumDescriptor {
 	return file_zerone_knowledge_v1_types_proto_enumTypes[0].Descriptor()
 }
 
-func (FactStatus) Type() protoreflect.EnumType {
+func (SampleType) Type() protoreflect.EnumType {
 	return &file_zerone_knowledge_v1_types_proto_enumTypes[0]
 }
 
-func (x FactStatus) Number() protoreflect.EnumNumber {
+func (x SampleType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use FactStatus.Descriptor instead.
-func (FactStatus) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use SampleType.Descriptor instead.
+func (SampleType) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{0}
 }
 
-// ClaimStatus represents the lifecycle state of a submitted claim.
-type ClaimStatus int32
+// SampleStatus represents the lifecycle state of a validated training sample.
+type SampleStatus int32
 
 const (
-	ClaimStatus_CLAIM_STATUS_UNSPECIFIED        ClaimStatus = 0
-	ClaimStatus_CLAIM_STATUS_PENDING            ClaimStatus = 1
-	ClaimStatus_CLAIM_STATUS_PENDING_EVALUATION ClaimStatus = 2
-	ClaimStatus_CLAIM_STATUS_EVALUATED          ClaimStatus = 3
-	ClaimStatus_CLAIM_STATUS_PROVISIONAL        ClaimStatus = 4
-	ClaimStatus_CLAIM_STATUS_IN_VERIFICATION    ClaimStatus = 5
-	ClaimStatus_CLAIM_STATUS_ACCEPTED           ClaimStatus = 6
-	ClaimStatus_CLAIM_STATUS_REJECTED           ClaimStatus = 7
-	ClaimStatus_CLAIM_STATUS_CHALLENGED         ClaimStatus = 8
-	ClaimStatus_CLAIM_STATUS_EXPIRED            ClaimStatus = 9
-	ClaimStatus_CLAIM_STATUS_INSUFFICIENT       ClaimStatus = 10
-	ClaimStatus_CLAIM_STATUS_CONTESTED          ClaimStatus = 11
-	ClaimStatus_CLAIM_STATUS_MALFORMED          ClaimStatus = 12 // Rejected as not truth-apt
+	SampleStatus_SAMPLE_STATUS_UNSPECIFIED SampleStatus = 0
+	SampleStatus_SAMPLE_STATUS_PENDING     SampleStatus = 1 // Awaiting quality validation
+	SampleStatus_SAMPLE_STATUS_IN_REVIEW   SampleStatus = 2 // Quality round in progress
+	SampleStatus_SAMPLE_STATUS_GOLD        SampleStatus = 3 // Exceptional quality
+	SampleStatus_SAMPLE_STATUS_SILVER      SampleStatus = 4 // Good quality
+	SampleStatus_SAMPLE_STATUS_BRONZE      SampleStatus = 5 // Acceptable quality
+	SampleStatus_SAMPLE_STATUS_REJECTED    SampleStatus = 6 // Not useful
+	SampleStatus_SAMPLE_STATUS_CONTESTED   SampleStatus = 7 // Under dispute
+	SampleStatus_SAMPLE_STATUS_EXPIRED     SampleStatus = 8 // Energy depleted
+	SampleStatus_SAMPLE_STATUS_PRUNED      SampleStatus = 9 // Removed from active set
 )
 
-// Enum value maps for ClaimStatus.
+// Enum value maps for SampleStatus.
 var (
-	ClaimStatus_name = map[int32]string{
-		0:  "CLAIM_STATUS_UNSPECIFIED",
-		1:  "CLAIM_STATUS_PENDING",
-		2:  "CLAIM_STATUS_PENDING_EVALUATION",
-		3:  "CLAIM_STATUS_EVALUATED",
-		4:  "CLAIM_STATUS_PROVISIONAL",
-		5:  "CLAIM_STATUS_IN_VERIFICATION",
-		6:  "CLAIM_STATUS_ACCEPTED",
-		7:  "CLAIM_STATUS_REJECTED",
-		8:  "CLAIM_STATUS_CHALLENGED",
-		9:  "CLAIM_STATUS_EXPIRED",
-		10: "CLAIM_STATUS_INSUFFICIENT",
-		11: "CLAIM_STATUS_CONTESTED",
-		12: "CLAIM_STATUS_MALFORMED",
+	SampleStatus_name = map[int32]string{
+		0: "SAMPLE_STATUS_UNSPECIFIED",
+		1: "SAMPLE_STATUS_PENDING",
+		2: "SAMPLE_STATUS_IN_REVIEW",
+		3: "SAMPLE_STATUS_GOLD",
+		4: "SAMPLE_STATUS_SILVER",
+		5: "SAMPLE_STATUS_BRONZE",
+		6: "SAMPLE_STATUS_REJECTED",
+		7: "SAMPLE_STATUS_CONTESTED",
+		8: "SAMPLE_STATUS_EXPIRED",
+		9: "SAMPLE_STATUS_PRUNED",
 	}
-	ClaimStatus_value = map[string]int32{
-		"CLAIM_STATUS_UNSPECIFIED":        0,
-		"CLAIM_STATUS_PENDING":            1,
-		"CLAIM_STATUS_PENDING_EVALUATION": 2,
-		"CLAIM_STATUS_EVALUATED":          3,
-		"CLAIM_STATUS_PROVISIONAL":        4,
-		"CLAIM_STATUS_IN_VERIFICATION":    5,
-		"CLAIM_STATUS_ACCEPTED":           6,
-		"CLAIM_STATUS_REJECTED":           7,
-		"CLAIM_STATUS_CHALLENGED":         8,
-		"CLAIM_STATUS_EXPIRED":            9,
-		"CLAIM_STATUS_INSUFFICIENT":       10,
-		"CLAIM_STATUS_CONTESTED":          11,
-		"CLAIM_STATUS_MALFORMED":          12,
+	SampleStatus_value = map[string]int32{
+		"SAMPLE_STATUS_UNSPECIFIED": 0,
+		"SAMPLE_STATUS_PENDING":     1,
+		"SAMPLE_STATUS_IN_REVIEW":   2,
+		"SAMPLE_STATUS_GOLD":        3,
+		"SAMPLE_STATUS_SILVER":      4,
+		"SAMPLE_STATUS_BRONZE":      5,
+		"SAMPLE_STATUS_REJECTED":    6,
+		"SAMPLE_STATUS_CONTESTED":   7,
+		"SAMPLE_STATUS_EXPIRED":     8,
+		"SAMPLE_STATUS_PRUNED":      9,
 	}
 )
 
-func (x ClaimStatus) Enum() *ClaimStatus {
-	p := new(ClaimStatus)
+func (x SampleStatus) Enum() *SampleStatus {
+	p := new(SampleStatus)
 	*p = x
 	return p
 }
 
-func (x ClaimStatus) String() string {
+func (x SampleStatus) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (ClaimStatus) Descriptor() protoreflect.EnumDescriptor {
+func (SampleStatus) Descriptor() protoreflect.EnumDescriptor {
 	return file_zerone_knowledge_v1_types_proto_enumTypes[1].Descriptor()
 }
 
-func (ClaimStatus) Type() protoreflect.EnumType {
+func (SampleStatus) Type() protoreflect.EnumType {
 	return &file_zerone_knowledge_v1_types_proto_enumTypes[1]
 }
 
-func (x ClaimStatus) Number() protoreflect.EnumNumber {
+func (x SampleStatus) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use ClaimStatus.Descriptor instead.
-func (ClaimStatus) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use SampleStatus.Descriptor instead.
+func (SampleStatus) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{1}
 }
 
-// VerificationPhase tracks progress of a commit-reveal verification round.
+// SubmissionStatus represents the lifecycle state of a raw submission.
+type SubmissionStatus int32
+
+const (
+	SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED    SubmissionStatus = 0
+	SubmissionStatus_SUBMISSION_STATUS_PENDING        SubmissionStatus = 1
+	SubmissionStatus_SUBMISSION_STATUS_PENDING_REVIEW SubmissionStatus = 2
+	SubmissionStatus_SUBMISSION_STATUS_REVIEWED       SubmissionStatus = 3
+	SubmissionStatus_SUBMISSION_STATUS_ACCEPTED       SubmissionStatus = 4
+	SubmissionStatus_SUBMISSION_STATUS_REJECTED       SubmissionStatus = 5
+	SubmissionStatus_SUBMISSION_STATUS_CONSENT_FAILED SubmissionStatus = 6
+	SubmissionStatus_SUBMISSION_STATUS_DUPLICATE      SubmissionStatus = 7
+)
+
+// Enum value maps for SubmissionStatus.
+var (
+	SubmissionStatus_name = map[int32]string{
+		0: "SUBMISSION_STATUS_UNSPECIFIED",
+		1: "SUBMISSION_STATUS_PENDING",
+		2: "SUBMISSION_STATUS_PENDING_REVIEW",
+		3: "SUBMISSION_STATUS_REVIEWED",
+		4: "SUBMISSION_STATUS_ACCEPTED",
+		5: "SUBMISSION_STATUS_REJECTED",
+		6: "SUBMISSION_STATUS_CONSENT_FAILED",
+		7: "SUBMISSION_STATUS_DUPLICATE",
+	}
+	SubmissionStatus_value = map[string]int32{
+		"SUBMISSION_STATUS_UNSPECIFIED":    0,
+		"SUBMISSION_STATUS_PENDING":        1,
+		"SUBMISSION_STATUS_PENDING_REVIEW": 2,
+		"SUBMISSION_STATUS_REVIEWED":       3,
+		"SUBMISSION_STATUS_ACCEPTED":       4,
+		"SUBMISSION_STATUS_REJECTED":       5,
+		"SUBMISSION_STATUS_CONSENT_FAILED": 6,
+		"SUBMISSION_STATUS_DUPLICATE":      7,
+	}
+)
+
+func (x SubmissionStatus) Enum() *SubmissionStatus {
+	p := new(SubmissionStatus)
+	*p = x
+	return p
+}
+
+func (x SubmissionStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SubmissionStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_zerone_knowledge_v1_types_proto_enumTypes[2].Descriptor()
+}
+
+func (SubmissionStatus) Type() protoreflect.EnumType {
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[2]
+}
+
+func (x SubmissionStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SubmissionStatus.Descriptor instead.
+func (SubmissionStatus) EnumDescriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
+}
+
+// VerificationPhase tracks progress of a commit-reveal quality round.
 type VerificationPhase int32
 
 const (
@@ -224,11 +280,11 @@ func (x VerificationPhase) String() string {
 }
 
 func (VerificationPhase) Descriptor() protoreflect.EnumDescriptor {
-	return file_zerone_knowledge_v1_types_proto_enumTypes[2].Descriptor()
+	return file_zerone_knowledge_v1_types_proto_enumTypes[3].Descriptor()
 }
 
 func (VerificationPhase) Type() protoreflect.EnumType {
-	return &file_zerone_knowledge_v1_types_proto_enumTypes[2]
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[3]
 }
 
 func (x VerificationPhase) Number() protoreflect.EnumNumber {
@@ -237,194 +293,128 @@ func (x VerificationPhase) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use VerificationPhase.Descriptor instead.
 func (VerificationPhase) EnumDescriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
-}
-
-// Verdict is the outcome of a completed verification round.
-type Verdict int32
-
-const (
-	Verdict_VERDICT_UNSPECIFIED  Verdict = 0
-	Verdict_VERDICT_ACCEPT       Verdict = 1
-	Verdict_VERDICT_REJECT       Verdict = 2
-	Verdict_VERDICT_INCONCLUSIVE Verdict = 3
-	Verdict_VERDICT_MALFORMED    Verdict = 4 // Claim is not truth-apt (paradox, category error, nonsense)
-)
-
-// Enum value maps for Verdict.
-var (
-	Verdict_name = map[int32]string{
-		0: "VERDICT_UNSPECIFIED",
-		1: "VERDICT_ACCEPT",
-		2: "VERDICT_REJECT",
-		3: "VERDICT_INCONCLUSIVE",
-		4: "VERDICT_MALFORMED",
-	}
-	Verdict_value = map[string]int32{
-		"VERDICT_UNSPECIFIED":  0,
-		"VERDICT_ACCEPT":       1,
-		"VERDICT_REJECT":       2,
-		"VERDICT_INCONCLUSIVE": 3,
-		"VERDICT_MALFORMED":    4,
-	}
-)
-
-func (x Verdict) Enum() *Verdict {
-	p := new(Verdict)
-	*p = x
-	return p
-}
-
-func (x Verdict) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (Verdict) Descriptor() protoreflect.EnumDescriptor {
-	return file_zerone_knowledge_v1_types_proto_enumTypes[3].Descriptor()
-}
-
-func (Verdict) Type() protoreflect.EnumType {
-	return &file_zerone_knowledge_v1_types_proto_enumTypes[3]
-}
-
-func (x Verdict) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use Verdict.Descriptor instead.
-func (Verdict) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
 }
 
-// ClaimType classifies the epistemic shape of a knowledge claim.
-// Agents use this to filter and prioritize facts for prompt injection.
-type ClaimType int32
+// QualityVerdict is the outcome of a completed quality round.
+type QualityVerdict int32
 
 const (
-	ClaimType_CLAIM_TYPE_UNSPECIFIED   ClaimType = 0 // Legacy/untyped — treated as assertion
-	ClaimType_CLAIM_TYPE_ASSERTION     ClaimType = 1 // "X is true" — direct factual statement
-	ClaimType_CLAIM_TYPE_RELATION      ClaimType = 2 // "X relates to Y via Z" — graph edge
-	ClaimType_CLAIM_TYPE_DEFINITION    ClaimType = 3 // "X means Y" — term/concept definition
-	ClaimType_CLAIM_TYPE_CONSTRAINT    ClaimType = 4 // "X must/cannot Y" — rule or boundary
-	ClaimType_CLAIM_TYPE_NEGATION      ClaimType = 5 // "X is NOT true" — explicit falsity marker
-	ClaimType_CLAIM_TYPE_OBSERVATION   ClaimType = 6 // "X was observed at time/place" — empirical data point
-	ClaimType_CLAIM_TYPE_COMPUTATIONAL ClaimType = 7 // Derived from computation/inference — agent specialty
+	QualityVerdict_QUALITY_VERDICT_UNSPECIFIED  QualityVerdict = 0
+	QualityVerdict_QUALITY_VERDICT_GOLD         QualityVerdict = 1
+	QualityVerdict_QUALITY_VERDICT_SILVER       QualityVerdict = 2
+	QualityVerdict_QUALITY_VERDICT_BRONZE       QualityVerdict = 3
+	QualityVerdict_QUALITY_VERDICT_REJECT       QualityVerdict = 4
+	QualityVerdict_QUALITY_VERDICT_CONSENT_FAIL QualityVerdict = 5
 )
 
-// Enum value maps for ClaimType.
+// Enum value maps for QualityVerdict.
 var (
-	ClaimType_name = map[int32]string{
-		0: "CLAIM_TYPE_UNSPECIFIED",
-		1: "CLAIM_TYPE_ASSERTION",
-		2: "CLAIM_TYPE_RELATION",
-		3: "CLAIM_TYPE_DEFINITION",
-		4: "CLAIM_TYPE_CONSTRAINT",
-		5: "CLAIM_TYPE_NEGATION",
-		6: "CLAIM_TYPE_OBSERVATION",
-		7: "CLAIM_TYPE_COMPUTATIONAL",
+	QualityVerdict_name = map[int32]string{
+		0: "QUALITY_VERDICT_UNSPECIFIED",
+		1: "QUALITY_VERDICT_GOLD",
+		2: "QUALITY_VERDICT_SILVER",
+		3: "QUALITY_VERDICT_BRONZE",
+		4: "QUALITY_VERDICT_REJECT",
+		5: "QUALITY_VERDICT_CONSENT_FAIL",
 	}
-	ClaimType_value = map[string]int32{
-		"CLAIM_TYPE_UNSPECIFIED":   0,
-		"CLAIM_TYPE_ASSERTION":     1,
-		"CLAIM_TYPE_RELATION":      2,
-		"CLAIM_TYPE_DEFINITION":    3,
-		"CLAIM_TYPE_CONSTRAINT":    4,
-		"CLAIM_TYPE_NEGATION":      5,
-		"CLAIM_TYPE_OBSERVATION":   6,
-		"CLAIM_TYPE_COMPUTATIONAL": 7,
+	QualityVerdict_value = map[string]int32{
+		"QUALITY_VERDICT_UNSPECIFIED":  0,
+		"QUALITY_VERDICT_GOLD":         1,
+		"QUALITY_VERDICT_SILVER":       2,
+		"QUALITY_VERDICT_BRONZE":       3,
+		"QUALITY_VERDICT_REJECT":       4,
+		"QUALITY_VERDICT_CONSENT_FAIL": 5,
 	}
 )
 
-func (x ClaimType) Enum() *ClaimType {
-	p := new(ClaimType)
+func (x QualityVerdict) Enum() *QualityVerdict {
+	p := new(QualityVerdict)
 	*p = x
 	return p
 }
 
-func (x ClaimType) String() string {
+func (x QualityVerdict) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (ClaimType) Descriptor() protoreflect.EnumDescriptor {
+func (QualityVerdict) Descriptor() protoreflect.EnumDescriptor {
 	return file_zerone_knowledge_v1_types_proto_enumTypes[4].Descriptor()
 }
 
-func (ClaimType) Type() protoreflect.EnumType {
+func (QualityVerdict) Type() protoreflect.EnumType {
 	return &file_zerone_knowledge_v1_types_proto_enumTypes[4]
 }
 
-func (x ClaimType) Number() protoreflect.EnumNumber {
+func (x QualityVerdict) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use ClaimType.Descriptor instead.
-func (ClaimType) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use QualityVerdict.Descriptor instead.
+func (QualityVerdict) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
 }
 
-// RelationType defines how one fact relates to another.
-type RelationType int32
+// ConsentType classifies how consent was obtained for the training data.
+type ConsentType int32
 
 const (
-	RelationType_RELATION_TYPE_UNSPECIFIED RelationType = 0
-	RelationType_RELATION_TYPE_SUPPORTS    RelationType = 1 // This fact provides evidence for the target
-	RelationType_RELATION_TYPE_CONTRADICTS RelationType = 2 // This fact conflicts with the target
-	RelationType_RELATION_TYPE_REQUIRES    RelationType = 3 // This fact depends on the target being true
-	RelationType_RELATION_TYPE_REFINES     RelationType = 4 // This fact is a more precise version of the target
-	RelationType_RELATION_TYPE_GENERALIZES RelationType = 5 // This fact is a broader version of the target
-	RelationType_RELATION_TYPE_SUPERSEDES  RelationType = 6 // This fact replaces the target (newer/better)
+	ConsentType_CONSENT_TYPE_UNSPECIFIED    ConsentType = 0
+	ConsentType_CONSENT_TYPE_SELF_AUTHORED  ConsentType = 1 // Submitter is the author (strongest)
+	ConsentType_CONSENT_TYPE_OPT_IN         ConsentType = 2 // Author explicitly opted in
+	ConsentType_CONSENT_TYPE_PUBLIC_LICENSE ConsentType = 3 // CC-BY or similar open license
+	ConsentType_CONSENT_TYPE_PLATFORM_TOS   ConsentType = 4 // Platform TOS permits this use
+	ConsentType_CONSENT_TYPE_FAIR_USE       ConsentType = 5 // Fair use claim (weakest)
 )
 
-// Enum value maps for RelationType.
+// Enum value maps for ConsentType.
 var (
-	RelationType_name = map[int32]string{
-		0: "RELATION_TYPE_UNSPECIFIED",
-		1: "RELATION_TYPE_SUPPORTS",
-		2: "RELATION_TYPE_CONTRADICTS",
-		3: "RELATION_TYPE_REQUIRES",
-		4: "RELATION_TYPE_REFINES",
-		5: "RELATION_TYPE_GENERALIZES",
-		6: "RELATION_TYPE_SUPERSEDES",
+	ConsentType_name = map[int32]string{
+		0: "CONSENT_TYPE_UNSPECIFIED",
+		1: "CONSENT_TYPE_SELF_AUTHORED",
+		2: "CONSENT_TYPE_OPT_IN",
+		3: "CONSENT_TYPE_PUBLIC_LICENSE",
+		4: "CONSENT_TYPE_PLATFORM_TOS",
+		5: "CONSENT_TYPE_FAIR_USE",
 	}
-	RelationType_value = map[string]int32{
-		"RELATION_TYPE_UNSPECIFIED": 0,
-		"RELATION_TYPE_SUPPORTS":    1,
-		"RELATION_TYPE_CONTRADICTS": 2,
-		"RELATION_TYPE_REQUIRES":    3,
-		"RELATION_TYPE_REFINES":     4,
-		"RELATION_TYPE_GENERALIZES": 5,
-		"RELATION_TYPE_SUPERSEDES":  6,
+	ConsentType_value = map[string]int32{
+		"CONSENT_TYPE_UNSPECIFIED":    0,
+		"CONSENT_TYPE_SELF_AUTHORED":  1,
+		"CONSENT_TYPE_OPT_IN":         2,
+		"CONSENT_TYPE_PUBLIC_LICENSE": 3,
+		"CONSENT_TYPE_PLATFORM_TOS":   4,
+		"CONSENT_TYPE_FAIR_USE":       5,
 	}
 )
 
-func (x RelationType) Enum() *RelationType {
-	p := new(RelationType)
+func (x ConsentType) Enum() *ConsentType {
+	p := new(ConsentType)
 	*p = x
 	return p
 }
 
-func (x RelationType) String() string {
+func (x ConsentType) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (RelationType) Descriptor() protoreflect.EnumDescriptor {
+func (ConsentType) Descriptor() protoreflect.EnumDescriptor {
 	return file_zerone_knowledge_v1_types_proto_enumTypes[5].Descriptor()
 }
 
-func (RelationType) Type() protoreflect.EnumType {
+func (ConsentType) Type() protoreflect.EnumType {
 	return &file_zerone_knowledge_v1_types_proto_enumTypes[5]
 }
 
-func (x RelationType) Number() protoreflect.EnumNumber {
+func (x ConsentType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use RelationType.Descriptor instead.
-func (RelationType) EnumDescriptor() ([]byte, []int) {
+// Deprecated: Use ConsentType.Descriptor instead.
+func (ConsentType) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
-// DomainStatus tracks whether an epistemic domain is active or proposed.
+// DomainStatus tracks whether a data domain is active or proposed.
 type DomainStatus int32
 
 const (
@@ -477,32 +467,32 @@ func (DomainStatus) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
-// FactRelation is a typed, directional edge in the knowledge graph.
-type FactRelation struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	SourceFactId   string                 `protobuf:"bytes,1,opt,name=source_fact_id,json=sourceFactId,proto3" json:"source_fact_id,omitempty"`          // The fact declaring the relationship
-	TargetFactId   string                 `protobuf:"bytes,2,opt,name=target_fact_id,json=targetFactId,proto3" json:"target_fact_id,omitempty"`          // The fact being referenced
-	Relation       RelationType           `protobuf:"varint,3,opt,name=relation,proto3,enum=zerone.knowledge.v1.RelationType" json:"relation,omitempty"` // How source relates to target
-	CreatedAtBlock uint64                 `protobuf:"varint,4,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
-	Creator        string                 `protobuf:"bytes,5,opt,name=creator,proto3" json:"creator,omitempty"` // Address that declared this relation
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+// ConsentProof records how consent was obtained for using source content.
+type ConsentProof struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Type             ConsentType            `protobuf:"varint,1,opt,name=type,proto3,enum=zerone.knowledge.v1.ConsentType" json:"type,omitempty"`
+	ProofUri         string                 `protobuf:"bytes,2,opt,name=proof_uri,json=proofUri,proto3" json:"proof_uri,omitempty"`                          // Link to consent evidence
+	AuthorSignature  string                 `protobuf:"bytes,3,opt,name=author_signature,json=authorSignature,proto3" json:"author_signature,omitempty"`     // Optional cryptographic consent
+	ConsentTimestamp uint64                 `protobuf:"varint,4,opt,name=consent_timestamp,json=consentTimestamp,proto3" json:"consent_timestamp,omitempty"` // Unix timestamp
+	ConsentTerms     string                 `protobuf:"bytes,5,opt,name=consent_terms,json=consentTerms,proto3" json:"consent_terms,omitempty"`              // What was consented to
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
-func (x *FactRelation) Reset() {
-	*x = FactRelation{}
+func (x *ConsentProof) Reset() {
+	*x = ConsentProof{}
 	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FactRelation) String() string {
+func (x *ConsentProof) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FactRelation) ProtoMessage() {}
+func (*ConsentProof) ProtoMessage() {}
 
-func (x *FactRelation) ProtoReflect() protoreflect.Message {
+func (x *ConsentProof) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -514,69 +504,90 @@ func (x *FactRelation) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FactRelation.ProtoReflect.Descriptor instead.
-func (*FactRelation) Descriptor() ([]byte, []int) {
+// Deprecated: Use ConsentProof.ProtoReflect.Descriptor instead.
+func (*ConsentProof) Descriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *FactRelation) GetSourceFactId() string {
+func (x *ConsentProof) GetType() ConsentType {
 	if x != nil {
-		return x.SourceFactId
+		return x.Type
+	}
+	return ConsentType_CONSENT_TYPE_UNSPECIFIED
+}
+
+func (x *ConsentProof) GetProofUri() string {
+	if x != nil {
+		return x.ProofUri
 	}
 	return ""
 }
 
-func (x *FactRelation) GetTargetFactId() string {
+func (x *ConsentProof) GetAuthorSignature() string {
 	if x != nil {
-		return x.TargetFactId
+		return x.AuthorSignature
 	}
 	return ""
 }
 
-func (x *FactRelation) GetRelation() RelationType {
+func (x *ConsentProof) GetConsentTimestamp() uint64 {
 	if x != nil {
-		return x.Relation
-	}
-	return RelationType_RELATION_TYPE_UNSPECIFIED
-}
-
-func (x *FactRelation) GetCreatedAtBlock() uint64 {
-	if x != nil {
-		return x.CreatedAtBlock
+		return x.ConsentTimestamp
 	}
 	return 0
 }
 
-func (x *FactRelation) GetCreator() string {
+func (x *ConsentProof) GetConsentTerms() string {
 	if x != nil {
-		return x.Creator
+		return x.ConsentTerms
 	}
 	return ""
 }
 
-// ClaimRelation declares a typed relationship from a claim to an existing fact.
-type ClaimRelation struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TargetFactId  string                 `protobuf:"bytes,1,opt,name=target_fact_id,json=targetFactId,proto3" json:"target_fact_id,omitempty"`
-	Relation      RelationType           `protobuf:"varint,2,opt,name=relation,proto3,enum=zerone.knowledge.v1.RelationType" json:"relation,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+// Submission is a raw discourse excerpt awaiting quality validation.
+// Replaces the old Claim message.
+type Submission struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Submitter          string                 `protobuf:"bytes,2,opt,name=submitter,proto3" json:"submitter,omitempty"`
+	Content            string                 `protobuf:"bytes,3,opt,name=content,proto3" json:"content,omitempty"`
+	SampleType         SampleType             `protobuf:"varint,4,opt,name=sample_type,json=sampleType,proto3,enum=zerone.knowledge.v1.SampleType" json:"sample_type,omitempty"`
+	Domain             string                 `protobuf:"bytes,5,opt,name=domain,proto3" json:"domain,omitempty"`
+	SourceUri          string                 `protobuf:"bytes,6,opt,name=source_uri,json=sourceUri,proto3" json:"source_uri,omitempty"`
+	SourcePlatform     string                 `protobuf:"bytes,7,opt,name=source_platform,json=sourcePlatform,proto3" json:"source_platform,omitempty"`
+	SourceTimestamp    uint64                 `protobuf:"varint,8,opt,name=source_timestamp,json=sourceTimestamp,proto3" json:"source_timestamp,omitempty"`
+	ParentSubmissionId string                 `protobuf:"bytes,9,opt,name=parent_submission_id,json=parentSubmissionId,proto3" json:"parent_submission_id,omitempty"`
+	ContextIds         []string               `protobuf:"bytes,10,rep,name=context_ids,json=contextIds,proto3" json:"context_ids,omitempty"`
+	ThreadId           string                 `protobuf:"bytes,11,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	Consent            *ConsentProof          `protobuf:"bytes,12,opt,name=consent,proto3" json:"consent,omitempty"`
+	OriginalAuthor     string                 `protobuf:"bytes,13,opt,name=original_author,json=originalAuthor,proto3" json:"original_author,omitempty"`
+	License            string                 `protobuf:"bytes,14,opt,name=license,proto3" json:"license,omitempty"`
+	Tags               []string               `protobuf:"bytes,15,rep,name=tags,proto3" json:"tags,omitempty"`
+	Language           string                 `protobuf:"bytes,16,opt,name=language,proto3" json:"language,omitempty"`
+	Stake              string                 `protobuf:"bytes,17,opt,name=stake,proto3" json:"stake,omitempty"`
+	SubmittedAtBlock   uint64                 `protobuf:"varint,18,opt,name=submitted_at_block,json=submittedAtBlock,proto3" json:"submitted_at_block,omitempty"`
+	Status             SubmissionStatus       `protobuf:"varint,19,opt,name=status,proto3,enum=zerone.knowledge.v1.SubmissionStatus" json:"status,omitempty"`
+	ContentHash        string                 `protobuf:"bytes,20,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
+	QualityRoundId     string                 `protobuf:"bytes,21,opt,name=quality_round_id,json=qualityRoundId,proto3" json:"quality_round_id,omitempty"`
+	Sponsored          bool                   `protobuf:"varint,22,opt,name=sponsored,proto3" json:"sponsored,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
-func (x *ClaimRelation) Reset() {
-	*x = ClaimRelation{}
+func (x *Submission) Reset() {
+	*x = Submission{}
 	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *ClaimRelation) String() string {
+func (x *Submission) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ClaimRelation) ProtoMessage() {}
+func (*Submission) ProtoMessage() {}
 
-func (x *ClaimRelation) ProtoReflect() protoreflect.Message {
+func (x *Submission) ProtoReflect() protoreflect.Message {
 	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -588,900 +599,239 @@ func (x *ClaimRelation) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ClaimRelation.ProtoReflect.Descriptor instead.
-func (*ClaimRelation) Descriptor() ([]byte, []int) {
+// Deprecated: Use Submission.ProtoReflect.Descriptor instead.
+func (*Submission) Descriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *ClaimRelation) GetTargetFactId() string {
-	if x != nil {
-		return x.TargetFactId
-	}
-	return ""
-}
-
-func (x *ClaimRelation) GetRelation() RelationType {
-	if x != nil {
-		return x.Relation
-	}
-	return RelationType_RELATION_TYPE_UNSPECIFIED
-}
-
-// ClaimStructure provides machine-readable decomposition of a claim.
-// The full claim text (fact_content) remains the canonical human-readable form.
-// Structure is optional but strongly encouraged — agents prioritize structured facts.
-type ClaimStructure struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Subject       string                 `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`                                  // What the claim is about: "entropy of a closed system"
-	Predicate     string                 `protobuf:"bytes,2,opt,name=predicate,proto3" json:"predicate,omitempty"`                              // What is being asserted: "cannot decrease spontaneously"
-	Object        string                 `protobuf:"bytes,3,opt,name=object,proto3" json:"object,omitempty"`                                    // Optional target: "second law of thermodynamics"
-	Scope         string                 `protobuf:"bytes,4,opt,name=scope,proto3" json:"scope,omitempty"`                                      // Conditions/context: "classical thermodynamics, isolated systems"
-	TemporalScope string                 `protobuf:"bytes,5,opt,name=temporal_scope,json=temporalScope,proto3" json:"temporal_scope,omitempty"` // Time bounds if any: "post-Big-Bang", "since 2024", "" for timeless
-	Negatable     bool                   `protobuf:"varint,6,opt,name=negatable,proto3" json:"negatable,omitempty"`                             // Can this claim be meaningfully negated? (false for definitions)
-	Tags          []string               `protobuf:"bytes,7,rep,name=tags,proto3" json:"tags,omitempty"`                                        // Free-form searchable tags: ["thermodynamics", "entropy", "physics"]
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ClaimStructure) Reset() {
-	*x = ClaimStructure{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ClaimStructure) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ClaimStructure) ProtoMessage() {}
-
-func (x *ClaimStructure) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ClaimStructure.ProtoReflect.Descriptor instead.
-func (*ClaimStructure) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *ClaimStructure) GetSubject() string {
-	if x != nil {
-		return x.Subject
-	}
-	return ""
-}
-
-func (x *ClaimStructure) GetPredicate() string {
-	if x != nil {
-		return x.Predicate
-	}
-	return ""
-}
-
-func (x *ClaimStructure) GetObject() string {
-	if x != nil {
-		return x.Object
-	}
-	return ""
-}
-
-func (x *ClaimStructure) GetScope() string {
-	if x != nil {
-		return x.Scope
-	}
-	return ""
-}
-
-func (x *ClaimStructure) GetTemporalScope() string {
-	if x != nil {
-		return x.TemporalScope
-	}
-	return ""
-}
-
-func (x *ClaimStructure) GetNegatable() bool {
-	if x != nil {
-		return x.Negatable
-	}
-	return false
-}
-
-func (x *ClaimStructure) GetTags() []string {
-	if x != nil {
-		return x.Tags
-	}
-	return nil
-}
-
-// Fact represents a piece of verified knowledge in the protocol.
-// Confidence is measured on a 0-1,000,000 BPS scale (1,000,000 = 100%).
-type Fact struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	Id      string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Content string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
-	Domain  string                 `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
-	// Epistemic category: "axiomatic", "empirical", "derived", "contested",
-	// "analytic", "formal", "protocol", "computational", "predictive",
-	// "historical", "replicated", "social", "protocol_observation"
-	Category              string          `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
-	Confidence            uint64          `protobuf:"varint,5,opt,name=confidence,proto3" json:"confidence,omitempty"` // 0-1,000,000 BPS
-	Submitter             string          `protobuf:"bytes,6,opt,name=submitter,proto3" json:"submitter,omitempty"`
-	SubmittedAtBlock      uint64          `protobuf:"varint,7,opt,name=submitted_at_block,json=submittedAtBlock,proto3" json:"submitted_at_block,omitempty"`
-	VerifiedAtBlock       uint64          `protobuf:"varint,8,opt,name=verified_at_block,json=verifiedAtBlock,proto3" json:"verified_at_block,omitempty"`
-	CitationCount         uint64          `protobuf:"varint,9,opt,name=citation_count,json=citationCount,proto3" json:"citation_count,omitempty"`
-	Fundamentality        uint64          `protobuf:"varint,10,opt,name=fundamentality,proto3" json:"fundamentality,omitempty"` // 0-1,000,000 (how foundational this fact is)
-	References            []string        `protobuf:"bytes,11,rep,name=references,proto3" json:"references,omitempty"`          // fact IDs this fact cites
-	Status                FactStatus      `protobuf:"varint,12,opt,name=status,proto3,enum=zerone.knowledge.v1.FactStatus" json:"status,omitempty"`
-	ClaimId               string          `protobuf:"bytes,13,opt,name=claim_id,json=claimId,proto3" json:"claim_id,omitempty"`
-	ReverificationBlock   uint64          `protobuf:"varint,14,opt,name=reverification_block,json=reverificationBlock,proto3" json:"reverification_block,omitempty"`
-	LastVerifiedBlock     uint64          `protobuf:"varint,15,opt,name=last_verified_block,json=lastVerifiedBlock,proto3" json:"last_verified_block,omitempty"`
-	ChallengeWindowEnd    uint64          `protobuf:"varint,16,opt,name=challenge_window_end,json=challengeWindowEnd,proto3" json:"challenge_window_end,omitempty"`
-	BridgeScore           uint64          `protobuf:"varint,17,opt,name=bridge_score,json=bridgeScore,proto3" json:"bridge_score,omitempty"`            // 0-1,000,000 cross-domain bridge value
-	NoveltyScore          uint64          `protobuf:"varint,18,opt,name=novelty_score,json=noveltyScore,proto3" json:"novelty_score,omitempty"`         // 0-1,000,000
-	PatronageAmount       string          `protobuf:"bytes,19,opt,name=patronage_amount,json=patronageAmount,proto3" json:"patronage_amount,omitempty"` // coin amount as string (uzrn)
-	PatronageExpiryBlock  uint64          `protobuf:"varint,20,opt,name=patronage_expiry_block,json=patronageExpiryBlock,proto3" json:"patronage_expiry_block,omitempty"`
-	Stratum               string          `protobuf:"bytes,21,opt,name=stratum,proto3" json:"stratum,omitempty"`
-	Maturity              string          `protobuf:"bytes,22,opt,name=maturity,proto3" json:"maturity,omitempty"` // "emerging", "established", "canonical"
-	IncomingCitationCount uint64          `protobuf:"varint,23,opt,name=incoming_citation_count,json=incomingCitationCount,proto3" json:"incoming_citation_count,omitempty"`
-	ClaimType             ClaimType       `protobuf:"varint,24,opt,name=claim_type,json=claimType,proto3,enum=zerone.knowledge.v1.ClaimType" json:"claim_type,omitempty"`
-	OutgoingRelations     []*FactRelation `protobuf:"bytes,25,rep,name=outgoing_relations,json=outgoingRelations,proto3" json:"outgoing_relations,omitempty"` // Relations this fact declares
-	IncomingRelations     []*FactRelation `protobuf:"bytes,26,rep,name=incoming_relations,json=incomingRelations,proto3" json:"incoming_relations,omitempty"` // Relations pointing to this fact
-	Structure             *ClaimStructure `protobuf:"bytes,27,opt,name=structure,proto3" json:"structure,omitempty"`                                          // Machine-readable decomposition (optional)
-	CanonicalForm         string          `protobuf:"bytes,28,opt,name=canonical_form,json=canonicalForm,proto3" json:"canonical_form,omitempty"`             // Machine-readable normalized form
-	CanonicalHash         string          `protobuf:"bytes,29,opt,name=canonical_hash,json=canonicalHash,proto3" json:"canonical_hash,omitempty"`             // SHA-256 of canonical_form for dedup
-	// ─── Fitness scoring ──────────────────────────────────────────────────────
-	FitnessScore        uint64 `protobuf:"varint,30,opt,name=fitness_score,json=fitnessScore,proto3" json:"fitness_score,omitempty"`                        // 0-1,000,000 composite fitness
-	FitnessUpdatedBlock uint64 `protobuf:"varint,31,opt,name=fitness_updated_block,json=fitnessUpdatedBlock,proto3" json:"fitness_updated_block,omitempty"` // Last block fitness was recalculated
-	QueryCount          uint64 `protobuf:"varint,32,opt,name=query_count,json=queryCount,proto3" json:"query_count,omitempty"`                              // Lifetime query count
-	QueryCountEpoch     uint64 `protobuf:"varint,33,opt,name=query_count_epoch,json=queryCountEpoch,proto3" json:"query_count_epoch,omitempty"`             // Queries in current epoch
-	EpochBorn           uint64 `protobuf:"varint,34,opt,name=epoch_born,json=epochBorn,proto3" json:"epoch_born,omitempty"`                                 // Epoch when fact was created
-	// ─── Metabolism (energy budget) ─────────────────────────────────────────
-	Energy            uint64 `protobuf:"varint,35,opt,name=energy,proto3" json:"energy,omitempty"`                                                  // Current energy budget (0-10,000)
-	EnergyCap         uint64 `protobuf:"varint,36,opt,name=energy_cap,json=energyCap,proto3" json:"energy_cap,omitempty"`                           // Maximum energy (governance-adjustable per domain)
-	EnergyLastUpdated uint64 `protobuf:"varint,37,opt,name=energy_last_updated,json=energyLastUpdated,proto3" json:"energy_last_updated,omitempty"` // Block height of last energy update
-	AtRiskSinceEpoch  uint64 `protobuf:"varint,38,opt,name=at_risk_since_epoch,json=atRiskSinceEpoch,proto3" json:"at_risk_since_epoch,omitempty"`  // Epoch when energy first hit 0 (0 = not at risk)
-	// ─── Competition (niche dynamics) ────────────────────────────────────
-	NicheKey       string `protobuf:"bytes,39,opt,name=niche_key,json=nicheKey,proto3" json:"niche_key,omitempty"`                    // Computed: hash(domain + subject + claim_type)
-	NicheLeader    bool   `protobuf:"varint,40,opt,name=niche_leader,json=nicheLeader,proto3" json:"niche_leader,omitempty"`          // Is this the top-ranked fact in its niche?
-	NicheRank      uint64 `protobuf:"varint,41,opt,name=niche_rank,json=nicheRank,proto3" json:"niche_rank,omitempty"`                // Rank within niche (1 = leader)
-	NicheSize      uint64 `protobuf:"varint,42,opt,name=niche_size,json=nicheSize,proto3" json:"niche_size,omitempty"`                // How many facts in this niche
-	CompetitionTax uint64 `protobuf:"varint,43,opt,name=competition_tax,json=competitionTax,proto3" json:"competition_tax,omitempty"` // Extra maintenance from competition (energy units)
-	// ─── Reproduction (lineage tracking) ──────────────────────────────────
-	ParentFactId  string   `protobuf:"bytes,44,opt,name=parent_fact_id,json=parentFactId,proto3" json:"parent_fact_id,omitempty"`    // Direct parent (empty if original)
-	ChildFactIds  []string `protobuf:"bytes,45,rep,name=child_fact_ids,json=childFactIds,proto3" json:"child_fact_ids,omitempty"`    // Direct children
-	LineageDepth  uint64   `protobuf:"varint,46,opt,name=lineage_depth,json=lineageDepth,proto3" json:"lineage_depth,omitempty"`     // 0 = original, 1 = child, 2 = grandchild...
-	ProgenyCount  uint64   `protobuf:"varint,47,opt,name=progeny_count,json=progenyCount,proto3" json:"progeny_count,omitempty"`     // Total descendants (recursively)
-	LineageRootId string   `protobuf:"bytes,48,opt,name=lineage_root_id,json=lineageRootId,proto3" json:"lineage_root_id,omitempty"` // ID of the original ancestor
-	// ─── Novelty detection ──────────────────────────────────────────────────
-	CommonKnowledgeMatch bool `protobuf:"varint,49,opt,name=common_knowledge_match,json=commonKnowledgeMatch,proto3" json:"common_knowledge_match,omitempty"` // True if subject matches common knowledge registry
-	// ─── Satisfaction feedback ──────────────────────────────────────────────
-	SatisfactionUp        uint64 `protobuf:"varint,60,opt,name=satisfaction_up,json=satisfactionUp,proto3" json:"satisfaction_up,omitempty"`                        // Lifetime positive ratings
-	SatisfactionDown      uint64 `protobuf:"varint,61,opt,name=satisfaction_down,json=satisfactionDown,proto3" json:"satisfaction_down,omitempty"`                  // Lifetime negative ratings
-	SatisfactionUpEpoch   uint64 `protobuf:"varint,62,opt,name=satisfaction_up_epoch,json=satisfactionUpEpoch,proto3" json:"satisfaction_up_epoch,omitempty"`       // Positive ratings this epoch (resets)
-	SatisfactionDownEpoch uint64 `protobuf:"varint,63,opt,name=satisfaction_down_epoch,json=satisfactionDownEpoch,proto3" json:"satisfaction_down_epoch,omitempty"` // Negative ratings this epoch (resets)
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
-}
-
-func (x *Fact) Reset() {
-	*x = Fact{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Fact) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Fact) ProtoMessage() {}
-
-func (x *Fact) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Fact.ProtoReflect.Descriptor instead.
-func (*Fact) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *Fact) GetId() string {
+func (x *Submission) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *Fact) GetContent() string {
+func (x *Submission) GetSubmitter() string {
+	if x != nil {
+		return x.Submitter
+	}
+	return ""
+}
+
+func (x *Submission) GetContent() string {
 	if x != nil {
 		return x.Content
 	}
 	return ""
 }
 
-func (x *Fact) GetDomain() string {
+func (x *Submission) GetSampleType() SampleType {
+	if x != nil {
+		return x.SampleType
+	}
+	return SampleType_SAMPLE_TYPE_UNSPECIFIED
+}
+
+func (x *Submission) GetDomain() string {
 	if x != nil {
 		return x.Domain
 	}
 	return ""
 }
 
-func (x *Fact) GetCategory() string {
+func (x *Submission) GetSourceUri() string {
 	if x != nil {
-		return x.Category
+		return x.SourceUri
 	}
 	return ""
 }
 
-func (x *Fact) GetConfidence() uint64 {
+func (x *Submission) GetSourcePlatform() string {
 	if x != nil {
-		return x.Confidence
-	}
-	return 0
-}
-
-func (x *Fact) GetSubmitter() string {
-	if x != nil {
-		return x.Submitter
+		return x.SourcePlatform
 	}
 	return ""
 }
 
-func (x *Fact) GetSubmittedAtBlock() uint64 {
+func (x *Submission) GetSourceTimestamp() uint64 {
 	if x != nil {
-		return x.SubmittedAtBlock
+		return x.SourceTimestamp
 	}
 	return 0
 }
 
-func (x *Fact) GetVerifiedAtBlock() uint64 {
+func (x *Submission) GetParentSubmissionId() string {
 	if x != nil {
-		return x.VerifiedAtBlock
+		return x.ParentSubmissionId
 	}
-	return 0
+	return ""
 }
 
-func (x *Fact) GetCitationCount() uint64 {
+func (x *Submission) GetContextIds() []string {
 	if x != nil {
-		return x.CitationCount
-	}
-	return 0
-}
-
-func (x *Fact) GetFundamentality() uint64 {
-	if x != nil {
-		return x.Fundamentality
-	}
-	return 0
-}
-
-func (x *Fact) GetReferences() []string {
-	if x != nil {
-		return x.References
+		return x.ContextIds
 	}
 	return nil
 }
 
-func (x *Fact) GetStatus() FactStatus {
+func (x *Submission) GetThreadId() string {
 	if x != nil {
-		return x.Status
-	}
-	return FactStatus_FACT_STATUS_UNSPECIFIED
-}
-
-func (x *Fact) GetClaimId() string {
-	if x != nil {
-		return x.ClaimId
+		return x.ThreadId
 	}
 	return ""
 }
 
-func (x *Fact) GetReverificationBlock() uint64 {
+func (x *Submission) GetConsent() *ConsentProof {
 	if x != nil {
-		return x.ReverificationBlock
-	}
-	return 0
-}
-
-func (x *Fact) GetLastVerifiedBlock() uint64 {
-	if x != nil {
-		return x.LastVerifiedBlock
-	}
-	return 0
-}
-
-func (x *Fact) GetChallengeWindowEnd() uint64 {
-	if x != nil {
-		return x.ChallengeWindowEnd
-	}
-	return 0
-}
-
-func (x *Fact) GetBridgeScore() uint64 {
-	if x != nil {
-		return x.BridgeScore
-	}
-	return 0
-}
-
-func (x *Fact) GetNoveltyScore() uint64 {
-	if x != nil {
-		return x.NoveltyScore
-	}
-	return 0
-}
-
-func (x *Fact) GetPatronageAmount() string {
-	if x != nil {
-		return x.PatronageAmount
-	}
-	return ""
-}
-
-func (x *Fact) GetPatronageExpiryBlock() uint64 {
-	if x != nil {
-		return x.PatronageExpiryBlock
-	}
-	return 0
-}
-
-func (x *Fact) GetStratum() string {
-	if x != nil {
-		return x.Stratum
-	}
-	return ""
-}
-
-func (x *Fact) GetMaturity() string {
-	if x != nil {
-		return x.Maturity
-	}
-	return ""
-}
-
-func (x *Fact) GetIncomingCitationCount() uint64 {
-	if x != nil {
-		return x.IncomingCitationCount
-	}
-	return 0
-}
-
-func (x *Fact) GetClaimType() ClaimType {
-	if x != nil {
-		return x.ClaimType
-	}
-	return ClaimType_CLAIM_TYPE_UNSPECIFIED
-}
-
-func (x *Fact) GetOutgoingRelations() []*FactRelation {
-	if x != nil {
-		return x.OutgoingRelations
+		return x.Consent
 	}
 	return nil
 }
 
-func (x *Fact) GetIncomingRelations() []*FactRelation {
+func (x *Submission) GetOriginalAuthor() string {
 	if x != nil {
-		return x.IncomingRelations
+		return x.OriginalAuthor
+	}
+	return ""
+}
+
+func (x *Submission) GetLicense() string {
+	if x != nil {
+		return x.License
+	}
+	return ""
+}
+
+func (x *Submission) GetTags() []string {
+	if x != nil {
+		return x.Tags
 	}
 	return nil
 }
 
-func (x *Fact) GetStructure() *ClaimStructure {
+func (x *Submission) GetLanguage() string {
 	if x != nil {
-		return x.Structure
-	}
-	return nil
-}
-
-func (x *Fact) GetCanonicalForm() string {
-	if x != nil {
-		return x.CanonicalForm
+		return x.Language
 	}
 	return ""
 }
 
-func (x *Fact) GetCanonicalHash() string {
-	if x != nil {
-		return x.CanonicalHash
-	}
-	return ""
-}
-
-func (x *Fact) GetFitnessScore() uint64 {
-	if x != nil {
-		return x.FitnessScore
-	}
-	return 0
-}
-
-func (x *Fact) GetFitnessUpdatedBlock() uint64 {
-	if x != nil {
-		return x.FitnessUpdatedBlock
-	}
-	return 0
-}
-
-func (x *Fact) GetQueryCount() uint64 {
-	if x != nil {
-		return x.QueryCount
-	}
-	return 0
-}
-
-func (x *Fact) GetQueryCountEpoch() uint64 {
-	if x != nil {
-		return x.QueryCountEpoch
-	}
-	return 0
-}
-
-func (x *Fact) GetEpochBorn() uint64 {
-	if x != nil {
-		return x.EpochBorn
-	}
-	return 0
-}
-
-func (x *Fact) GetEnergy() uint64 {
-	if x != nil {
-		return x.Energy
-	}
-	return 0
-}
-
-func (x *Fact) GetEnergyCap() uint64 {
-	if x != nil {
-		return x.EnergyCap
-	}
-	return 0
-}
-
-func (x *Fact) GetEnergyLastUpdated() uint64 {
-	if x != nil {
-		return x.EnergyLastUpdated
-	}
-	return 0
-}
-
-func (x *Fact) GetAtRiskSinceEpoch() uint64 {
-	if x != nil {
-		return x.AtRiskSinceEpoch
-	}
-	return 0
-}
-
-func (x *Fact) GetNicheKey() string {
-	if x != nil {
-		return x.NicheKey
-	}
-	return ""
-}
-
-func (x *Fact) GetNicheLeader() bool {
-	if x != nil {
-		return x.NicheLeader
-	}
-	return false
-}
-
-func (x *Fact) GetNicheRank() uint64 {
-	if x != nil {
-		return x.NicheRank
-	}
-	return 0
-}
-
-func (x *Fact) GetNicheSize() uint64 {
-	if x != nil {
-		return x.NicheSize
-	}
-	return 0
-}
-
-func (x *Fact) GetCompetitionTax() uint64 {
-	if x != nil {
-		return x.CompetitionTax
-	}
-	return 0
-}
-
-func (x *Fact) GetParentFactId() string {
-	if x != nil {
-		return x.ParentFactId
-	}
-	return ""
-}
-
-func (x *Fact) GetChildFactIds() []string {
-	if x != nil {
-		return x.ChildFactIds
-	}
-	return nil
-}
-
-func (x *Fact) GetLineageDepth() uint64 {
-	if x != nil {
-		return x.LineageDepth
-	}
-	return 0
-}
-
-func (x *Fact) GetProgenyCount() uint64 {
-	if x != nil {
-		return x.ProgenyCount
-	}
-	return 0
-}
-
-func (x *Fact) GetLineageRootId() string {
-	if x != nil {
-		return x.LineageRootId
-	}
-	return ""
-}
-
-func (x *Fact) GetCommonKnowledgeMatch() bool {
-	if x != nil {
-		return x.CommonKnowledgeMatch
-	}
-	return false
-}
-
-func (x *Fact) GetSatisfactionUp() uint64 {
-	if x != nil {
-		return x.SatisfactionUp
-	}
-	return 0
-}
-
-func (x *Fact) GetSatisfactionDown() uint64 {
-	if x != nil {
-		return x.SatisfactionDown
-	}
-	return 0
-}
-
-func (x *Fact) GetSatisfactionUpEpoch() uint64 {
-	if x != nil {
-		return x.SatisfactionUpEpoch
-	}
-	return 0
-}
-
-func (x *Fact) GetSatisfactionDownEpoch() uint64 {
-	if x != nil {
-		return x.SatisfactionDownEpoch
-	}
-	return 0
-}
-
-// CommonKnowledgeEntry represents a subject that LLMs already know.
-// Claims matching these subjects receive a novelty penalty.
-type CommonKnowledgeEntry struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Domain        string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
-	Subject       string                 `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`                          // Normalized subject string
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`                  // Human-readable explanation
-	PenaltyBps    uint64                 `protobuf:"varint,5,opt,name=penalty_bps,json=penaltyBps,proto3" json:"penalty_bps,omitempty"` // Novelty penalty (0-1,000,000)
-	AddedBlock    uint64                 `protobuf:"varint,6,opt,name=added_block,json=addedBlock,proto3" json:"added_block,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CommonKnowledgeEntry) Reset() {
-	*x = CommonKnowledgeEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CommonKnowledgeEntry) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CommonKnowledgeEntry) ProtoMessage() {}
-
-func (x *CommonKnowledgeEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CommonKnowledgeEntry.ProtoReflect.Descriptor instead.
-func (*CommonKnowledgeEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *CommonKnowledgeEntry) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *CommonKnowledgeEntry) GetDomain() string {
-	if x != nil {
-		return x.Domain
-	}
-	return ""
-}
-
-func (x *CommonKnowledgeEntry) GetSubject() string {
-	if x != nil {
-		return x.Subject
-	}
-	return ""
-}
-
-func (x *CommonKnowledgeEntry) GetDescription() string {
-	if x != nil {
-		return x.Description
-	}
-	return ""
-}
-
-func (x *CommonKnowledgeEntry) GetPenaltyBps() uint64 {
-	if x != nil {
-		return x.PenaltyBps
-	}
-	return 0
-}
-
-func (x *CommonKnowledgeEntry) GetAddedBlock() uint64 {
-	if x != nil {
-		return x.AddedBlock
-	}
-	return 0
-}
-
-// Claim is an unverified submission awaiting or undergoing verification.
-type Claim struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	FactContent         string                 `protobuf:"bytes,2,opt,name=fact_content,json=factContent,proto3" json:"fact_content,omitempty"`
-	Domain              string                 `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
-	Category            string                 `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
-	Submitter           string                 `protobuf:"bytes,5,opt,name=submitter,proto3" json:"submitter,omitempty"`
-	SubmittedAtBlock    uint64                 `protobuf:"varint,6,opt,name=submitted_at_block,json=submittedAtBlock,proto3" json:"submitted_at_block,omitempty"`
-	Status              ClaimStatus            `protobuf:"varint,7,opt,name=status,proto3,enum=zerone.knowledge.v1.ClaimStatus" json:"status,omitempty"`
-	References          []string               `protobuf:"bytes,8,rep,name=references,proto3" json:"references,omitempty"`
-	VerificationRoundId string                 `protobuf:"bytes,9,opt,name=verification_round_id,json=verificationRoundId,proto3" json:"verification_round_id,omitempty"`
-	Stake               string                 `protobuf:"bytes,10,opt,name=stake,proto3" json:"stake,omitempty"` // coin amount as string (uzrn)
-	PartnershipId       string                 `protobuf:"bytes,11,opt,name=partnership_id,json=partnershipId,proto3" json:"partnership_id,omitempty"`
-	ChallengeWindowEnd  uint64                 `protobuf:"varint,12,opt,name=challenge_window_end,json=challengeWindowEnd,proto3" json:"challenge_window_end,omitempty"`
-	ProvisionalFactId   string                 `protobuf:"bytes,13,opt,name=provisional_fact_id,json=provisionalFactId,proto3" json:"provisional_fact_id,omitempty"`
-	ContentHash         string                 `protobuf:"bytes,14,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"` // SHA-256 of fact_content for duplicate detection
-	ClaimType           ClaimType              `protobuf:"varint,15,opt,name=claim_type,json=claimType,proto3,enum=zerone.knowledge.v1.ClaimType" json:"claim_type,omitempty"`
-	Relations           []*ClaimRelation       `protobuf:"bytes,16,rep,name=relations,proto3" json:"relations,omitempty"`                              // Typed relationships to existing facts
-	Structure           *ClaimStructure        `protobuf:"bytes,17,opt,name=structure,proto3" json:"structure,omitempty"`                              // Machine-readable decomposition (optional)
-	CanonicalForm       string                 `protobuf:"bytes,18,opt,name=canonical_form,json=canonicalForm,proto3" json:"canonical_form,omitempty"` // Machine-readable normalized form
-	CanonicalHash       string                 `protobuf:"bytes,19,opt,name=canonical_hash,json=canonicalHash,proto3" json:"canonical_hash,omitempty"` // SHA-256 of canonical_form for dedup
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
-}
-
-func (x *Claim) Reset() {
-	*x = Claim{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *Claim) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*Claim) ProtoMessage() {}
-
-func (x *Claim) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use Claim.ProtoReflect.Descriptor instead.
-func (*Claim) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *Claim) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *Claim) GetFactContent() string {
-	if x != nil {
-		return x.FactContent
-	}
-	return ""
-}
-
-func (x *Claim) GetDomain() string {
-	if x != nil {
-		return x.Domain
-	}
-	return ""
-}
-
-func (x *Claim) GetCategory() string {
-	if x != nil {
-		return x.Category
-	}
-	return ""
-}
-
-func (x *Claim) GetSubmitter() string {
-	if x != nil {
-		return x.Submitter
-	}
-	return ""
-}
-
-func (x *Claim) GetSubmittedAtBlock() uint64 {
-	if x != nil {
-		return x.SubmittedAtBlock
-	}
-	return 0
-}
-
-func (x *Claim) GetStatus() ClaimStatus {
-	if x != nil {
-		return x.Status
-	}
-	return ClaimStatus_CLAIM_STATUS_UNSPECIFIED
-}
-
-func (x *Claim) GetReferences() []string {
-	if x != nil {
-		return x.References
-	}
-	return nil
-}
-
-func (x *Claim) GetVerificationRoundId() string {
-	if x != nil {
-		return x.VerificationRoundId
-	}
-	return ""
-}
-
-func (x *Claim) GetStake() string {
+func (x *Submission) GetStake() string {
 	if x != nil {
 		return x.Stake
 	}
 	return ""
 }
 
-func (x *Claim) GetPartnershipId() string {
+func (x *Submission) GetSubmittedAtBlock() uint64 {
 	if x != nil {
-		return x.PartnershipId
-	}
-	return ""
-}
-
-func (x *Claim) GetChallengeWindowEnd() uint64 {
-	if x != nil {
-		return x.ChallengeWindowEnd
+		return x.SubmittedAtBlock
 	}
 	return 0
 }
 
-func (x *Claim) GetProvisionalFactId() string {
+func (x *Submission) GetStatus() SubmissionStatus {
 	if x != nil {
-		return x.ProvisionalFactId
+		return x.Status
 	}
-	return ""
+	return SubmissionStatus_SUBMISSION_STATUS_UNSPECIFIED
 }
 
-func (x *Claim) GetContentHash() string {
+func (x *Submission) GetContentHash() string {
 	if x != nil {
 		return x.ContentHash
 	}
 	return ""
 }
 
-func (x *Claim) GetClaimType() ClaimType {
+func (x *Submission) GetQualityRoundId() string {
 	if x != nil {
-		return x.ClaimType
-	}
-	return ClaimType_CLAIM_TYPE_UNSPECIFIED
-}
-
-func (x *Claim) GetRelations() []*ClaimRelation {
-	if x != nil {
-		return x.Relations
-	}
-	return nil
-}
-
-func (x *Claim) GetStructure() *ClaimStructure {
-	if x != nil {
-		return x.Structure
-	}
-	return nil
-}
-
-func (x *Claim) GetCanonicalForm() string {
-	if x != nil {
-		return x.CanonicalForm
+		return x.QualityRoundId
 	}
 	return ""
 }
 
-func (x *Claim) GetCanonicalHash() string {
+func (x *Submission) GetSponsored() bool {
 	if x != nil {
-		return x.CanonicalHash
+		return x.Sponsored
 	}
-	return ""
+	return false
 }
 
-// VerificationRound tracks one commit-reveal verification cycle.
-type VerificationRound struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ClaimId             string                 `protobuf:"bytes,2,opt,name=claim_id,json=claimId,proto3" json:"claim_id,omitempty"`
-	StartedAtBlock      uint64                 `protobuf:"varint,3,opt,name=started_at_block,json=startedAtBlock,proto3" json:"started_at_block,omitempty"`
-	Phase               VerificationPhase      `protobuf:"varint,4,opt,name=phase,proto3,enum=zerone.knowledge.v1.VerificationPhase" json:"phase,omitempty"`
-	SelectedVerifiers   []string               `protobuf:"bytes,5,rep,name=selected_verifiers,json=selectedVerifiers,proto3" json:"selected_verifiers,omitempty"`
-	Commits             []*CommitEntry         `protobuf:"bytes,6,rep,name=commits,proto3" json:"commits,omitempty"`
-	Reveals             []*RevealEntry         `protobuf:"bytes,7,rep,name=reveals,proto3" json:"reveals,omitempty"`
-	Verdict             Verdict                `protobuf:"varint,8,opt,name=verdict,proto3,enum=zerone.knowledge.v1.Verdict" json:"verdict,omitempty"`
-	VerdictBlock        uint64                 `protobuf:"varint,9,opt,name=verdict_block,json=verdictBlock,proto3" json:"verdict_block,omitempty"`
-	CommitDeadline      uint64                 `protobuf:"varint,10,opt,name=commit_deadline,json=commitDeadline,proto3" json:"commit_deadline,omitempty"`
-	RevealDeadline      uint64                 `protobuf:"varint,11,opt,name=reveal_deadline,json=revealDeadline,proto3" json:"reveal_deadline,omitempty"`
-	AggregationDeadline uint64                 `protobuf:"varint,12,opt,name=aggregation_deadline,json=aggregationDeadline,proto3" json:"aggregation_deadline,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+// Sample is a validated, quality-scored training data unit.
+// Replaces the old Fact message.
+type Sample struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Content         string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	SampleType      SampleType             `protobuf:"varint,3,opt,name=sample_type,json=sampleType,proto3,enum=zerone.knowledge.v1.SampleType" json:"sample_type,omitempty"`
+	Domain          string                 `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`
+	SourceUri       string                 `protobuf:"bytes,5,opt,name=source_uri,json=sourceUri,proto3" json:"source_uri,omitempty"`
+	SourcePlatform  string                 `protobuf:"bytes,6,opt,name=source_platform,json=sourcePlatform,proto3" json:"source_platform,omitempty"`
+	SourceTimestamp uint64                 `protobuf:"varint,7,opt,name=source_timestamp,json=sourceTimestamp,proto3" json:"source_timestamp,omitempty"`
+	// Quality
+	QualityScore   uint64 `protobuf:"varint,8,opt,name=quality_score,json=qualityScore,proto3" json:"quality_score,omitempty"`
+	QualityTier    string `protobuf:"bytes,9,opt,name=quality_tier,json=qualityTier,proto3" json:"quality_tier,omitempty"`
+	NoveltyScore   uint64 `protobuf:"varint,10,opt,name=novelty_score,json=noveltyScore,proto3" json:"novelty_score,omitempty"`
+	DiversityScore uint64 `protobuf:"varint,11,opt,name=diversity_score,json=diversityScore,proto3" json:"diversity_score,omitempty"`
+	ReasoningDepth uint64 `protobuf:"varint,12,opt,name=reasoning_depth,json=reasoningDepth,proto3" json:"reasoning_depth,omitempty"`
+	// Provenance
+	Submitter      string        `protobuf:"bytes,13,opt,name=submitter,proto3" json:"submitter,omitempty"`
+	OriginalAuthor string        `protobuf:"bytes,14,opt,name=original_author,json=originalAuthor,proto3" json:"original_author,omitempty"`
+	Consent        *ConsentProof `protobuf:"bytes,15,opt,name=consent,proto3" json:"consent,omitempty"`
+	License        string        `protobuf:"bytes,16,opt,name=license,proto3" json:"license,omitempty"`
+	SubmissionId   string        `protobuf:"bytes,17,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	// Thread context
+	ThreadId       string   `protobuf:"bytes,18,opt,name=thread_id,json=threadId,proto3" json:"thread_id,omitempty"`
+	ParentSampleId string   `protobuf:"bytes,19,opt,name=parent_sample_id,json=parentSampleId,proto3" json:"parent_sample_id,omitempty"`
+	ChildSampleIds []string `protobuf:"bytes,20,rep,name=child_sample_ids,json=childSampleIds,proto3" json:"child_sample_ids,omitempty"`
+	ThreadPosition uint64   `protobuf:"varint,21,opt,name=thread_position,json=threadPosition,proto3" json:"thread_position,omitempty"`
+	ThreadDepth    uint64   `protobuf:"varint,22,opt,name=thread_depth,json=threadDepth,proto3" json:"thread_depth,omitempty"`
+	// Economics
+	AccessCount          uint64 `protobuf:"varint,23,opt,name=access_count,json=accessCount,proto3" json:"access_count,omitempty"`
+	TotalRevenue         string `protobuf:"bytes,24,opt,name=total_revenue,json=totalRevenue,proto3" json:"total_revenue,omitempty"`
+	PatronageAmount      string `protobuf:"bytes,25,opt,name=patronage_amount,json=patronageAmount,proto3" json:"patronage_amount,omitempty"`
+	PatronageExpiryBlock uint64 `protobuf:"varint,26,opt,name=patronage_expiry_block,json=patronageExpiryBlock,proto3" json:"patronage_expiry_block,omitempty"`
+	// Lifecycle
+	Status            SampleStatus `protobuf:"varint,27,opt,name=status,proto3,enum=zerone.knowledge.v1.SampleStatus" json:"status,omitempty"`
+	VerifiedAtBlock   uint64       `protobuf:"varint,28,opt,name=verified_at_block,json=verifiedAtBlock,proto3" json:"verified_at_block,omitempty"`
+	LastAccessedBlock uint64       `protobuf:"varint,29,opt,name=last_accessed_block,json=lastAccessedBlock,proto3" json:"last_accessed_block,omitempty"`
+	// Fitness / ecology
+	FitnessScore        uint64 `protobuf:"varint,30,opt,name=fitness_score,json=fitnessScore,proto3" json:"fitness_score,omitempty"`
+	FitnessUpdatedBlock uint64 `protobuf:"varint,31,opt,name=fitness_updated_block,json=fitnessUpdatedBlock,proto3" json:"fitness_updated_block,omitempty"`
+	Energy              uint64 `protobuf:"varint,32,opt,name=energy,proto3" json:"energy,omitempty"`
+	EnergyCap           uint64 `protobuf:"varint,33,opt,name=energy_cap,json=energyCap,proto3" json:"energy_cap,omitempty"`
+	EnergyLastUpdated   uint64 `protobuf:"varint,34,opt,name=energy_last_updated,json=energyLastUpdated,proto3" json:"energy_last_updated,omitempty"`
+	AtRiskSinceEpoch    uint64 `protobuf:"varint,35,opt,name=at_risk_since_epoch,json=atRiskSinceEpoch,proto3" json:"at_risk_since_epoch,omitempty"`
+	// Tags & search
+	Tags     []string `protobuf:"bytes,36,rep,name=tags,proto3" json:"tags,omitempty"`
+	Language string   `protobuf:"bytes,37,opt,name=language,proto3" json:"language,omitempty"`
+	Topics   []string `protobuf:"bytes,38,rep,name=topics,proto3" json:"topics,omitempty"`
+	// Niche dynamics
+	NicheKey       string `protobuf:"bytes,39,opt,name=niche_key,json=nicheKey,proto3" json:"niche_key,omitempty"`
+	NicheLeader    bool   `protobuf:"varint,40,opt,name=niche_leader,json=nicheLeader,proto3" json:"niche_leader,omitempty"`
+	NicheRank      uint64 `protobuf:"varint,41,opt,name=niche_rank,json=nicheRank,proto3" json:"niche_rank,omitempty"`
+	NicheSize      uint64 `protobuf:"varint,42,opt,name=niche_size,json=nicheSize,proto3" json:"niche_size,omitempty"`
+	CompetitionTax uint64 `protobuf:"varint,43,opt,name=competition_tax,json=competitionTax,proto3" json:"competition_tax,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
-func (x *VerificationRound) Reset() {
-	*x = VerificationRound{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
+func (x *Sample) Reset() {
+	*x = Sample{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *VerificationRound) String() string {
+func (x *Sample) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*VerificationRound) ProtoMessage() {}
+func (*Sample) ProtoMessage() {}
 
-func (x *VerificationRound) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
+func (x *Sample) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1492,93 +842,553 @@ func (x *VerificationRound) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use VerificationRound.ProtoReflect.Descriptor instead.
-func (*VerificationRound) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
+// Deprecated: Use Sample.ProtoReflect.Descriptor instead.
+func (*Sample) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *VerificationRound) GetId() string {
+func (x *Sample) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *VerificationRound) GetClaimId() string {
+func (x *Sample) GetContent() string {
 	if x != nil {
-		return x.ClaimId
+		return x.Content
 	}
 	return ""
 }
 
-func (x *VerificationRound) GetStartedAtBlock() uint64 {
+func (x *Sample) GetSampleType() SampleType {
+	if x != nil {
+		return x.SampleType
+	}
+	return SampleType_SAMPLE_TYPE_UNSPECIFIED
+}
+
+func (x *Sample) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *Sample) GetSourceUri() string {
+	if x != nil {
+		return x.SourceUri
+	}
+	return ""
+}
+
+func (x *Sample) GetSourcePlatform() string {
+	if x != nil {
+		return x.SourcePlatform
+	}
+	return ""
+}
+
+func (x *Sample) GetSourceTimestamp() uint64 {
+	if x != nil {
+		return x.SourceTimestamp
+	}
+	return 0
+}
+
+func (x *Sample) GetQualityScore() uint64 {
+	if x != nil {
+		return x.QualityScore
+	}
+	return 0
+}
+
+func (x *Sample) GetQualityTier() string {
+	if x != nil {
+		return x.QualityTier
+	}
+	return ""
+}
+
+func (x *Sample) GetNoveltyScore() uint64 {
+	if x != nil {
+		return x.NoveltyScore
+	}
+	return 0
+}
+
+func (x *Sample) GetDiversityScore() uint64 {
+	if x != nil {
+		return x.DiversityScore
+	}
+	return 0
+}
+
+func (x *Sample) GetReasoningDepth() uint64 {
+	if x != nil {
+		return x.ReasoningDepth
+	}
+	return 0
+}
+
+func (x *Sample) GetSubmitter() string {
+	if x != nil {
+		return x.Submitter
+	}
+	return ""
+}
+
+func (x *Sample) GetOriginalAuthor() string {
+	if x != nil {
+		return x.OriginalAuthor
+	}
+	return ""
+}
+
+func (x *Sample) GetConsent() *ConsentProof {
+	if x != nil {
+		return x.Consent
+	}
+	return nil
+}
+
+func (x *Sample) GetLicense() string {
+	if x != nil {
+		return x.License
+	}
+	return ""
+}
+
+func (x *Sample) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *Sample) GetThreadId() string {
+	if x != nil {
+		return x.ThreadId
+	}
+	return ""
+}
+
+func (x *Sample) GetParentSampleId() string {
+	if x != nil {
+		return x.ParentSampleId
+	}
+	return ""
+}
+
+func (x *Sample) GetChildSampleIds() []string {
+	if x != nil {
+		return x.ChildSampleIds
+	}
+	return nil
+}
+
+func (x *Sample) GetThreadPosition() uint64 {
+	if x != nil {
+		return x.ThreadPosition
+	}
+	return 0
+}
+
+func (x *Sample) GetThreadDepth() uint64 {
+	if x != nil {
+		return x.ThreadDepth
+	}
+	return 0
+}
+
+func (x *Sample) GetAccessCount() uint64 {
+	if x != nil {
+		return x.AccessCount
+	}
+	return 0
+}
+
+func (x *Sample) GetTotalRevenue() string {
+	if x != nil {
+		return x.TotalRevenue
+	}
+	return ""
+}
+
+func (x *Sample) GetPatronageAmount() string {
+	if x != nil {
+		return x.PatronageAmount
+	}
+	return ""
+}
+
+func (x *Sample) GetPatronageExpiryBlock() uint64 {
+	if x != nil {
+		return x.PatronageExpiryBlock
+	}
+	return 0
+}
+
+func (x *Sample) GetStatus() SampleStatus {
+	if x != nil {
+		return x.Status
+	}
+	return SampleStatus_SAMPLE_STATUS_UNSPECIFIED
+}
+
+func (x *Sample) GetVerifiedAtBlock() uint64 {
+	if x != nil {
+		return x.VerifiedAtBlock
+	}
+	return 0
+}
+
+func (x *Sample) GetLastAccessedBlock() uint64 {
+	if x != nil {
+		return x.LastAccessedBlock
+	}
+	return 0
+}
+
+func (x *Sample) GetFitnessScore() uint64 {
+	if x != nil {
+		return x.FitnessScore
+	}
+	return 0
+}
+
+func (x *Sample) GetFitnessUpdatedBlock() uint64 {
+	if x != nil {
+		return x.FitnessUpdatedBlock
+	}
+	return 0
+}
+
+func (x *Sample) GetEnergy() uint64 {
+	if x != nil {
+		return x.Energy
+	}
+	return 0
+}
+
+func (x *Sample) GetEnergyCap() uint64 {
+	if x != nil {
+		return x.EnergyCap
+	}
+	return 0
+}
+
+func (x *Sample) GetEnergyLastUpdated() uint64 {
+	if x != nil {
+		return x.EnergyLastUpdated
+	}
+	return 0
+}
+
+func (x *Sample) GetAtRiskSinceEpoch() uint64 {
+	if x != nil {
+		return x.AtRiskSinceEpoch
+	}
+	return 0
+}
+
+func (x *Sample) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *Sample) GetLanguage() string {
+	if x != nil {
+		return x.Language
+	}
+	return ""
+}
+
+func (x *Sample) GetTopics() []string {
+	if x != nil {
+		return x.Topics
+	}
+	return nil
+}
+
+func (x *Sample) GetNicheKey() string {
+	if x != nil {
+		return x.NicheKey
+	}
+	return ""
+}
+
+func (x *Sample) GetNicheLeader() bool {
+	if x != nil {
+		return x.NicheLeader
+	}
+	return false
+}
+
+func (x *Sample) GetNicheRank() uint64 {
+	if x != nil {
+		return x.NicheRank
+	}
+	return 0
+}
+
+func (x *Sample) GetNicheSize() uint64 {
+	if x != nil {
+		return x.NicheSize
+	}
+	return 0
+}
+
+func (x *Sample) GetCompetitionTax() uint64 {
+	if x != nil {
+		return x.CompetitionTax
+	}
+	return 0
+}
+
+// QualityVote records a validator's multi-dimensional quality assessment.
+type QualityVote struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	OverallQuality  uint64                 `protobuf:"varint,1,opt,name=overall_quality,json=overallQuality,proto3" json:"overall_quality,omitempty"`
+	ReasoningDepth  uint64                 `protobuf:"varint,2,opt,name=reasoning_depth,json=reasoningDepth,proto3" json:"reasoning_depth,omitempty"`
+	Novelty         uint64                 `protobuf:"varint,3,opt,name=novelty,proto3" json:"novelty,omitempty"`
+	Toxicity        uint64                 `protobuf:"varint,4,opt,name=toxicity,proto3" json:"toxicity,omitempty"`
+	FactualAccuracy uint64                 `protobuf:"varint,5,opt,name=factual_accuracy,json=factualAccuracy,proto3" json:"factual_accuracy,omitempty"`
+	ConsentValid    bool                   `protobuf:"varint,6,opt,name=consent_valid,json=consentValid,proto3" json:"consent_valid,omitempty"`
+	Duplicate       bool                   `protobuf:"varint,7,opt,name=duplicate,proto3" json:"duplicate,omitempty"`
+	Notes           string                 `protobuf:"bytes,8,opt,name=notes,proto3" json:"notes,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *QualityVote) Reset() {
+	*x = QualityVote{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QualityVote) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QualityVote) ProtoMessage() {}
+
+func (x *QualityVote) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QualityVote.ProtoReflect.Descriptor instead.
+func (*QualityVote) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *QualityVote) GetOverallQuality() uint64 {
+	if x != nil {
+		return x.OverallQuality
+	}
+	return 0
+}
+
+func (x *QualityVote) GetReasoningDepth() uint64 {
+	if x != nil {
+		return x.ReasoningDepth
+	}
+	return 0
+}
+
+func (x *QualityVote) GetNovelty() uint64 {
+	if x != nil {
+		return x.Novelty
+	}
+	return 0
+}
+
+func (x *QualityVote) GetToxicity() uint64 {
+	if x != nil {
+		return x.Toxicity
+	}
+	return 0
+}
+
+func (x *QualityVote) GetFactualAccuracy() uint64 {
+	if x != nil {
+		return x.FactualAccuracy
+	}
+	return 0
+}
+
+func (x *QualityVote) GetConsentValid() bool {
+	if x != nil {
+		return x.ConsentValid
+	}
+	return false
+}
+
+func (x *QualityVote) GetDuplicate() bool {
+	if x != nil {
+		return x.Duplicate
+	}
+	return false
+}
+
+func (x *QualityVote) GetNotes() string {
+	if x != nil {
+		return x.Notes
+	}
+	return ""
+}
+
+// QualityRound tracks one commit-reveal quality validation cycle.
+// Replaces the old VerificationRound message.
+type QualityRound struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SubmissionId        string                 `protobuf:"bytes,2,opt,name=submission_id,json=submissionId,proto3" json:"submission_id,omitempty"`
+	StartedAtBlock      uint64                 `protobuf:"varint,3,opt,name=started_at_block,json=startedAtBlock,proto3" json:"started_at_block,omitempty"`
+	Phase               VerificationPhase      `protobuf:"varint,4,opt,name=phase,proto3,enum=zerone.knowledge.v1.VerificationPhase" json:"phase,omitempty"`
+	SelectedVerifiers   []string               `protobuf:"bytes,5,rep,name=selected_verifiers,json=selectedVerifiers,proto3" json:"selected_verifiers,omitempty"`
+	Commits             []*CommitEntry         `protobuf:"bytes,6,rep,name=commits,proto3" json:"commits,omitempty"`
+	Reveals             []*RevealEntry         `protobuf:"bytes,7,rep,name=reveals,proto3" json:"reveals,omitempty"`
+	Verdict             QualityVerdict         `protobuf:"varint,8,opt,name=verdict,proto3,enum=zerone.knowledge.v1.QualityVerdict" json:"verdict,omitempty"`
+	VerdictBlock        uint64                 `protobuf:"varint,9,opt,name=verdict_block,json=verdictBlock,proto3" json:"verdict_block,omitempty"`
+	CommitDeadline      uint64                 `protobuf:"varint,10,opt,name=commit_deadline,json=commitDeadline,proto3" json:"commit_deadline,omitempty"`
+	RevealDeadline      uint64                 `protobuf:"varint,11,opt,name=reveal_deadline,json=revealDeadline,proto3" json:"reveal_deadline,omitempty"`
+	AggregationDeadline uint64                 `protobuf:"varint,12,opt,name=aggregation_deadline,json=aggregationDeadline,proto3" json:"aggregation_deadline,omitempty"`
+	AggregateScores     *QualityVote           `protobuf:"bytes,13,opt,name=aggregate_scores,json=aggregateScores,proto3" json:"aggregate_scores,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *QualityRound) Reset() {
+	*x = QualityRound{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QualityRound) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QualityRound) ProtoMessage() {}
+
+func (x *QualityRound) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QualityRound.ProtoReflect.Descriptor instead.
+func (*QualityRound) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *QualityRound) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *QualityRound) GetSubmissionId() string {
+	if x != nil {
+		return x.SubmissionId
+	}
+	return ""
+}
+
+func (x *QualityRound) GetStartedAtBlock() uint64 {
 	if x != nil {
 		return x.StartedAtBlock
 	}
 	return 0
 }
 
-func (x *VerificationRound) GetPhase() VerificationPhase {
+func (x *QualityRound) GetPhase() VerificationPhase {
 	if x != nil {
 		return x.Phase
 	}
 	return VerificationPhase_VERIFICATION_PHASE_UNSPECIFIED
 }
 
-func (x *VerificationRound) GetSelectedVerifiers() []string {
+func (x *QualityRound) GetSelectedVerifiers() []string {
 	if x != nil {
 		return x.SelectedVerifiers
 	}
 	return nil
 }
 
-func (x *VerificationRound) GetCommits() []*CommitEntry {
+func (x *QualityRound) GetCommits() []*CommitEntry {
 	if x != nil {
 		return x.Commits
 	}
 	return nil
 }
 
-func (x *VerificationRound) GetReveals() []*RevealEntry {
+func (x *QualityRound) GetReveals() []*RevealEntry {
 	if x != nil {
 		return x.Reveals
 	}
 	return nil
 }
 
-func (x *VerificationRound) GetVerdict() Verdict {
+func (x *QualityRound) GetVerdict() QualityVerdict {
 	if x != nil {
 		return x.Verdict
 	}
-	return Verdict_VERDICT_UNSPECIFIED
+	return QualityVerdict_QUALITY_VERDICT_UNSPECIFIED
 }
 
-func (x *VerificationRound) GetVerdictBlock() uint64 {
+func (x *QualityRound) GetVerdictBlock() uint64 {
 	if x != nil {
 		return x.VerdictBlock
 	}
 	return 0
 }
 
-func (x *VerificationRound) GetCommitDeadline() uint64 {
+func (x *QualityRound) GetCommitDeadline() uint64 {
 	if x != nil {
 		return x.CommitDeadline
 	}
 	return 0
 }
 
-func (x *VerificationRound) GetRevealDeadline() uint64 {
+func (x *QualityRound) GetRevealDeadline() uint64 {
 	if x != nil {
 		return x.RevealDeadline
 	}
 	return 0
 }
 
-func (x *VerificationRound) GetAggregationDeadline() uint64 {
+func (x *QualityRound) GetAggregationDeadline() uint64 {
 	if x != nil {
 		return x.AggregationDeadline
 	}
 	return 0
+}
+
+func (x *QualityRound) GetAggregateScores() *QualityVote {
+	if x != nil {
+		return x.AggregateScores
+	}
+	return nil
 }
 
 // CommitEntry records a validator's blinded commitment (SHA-256(vote || salt)).
@@ -1593,7 +1403,7 @@ type CommitEntry struct {
 
 func (x *CommitEntry) Reset() {
 	*x = CommitEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1605,7 +1415,7 @@ func (x *CommitEntry) String() string {
 func (*CommitEntry) ProtoMessage() {}
 
 func (x *CommitEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1618,7 +1428,7 @@ func (x *CommitEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitEntry.ProtoReflect.Descriptor instead.
 func (*CommitEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CommitEntry) GetVerifier() string {
@@ -1642,11 +1452,11 @@ func (x *CommitEntry) GetCommittedAtBlock() uint64 {
 	return 0
 }
 
-// RevealEntry records a validator's revealed vote and salt.
+// RevealEntry records a validator's revealed quality vote and salt.
 type RevealEntry struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Verifier        string                 `protobuf:"bytes,1,opt,name=verifier,proto3" json:"verifier,omitempty"`
-	Vote            string                 `protobuf:"bytes,2,opt,name=vote,proto3" json:"vote,omitempty"` // "accept", "reject", or "malformed"
+	Vote            string                 `protobuf:"bytes,2,opt,name=vote,proto3" json:"vote,omitempty"` // Serialized QualityVote JSON
 	Salt            []byte                 `protobuf:"bytes,3,opt,name=salt,proto3" json:"salt,omitempty"`
 	RevealedAtBlock uint64                 `protobuf:"varint,4,opt,name=revealed_at_block,json=revealedAtBlock,proto3" json:"revealed_at_block,omitempty"`
 	unknownFields   protoimpl.UnknownFields
@@ -1655,7 +1465,7 @@ type RevealEntry struct {
 
 func (x *RevealEntry) Reset() {
 	*x = RevealEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1667,7 +1477,7 @@ func (x *RevealEntry) String() string {
 func (*RevealEntry) ProtoMessage() {}
 
 func (x *RevealEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1680,7 +1490,7 @@ func (x *RevealEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevealEntry.ProtoReflect.Descriptor instead.
 func (*RevealEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *RevealEntry) GetVerifier() string {
@@ -1724,7 +1534,7 @@ type VRFProof struct {
 
 func (x *VRFProof) Reset() {
 	*x = VRFProof{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1736,7 +1546,7 @@ func (x *VRFProof) String() string {
 func (*VRFProof) ProtoMessage() {}
 
 func (x *VRFProof) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1749,7 +1559,7 @@ func (x *VRFProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VRFProof.ProtoReflect.Descriptor instead.
 func (*VRFProof) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *VRFProof) GetProof() []byte {
@@ -1780,7 +1590,7 @@ func (x *VRFProof) GetBlockHeight() uint64 {
 	return 0
 }
 
-// Domain is an epistemic knowledge domain (e.g., "mathematics", "physics").
+// Domain is a data domain (e.g., "technical", "culture", "science").
 type Domain struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Name           string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1799,7 +1609,7 @@ type Domain struct {
 
 func (x *Domain) Reset() {
 	*x = Domain{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1811,7 +1621,7 @@ func (x *Domain) String() string {
 func (*Domain) ProtoMessage() {}
 
 func (x *Domain) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1824,7 +1634,7 @@ func (x *Domain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Domain.ProtoReflect.Descriptor instead.
 func (*Domain) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Domain) GetName() string {
@@ -1897,7 +1707,7 @@ func (x *Domain) GetDepth() uint32 {
 	return 0
 }
 
-// ValidatorInfo caches a validator's tier and verification stats for round selection.
+// ValidatorInfo caches a validator's tier and quality scoring stats.
 type ValidatorInfo struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Address           string                 `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
@@ -1911,7 +1721,7 @@ type ValidatorInfo struct {
 
 func (x *ValidatorInfo) Reset() {
 	*x = ValidatorInfo{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1923,7 +1733,7 @@ func (x *ValidatorInfo) String() string {
 func (*ValidatorInfo) ProtoMessage() {}
 
 func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1936,7 +1746,7 @@ func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatorInfo.ProtoReflect.Descriptor instead.
 func (*ValidatorInfo) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{11}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ValidatorInfo) GetAddress() string {
@@ -1974,168 +1784,9 @@ func (x *ValidatorInfo) GetAccuracyBps() uint64 {
 	return 0
 }
 
-// ProvisionalChallenge is an adversarial challenge against a provisional fact.
-type ProvisionalChallenge struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	Id           string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ClaimId      string                 `protobuf:"bytes,2,opt,name=claim_id,json=claimId,proto3" json:"claim_id,omitempty"`
-	FactId       string                 `protobuf:"bytes,3,opt,name=fact_id,json=factId,proto3" json:"fact_id,omitempty"`
-	Challenger   string                 `protobuf:"bytes,4,opt,name=challenger,proto3" json:"challenger,omitempty"`
-	Stake        string                 `protobuf:"bytes,5,opt,name=stake,proto3" json:"stake,omitempty"`
-	Reason       string                 `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
-	EvidenceIds  []string               `protobuf:"bytes,7,rep,name=evidence_ids,json=evidenceIds,proto3" json:"evidence_ids,omitempty"`
-	CounterClaim string                 `protobuf:"bytes,8,opt,name=counter_claim,json=counterClaim,proto3" json:"counter_claim,omitempty"`
-	// "open", "resolved_upheld", "resolved_overturned", "expired", "inconclusive"
-	Status string `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"`
-	// "deterministic" or "arbiter"
-	ResolutionPath   string `protobuf:"bytes,10,opt,name=resolution_path,json=resolutionPath,proto3" json:"resolution_path,omitempty"`
-	DisputeId        string `protobuf:"bytes,11,opt,name=dispute_id,json=disputeId,proto3" json:"dispute_id,omitempty"`
-	CreatedAtHeight  uint64 `protobuf:"varint,12,opt,name=created_at_height,json=createdAtHeight,proto3" json:"created_at_height,omitempty"`
-	ResolvedAtHeight uint64 `protobuf:"varint,13,opt,name=resolved_at_height,json=resolvedAtHeight,proto3" json:"resolved_at_height,omitempty"`
-	// "upheld", "overturned", "weakened", "inconclusive", "undecidability"
-	Outcome       string `protobuf:"bytes,14,opt,name=outcome,proto3" json:"outcome,omitempty"`
-	AttemptNumber uint32 `protobuf:"varint,15,opt,name=attempt_number,json=attemptNumber,proto3" json:"attempt_number,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ProvisionalChallenge) Reset() {
-	*x = ProvisionalChallenge{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ProvisionalChallenge) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ProvisionalChallenge) ProtoMessage() {}
-
-func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ProvisionalChallenge.ProtoReflect.Descriptor instead.
-func (*ProvisionalChallenge) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{12}
-}
-
-func (x *ProvisionalChallenge) GetId() string {
-	if x != nil {
-		return x.Id
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetClaimId() string {
-	if x != nil {
-		return x.ClaimId
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetFactId() string {
-	if x != nil {
-		return x.FactId
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetChallenger() string {
-	if x != nil {
-		return x.Challenger
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetStake() string {
-	if x != nil {
-		return x.Stake
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetReason() string {
-	if x != nil {
-		return x.Reason
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetEvidenceIds() []string {
-	if x != nil {
-		return x.EvidenceIds
-	}
-	return nil
-}
-
-func (x *ProvisionalChallenge) GetCounterClaim() string {
-	if x != nil {
-		return x.CounterClaim
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetStatus() string {
-	if x != nil {
-		return x.Status
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetResolutionPath() string {
-	if x != nil {
-		return x.ResolutionPath
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetDisputeId() string {
-	if x != nil {
-		return x.DisputeId
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetCreatedAtHeight() uint64 {
-	if x != nil {
-		return x.CreatedAtHeight
-	}
-	return 0
-}
-
-func (x *ProvisionalChallenge) GetResolvedAtHeight() uint64 {
-	if x != nil {
-		return x.ResolvedAtHeight
-	}
-	return 0
-}
-
-func (x *ProvisionalChallenge) GetOutcome() string {
-	if x != nil {
-		return x.Outcome
-	}
-	return ""
-}
-
-func (x *ProvisionalChallenge) GetAttemptNumber() uint32 {
-	if x != nil {
-		return x.AttemptNumber
-	}
-	return 0
-}
-
-// DemandSignal tracks aggregate query demand for a domain/subject pair.
-type DemandSignal struct {
+// TrainingDemand tracks aggregate demand for training data in a domain/topic.
+// Replaces the old DemandSignal message.
+type TrainingDemand struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Domain           string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
 	Subject          string                 `protobuf:"bytes,2,opt,name=subject,proto3" json:"subject,omitempty"`                                            // Normalized query subject
@@ -2145,25 +1796,28 @@ type DemandSignal struct {
 	LastQueryBlock   uint64                 `protobuf:"varint,6,opt,name=last_query_block,json=lastQueryBlock,proto3" json:"last_query_block,omitempty"`
 	EpochQueryCount  uint64                 `protobuf:"varint,7,opt,name=epoch_query_count,json=epochQueryCount,proto3" json:"epoch_query_count,omitempty"`  // Queries this epoch (resets)
 	EpochUnfulfilled uint64                 `protobuf:"varint,8,opt,name=epoch_unfulfilled,json=epochUnfulfilled,proto3" json:"epoch_unfulfilled,omitempty"` // Unfulfilled this epoch (resets)
+	PreferredType    SampleType             `protobuf:"varint,9,opt,name=preferred_type,json=preferredType,proto3,enum=zerone.knowledge.v1.SampleType" json:"preferred_type,omitempty"`
+	Language         string                 `protobuf:"bytes,10,opt,name=language,proto3" json:"language,omitempty"`
+	BountyPool       uint64                 `protobuf:"varint,11,opt,name=bounty_pool,json=bountyPool,proto3" json:"bounty_pool,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
-func (x *DemandSignal) Reset() {
-	*x = DemandSignal{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+func (x *TrainingDemand) Reset() {
+	*x = TrainingDemand{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DemandSignal) String() string {
+func (x *TrainingDemand) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DemandSignal) ProtoMessage() {}
+func (*TrainingDemand) ProtoMessage() {}
 
-func (x *DemandSignal) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+func (x *TrainingDemand) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2174,98 +1828,120 @@ func (x *DemandSignal) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DemandSignal.ProtoReflect.Descriptor instead.
-func (*DemandSignal) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
+// Deprecated: Use TrainingDemand.ProtoReflect.Descriptor instead.
+func (*TrainingDemand) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
 }
 
-func (x *DemandSignal) GetDomain() string {
+func (x *TrainingDemand) GetDomain() string {
 	if x != nil {
 		return x.Domain
 	}
 	return ""
 }
 
-func (x *DemandSignal) GetSubject() string {
+func (x *TrainingDemand) GetSubject() string {
 	if x != nil {
 		return x.Subject
 	}
 	return ""
 }
 
-func (x *DemandSignal) GetQueryCount() uint64 {
+func (x *TrainingDemand) GetQueryCount() uint64 {
 	if x != nil {
 		return x.QueryCount
 	}
 	return 0
 }
 
-func (x *DemandSignal) GetFulfilledCount() uint64 {
+func (x *TrainingDemand) GetFulfilledCount() uint64 {
 	if x != nil {
 		return x.FulfilledCount
 	}
 	return 0
 }
 
-func (x *DemandSignal) GetUnfulfilledCount() uint64 {
+func (x *TrainingDemand) GetUnfulfilledCount() uint64 {
 	if x != nil {
 		return x.UnfulfilledCount
 	}
 	return 0
 }
 
-func (x *DemandSignal) GetLastQueryBlock() uint64 {
+func (x *TrainingDemand) GetLastQueryBlock() uint64 {
 	if x != nil {
 		return x.LastQueryBlock
 	}
 	return 0
 }
 
-func (x *DemandSignal) GetEpochQueryCount() uint64 {
+func (x *TrainingDemand) GetEpochQueryCount() uint64 {
 	if x != nil {
 		return x.EpochQueryCount
 	}
 	return 0
 }
 
-func (x *DemandSignal) GetEpochUnfulfilled() uint64 {
+func (x *TrainingDemand) GetEpochUnfulfilled() uint64 {
 	if x != nil {
 		return x.EpochUnfulfilled
 	}
 	return 0
 }
 
-// KnowledgeBounty is an auto-generated reward for filling a knowledge gap.
-type KnowledgeBounty struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Domain          string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
-	Subject         string                 `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`
-	RewardAmount    string                 `protobuf:"bytes,4,opt,name=reward_amount,json=rewardAmount,proto3" json:"reward_amount,omitempty"` // uzrn
-	CreatedAtBlock  uint64                 `protobuf:"varint,5,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
-	ExpiresAtBlock  uint64                 `protobuf:"varint,6,opt,name=expires_at_block,json=expiresAtBlock,proto3" json:"expires_at_block,omitempty"`
-	Claimed         bool                   `protobuf:"varint,7,opt,name=claimed,proto3" json:"claimed,omitempty"`
-	ClaimedByFactId string                 `protobuf:"bytes,8,opt,name=claimed_by_fact_id,json=claimedByFactId,proto3" json:"claimed_by_fact_id,omitempty"`
-	DemandCount     uint64                 `protobuf:"varint,9,opt,name=demand_count,json=demandCount,proto3" json:"demand_count,omitempty"` // Demand that triggered this bounty
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+func (x *TrainingDemand) GetPreferredType() SampleType {
+	if x != nil {
+		return x.PreferredType
+	}
+	return SampleType_SAMPLE_TYPE_UNSPECIFIED
 }
 
-func (x *KnowledgeBounty) Reset() {
-	*x = KnowledgeBounty{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+func (x *TrainingDemand) GetLanguage() string {
+	if x != nil {
+		return x.Language
+	}
+	return ""
+}
+
+func (x *TrainingDemand) GetBountyPool() uint64 {
+	if x != nil {
+		return x.BountyPool
+	}
+	return 0
+}
+
+// DataBounty is a reward for filling a training data gap.
+// Replaces the old KnowledgeBounty message.
+type DataBounty struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	Id                string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Domain            string                 `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
+	Subject           string                 `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`
+	RewardAmount      string                 `protobuf:"bytes,4,opt,name=reward_amount,json=rewardAmount,proto3" json:"reward_amount,omitempty"` // uzrn
+	CreatedAtBlock    uint64                 `protobuf:"varint,5,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	ExpiresAtBlock    uint64                 `protobuf:"varint,6,opt,name=expires_at_block,json=expiresAtBlock,proto3" json:"expires_at_block,omitempty"`
+	Claimed           bool                   `protobuf:"varint,7,opt,name=claimed,proto3" json:"claimed,omitempty"`
+	ClaimedBySampleId string                 `protobuf:"bytes,8,opt,name=claimed_by_sample_id,json=claimedBySampleId,proto3" json:"claimed_by_sample_id,omitempty"`
+	DemandCount       uint64                 `protobuf:"varint,9,opt,name=demand_count,json=demandCount,proto3" json:"demand_count,omitempty"` // Demand that triggered this bounty
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *DataBounty) Reset() {
+	*x = DataBounty{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *KnowledgeBounty) String() string {
+func (x *DataBounty) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*KnowledgeBounty) ProtoMessage() {}
+func (*DataBounty) ProtoMessage() {}
 
-func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+func (x *DataBounty) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2276,76 +1952,327 @@ func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use KnowledgeBounty.ProtoReflect.Descriptor instead.
-func (*KnowledgeBounty) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
+// Deprecated: Use DataBounty.ProtoReflect.Descriptor instead.
+func (*DataBounty) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *KnowledgeBounty) GetId() string {
+func (x *DataBounty) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *KnowledgeBounty) GetDomain() string {
+func (x *DataBounty) GetDomain() string {
 	if x != nil {
 		return x.Domain
 	}
 	return ""
 }
 
-func (x *KnowledgeBounty) GetSubject() string {
+func (x *DataBounty) GetSubject() string {
 	if x != nil {
 		return x.Subject
 	}
 	return ""
 }
 
-func (x *KnowledgeBounty) GetRewardAmount() string {
+func (x *DataBounty) GetRewardAmount() string {
 	if x != nil {
 		return x.RewardAmount
 	}
 	return ""
 }
 
-func (x *KnowledgeBounty) GetCreatedAtBlock() uint64 {
+func (x *DataBounty) GetCreatedAtBlock() uint64 {
 	if x != nil {
 		return x.CreatedAtBlock
 	}
 	return 0
 }
 
-func (x *KnowledgeBounty) GetExpiresAtBlock() uint64 {
+func (x *DataBounty) GetExpiresAtBlock() uint64 {
 	if x != nil {
 		return x.ExpiresAtBlock
 	}
 	return 0
 }
 
-func (x *KnowledgeBounty) GetClaimed() bool {
+func (x *DataBounty) GetClaimed() bool {
 	if x != nil {
 		return x.Claimed
 	}
 	return false
 }
 
-func (x *KnowledgeBounty) GetClaimedByFactId() string {
+func (x *DataBounty) GetClaimedBySampleId() string {
 	if x != nil {
-		return x.ClaimedByFactId
+		return x.ClaimedBySampleId
 	}
 	return ""
 }
 
-func (x *KnowledgeBounty) GetDemandCount() uint64 {
+func (x *DataBounty) GetDemandCount() uint64 {
 	if x != nil {
 		return x.DemandCount
 	}
 	return 0
 }
 
-// CompletedRoundMeta stores metadata for completed verification rounds,
-// indexed by verdict block height for efficient window-based queries (R31-2).
+// ScrapedSourceEntry tracks sources already heavily scraped by AI labs.
+// Replaces the old CommonKnowledgeEntry message.
+type ScrapedSourceEntry struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Platform       string                 `protobuf:"bytes,2,opt,name=platform,proto3" json:"platform,omitempty"` // "reddit", "stackoverflow", etc.
+	Domain         string                 `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
+	Description    string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	NoveltyPenalty uint64                 `protobuf:"varint,5,opt,name=novelty_penalty,json=noveltyPenalty,proto3" json:"novelty_penalty,omitempty"` // 0-1,000,000
+	AddedBlock     uint64                 `protobuf:"varint,6,opt,name=added_block,json=addedBlock,proto3" json:"added_block,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ScrapedSourceEntry) Reset() {
+	*x = ScrapedSourceEntry{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ScrapedSourceEntry) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ScrapedSourceEntry) ProtoMessage() {}
+
+func (x *ScrapedSourceEntry) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ScrapedSourceEntry.ProtoReflect.Descriptor instead.
+func (*ScrapedSourceEntry) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ScrapedSourceEntry) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ScrapedSourceEntry) GetPlatform() string {
+	if x != nil {
+		return x.Platform
+	}
+	return ""
+}
+
+func (x *ScrapedSourceEntry) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *ScrapedSourceEntry) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *ScrapedSourceEntry) GetNoveltyPenalty() uint64 {
+	if x != nil {
+		return x.NoveltyPenalty
+	}
+	return 0
+}
+
+func (x *ScrapedSourceEntry) GetAddedBlock() uint64 {
+	if x != nil {
+		return x.AddedBlock
+	}
+	return 0
+}
+
+// Dataset is a curated collection of samples for bulk access.
+type Dataset struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name           string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Description    string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	Domain         string                 `protobuf:"bytes,4,opt,name=domain,proto3" json:"domain,omitempty"`
+	License        string                 `protobuf:"bytes,5,opt,name=license,proto3" json:"license,omitempty"`
+	SampleCount    uint64                 `protobuf:"varint,6,opt,name=sample_count,json=sampleCount,proto3" json:"sample_count,omitempty"`
+	TotalTokens    uint64                 `protobuf:"varint,7,opt,name=total_tokens,json=totalTokens,proto3" json:"total_tokens,omitempty"`
+	PricePerSample string                 `protobuf:"bytes,8,opt,name=price_per_sample,json=pricePerSample,proto3" json:"price_per_sample,omitempty"`
+	BulkPrice      string                 `protobuf:"bytes,9,opt,name=bulk_price,json=bulkPrice,proto3" json:"bulk_price,omitempty"`
+	Curator        string                 `protobuf:"bytes,10,opt,name=curator,proto3" json:"curator,omitempty"`
+	FilterTags     []string               `protobuf:"bytes,11,rep,name=filter_tags,json=filterTags,proto3" json:"filter_tags,omitempty"`
+	FilterType     SampleType             `protobuf:"varint,12,opt,name=filter_type,json=filterType,proto3,enum=zerone.knowledge.v1.SampleType" json:"filter_type,omitempty"`
+	FilterLanguage string                 `protobuf:"bytes,13,opt,name=filter_language,json=filterLanguage,proto3" json:"filter_language,omitempty"`
+	MinQuality     uint64                 `protobuf:"varint,14,opt,name=min_quality,json=minQuality,proto3" json:"min_quality,omitempty"` // Minimum quality_score for inclusion
+	CreatedAtBlock uint64                 `protobuf:"varint,15,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	UpdatedAtBlock uint64                 `protobuf:"varint,16,opt,name=updated_at_block,json=updatedAtBlock,proto3" json:"updated_at_block,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *Dataset) Reset() {
+	*x = Dataset{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Dataset) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Dataset) ProtoMessage() {}
+
+func (x *Dataset) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Dataset.ProtoReflect.Descriptor instead.
+func (*Dataset) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *Dataset) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Dataset) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Dataset) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Dataset) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *Dataset) GetLicense() string {
+	if x != nil {
+		return x.License
+	}
+	return ""
+}
+
+func (x *Dataset) GetSampleCount() uint64 {
+	if x != nil {
+		return x.SampleCount
+	}
+	return 0
+}
+
+func (x *Dataset) GetTotalTokens() uint64 {
+	if x != nil {
+		return x.TotalTokens
+	}
+	return 0
+}
+
+func (x *Dataset) GetPricePerSample() string {
+	if x != nil {
+		return x.PricePerSample
+	}
+	return ""
+}
+
+func (x *Dataset) GetBulkPrice() string {
+	if x != nil {
+		return x.BulkPrice
+	}
+	return ""
+}
+
+func (x *Dataset) GetCurator() string {
+	if x != nil {
+		return x.Curator
+	}
+	return ""
+}
+
+func (x *Dataset) GetFilterTags() []string {
+	if x != nil {
+		return x.FilterTags
+	}
+	return nil
+}
+
+func (x *Dataset) GetFilterType() SampleType {
+	if x != nil {
+		return x.FilterType
+	}
+	return SampleType_SAMPLE_TYPE_UNSPECIFIED
+}
+
+func (x *Dataset) GetFilterLanguage() string {
+	if x != nil {
+		return x.FilterLanguage
+	}
+	return ""
+}
+
+func (x *Dataset) GetMinQuality() uint64 {
+	if x != nil {
+		return x.MinQuality
+	}
+	return 0
+}
+
+func (x *Dataset) GetCreatedAtBlock() uint64 {
+	if x != nil {
+		return x.CreatedAtBlock
+	}
+	return 0
+}
+
+func (x *Dataset) GetUpdatedAtBlock() uint64 {
+	if x != nil {
+		return x.UpdatedAtBlock
+	}
+	return 0
+}
+
+// CompletedRoundMeta stores metadata for completed quality rounds,
+// indexed by verdict block height for efficient window-based queries.
 type CompletedRoundMeta struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Domain         string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
@@ -2357,7 +2284,7 @@ type CompletedRoundMeta struct {
 
 func (x *CompletedRoundMeta) Reset() {
 	*x = CompletedRoundMeta{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2369,7 +2296,7 @@ func (x *CompletedRoundMeta) String() string {
 func (*CompletedRoundMeta) ProtoMessage() {}
 
 func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2382,7 +2309,7 @@ func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompletedRoundMeta.ProtoReflect.Descriptor instead.
 func (*CompletedRoundMeta) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *CompletedRoundMeta) GetDomain() string {
@@ -2410,136 +2337,115 @@ var File_zerone_knowledge_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x1fzerone/knowledge/v1/types.proto\x12\x13zerone.knowledge.v1\"\xdd\x01\n" +
-	"\fFactRelation\x12$\n" +
-	"\x0esource_fact_id\x18\x01 \x01(\tR\fsourceFactId\x12$\n" +
-	"\x0etarget_fact_id\x18\x02 \x01(\tR\ftargetFactId\x12=\n" +
-	"\brelation\x18\x03 \x01(\x0e2!.zerone.knowledge.v1.RelationTypeR\brelation\x12(\n" +
-	"\x10created_at_block\x18\x04 \x01(\x04R\x0ecreatedAtBlock\x12\x18\n" +
-	"\acreator\x18\x05 \x01(\tR\acreator\"t\n" +
-	"\rClaimRelation\x12$\n" +
-	"\x0etarget_fact_id\x18\x01 \x01(\tR\ftargetFactId\x12=\n" +
-	"\brelation\x18\x02 \x01(\x0e2!.zerone.knowledge.v1.RelationTypeR\brelation\"\xcf\x01\n" +
-	"\x0eClaimStructure\x12\x18\n" +
-	"\asubject\x18\x01 \x01(\tR\asubject\x12\x1c\n" +
-	"\tpredicate\x18\x02 \x01(\tR\tpredicate\x12\x16\n" +
-	"\x06object\x18\x03 \x01(\tR\x06object\x12\x14\n" +
-	"\x05scope\x18\x04 \x01(\tR\x05scope\x12%\n" +
-	"\x0etemporal_scope\x18\x05 \x01(\tR\rtemporalScope\x12\x1c\n" +
-	"\tnegatable\x18\x06 \x01(\bR\tnegatable\x12\x12\n" +
-	"\x04tags\x18\a \x03(\tR\x04tags\"\x97\x11\n" +
-	"\x04Fact\x12\x0e\n" +
+	"\x1fzerone/knowledge/v1/types.proto\x12\x13zerone.knowledge.v1\"\xde\x01\n" +
+	"\fConsentProof\x124\n" +
+	"\x04type\x18\x01 \x01(\x0e2 .zerone.knowledge.v1.ConsentTypeR\x04type\x12\x1b\n" +
+	"\tproof_uri\x18\x02 \x01(\tR\bproofUri\x12)\n" +
+	"\x10author_signature\x18\x03 \x01(\tR\x0fauthorSignature\x12+\n" +
+	"\x11consent_timestamp\x18\x04 \x01(\x04R\x10consentTimestamp\x12#\n" +
+	"\rconsent_terms\x18\x05 \x01(\tR\fconsentTerms\"\xaf\x06\n" +
+	"\n" +
+	"Submission\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1c\n" +
+	"\tsubmitter\x18\x02 \x01(\tR\tsubmitter\x12\x18\n" +
+	"\acontent\x18\x03 \x01(\tR\acontent\x12@\n" +
+	"\vsample_type\x18\x04 \x01(\x0e2\x1f.zerone.knowledge.v1.SampleTypeR\n" +
+	"sampleType\x12\x16\n" +
+	"\x06domain\x18\x05 \x01(\tR\x06domain\x12\x1d\n" +
+	"\n" +
+	"source_uri\x18\x06 \x01(\tR\tsourceUri\x12'\n" +
+	"\x0fsource_platform\x18\a \x01(\tR\x0esourcePlatform\x12)\n" +
+	"\x10source_timestamp\x18\b \x01(\x04R\x0fsourceTimestamp\x120\n" +
+	"\x14parent_submission_id\x18\t \x01(\tR\x12parentSubmissionId\x12\x1f\n" +
+	"\vcontext_ids\x18\n" +
+	" \x03(\tR\n" +
+	"contextIds\x12\x1b\n" +
+	"\tthread_id\x18\v \x01(\tR\bthreadId\x12;\n" +
+	"\aconsent\x18\f \x01(\v2!.zerone.knowledge.v1.ConsentProofR\aconsent\x12'\n" +
+	"\x0foriginal_author\x18\r \x01(\tR\x0eoriginalAuthor\x12\x18\n" +
+	"\alicense\x18\x0e \x01(\tR\alicense\x12\x12\n" +
+	"\x04tags\x18\x0f \x03(\tR\x04tags\x12\x1a\n" +
+	"\blanguage\x18\x10 \x01(\tR\blanguage\x12\x14\n" +
+	"\x05stake\x18\x11 \x01(\tR\x05stake\x12,\n" +
+	"\x12submitted_at_block\x18\x12 \x01(\x04R\x10submittedAtBlock\x12=\n" +
+	"\x06status\x18\x13 \x01(\x0e2%.zerone.knowledge.v1.SubmissionStatusR\x06status\x12!\n" +
+	"\fcontent_hash\x18\x14 \x01(\tR\vcontentHash\x12(\n" +
+	"\x10quality_round_id\x18\x15 \x01(\tR\x0equalityRoundId\x12\x1c\n" +
+	"\tsponsored\x18\x16 \x01(\bR\tsponsored\"\xdc\f\n" +
+	"\x06Sample\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
-	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
-	"\x06domain\x18\x03 \x01(\tR\x06domain\x12\x1a\n" +
-	"\bcategory\x18\x04 \x01(\tR\bcategory\x12\x1e\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12@\n" +
+	"\vsample_type\x18\x03 \x01(\x0e2\x1f.zerone.knowledge.v1.SampleTypeR\n" +
+	"sampleType\x12\x16\n" +
+	"\x06domain\x18\x04 \x01(\tR\x06domain\x12\x1d\n" +
 	"\n" +
-	"confidence\x18\x05 \x01(\x04R\n" +
-	"confidence\x12\x1c\n" +
-	"\tsubmitter\x18\x06 \x01(\tR\tsubmitter\x12,\n" +
-	"\x12submitted_at_block\x18\a \x01(\x04R\x10submittedAtBlock\x12*\n" +
-	"\x11verified_at_block\x18\b \x01(\x04R\x0fverifiedAtBlock\x12%\n" +
-	"\x0ecitation_count\x18\t \x01(\x04R\rcitationCount\x12&\n" +
-	"\x0efundamentality\x18\n" +
-	" \x01(\x04R\x0efundamentality\x12\x1e\n" +
-	"\n" +
-	"references\x18\v \x03(\tR\n" +
-	"references\x127\n" +
-	"\x06status\x18\f \x01(\x0e2\x1f.zerone.knowledge.v1.FactStatusR\x06status\x12\x19\n" +
-	"\bclaim_id\x18\r \x01(\tR\aclaimId\x121\n" +
-	"\x14reverification_block\x18\x0e \x01(\x04R\x13reverificationBlock\x12.\n" +
-	"\x13last_verified_block\x18\x0f \x01(\x04R\x11lastVerifiedBlock\x120\n" +
-	"\x14challenge_window_end\x18\x10 \x01(\x04R\x12challengeWindowEnd\x12!\n" +
-	"\fbridge_score\x18\x11 \x01(\x04R\vbridgeScore\x12#\n" +
-	"\rnovelty_score\x18\x12 \x01(\x04R\fnoveltyScore\x12)\n" +
-	"\x10patronage_amount\x18\x13 \x01(\tR\x0fpatronageAmount\x124\n" +
-	"\x16patronage_expiry_block\x18\x14 \x01(\x04R\x14patronageExpiryBlock\x12\x18\n" +
-	"\astratum\x18\x15 \x01(\tR\astratum\x12\x1a\n" +
-	"\bmaturity\x18\x16 \x01(\tR\bmaturity\x126\n" +
-	"\x17incoming_citation_count\x18\x17 \x01(\x04R\x15incomingCitationCount\x12=\n" +
-	"\n" +
-	"claim_type\x18\x18 \x01(\x0e2\x1e.zerone.knowledge.v1.ClaimTypeR\tclaimType\x12P\n" +
-	"\x12outgoing_relations\x18\x19 \x03(\v2!.zerone.knowledge.v1.FactRelationR\x11outgoingRelations\x12P\n" +
-	"\x12incoming_relations\x18\x1a \x03(\v2!.zerone.knowledge.v1.FactRelationR\x11incomingRelations\x12A\n" +
-	"\tstructure\x18\x1b \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\x12%\n" +
-	"\x0ecanonical_form\x18\x1c \x01(\tR\rcanonicalForm\x12%\n" +
-	"\x0ecanonical_hash\x18\x1d \x01(\tR\rcanonicalHash\x12#\n" +
+	"source_uri\x18\x05 \x01(\tR\tsourceUri\x12'\n" +
+	"\x0fsource_platform\x18\x06 \x01(\tR\x0esourcePlatform\x12)\n" +
+	"\x10source_timestamp\x18\a \x01(\x04R\x0fsourceTimestamp\x12#\n" +
+	"\rquality_score\x18\b \x01(\x04R\fqualityScore\x12!\n" +
+	"\fquality_tier\x18\t \x01(\tR\vqualityTier\x12#\n" +
+	"\rnovelty_score\x18\n" +
+	" \x01(\x04R\fnoveltyScore\x12'\n" +
+	"\x0fdiversity_score\x18\v \x01(\x04R\x0ediversityScore\x12'\n" +
+	"\x0freasoning_depth\x18\f \x01(\x04R\x0ereasoningDepth\x12\x1c\n" +
+	"\tsubmitter\x18\r \x01(\tR\tsubmitter\x12'\n" +
+	"\x0foriginal_author\x18\x0e \x01(\tR\x0eoriginalAuthor\x12;\n" +
+	"\aconsent\x18\x0f \x01(\v2!.zerone.knowledge.v1.ConsentProofR\aconsent\x12\x18\n" +
+	"\alicense\x18\x10 \x01(\tR\alicense\x12#\n" +
+	"\rsubmission_id\x18\x11 \x01(\tR\fsubmissionId\x12\x1b\n" +
+	"\tthread_id\x18\x12 \x01(\tR\bthreadId\x12(\n" +
+	"\x10parent_sample_id\x18\x13 \x01(\tR\x0eparentSampleId\x12(\n" +
+	"\x10child_sample_ids\x18\x14 \x03(\tR\x0echildSampleIds\x12'\n" +
+	"\x0fthread_position\x18\x15 \x01(\x04R\x0ethreadPosition\x12!\n" +
+	"\fthread_depth\x18\x16 \x01(\x04R\vthreadDepth\x12!\n" +
+	"\faccess_count\x18\x17 \x01(\x04R\vaccessCount\x12#\n" +
+	"\rtotal_revenue\x18\x18 \x01(\tR\ftotalRevenue\x12)\n" +
+	"\x10patronage_amount\x18\x19 \x01(\tR\x0fpatronageAmount\x124\n" +
+	"\x16patronage_expiry_block\x18\x1a \x01(\x04R\x14patronageExpiryBlock\x129\n" +
+	"\x06status\x18\x1b \x01(\x0e2!.zerone.knowledge.v1.SampleStatusR\x06status\x12*\n" +
+	"\x11verified_at_block\x18\x1c \x01(\x04R\x0fverifiedAtBlock\x12.\n" +
+	"\x13last_accessed_block\x18\x1d \x01(\x04R\x11lastAccessedBlock\x12#\n" +
 	"\rfitness_score\x18\x1e \x01(\x04R\ffitnessScore\x122\n" +
-	"\x15fitness_updated_block\x18\x1f \x01(\x04R\x13fitnessUpdatedBlock\x12\x1f\n" +
-	"\vquery_count\x18  \x01(\x04R\n" +
-	"queryCount\x12*\n" +
-	"\x11query_count_epoch\x18! \x01(\x04R\x0fqueryCountEpoch\x12\x1d\n" +
+	"\x15fitness_updated_block\x18\x1f \x01(\x04R\x13fitnessUpdatedBlock\x12\x16\n" +
+	"\x06energy\x18  \x01(\x04R\x06energy\x12\x1d\n" +
 	"\n" +
-	"epoch_born\x18\" \x01(\x04R\tepochBorn\x12\x16\n" +
-	"\x06energy\x18# \x01(\x04R\x06energy\x12\x1d\n" +
-	"\n" +
-	"energy_cap\x18$ \x01(\x04R\tenergyCap\x12.\n" +
-	"\x13energy_last_updated\x18% \x01(\x04R\x11energyLastUpdated\x12-\n" +
-	"\x13at_risk_since_epoch\x18& \x01(\x04R\x10atRiskSinceEpoch\x12\x1b\n" +
+	"energy_cap\x18! \x01(\x04R\tenergyCap\x12.\n" +
+	"\x13energy_last_updated\x18\" \x01(\x04R\x11energyLastUpdated\x12-\n" +
+	"\x13at_risk_since_epoch\x18# \x01(\x04R\x10atRiskSinceEpoch\x12\x12\n" +
+	"\x04tags\x18$ \x03(\tR\x04tags\x12\x1a\n" +
+	"\blanguage\x18% \x01(\tR\blanguage\x12\x16\n" +
+	"\x06topics\x18& \x03(\tR\x06topics\x12\x1b\n" +
 	"\tniche_key\x18' \x01(\tR\bnicheKey\x12!\n" +
 	"\fniche_leader\x18( \x01(\bR\vnicheLeader\x12\x1d\n" +
 	"\n" +
 	"niche_rank\x18) \x01(\x04R\tnicheRank\x12\x1d\n" +
 	"\n" +
 	"niche_size\x18* \x01(\x04R\tnicheSize\x12'\n" +
-	"\x0fcompetition_tax\x18+ \x01(\x04R\x0ecompetitionTax\x12$\n" +
-	"\x0eparent_fact_id\x18, \x01(\tR\fparentFactId\x12$\n" +
-	"\x0echild_fact_ids\x18- \x03(\tR\fchildFactIds\x12#\n" +
-	"\rlineage_depth\x18. \x01(\x04R\flineageDepth\x12#\n" +
-	"\rprogeny_count\x18/ \x01(\x04R\fprogenyCount\x12&\n" +
-	"\x0flineage_root_id\x180 \x01(\tR\rlineageRootId\x124\n" +
-	"\x16common_knowledge_match\x181 \x01(\bR\x14commonKnowledgeMatch\x12'\n" +
-	"\x0fsatisfaction_up\x18< \x01(\x04R\x0esatisfactionUp\x12+\n" +
-	"\x11satisfaction_down\x18= \x01(\x04R\x10satisfactionDown\x122\n" +
-	"\x15satisfaction_up_epoch\x18> \x01(\x04R\x13satisfactionUpEpoch\x126\n" +
-	"\x17satisfaction_down_epoch\x18? \x01(\x04R\x15satisfactionDownEpoch\"\xbc\x01\n" +
-	"\x14CommonKnowledgeEntry\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
-	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x18\n" +
-	"\asubject\x18\x03 \x01(\tR\asubject\x12 \n" +
-	"\vdescription\x18\x04 \x01(\tR\vdescription\x12\x1f\n" +
-	"\vpenalty_bps\x18\x05 \x01(\x04R\n" +
-	"penaltyBps\x12\x1f\n" +
-	"\vadded_block\x18\x06 \x01(\x04R\n" +
-	"addedBlock\"\x9c\x06\n" +
-	"\x05Claim\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
-	"\ffact_content\x18\x02 \x01(\tR\vfactContent\x12\x16\n" +
-	"\x06domain\x18\x03 \x01(\tR\x06domain\x12\x1a\n" +
-	"\bcategory\x18\x04 \x01(\tR\bcategory\x12\x1c\n" +
-	"\tsubmitter\x18\x05 \x01(\tR\tsubmitter\x12,\n" +
-	"\x12submitted_at_block\x18\x06 \x01(\x04R\x10submittedAtBlock\x128\n" +
-	"\x06status\x18\a \x01(\x0e2 .zerone.knowledge.v1.ClaimStatusR\x06status\x12\x1e\n" +
-	"\n" +
-	"references\x18\b \x03(\tR\n" +
-	"references\x122\n" +
-	"\x15verification_round_id\x18\t \x01(\tR\x13verificationRoundId\x12\x14\n" +
-	"\x05stake\x18\n" +
-	" \x01(\tR\x05stake\x12%\n" +
-	"\x0epartnership_id\x18\v \x01(\tR\rpartnershipId\x120\n" +
-	"\x14challenge_window_end\x18\f \x01(\x04R\x12challengeWindowEnd\x12.\n" +
-	"\x13provisional_fact_id\x18\r \x01(\tR\x11provisionalFactId\x12!\n" +
-	"\fcontent_hash\x18\x0e \x01(\tR\vcontentHash\x12=\n" +
-	"\n" +
-	"claim_type\x18\x0f \x01(\x0e2\x1e.zerone.knowledge.v1.ClaimTypeR\tclaimType\x12@\n" +
-	"\trelations\x18\x10 \x03(\v2\".zerone.knowledge.v1.ClaimRelationR\trelations\x12A\n" +
-	"\tstructure\x18\x11 \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\x12%\n" +
-	"\x0ecanonical_form\x18\x12 \x01(\tR\rcanonicalForm\x12%\n" +
-	"\x0ecanonical_hash\x18\x13 \x01(\tR\rcanonicalHash\"\xaf\x04\n" +
-	"\x11VerificationRound\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bclaim_id\x18\x02 \x01(\tR\aclaimId\x12(\n" +
+	"\x0fcompetition_tax\x18+ \x01(\x04R\x0ecompetitionTax\"\x99\x02\n" +
+	"\vQualityVote\x12'\n" +
+	"\x0foverall_quality\x18\x01 \x01(\x04R\x0eoverallQuality\x12'\n" +
+	"\x0freasoning_depth\x18\x02 \x01(\x04R\x0ereasoningDepth\x12\x18\n" +
+	"\anovelty\x18\x03 \x01(\x04R\anovelty\x12\x1a\n" +
+	"\btoxicity\x18\x04 \x01(\x04R\btoxicity\x12)\n" +
+	"\x10factual_accuracy\x18\x05 \x01(\x04R\x0ffactualAccuracy\x12#\n" +
+	"\rconsent_valid\x18\x06 \x01(\bR\fconsentValid\x12\x1c\n" +
+	"\tduplicate\x18\a \x01(\bR\tduplicate\x12\x14\n" +
+	"\x05notes\x18\b \x01(\tR\x05notes\"\x88\x05\n" +
+	"\fQualityRound\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12#\n" +
+	"\rsubmission_id\x18\x02 \x01(\tR\fsubmissionId\x12(\n" +
 	"\x10started_at_block\x18\x03 \x01(\x04R\x0estartedAtBlock\x12<\n" +
 	"\x05phase\x18\x04 \x01(\x0e2&.zerone.knowledge.v1.VerificationPhaseR\x05phase\x12-\n" +
 	"\x12selected_verifiers\x18\x05 \x03(\tR\x11selectedVerifiers\x12:\n" +
 	"\acommits\x18\x06 \x03(\v2 .zerone.knowledge.v1.CommitEntryR\acommits\x12:\n" +
-	"\areveals\x18\a \x03(\v2 .zerone.knowledge.v1.RevealEntryR\areveals\x126\n" +
-	"\averdict\x18\b \x01(\x0e2\x1c.zerone.knowledge.v1.VerdictR\averdict\x12#\n" +
+	"\areveals\x18\a \x03(\v2 .zerone.knowledge.v1.RevealEntryR\areveals\x12=\n" +
+	"\averdict\x18\b \x01(\x0e2#.zerone.knowledge.v1.QualityVerdictR\averdict\x12#\n" +
 	"\rverdict_block\x18\t \x01(\x04R\fverdictBlock\x12'\n" +
 	"\x0fcommit_deadline\x18\n" +
 	" \x01(\x04R\x0ecommitDeadline\x12'\n" +
 	"\x0freveal_deadline\x18\v \x01(\x04R\x0erevealDeadline\x121\n" +
-	"\x14aggregation_deadline\x18\f \x01(\x04R\x13aggregationDeadline\"x\n" +
+	"\x14aggregation_deadline\x18\f \x01(\x04R\x13aggregationDeadline\x12K\n" +
+	"\x10aggregate_scores\x18\r \x01(\v2 .zerone.knowledge.v1.QualityVoteR\x0faggregateScores\"x\n" +
 	"\vCommitEntry\x12\x1a\n" +
 	"\bverifier\x18\x01 \x01(\tR\bverifier\x12\x1f\n" +
 	"\vcommit_hash\x18\x02 \x01(\fR\n" +
@@ -2573,28 +2479,8 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x05stake\x18\x02 \x01(\x04R\x05stake\x12\x12\n" +
 	"\x04tier\x18\x03 \x01(\tR\x04tier\x12-\n" +
 	"\x12verification_count\x18\x04 \x01(\x04R\x11verificationCount\x12!\n" +
-	"\faccuracy_bps\x18\x05 \x01(\x04R\vaccuracyBps\"\xeb\x03\n" +
-	"\x14ProvisionalChallenge\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
-	"\bclaim_id\x18\x02 \x01(\tR\aclaimId\x12\x17\n" +
-	"\afact_id\x18\x03 \x01(\tR\x06factId\x12\x1e\n" +
-	"\n" +
-	"challenger\x18\x04 \x01(\tR\n" +
-	"challenger\x12\x14\n" +
-	"\x05stake\x18\x05 \x01(\tR\x05stake\x12\x16\n" +
-	"\x06reason\x18\x06 \x01(\tR\x06reason\x12!\n" +
-	"\fevidence_ids\x18\a \x03(\tR\vevidenceIds\x12#\n" +
-	"\rcounter_claim\x18\b \x01(\tR\fcounterClaim\x12\x16\n" +
-	"\x06status\x18\t \x01(\tR\x06status\x12'\n" +
-	"\x0fresolution_path\x18\n" +
-	" \x01(\tR\x0eresolutionPath\x12\x1d\n" +
-	"\n" +
-	"dispute_id\x18\v \x01(\tR\tdisputeId\x12*\n" +
-	"\x11created_at_height\x18\f \x01(\x04R\x0fcreatedAtHeight\x12,\n" +
-	"\x12resolved_at_height\x18\r \x01(\x04R\x10resolvedAtHeight\x12\x18\n" +
-	"\aoutcome\x18\x0e \x01(\tR\aoutcome\x12%\n" +
-	"\x0eattempt_number\x18\x0f \x01(\rR\rattemptNumber\"\xba\x02\n" +
-	"\fDemandSignal\x12\x16\n" +
+	"\faccuracy_bps\x18\x05 \x01(\x04R\vaccuracyBps\"\xc1\x03\n" +
+	"\x0eTrainingDemand\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x18\n" +
 	"\asubject\x18\x02 \x01(\tR\asubject\x12\x1f\n" +
 	"\vquery_count\x18\x03 \x01(\x04R\n" +
@@ -2603,83 +2489,115 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x11unfulfilled_count\x18\x05 \x01(\x04R\x10unfulfilledCount\x12(\n" +
 	"\x10last_query_block\x18\x06 \x01(\x04R\x0elastQueryBlock\x12*\n" +
 	"\x11epoch_query_count\x18\a \x01(\x04R\x0fepochQueryCount\x12+\n" +
-	"\x11epoch_unfulfilled\x18\b \x01(\x04R\x10epochUnfulfilled\"\xb6\x02\n" +
-	"\x0fKnowledgeBounty\x12\x0e\n" +
+	"\x11epoch_unfulfilled\x18\b \x01(\x04R\x10epochUnfulfilled\x12F\n" +
+	"\x0epreferred_type\x18\t \x01(\x0e2\x1f.zerone.knowledge.v1.SampleTypeR\rpreferredType\x12\x1a\n" +
+	"\blanguage\x18\n" +
+	" \x01(\tR\blanguage\x12\x1f\n" +
+	"\vbounty_pool\x18\v \x01(\x04R\n" +
+	"bountyPool\"\xb5\x02\n" +
+	"\n" +
+	"DataBounty\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x18\n" +
 	"\asubject\x18\x03 \x01(\tR\asubject\x12#\n" +
 	"\rreward_amount\x18\x04 \x01(\tR\frewardAmount\x12(\n" +
 	"\x10created_at_block\x18\x05 \x01(\x04R\x0ecreatedAtBlock\x12(\n" +
 	"\x10expires_at_block\x18\x06 \x01(\x04R\x0eexpiresAtBlock\x12\x18\n" +
-	"\aclaimed\x18\a \x01(\bR\aclaimed\x12+\n" +
-	"\x12claimed_by_fact_id\x18\b \x01(\tR\x0fclaimedByFactId\x12!\n" +
-	"\fdemand_count\x18\t \x01(\x04R\vdemandCount\"v\n" +
+	"\aclaimed\x18\a \x01(\bR\aclaimed\x12/\n" +
+	"\x14claimed_by_sample_id\x18\b \x01(\tR\x11claimedBySampleId\x12!\n" +
+	"\fdemand_count\x18\t \x01(\x04R\vdemandCount\"\xc4\x01\n" +
+	"\x12ScrapedSourceEntry\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bplatform\x18\x02 \x01(\tR\bplatform\x12\x16\n" +
+	"\x06domain\x18\x03 \x01(\tR\x06domain\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\x12'\n" +
+	"\x0fnovelty_penalty\x18\x05 \x01(\x04R\x0enoveltyPenalty\x12\x1f\n" +
+	"\vadded_block\x18\x06 \x01(\x04R\n" +
+	"addedBlock\"\xab\x04\n" +
+	"\aDataset\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12\x16\n" +
+	"\x06domain\x18\x04 \x01(\tR\x06domain\x12\x18\n" +
+	"\alicense\x18\x05 \x01(\tR\alicense\x12!\n" +
+	"\fsample_count\x18\x06 \x01(\x04R\vsampleCount\x12!\n" +
+	"\ftotal_tokens\x18\a \x01(\x04R\vtotalTokens\x12(\n" +
+	"\x10price_per_sample\x18\b \x01(\tR\x0epricePerSample\x12\x1d\n" +
+	"\n" +
+	"bulk_price\x18\t \x01(\tR\tbulkPrice\x12\x18\n" +
+	"\acurator\x18\n" +
+	" \x01(\tR\acurator\x12\x1f\n" +
+	"\vfilter_tags\x18\v \x03(\tR\n" +
+	"filterTags\x12@\n" +
+	"\vfilter_type\x18\f \x01(\x0e2\x1f.zerone.knowledge.v1.SampleTypeR\n" +
+	"filterType\x12'\n" +
+	"\x0ffilter_language\x18\r \x01(\tR\x0efilterLanguage\x12\x1f\n" +
+	"\vmin_quality\x18\x0e \x01(\x04R\n" +
+	"minQuality\x12(\n" +
+	"\x10created_at_block\x18\x0f \x01(\x04R\x0ecreatedAtBlock\x12(\n" +
+	"\x10updated_at_block\x18\x10 \x01(\x04R\x0eupdatedAtBlock\"v\n" +
 	"\x12CompletedRoundMeta\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x1f\n" +
 	"\vhas_dissent\x18\x02 \x01(\bR\n" +
 	"hasDissent\x12'\n" +
-	"\x0fduration_blocks\x18\x03 \x01(\x04R\x0edurationBlocks*\xe2\x02\n" +
+	"\x0fduration_blocks\x18\x03 \x01(\x04R\x0edurationBlocks*\xe9\x02\n" +
 	"\n" +
-	"FactStatus\x12\x1b\n" +
-	"\x17FACT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
-	"\x13FACT_STATUS_PENDING\x10\x01\x12\x1b\n" +
-	"\x17FACT_STATUS_PROVISIONAL\x10\x02\x12\x18\n" +
-	"\x14FACT_STATUS_VERIFIED\x10\x03\x12\x16\n" +
-	"\x12FACT_STATUS_ACTIVE\x10\x04\x12\x19\n" +
-	"\x15FACT_STATUS_CONTESTED\x10\x05\x12\x1a\n" +
-	"\x16FACT_STATUS_CHALLENGED\x10\x06\x12\x1a\n" +
-	"\x16FACT_STATUS_SUPERSEDED\x10\a\x12\x17\n" +
-	"\x13FACT_STATUS_EXPIRED\x10\b\x12\x19\n" +
-	"\x15FACT_STATUS_DISPROVEN\x10\t\x12\x17\n" +
-	"\x13FACT_STATUS_REVOKED\x10\n" +
-	"\x12\x17\n" +
-	"\x13FACT_STATUS_AT_RISK\x10\v\x12\x16\n" +
-	"\x12FACT_STATUS_PRUNED\x10\f*\x8a\x03\n" +
-	"\vClaimStatus\x12\x1c\n" +
-	"\x18CLAIM_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
-	"\x14CLAIM_STATUS_PENDING\x10\x01\x12#\n" +
-	"\x1fCLAIM_STATUS_PENDING_EVALUATION\x10\x02\x12\x1a\n" +
-	"\x16CLAIM_STATUS_EVALUATED\x10\x03\x12\x1c\n" +
-	"\x18CLAIM_STATUS_PROVISIONAL\x10\x04\x12 \n" +
-	"\x1cCLAIM_STATUS_IN_VERIFICATION\x10\x05\x12\x19\n" +
-	"\x15CLAIM_STATUS_ACCEPTED\x10\x06\x12\x19\n" +
-	"\x15CLAIM_STATUS_REJECTED\x10\a\x12\x1b\n" +
-	"\x17CLAIM_STATUS_CHALLENGED\x10\b\x12\x18\n" +
-	"\x14CLAIM_STATUS_EXPIRED\x10\t\x12\x1d\n" +
-	"\x19CLAIM_STATUS_INSUFFICIENT\x10\n" +
+	"SampleType\x12\x1b\n" +
+	"\x17SAMPLE_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16SAMPLE_TYPE_DISCUSSION\x10\x01\x12\x16\n" +
+	"\x12SAMPLE_TYPE_DEBATE\x10\x02\x12\x1b\n" +
+	"\x17SAMPLE_TYPE_EXPLANATION\x10\x03\x12\x1c\n" +
+	"\x18SAMPLE_TYPE_TROUBLESHOOT\x10\x04\x12\x16\n" +
+	"\x12SAMPLE_TYPE_REVIEW\x10\x05\x12\x18\n" +
+	"\x14SAMPLE_TYPE_TUTORIAL\x10\x06\x12\x17\n" +
+	"\x13SAMPLE_TYPE_OPINION\x10\a\x12\x19\n" +
+	"\x15SAMPLE_TYPE_NARRATIVE\x10\b\x12\x17\n" +
+	"\x13SAMPLE_TYPE_Q_AND_A\x10\t\x12\x18\n" +
+	"\x14SAMPLE_TYPE_CREATIVE\x10\n" +
 	"\x12\x1a\n" +
-	"\x16CLAIM_STATUS_CONTESTED\x10\v\x12\x1a\n" +
-	"\x16CLAIM_STATUS_MALFORMED\x10\f*\xda\x01\n" +
+	"\x16SAMPLE_TYPE_ANNOTATION\x10\v\x12\x1a\n" +
+	"\x16SAMPLE_TYPE_CORRECTION\x10\f*\x9f\x02\n" +
+	"\fSampleStatus\x12\x1d\n" +
+	"\x19SAMPLE_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15SAMPLE_STATUS_PENDING\x10\x01\x12\x1b\n" +
+	"\x17SAMPLE_STATUS_IN_REVIEW\x10\x02\x12\x16\n" +
+	"\x12SAMPLE_STATUS_GOLD\x10\x03\x12\x18\n" +
+	"\x14SAMPLE_STATUS_SILVER\x10\x04\x12\x18\n" +
+	"\x14SAMPLE_STATUS_BRONZE\x10\x05\x12\x1a\n" +
+	"\x16SAMPLE_STATUS_REJECTED\x10\x06\x12\x1b\n" +
+	"\x17SAMPLE_STATUS_CONTESTED\x10\a\x12\x19\n" +
+	"\x15SAMPLE_STATUS_EXPIRED\x10\b\x12\x18\n" +
+	"\x14SAMPLE_STATUS_PRUNED\x10\t*\xa1\x02\n" +
+	"\x10SubmissionStatus\x12!\n" +
+	"\x1dSUBMISSION_STATUS_UNSPECIFIED\x10\x00\x12\x1d\n" +
+	"\x19SUBMISSION_STATUS_PENDING\x10\x01\x12$\n" +
+	" SUBMISSION_STATUS_PENDING_REVIEW\x10\x02\x12\x1e\n" +
+	"\x1aSUBMISSION_STATUS_REVIEWED\x10\x03\x12\x1e\n" +
+	"\x1aSUBMISSION_STATUS_ACCEPTED\x10\x04\x12\x1e\n" +
+	"\x1aSUBMISSION_STATUS_REJECTED\x10\x05\x12$\n" +
+	" SUBMISSION_STATUS_CONSENT_FAILED\x10\x06\x12\x1f\n" +
+	"\x1bSUBMISSION_STATUS_DUPLICATE\x10\a*\xda\x01\n" +
 	"\x11VerificationPhase\x12\"\n" +
 	"\x1eVERIFICATION_PHASE_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19VERIFICATION_PHASE_COMMIT\x10\x01\x12\x1d\n" +
 	"\x19VERIFICATION_PHASE_REVEAL\x10\x02\x12\"\n" +
 	"\x1eVERIFICATION_PHASE_AGGREGATION\x10\x03\x12\x1f\n" +
 	"\x1bVERIFICATION_PHASE_COMPLETE\x10\x04\x12\x1e\n" +
-	"\x1aVERIFICATION_PHASE_EXPIRED\x10\x05*{\n" +
-	"\aVerdict\x12\x17\n" +
-	"\x13VERDICT_UNSPECIFIED\x10\x00\x12\x12\n" +
-	"\x0eVERDICT_ACCEPT\x10\x01\x12\x12\n" +
-	"\x0eVERDICT_REJECT\x10\x02\x12\x18\n" +
-	"\x14VERDICT_INCONCLUSIVE\x10\x03\x12\x15\n" +
-	"\x11VERDICT_MALFORMED\x10\x04*\xe3\x01\n" +
-	"\tClaimType\x12\x1a\n" +
-	"\x16CLAIM_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
-	"\x14CLAIM_TYPE_ASSERTION\x10\x01\x12\x17\n" +
-	"\x13CLAIM_TYPE_RELATION\x10\x02\x12\x19\n" +
-	"\x15CLAIM_TYPE_DEFINITION\x10\x03\x12\x19\n" +
-	"\x15CLAIM_TYPE_CONSTRAINT\x10\x04\x12\x17\n" +
-	"\x13CLAIM_TYPE_NEGATION\x10\x05\x12\x1a\n" +
-	"\x16CLAIM_TYPE_OBSERVATION\x10\x06\x12\x1c\n" +
-	"\x18CLAIM_TYPE_COMPUTATIONAL\x10\a*\xdc\x01\n" +
-	"\fRelationType\x12\x1d\n" +
-	"\x19RELATION_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
-	"\x16RELATION_TYPE_SUPPORTS\x10\x01\x12\x1d\n" +
-	"\x19RELATION_TYPE_CONTRADICTS\x10\x02\x12\x1a\n" +
-	"\x16RELATION_TYPE_REQUIRES\x10\x03\x12\x19\n" +
-	"\x15RELATION_TYPE_REFINES\x10\x04\x12\x1d\n" +
-	"\x19RELATION_TYPE_GENERALIZES\x10\x05\x12\x1c\n" +
-	"\x18RELATION_TYPE_SUPERSEDES\x10\x06*\x81\x01\n" +
+	"\x1aVERIFICATION_PHASE_EXPIRED\x10\x05*\xc1\x01\n" +
+	"\x0eQualityVerdict\x12\x1f\n" +
+	"\x1bQUALITY_VERDICT_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14QUALITY_VERDICT_GOLD\x10\x01\x12\x1a\n" +
+	"\x16QUALITY_VERDICT_SILVER\x10\x02\x12\x1a\n" +
+	"\x16QUALITY_VERDICT_BRONZE\x10\x03\x12\x1a\n" +
+	"\x16QUALITY_VERDICT_REJECT\x10\x04\x12 \n" +
+	"\x1cQUALITY_VERDICT_CONSENT_FAIL\x10\x05*\xbf\x01\n" +
+	"\vConsentType\x12\x1c\n" +
+	"\x18CONSENT_TYPE_UNSPECIFIED\x10\x00\x12\x1e\n" +
+	"\x1aCONSENT_TYPE_SELF_AUTHORED\x10\x01\x12\x17\n" +
+	"\x13CONSENT_TYPE_OPT_IN\x10\x02\x12\x1f\n" +
+	"\x1bCONSENT_TYPE_PUBLIC_LICENSE\x10\x03\x12\x1d\n" +
+	"\x19CONSENT_TYPE_PLATFORM_TOS\x10\x04\x12\x19\n" +
+	"\x15CONSENT_TYPE_FAIR_USE\x10\x05*\x81\x01\n" +
 	"\fDomainStatus\x12\x1d\n" +
 	"\x19DOMAIN_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14DOMAIN_STATUS_ACTIVE\x10\x01\x12\x1c\n" +
@@ -2699,54 +2617,52 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
-	(FactStatus)(0),              // 0: zerone.knowledge.v1.FactStatus
-	(ClaimStatus)(0),             // 1: zerone.knowledge.v1.ClaimStatus
-	(VerificationPhase)(0),       // 2: zerone.knowledge.v1.VerificationPhase
-	(Verdict)(0),                 // 3: zerone.knowledge.v1.Verdict
-	(ClaimType)(0),               // 4: zerone.knowledge.v1.ClaimType
-	(RelationType)(0),            // 5: zerone.knowledge.v1.RelationType
-	(DomainStatus)(0),            // 6: zerone.knowledge.v1.DomainStatus
-	(*FactRelation)(nil),         // 7: zerone.knowledge.v1.FactRelation
-	(*ClaimRelation)(nil),        // 8: zerone.knowledge.v1.ClaimRelation
-	(*ClaimStructure)(nil),       // 9: zerone.knowledge.v1.ClaimStructure
-	(*Fact)(nil),                 // 10: zerone.knowledge.v1.Fact
-	(*CommonKnowledgeEntry)(nil), // 11: zerone.knowledge.v1.CommonKnowledgeEntry
-	(*Claim)(nil),                // 12: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),    // 13: zerone.knowledge.v1.VerificationRound
-	(*CommitEntry)(nil),          // 14: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),          // 15: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),             // 16: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),               // 17: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),        // 18: zerone.knowledge.v1.ValidatorInfo
-	(*ProvisionalChallenge)(nil), // 19: zerone.knowledge.v1.ProvisionalChallenge
-	(*DemandSignal)(nil),         // 20: zerone.knowledge.v1.DemandSignal
-	(*KnowledgeBounty)(nil),      // 21: zerone.knowledge.v1.KnowledgeBounty
-	(*CompletedRoundMeta)(nil),   // 22: zerone.knowledge.v1.CompletedRoundMeta
+	(SampleType)(0),            // 0: zerone.knowledge.v1.SampleType
+	(SampleStatus)(0),          // 1: zerone.knowledge.v1.SampleStatus
+	(SubmissionStatus)(0),      // 2: zerone.knowledge.v1.SubmissionStatus
+	(VerificationPhase)(0),     // 3: zerone.knowledge.v1.VerificationPhase
+	(QualityVerdict)(0),        // 4: zerone.knowledge.v1.QualityVerdict
+	(ConsentType)(0),           // 5: zerone.knowledge.v1.ConsentType
+	(DomainStatus)(0),          // 6: zerone.knowledge.v1.DomainStatus
+	(*ConsentProof)(nil),       // 7: zerone.knowledge.v1.ConsentProof
+	(*Submission)(nil),         // 8: zerone.knowledge.v1.Submission
+	(*Sample)(nil),             // 9: zerone.knowledge.v1.Sample
+	(*QualityVote)(nil),        // 10: zerone.knowledge.v1.QualityVote
+	(*QualityRound)(nil),       // 11: zerone.knowledge.v1.QualityRound
+	(*CommitEntry)(nil),        // 12: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),        // 13: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),           // 14: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),             // 15: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),      // 16: zerone.knowledge.v1.ValidatorInfo
+	(*TrainingDemand)(nil),     // 17: zerone.knowledge.v1.TrainingDemand
+	(*DataBounty)(nil),         // 18: zerone.knowledge.v1.DataBounty
+	(*ScrapedSourceEntry)(nil), // 19: zerone.knowledge.v1.ScrapedSourceEntry
+	(*Dataset)(nil),            // 20: zerone.knowledge.v1.Dataset
+	(*CompletedRoundMeta)(nil), // 21: zerone.knowledge.v1.CompletedRoundMeta
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
-	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
-	5,  // 1: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
-	0,  // 2: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
-	4,  // 3: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	7,  // 4: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
-	7,  // 5: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
-	9,  // 6: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
-	1,  // 7: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
-	4,  // 8: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	8,  // 9: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
-	9,  // 10: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
-	2,  // 11: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	14, // 12: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	15, // 13: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
-	3,  // 14: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
-	6,  // 15: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	5,  // 0: zerone.knowledge.v1.ConsentProof.type:type_name -> zerone.knowledge.v1.ConsentType
+	0,  // 1: zerone.knowledge.v1.Submission.sample_type:type_name -> zerone.knowledge.v1.SampleType
+	7,  // 2: zerone.knowledge.v1.Submission.consent:type_name -> zerone.knowledge.v1.ConsentProof
+	2,  // 3: zerone.knowledge.v1.Submission.status:type_name -> zerone.knowledge.v1.SubmissionStatus
+	0,  // 4: zerone.knowledge.v1.Sample.sample_type:type_name -> zerone.knowledge.v1.SampleType
+	7,  // 5: zerone.knowledge.v1.Sample.consent:type_name -> zerone.knowledge.v1.ConsentProof
+	1,  // 6: zerone.knowledge.v1.Sample.status:type_name -> zerone.knowledge.v1.SampleStatus
+	3,  // 7: zerone.knowledge.v1.QualityRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
+	12, // 8: zerone.knowledge.v1.QualityRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	13, // 9: zerone.knowledge.v1.QualityRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	4,  // 10: zerone.knowledge.v1.QualityRound.verdict:type_name -> zerone.knowledge.v1.QualityVerdict
+	10, // 11: zerone.knowledge.v1.QualityRound.aggregate_scores:type_name -> zerone.knowledge.v1.QualityVote
+	6,  // 12: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
+	0,  // 13: zerone.knowledge.v1.TrainingDemand.preferred_type:type_name -> zerone.knowledge.v1.SampleType
+	0,  // 14: zerone.knowledge.v1.Dataset.filter_type:type_name -> zerone.knowledge.v1.SampleType
+	15, // [15:15] is the sub-list for method output_type
+	15, // [15:15] is the sub-list for method input_type
+	15, // [15:15] is the sub-list for extension type_name
+	15, // [15:15] is the sub-list for extension extendee
+	0,  // [0:15] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_types_proto_init() }
@@ -2760,7 +2676,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
 			NumEnums:      7,
-			NumMessages:   16,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

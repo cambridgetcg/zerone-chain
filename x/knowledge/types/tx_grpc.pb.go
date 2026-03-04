@@ -19,27 +19,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Msg_SubmitClaim_FullMethodName              = "/zerone.knowledge.v1.Msg/SubmitClaim"
-	Msg_SubmitCommitment_FullMethodName         = "/zerone.knowledge.v1.Msg/SubmitCommitment"
-	Msg_SubmitReveal_FullMethodName             = "/zerone.knowledge.v1.Msg/SubmitReveal"
-	Msg_ChallengeFact_FullMethodName            = "/zerone.knowledge.v1.Msg/ChallengeFact"
-	Msg_AddFact_FullMethodName                  = "/zerone.knowledge.v1.Msg/AddFact"
-	Msg_SubmitContradiction_FullMethodName      = "/zerone.knowledge.v1.Msg/SubmitContradiction"
-	Msg_PatronizeFact_FullMethodName            = "/zerone.knowledge.v1.Msg/PatronizeFact"
-	Msg_ProposeDomain_FullMethodName            = "/zerone.knowledge.v1.Msg/ProposeDomain"
-	Msg_EndorseDomainProposal_FullMethodName    = "/zerone.knowledge.v1.Msg/EndorseDomainProposal"
-	Msg_ChallengeDomainProposal_FullMethodName  = "/zerone.knowledge.v1.Msg/ChallengeDomainProposal"
-	Msg_RegisterStratum_FullMethodName          = "/zerone.knowledge.v1.Msg/RegisterStratum"
-	Msg_ChallengeProvisionalFact_FullMethodName = "/zerone.knowledge.v1.Msg/ChallengeProvisionalFact"
-	Msg_UpdateParams_FullMethodName             = "/zerone.knowledge.v1.Msg/UpdateParams"
-	Msg_UpdateExtendedParams_FullMethodName     = "/zerone.knowledge.v1.Msg/UpdateExtendedParams"
-	Msg_ProposeResearchFund_FullMethodName      = "/zerone.knowledge.v1.Msg/ProposeResearchFund"
-	Msg_VoteResearchProposal_FullMethodName     = "/zerone.knowledge.v1.Msg/VoteResearchProposal"
-	Msg_ExecuteResearchProposal_FullMethodName  = "/zerone.knowledge.v1.Msg/ExecuteResearchProposal"
-	Msg_AddCommonKnowledge_FullMethodName       = "/zerone.knowledge.v1.Msg/AddCommonKnowledge"
-	Msg_RemoveCommonKnowledge_FullMethodName    = "/zerone.knowledge.v1.Msg/RemoveCommonKnowledge"
-	Msg_ReportDemand_FullMethodName             = "/zerone.knowledge.v1.Msg/ReportDemand"
-	Msg_RateFact_FullMethodName                 = "/zerone.knowledge.v1.Msg/RateFact"
+	Msg_SubmitData_FullMethodName              = "/zerone.knowledge.v1.Msg/SubmitData"
+	Msg_SubmitCommitment_FullMethodName        = "/zerone.knowledge.v1.Msg/SubmitCommitment"
+	Msg_SubmitReveal_FullMethodName            = "/zerone.knowledge.v1.Msg/SubmitReveal"
+	Msg_ContestSample_FullMethodName           = "/zerone.knowledge.v1.Msg/ContestSample"
+	Msg_AddSample_FullMethodName               = "/zerone.knowledge.v1.Msg/AddSample"
+	Msg_SponsorSample_FullMethodName           = "/zerone.knowledge.v1.Msg/SponsorSample"
+	Msg_ProposeDomain_FullMethodName           = "/zerone.knowledge.v1.Msg/ProposeDomain"
+	Msg_EndorseDomainProposal_FullMethodName   = "/zerone.knowledge.v1.Msg/EndorseDomainProposal"
+	Msg_ChallengeDomainProposal_FullMethodName = "/zerone.knowledge.v1.Msg/ChallengeDomainProposal"
+	Msg_RegisterStratum_FullMethodName         = "/zerone.knowledge.v1.Msg/RegisterStratum"
+	Msg_UpdateParams_FullMethodName            = "/zerone.knowledge.v1.Msg/UpdateParams"
+	Msg_UpdateExtendedParams_FullMethodName    = "/zerone.knowledge.v1.Msg/UpdateExtendedParams"
+	Msg_ProposeResearchFund_FullMethodName     = "/zerone.knowledge.v1.Msg/ProposeResearchFund"
+	Msg_VoteResearchProposal_FullMethodName    = "/zerone.knowledge.v1.Msg/VoteResearchProposal"
+	Msg_ExecuteResearchProposal_FullMethodName = "/zerone.knowledge.v1.Msg/ExecuteResearchProposal"
+	Msg_AddScrapedSource_FullMethodName        = "/zerone.knowledge.v1.Msg/AddScrapedSource"
+	Msg_RemoveScrapedSource_FullMethodName     = "/zerone.knowledge.v1.Msg/RemoveScrapedSource"
+	Msg_ReportDemand_FullMethodName            = "/zerone.knowledge.v1.Msg/ReportDemand"
+	Msg_RateSample_FullMethodName              = "/zerone.knowledge.v1.Msg/RateSample"
 )
 
 // MsgClient is the client API for Msg service.
@@ -48,30 +46,26 @@ const (
 //
 // Msg defines the knowledge module's transaction service.
 type MsgClient interface {
-	// SubmitClaim submits a new knowledge claim for verification.
-	SubmitClaim(ctx context.Context, in *MsgSubmitClaim, opts ...grpc.CallOption) (*MsgSubmitClaimResponse, error)
+	// SubmitData submits a new training data submission for quality validation.
+	SubmitData(ctx context.Context, in *MsgSubmitData, opts ...grpc.CallOption) (*MsgSubmitDataResponse, error)
 	// SubmitCommitment submits a blinded commitment during the commit phase.
 	SubmitCommitment(ctx context.Context, in *MsgSubmitCommitment, opts ...grpc.CallOption) (*MsgSubmitCommitmentResponse, error)
-	// SubmitReveal reveals a validator's vote during the reveal phase.
+	// SubmitReveal reveals a validator's quality vote during the reveal phase.
 	SubmitReveal(ctx context.Context, in *MsgSubmitReveal, opts ...grpc.CallOption) (*MsgSubmitRevealResponse, error)
-	// ChallengeFact challenges a verified fact and opens a new verification round.
-	ChallengeFact(ctx context.Context, in *MsgChallengeFact, opts ...grpc.CallOption) (*MsgChallengeFactResponse, error)
-	// AddFact governance-creates a fact (authority-gated).
-	AddFact(ctx context.Context, in *MsgAddFact, opts ...grpc.CallOption) (*MsgAddFactResponse, error)
-	// SubmitContradiction submits a counter-claim against an existing fact.
-	SubmitContradiction(ctx context.Context, in *MsgSubmitContradiction, opts ...grpc.CallOption) (*MsgSubmitContradictionResponse, error)
-	// PatronizeFact funds a fact to prevent it from being pruned.
-	PatronizeFact(ctx context.Context, in *MsgPatronizeFact, opts ...grpc.CallOption) (*MsgPatronizeFactResponse, error)
-	// ProposeDomain proposes a new epistemic domain.
+	// ContestSample challenges a validated sample and opens a new quality round.
+	ContestSample(ctx context.Context, in *MsgContestSample, opts ...grpc.CallOption) (*MsgContestSampleResponse, error)
+	// AddSample governance-creates a sample (authority-gated).
+	AddSample(ctx context.Context, in *MsgAddSample, opts ...grpc.CallOption) (*MsgAddSampleResponse, error)
+	// SponsorSample funds a sample to prevent it from being pruned.
+	SponsorSample(ctx context.Context, in *MsgSponsorSample, opts ...grpc.CallOption) (*MsgSponsorSampleResponse, error)
+	// ProposeDomain proposes a new data domain.
 	ProposeDomain(ctx context.Context, in *MsgProposeDomain, opts ...grpc.CallOption) (*MsgProposeDomainResponse, error)
 	// EndorseDomainProposal endorses a pending domain proposal.
 	EndorseDomainProposal(ctx context.Context, in *MsgEndorseDomainProposal, opts ...grpc.CallOption) (*MsgEndorseDomainProposalResponse, error)
 	// ChallengeDomainProposal challenges a pending domain proposal.
 	ChallengeDomainProposal(ctx context.Context, in *MsgChallengeDomainProposal, opts ...grpc.CallOption) (*MsgChallengeDomainProposalResponse, error)
-	// RegisterStratum registers a new knowledge stratum (authority-gated).
+	// RegisterStratum registers a new data stratum (authority-gated).
 	RegisterStratum(ctx context.Context, in *MsgRegisterStratum, opts ...grpc.CallOption) (*MsgRegisterStratumResponse, error)
-	// ChallengeProvisionalFact challenges a provisional fact before it becomes verified.
-	ChallengeProvisionalFact(ctx context.Context, in *MsgChallengeProvisionalFact, opts ...grpc.CallOption) (*MsgChallengeProvisionalFactResponse, error)
 	// UpdateParams updates module parameters. Governance authority only.
 	UpdateParams(ctx context.Context, in *MsgUpdateParams, opts ...grpc.CallOption) (*MsgUpdateParamsResponse, error)
 	// UpdateExtendedParams updates the JSON-encoded extended parameters.
@@ -82,14 +76,14 @@ type MsgClient interface {
 	VoteResearchProposal(ctx context.Context, in *MsgVoteResearchProposal, opts ...grpc.CallOption) (*MsgVoteResearchProposalResponse, error)
 	// ExecuteResearchProposal executes an approved research fund proposal.
 	ExecuteResearchProposal(ctx context.Context, in *MsgExecuteResearchProposal, opts ...grpc.CallOption) (*MsgExecuteResearchProposalResponse, error)
-	// AddCommonKnowledge adds an entry to the common knowledge registry (authority-only).
-	AddCommonKnowledge(ctx context.Context, in *MsgAddCommonKnowledge, opts ...grpc.CallOption) (*MsgAddCommonKnowledgeResponse, error)
-	// RemoveCommonKnowledge removes an entry from the common knowledge registry (authority-only).
-	RemoveCommonKnowledge(ctx context.Context, in *MsgRemoveCommonKnowledge, opts ...grpc.CallOption) (*MsgRemoveCommonKnowledgeResponse, error)
-	// ReportDemand reports agent query demand (authorized reporters only).
+	// AddScrapedSource adds an entry to the scraped source registry (authority-only).
+	AddScrapedSource(ctx context.Context, in *MsgAddScrapedSource, opts ...grpc.CallOption) (*MsgAddScrapedSourceResponse, error)
+	// RemoveScrapedSource removes an entry from the scraped source registry (authority-only).
+	RemoveScrapedSource(ctx context.Context, in *MsgRemoveScrapedSource, opts ...grpc.CallOption) (*MsgRemoveScrapedSourceResponse, error)
+	// ReportDemand reports training data demand (authorized reporters only).
 	ReportDemand(ctx context.Context, in *MsgReportDemand, opts ...grpc.CallOption) (*MsgReportDemandResponse, error)
-	// RateFact allows a querier to provide relevance feedback on a fact.
-	RateFact(ctx context.Context, in *MsgRateFact, opts ...grpc.CallOption) (*MsgRateFactResponse, error)
+	// RateSample allows a consumer to provide quality feedback on a sample.
+	RateSample(ctx context.Context, in *MsgRateSample, opts ...grpc.CallOption) (*MsgRateSampleResponse, error)
 }
 
 type msgClient struct {
@@ -100,10 +94,10 @@ func NewMsgClient(cc grpc.ClientConnInterface) MsgClient {
 	return &msgClient{cc}
 }
 
-func (c *msgClient) SubmitClaim(ctx context.Context, in *MsgSubmitClaim, opts ...grpc.CallOption) (*MsgSubmitClaimResponse, error) {
+func (c *msgClient) SubmitData(ctx context.Context, in *MsgSubmitData, opts ...grpc.CallOption) (*MsgSubmitDataResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgSubmitClaimResponse)
-	err := c.cc.Invoke(ctx, Msg_SubmitClaim_FullMethodName, in, out, cOpts...)
+	out := new(MsgSubmitDataResponse)
+	err := c.cc.Invoke(ctx, Msg_SubmitData_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,40 +124,30 @@ func (c *msgClient) SubmitReveal(ctx context.Context, in *MsgSubmitReveal, opts 
 	return out, nil
 }
 
-func (c *msgClient) ChallengeFact(ctx context.Context, in *MsgChallengeFact, opts ...grpc.CallOption) (*MsgChallengeFactResponse, error) {
+func (c *msgClient) ContestSample(ctx context.Context, in *MsgContestSample, opts ...grpc.CallOption) (*MsgContestSampleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgChallengeFactResponse)
-	err := c.cc.Invoke(ctx, Msg_ChallengeFact_FullMethodName, in, out, cOpts...)
+	out := new(MsgContestSampleResponse)
+	err := c.cc.Invoke(ctx, Msg_ContestSample_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *msgClient) AddFact(ctx context.Context, in *MsgAddFact, opts ...grpc.CallOption) (*MsgAddFactResponse, error) {
+func (c *msgClient) AddSample(ctx context.Context, in *MsgAddSample, opts ...grpc.CallOption) (*MsgAddSampleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgAddFactResponse)
-	err := c.cc.Invoke(ctx, Msg_AddFact_FullMethodName, in, out, cOpts...)
+	out := new(MsgAddSampleResponse)
+	err := c.cc.Invoke(ctx, Msg_AddSample_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *msgClient) SubmitContradiction(ctx context.Context, in *MsgSubmitContradiction, opts ...grpc.CallOption) (*MsgSubmitContradictionResponse, error) {
+func (c *msgClient) SponsorSample(ctx context.Context, in *MsgSponsorSample, opts ...grpc.CallOption) (*MsgSponsorSampleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgSubmitContradictionResponse)
-	err := c.cc.Invoke(ctx, Msg_SubmitContradiction_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *msgClient) PatronizeFact(ctx context.Context, in *MsgPatronizeFact, opts ...grpc.CallOption) (*MsgPatronizeFactResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgPatronizeFactResponse)
-	err := c.cc.Invoke(ctx, Msg_PatronizeFact_FullMethodName, in, out, cOpts...)
+	out := new(MsgSponsorSampleResponse)
+	err := c.cc.Invoke(ctx, Msg_SponsorSample_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -204,16 +188,6 @@ func (c *msgClient) RegisterStratum(ctx context.Context, in *MsgRegisterStratum,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MsgRegisterStratumResponse)
 	err := c.cc.Invoke(ctx, Msg_RegisterStratum_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *msgClient) ChallengeProvisionalFact(ctx context.Context, in *MsgChallengeProvisionalFact, opts ...grpc.CallOption) (*MsgChallengeProvisionalFactResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgChallengeProvisionalFactResponse)
-	err := c.cc.Invoke(ctx, Msg_ChallengeProvisionalFact_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -270,20 +244,20 @@ func (c *msgClient) ExecuteResearchProposal(ctx context.Context, in *MsgExecuteR
 	return out, nil
 }
 
-func (c *msgClient) AddCommonKnowledge(ctx context.Context, in *MsgAddCommonKnowledge, opts ...grpc.CallOption) (*MsgAddCommonKnowledgeResponse, error) {
+func (c *msgClient) AddScrapedSource(ctx context.Context, in *MsgAddScrapedSource, opts ...grpc.CallOption) (*MsgAddScrapedSourceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgAddCommonKnowledgeResponse)
-	err := c.cc.Invoke(ctx, Msg_AddCommonKnowledge_FullMethodName, in, out, cOpts...)
+	out := new(MsgAddScrapedSourceResponse)
+	err := c.cc.Invoke(ctx, Msg_AddScrapedSource_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *msgClient) RemoveCommonKnowledge(ctx context.Context, in *MsgRemoveCommonKnowledge, opts ...grpc.CallOption) (*MsgRemoveCommonKnowledgeResponse, error) {
+func (c *msgClient) RemoveScrapedSource(ctx context.Context, in *MsgRemoveScrapedSource, opts ...grpc.CallOption) (*MsgRemoveScrapedSourceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgRemoveCommonKnowledgeResponse)
-	err := c.cc.Invoke(ctx, Msg_RemoveCommonKnowledge_FullMethodName, in, out, cOpts...)
+	out := new(MsgRemoveScrapedSourceResponse)
+	err := c.cc.Invoke(ctx, Msg_RemoveScrapedSource_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -300,10 +274,10 @@ func (c *msgClient) ReportDemand(ctx context.Context, in *MsgReportDemand, opts 
 	return out, nil
 }
 
-func (c *msgClient) RateFact(ctx context.Context, in *MsgRateFact, opts ...grpc.CallOption) (*MsgRateFactResponse, error) {
+func (c *msgClient) RateSample(ctx context.Context, in *MsgRateSample, opts ...grpc.CallOption) (*MsgRateSampleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgRateFactResponse)
-	err := c.cc.Invoke(ctx, Msg_RateFact_FullMethodName, in, out, cOpts...)
+	out := new(MsgRateSampleResponse)
+	err := c.cc.Invoke(ctx, Msg_RateSample_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -316,30 +290,26 @@ func (c *msgClient) RateFact(ctx context.Context, in *MsgRateFact, opts ...grpc.
 //
 // Msg defines the knowledge module's transaction service.
 type MsgServer interface {
-	// SubmitClaim submits a new knowledge claim for verification.
-	SubmitClaim(context.Context, *MsgSubmitClaim) (*MsgSubmitClaimResponse, error)
+	// SubmitData submits a new training data submission for quality validation.
+	SubmitData(context.Context, *MsgSubmitData) (*MsgSubmitDataResponse, error)
 	// SubmitCommitment submits a blinded commitment during the commit phase.
 	SubmitCommitment(context.Context, *MsgSubmitCommitment) (*MsgSubmitCommitmentResponse, error)
-	// SubmitReveal reveals a validator's vote during the reveal phase.
+	// SubmitReveal reveals a validator's quality vote during the reveal phase.
 	SubmitReveal(context.Context, *MsgSubmitReveal) (*MsgSubmitRevealResponse, error)
-	// ChallengeFact challenges a verified fact and opens a new verification round.
-	ChallengeFact(context.Context, *MsgChallengeFact) (*MsgChallengeFactResponse, error)
-	// AddFact governance-creates a fact (authority-gated).
-	AddFact(context.Context, *MsgAddFact) (*MsgAddFactResponse, error)
-	// SubmitContradiction submits a counter-claim against an existing fact.
-	SubmitContradiction(context.Context, *MsgSubmitContradiction) (*MsgSubmitContradictionResponse, error)
-	// PatronizeFact funds a fact to prevent it from being pruned.
-	PatronizeFact(context.Context, *MsgPatronizeFact) (*MsgPatronizeFactResponse, error)
-	// ProposeDomain proposes a new epistemic domain.
+	// ContestSample challenges a validated sample and opens a new quality round.
+	ContestSample(context.Context, *MsgContestSample) (*MsgContestSampleResponse, error)
+	// AddSample governance-creates a sample (authority-gated).
+	AddSample(context.Context, *MsgAddSample) (*MsgAddSampleResponse, error)
+	// SponsorSample funds a sample to prevent it from being pruned.
+	SponsorSample(context.Context, *MsgSponsorSample) (*MsgSponsorSampleResponse, error)
+	// ProposeDomain proposes a new data domain.
 	ProposeDomain(context.Context, *MsgProposeDomain) (*MsgProposeDomainResponse, error)
 	// EndorseDomainProposal endorses a pending domain proposal.
 	EndorseDomainProposal(context.Context, *MsgEndorseDomainProposal) (*MsgEndorseDomainProposalResponse, error)
 	// ChallengeDomainProposal challenges a pending domain proposal.
 	ChallengeDomainProposal(context.Context, *MsgChallengeDomainProposal) (*MsgChallengeDomainProposalResponse, error)
-	// RegisterStratum registers a new knowledge stratum (authority-gated).
+	// RegisterStratum registers a new data stratum (authority-gated).
 	RegisterStratum(context.Context, *MsgRegisterStratum) (*MsgRegisterStratumResponse, error)
-	// ChallengeProvisionalFact challenges a provisional fact before it becomes verified.
-	ChallengeProvisionalFact(context.Context, *MsgChallengeProvisionalFact) (*MsgChallengeProvisionalFactResponse, error)
 	// UpdateParams updates module parameters. Governance authority only.
 	UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error)
 	// UpdateExtendedParams updates the JSON-encoded extended parameters.
@@ -350,14 +320,14 @@ type MsgServer interface {
 	VoteResearchProposal(context.Context, *MsgVoteResearchProposal) (*MsgVoteResearchProposalResponse, error)
 	// ExecuteResearchProposal executes an approved research fund proposal.
 	ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error)
-	// AddCommonKnowledge adds an entry to the common knowledge registry (authority-only).
-	AddCommonKnowledge(context.Context, *MsgAddCommonKnowledge) (*MsgAddCommonKnowledgeResponse, error)
-	// RemoveCommonKnowledge removes an entry from the common knowledge registry (authority-only).
-	RemoveCommonKnowledge(context.Context, *MsgRemoveCommonKnowledge) (*MsgRemoveCommonKnowledgeResponse, error)
-	// ReportDemand reports agent query demand (authorized reporters only).
+	// AddScrapedSource adds an entry to the scraped source registry (authority-only).
+	AddScrapedSource(context.Context, *MsgAddScrapedSource) (*MsgAddScrapedSourceResponse, error)
+	// RemoveScrapedSource removes an entry from the scraped source registry (authority-only).
+	RemoveScrapedSource(context.Context, *MsgRemoveScrapedSource) (*MsgRemoveScrapedSourceResponse, error)
+	// ReportDemand reports training data demand (authorized reporters only).
 	ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error)
-	// RateFact allows a querier to provide relevance feedback on a fact.
-	RateFact(context.Context, *MsgRateFact) (*MsgRateFactResponse, error)
+	// RateSample allows a consumer to provide quality feedback on a sample.
+	RateSample(context.Context, *MsgRateSample) (*MsgRateSampleResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -368,8 +338,8 @@ type MsgServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMsgServer struct{}
 
-func (UnimplementedMsgServer) SubmitClaim(context.Context, *MsgSubmitClaim) (*MsgSubmitClaimResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SubmitClaim not implemented")
+func (UnimplementedMsgServer) SubmitData(context.Context, *MsgSubmitData) (*MsgSubmitDataResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitData not implemented")
 }
 func (UnimplementedMsgServer) SubmitCommitment(context.Context, *MsgSubmitCommitment) (*MsgSubmitCommitmentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SubmitCommitment not implemented")
@@ -377,17 +347,14 @@ func (UnimplementedMsgServer) SubmitCommitment(context.Context, *MsgSubmitCommit
 func (UnimplementedMsgServer) SubmitReveal(context.Context, *MsgSubmitReveal) (*MsgSubmitRevealResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SubmitReveal not implemented")
 }
-func (UnimplementedMsgServer) ChallengeFact(context.Context, *MsgChallengeFact) (*MsgChallengeFactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ChallengeFact not implemented")
+func (UnimplementedMsgServer) ContestSample(context.Context, *MsgContestSample) (*MsgContestSampleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ContestSample not implemented")
 }
-func (UnimplementedMsgServer) AddFact(context.Context, *MsgAddFact) (*MsgAddFactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method AddFact not implemented")
+func (UnimplementedMsgServer) AddSample(context.Context, *MsgAddSample) (*MsgAddSampleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddSample not implemented")
 }
-func (UnimplementedMsgServer) SubmitContradiction(context.Context, *MsgSubmitContradiction) (*MsgSubmitContradictionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method SubmitContradiction not implemented")
-}
-func (UnimplementedMsgServer) PatronizeFact(context.Context, *MsgPatronizeFact) (*MsgPatronizeFactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method PatronizeFact not implemented")
+func (UnimplementedMsgServer) SponsorSample(context.Context, *MsgSponsorSample) (*MsgSponsorSampleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SponsorSample not implemented")
 }
 func (UnimplementedMsgServer) ProposeDomain(context.Context, *MsgProposeDomain) (*MsgProposeDomainResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ProposeDomain not implemented")
@@ -400,9 +367,6 @@ func (UnimplementedMsgServer) ChallengeDomainProposal(context.Context, *MsgChall
 }
 func (UnimplementedMsgServer) RegisterStratum(context.Context, *MsgRegisterStratum) (*MsgRegisterStratumResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegisterStratum not implemented")
-}
-func (UnimplementedMsgServer) ChallengeProvisionalFact(context.Context, *MsgChallengeProvisionalFact) (*MsgChallengeProvisionalFactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ChallengeProvisionalFact not implemented")
 }
 func (UnimplementedMsgServer) UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateParams not implemented")
@@ -419,17 +383,17 @@ func (UnimplementedMsgServer) VoteResearchProposal(context.Context, *MsgVoteRese
 func (UnimplementedMsgServer) ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExecuteResearchProposal not implemented")
 }
-func (UnimplementedMsgServer) AddCommonKnowledge(context.Context, *MsgAddCommonKnowledge) (*MsgAddCommonKnowledgeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method AddCommonKnowledge not implemented")
+func (UnimplementedMsgServer) AddScrapedSource(context.Context, *MsgAddScrapedSource) (*MsgAddScrapedSourceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddScrapedSource not implemented")
 }
-func (UnimplementedMsgServer) RemoveCommonKnowledge(context.Context, *MsgRemoveCommonKnowledge) (*MsgRemoveCommonKnowledgeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RemoveCommonKnowledge not implemented")
+func (UnimplementedMsgServer) RemoveScrapedSource(context.Context, *MsgRemoveScrapedSource) (*MsgRemoveScrapedSourceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveScrapedSource not implemented")
 }
 func (UnimplementedMsgServer) ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ReportDemand not implemented")
 }
-func (UnimplementedMsgServer) RateFact(context.Context, *MsgRateFact) (*MsgRateFactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RateFact not implemented")
+func (UnimplementedMsgServer) RateSample(context.Context, *MsgRateSample) (*MsgRateSampleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RateSample not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -452,20 +416,20 @@ func RegisterMsgServer(s grpc.ServiceRegistrar, srv MsgServer) {
 	s.RegisterService(&Msg_ServiceDesc, srv)
 }
 
-func _Msg_SubmitClaim_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgSubmitClaim)
+func _Msg_SubmitData_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgSubmitData)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).SubmitClaim(ctx, in)
+		return srv.(MsgServer).SubmitData(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_SubmitClaim_FullMethodName,
+		FullMethod: Msg_SubmitData_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).SubmitClaim(ctx, req.(*MsgSubmitClaim))
+		return srv.(MsgServer).SubmitData(ctx, req.(*MsgSubmitData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -506,74 +470,56 @@ func _Msg_SubmitReveal_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_ChallengeFact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgChallengeFact)
+func _Msg_ContestSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgContestSample)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).ChallengeFact(ctx, in)
+		return srv.(MsgServer).ContestSample(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_ChallengeFact_FullMethodName,
+		FullMethod: Msg_ContestSample_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).ChallengeFact(ctx, req.(*MsgChallengeFact))
+		return srv.(MsgServer).ContestSample(ctx, req.(*MsgContestSample))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_AddFact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgAddFact)
+func _Msg_AddSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAddSample)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).AddFact(ctx, in)
+		return srv.(MsgServer).AddSample(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_AddFact_FullMethodName,
+		FullMethod: Msg_AddSample_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).AddFact(ctx, req.(*MsgAddFact))
+		return srv.(MsgServer).AddSample(ctx, req.(*MsgAddSample))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_SubmitContradiction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgSubmitContradiction)
+func _Msg_SponsorSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgSponsorSample)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).SubmitContradiction(ctx, in)
+		return srv.(MsgServer).SponsorSample(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_SubmitContradiction_FullMethodName,
+		FullMethod: Msg_SponsorSample_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).SubmitContradiction(ctx, req.(*MsgSubmitContradiction))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Msg_PatronizeFact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgPatronizeFact)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MsgServer).PatronizeFact(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Msg_PatronizeFact_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).PatronizeFact(ctx, req.(*MsgPatronizeFact))
+		return srv.(MsgServer).SponsorSample(ctx, req.(*MsgSponsorSample))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -646,24 +592,6 @@ func _Msg_RegisterStratum_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MsgServer).RegisterStratum(ctx, req.(*MsgRegisterStratum))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Msg_ChallengeProvisionalFact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgChallengeProvisionalFact)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MsgServer).ChallengeProvisionalFact(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Msg_ChallengeProvisionalFact_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).ChallengeProvisionalFact(ctx, req.(*MsgChallengeProvisionalFact))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -758,38 +686,38 @@ func _Msg_ExecuteResearchProposal_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_AddCommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgAddCommonKnowledge)
+func _Msg_AddScrapedSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAddScrapedSource)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).AddCommonKnowledge(ctx, in)
+		return srv.(MsgServer).AddScrapedSource(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_AddCommonKnowledge_FullMethodName,
+		FullMethod: Msg_AddScrapedSource_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).AddCommonKnowledge(ctx, req.(*MsgAddCommonKnowledge))
+		return srv.(MsgServer).AddScrapedSource(ctx, req.(*MsgAddScrapedSource))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_RemoveCommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgRemoveCommonKnowledge)
+func _Msg_RemoveScrapedSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRemoveScrapedSource)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).RemoveCommonKnowledge(ctx, in)
+		return srv.(MsgServer).RemoveScrapedSource(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_RemoveCommonKnowledge_FullMethodName,
+		FullMethod: Msg_RemoveScrapedSource_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).RemoveCommonKnowledge(ctx, req.(*MsgRemoveCommonKnowledge))
+		return srv.(MsgServer).RemoveScrapedSource(ctx, req.(*MsgRemoveScrapedSource))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -812,20 +740,20 @@ func _Msg_ReportDemand_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_RateFact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgRateFact)
+func _Msg_RateSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRateSample)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).RateFact(ctx, in)
+		return srv.(MsgServer).RateSample(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_RateFact_FullMethodName,
+		FullMethod: Msg_RateSample_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).RateFact(ctx, req.(*MsgRateFact))
+		return srv.(MsgServer).RateSample(ctx, req.(*MsgRateSample))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -838,8 +766,8 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*MsgServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SubmitClaim",
-			Handler:    _Msg_SubmitClaim_Handler,
+			MethodName: "SubmitData",
+			Handler:    _Msg_SubmitData_Handler,
 		},
 		{
 			MethodName: "SubmitCommitment",
@@ -850,20 +778,16 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Msg_SubmitReveal_Handler,
 		},
 		{
-			MethodName: "ChallengeFact",
-			Handler:    _Msg_ChallengeFact_Handler,
+			MethodName: "ContestSample",
+			Handler:    _Msg_ContestSample_Handler,
 		},
 		{
-			MethodName: "AddFact",
-			Handler:    _Msg_AddFact_Handler,
+			MethodName: "AddSample",
+			Handler:    _Msg_AddSample_Handler,
 		},
 		{
-			MethodName: "SubmitContradiction",
-			Handler:    _Msg_SubmitContradiction_Handler,
-		},
-		{
-			MethodName: "PatronizeFact",
-			Handler:    _Msg_PatronizeFact_Handler,
+			MethodName: "SponsorSample",
+			Handler:    _Msg_SponsorSample_Handler,
 		},
 		{
 			MethodName: "ProposeDomain",
@@ -880,10 +804,6 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterStratum",
 			Handler:    _Msg_RegisterStratum_Handler,
-		},
-		{
-			MethodName: "ChallengeProvisionalFact",
-			Handler:    _Msg_ChallengeProvisionalFact_Handler,
 		},
 		{
 			MethodName: "UpdateParams",
@@ -906,20 +826,20 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Msg_ExecuteResearchProposal_Handler,
 		},
 		{
-			MethodName: "AddCommonKnowledge",
-			Handler:    _Msg_AddCommonKnowledge_Handler,
+			MethodName: "AddScrapedSource",
+			Handler:    _Msg_AddScrapedSource_Handler,
 		},
 		{
-			MethodName: "RemoveCommonKnowledge",
-			Handler:    _Msg_RemoveCommonKnowledge_Handler,
+			MethodName: "RemoveScrapedSource",
+			Handler:    _Msg_RemoveScrapedSource_Handler,
 		},
 		{
 			MethodName: "ReportDemand",
 			Handler:    _Msg_ReportDemand_Handler,
 		},
 		{
-			MethodName: "RateFact",
-			Handler:    _Msg_RateFact_Handler,
+			MethodName: "RateSample",
+			Handler:    _Msg_RateSample_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
