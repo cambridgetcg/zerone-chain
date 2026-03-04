@@ -13,76 +13,78 @@ service Msg {
 
   // ─── Submission lifecycle ──────────────────────────────────────────────────
 
-  // SubmitData submits a new training data submission for quality validation.
+  // SubmitData submits discourse for quality validation.
   rpc SubmitData(MsgSubmitData) returns (MsgSubmitDataResponse);
 
-  // SubmitCommitment submits a blinded commitment during the commit phase.
+  // SubmitThread submits a complete conversation thread (batch).
+  rpc SubmitThread(MsgSubmitThread) returns (MsgSubmitThreadResponse);
+
+  // ─── Quality validation (commit-reveal) ────────────────────────────────────
+
+  // SubmitCommitment submits a blinded quality score during commit phase.
   rpc SubmitCommitment(MsgSubmitCommitment) returns (MsgSubmitCommitmentResponse);
 
-  // SubmitReveal reveals a validator's quality vote during the reveal phase.
+  // SubmitReveal reveals a validator's quality scores during reveal phase.
   rpc SubmitReveal(MsgSubmitReveal) returns (MsgSubmitRevealResponse);
 
-  // ContestSample challenges a validated sample and opens a new quality round.
+  // ─── Data integrity ────────────────────────────────────────────────────────
+
+  // ContestSample disputes a validated sample (consent, quality, duplication).
   rpc ContestSample(MsgContestSample) returns (MsgContestSampleResponse);
 
-  // AddSample governance-creates a sample (authority-gated).
-  rpc AddSample(MsgAddSample) returns (MsgAddSampleResponse);
-
-  // ─── Sample preservation ──────────────────────────────────────────────────
+  // ─── Data preservation ─────────────────────────────────────────────────────
 
   // SponsorSample funds a sample to prevent it from being pruned.
   rpc SponsorSample(MsgSponsorSample) returns (MsgSponsorSampleResponse);
 
-  // ─── Domain management ───────────────────────────────────────────────────
+  // ─── Domain management ─────────────────────────────────────────────────────
 
-  // ProposeDomain proposes a new data domain.
   rpc ProposeDomain(MsgProposeDomain) returns (MsgProposeDomainResponse);
-
-  // EndorseDomainProposal endorses a pending domain proposal.
   rpc EndorseDomainProposal(MsgEndorseDomainProposal) returns (MsgEndorseDomainProposalResponse);
 
-  // ChallengeDomainProposal challenges a pending domain proposal.
-  rpc ChallengeDomainProposal(MsgChallengeDomainProposal) returns (MsgChallengeDomainProposalResponse);
+  // ─── Dataset curation ──────────────────────────────────────────────────────
 
-  // RegisterStratum registers a new data stratum (authority-gated).
-  rpc RegisterStratum(MsgRegisterStratum) returns (MsgRegisterStratumResponse);
+  // CreateDataset creates a curated dataset definition.
+  rpc CreateDataset(MsgCreateDataset) returns (MsgCreateDatasetResponse);
 
-  // ─── Governance ──────────────────────────────────────────────────────────
+  // AccessDataset records a consumer accessing a dataset (triggers payment).
+  rpc AccessDataset(MsgAccessDataset) returns (MsgAccessDatasetResponse);
 
-  // UpdateParams updates module parameters. Governance authority only.
-  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+  // AccessSample records individual sample access (triggers micro-payment).
+  rpc AccessSample(MsgAccessSample) returns (MsgAccessSampleResponse);
 
-  // UpdateExtendedParams updates the JSON-encoded extended parameters.
-  rpc UpdateExtendedParams(MsgUpdateExtendedParams) returns (MsgUpdateExtendedParamsResponse);
+  // ─── Demand & bounties ─────────────────────────────────────────────────────
 
-  // ─── Research fund governance ────────────────────────────────────────────
-
-  // ProposeResearchFund proposes a disbursement from the research fund.
-  rpc ProposeResearchFund(MsgProposeResearchFund) returns (MsgProposeResearchFundResponse);
-
-  // VoteResearchProposal votes on a research fund proposal.
-  rpc VoteResearchProposal(MsgVoteResearchProposal) returns (MsgVoteResearchProposalResponse);
-
-  // ExecuteResearchProposal executes an approved research fund proposal.
-  rpc ExecuteResearchProposal(MsgExecuteResearchProposal) returns (MsgExecuteResearchProposalResponse);
-
-  // ─── Scraped source registry governance ──────────────────────────────────
-
-  // AddScrapedSource adds an entry to the scraped source registry (authority-only).
-  rpc AddScrapedSource(MsgAddScrapedSource) returns (MsgAddScrapedSourceResponse);
-
-  // RemoveScrapedSource removes an entry from the scraped source registry (authority-only).
-  rpc RemoveScrapedSource(MsgRemoveScrapedSource) returns (MsgRemoveScrapedSourceResponse);
-
-  // ─── Training demand ──────────────────────────────────────────────────
-
-  // ReportDemand reports training data demand (authorized reporters only).
+  // ReportDemand reports training data demand from AI labs.
   rpc ReportDemand(MsgReportDemand) returns (MsgReportDemandResponse);
 
-  // ─── Sample rating ──────────────────────────────────────────────────────
+  // FundBounty creates or adds to a data collection bounty.
+  rpc FundBounty(MsgFundBounty) returns (MsgFundBountyResponse);
 
-  // RateSample allows a consumer to provide quality feedback on a sample.
+  // ─── Feedback ──────────────────────────────────────────────────────────────
+
+  // RateSample provides downstream quality feedback on a sample.
   rpc RateSample(MsgRateSample) returns (MsgRateSampleResponse);
+
+  // ─── Governance ────────────────────────────────────────────────────────────
+
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+
+  // ─── Scraped source registry ───────────────────────────────────────────────
+
+  rpc AddScrapedSource(MsgAddScrapedSource) returns (MsgAddScrapedSourceResponse);
+  rpc RemoveScrapedSource(MsgRemoveScrapedSource) returns (MsgRemoveScrapedSourceResponse);
+
+  // ─── Research fund ─────────────────────────────────────────────────────────
+
+  rpc ProposeResearchFund(MsgProposeResearchFund) returns (MsgProposeResearchFundResponse);
+  rpc VoteResearchProposal(MsgVoteResearchProposal) returns (MsgVoteResearchProposalResponse);
+  rpc ExecuteResearchProposal(MsgExecuteResearchProposal) returns (MsgExecuteResearchProposalResponse);
+
+  // ─── Authority ─────────────────────────────────────────────────────────────
+
+  // AddSample governance-creates a sample (authority-gated, for seed data).
+  rpc AddSample(MsgAddSample) returns (MsgAddSampleResponse);
 }
 
 // ─── Submission lifecycle messages ────────────────────────────────────────────
@@ -90,35 +92,52 @@ service Msg {
 message MsgSubmitData {
   option (cosmos.msg.v1.signer) = "submitter";
 
-  string          submitter        = 1;
-  string          content          = 2;
-  SampleType      sample_type      = 3;
-  string          domain           = 4;
-  string          source_uri       = 5;
-  string          source_platform  = 6;
-  uint64          source_timestamp = 7;
-  string          original_author  = 8;
-  string          license          = 9;
-  ConsentProof    consent          = 10;
-  repeated string tags             = 11;
-  string          language         = 12;
-  string          stake            = 13; // uzrn amount
-  string          thread_id        = 14;
-  string          parent_submission_id = 15;
-  repeated string context_ids      = 16;
-  bool            sponsored        = 17; // Request bootstrap fund sponsorship for review fee
+  string          submitter           = 1;
+  string          content             = 2;
+  SampleType      sample_type         = 3;
+  string          domain              = 4;
+  string          source_uri          = 5;
+  string          source_platform     = 6;
+  uint64          source_timestamp    = 7;
+  ConsentProof    consent             = 8;
+  string          original_author     = 9;
+  string          license             = 10;
+  repeated string tags                = 11;
+  string          language            = 12;
+  string          stake               = 13; // uzrn amount
+  string          parent_submission_id = 14; // If part of thread
+  string          thread_id           = 15;
+  repeated string context_ids         = 16;
+  bool            sponsored           = 17; // Request bootstrap fund sponsorship
 }
 
 message MsgSubmitDataResponse {
   string submission_id = 1;
 }
 
+message MsgSubmitThread {
+  option (cosmos.msg.v1.signer) = "submitter";
+
+  string                submitter = 1;
+  repeated MsgSubmitData items    = 2; // Ordered conversation
+  string                thread_id = 3; // Shared thread ID
+  string                domain    = 4;
+  string                stake     = 5; // Covers entire thread
+}
+
+message MsgSubmitThreadResponse {
+  repeated string submission_ids = 1;
+  string          thread_id      = 2;
+}
+
+// ─── Quality validation messages ──────────────────────────────────────────────
+
 message MsgSubmitCommitment {
   option (cosmos.msg.v1.signer) = "verifier";
 
-  string verifier  = 1;
-  string round_id  = 2;
-  bytes  commit_hash = 3; // SHA-256(vote || salt)
+  string verifier    = 1;
+  string round_id    = 2;
+  bytes  commit_hash = 3; // SHA-256(quality_vote_json || salt)
 }
 
 message MsgSubmitCommitmentResponse {}
@@ -126,46 +145,31 @@ message MsgSubmitCommitmentResponse {}
 message MsgSubmitReveal {
   option (cosmos.msg.v1.signer) = "verifier";
 
-  string verifier = 1;
-  string round_id = 2;
-  string vote     = 3; // Serialized QualityVote JSON
-  bytes  salt     = 4;
+  string      verifier = 1;
+  string      round_id = 2;
+  QualityVote scores   = 3; // Multi-dimensional quality scores
+  bytes       salt     = 4;
 }
 
 message MsgSubmitRevealResponse {}
 
+// ─── Data integrity messages ──────────────────────────────────────────────────
+
 message MsgContestSample {
   option (cosmos.msg.v1.signer) = "challenger";
 
-  string          challenger   = 1;
-  string          sample_id    = 2;
-  string          stake        = 3; // uzrn amount
-  string          reason       = 4;
-  repeated string evidence_ids = 5;
+  string      challenger   = 1;
+  string      sample_id    = 2;
+  string      stake        = 3; // uzrn amount
+  string      reason       = 4;
+  ContestType contest_type = 5;
 }
 
 message MsgContestSampleResponse {
   string round_id = 1;
 }
 
-message MsgAddSample {
-  option (cosmos.msg.v1.signer) = "authority";
-
-  string          authority      = 1;
-  string          content        = 2;
-  SampleType      sample_type    = 3;
-  string          domain         = 4;
-  string          source_uri     = 5;
-  string          original_author = 6;
-  string          license        = 7;
-  uint64          quality_score  = 8; // initial quality (0-1,000,000)
-}
-
-message MsgAddSampleResponse {
-  string sample_id = 1;
-}
-
-// ─── Sample preservation messages ─────────────────────────────────────────────
+// ─── Data preservation messages ───────────────────────────────────────────────
 
 message MsgSponsorSample {
   option (cosmos.msg.v1.signer) = "sponsor";
@@ -178,7 +182,7 @@ message MsgSponsorSample {
 
 message MsgSponsorSampleResponse {}
 
-// ─── Domain management messages ──────────────────────────────────────────────
+// ─── Domain management messages ───────────────────────────────────────────────
 
 message MsgProposeDomain {
   option (cosmos.msg.v1.signer) = "proposer";
@@ -203,27 +207,100 @@ message MsgEndorseDomainProposal {
 
 message MsgEndorseDomainProposalResponse {}
 
-message MsgChallengeDomainProposal {
-  option (cosmos.msg.v1.signer) = "challenger";
+// ─── Dataset curation messages ────────────────────────────────────────────────
 
-  string challenger  = 1;
-  string proposal_id = 2;
-  string reason      = 3;
+message MsgCreateDataset {
+  option (cosmos.msg.v1.signer) = "curator";
+
+  string          curator          = 1;
+  string          name             = 2;
+  string          description      = 3;
+  string          domain           = 4;
+  string          license          = 5;
+  SampleType      filter_type      = 6;
+  string          filter_language  = 7;
+  repeated string filter_tags      = 8;
+  uint64          min_quality      = 9;
+  string          price_per_sample = 10;
+  string          bulk_price       = 11;
 }
 
-message MsgChallengeDomainProposalResponse {}
-
-message MsgRegisterStratum {
-  option (cosmos.msg.v1.signer) = "authority";
-
-  string          authority          = 1;
-  string          name               = 2;
-  string          description        = 3;
-  uint64          confidence_ceiling = 4; // 0-1,000,000
-  repeated string parent_strata      = 5;
+message MsgCreateDatasetResponse {
+  string dataset_id = 1;
 }
 
-message MsgRegisterStratumResponse {}
+message MsgAccessDataset {
+  option (cosmos.msg.v1.signer) = "consumer";
+
+  string consumer    = 1;
+  string dataset_id  = 2;
+  string max_payment = 3;
+}
+
+message MsgAccessDatasetResponse {
+  string payment      = 1;
+  uint64 sample_count = 2;
+}
+
+message MsgAccessSample {
+  option (cosmos.msg.v1.signer) = "consumer";
+
+  string consumer    = 1;
+  string sample_id   = 2;
+  string max_payment = 3;
+}
+
+message MsgAccessSampleResponse {
+  string payment = 1;
+}
+
+// ─── Demand & bounty messages ─────────────────────────────────────────────────
+
+message MsgReportDemand {
+  option (cosmos.msg.v1.signer) = "reporter";
+
+  string                reporter = 1;
+  repeated DemandReport reports  = 2;
+}
+
+message DemandReport {
+  string domain      = 1;
+  string subject     = 2;
+  uint64 queries     = 3;
+  uint64 fulfilled   = 4;
+  uint64 unfulfilled = 5;
+}
+
+message MsgReportDemandResponse {}
+
+message MsgFundBounty {
+  option (cosmos.msg.v1.signer) = "funder";
+
+  string     funder         = 1;
+  string     domain         = 2;
+  string     topic          = 3;
+  SampleType preferred_type = 4;
+  string     language       = 5;
+  string     amount         = 6;
+  uint64     expires_blocks = 7;
+}
+
+message MsgFundBountyResponse {
+  string bounty_id = 1;
+}
+
+// ─── Feedback messages ────────────────────────────────────────────────────────
+
+message MsgRateSample {
+  option (cosmos.msg.v1.signer) = "rater";
+
+  string rater     = 1;
+  string sample_id = 2;
+  bool   useful    = 3;
+  string memo      = 4;
+}
+
+message MsgRateSampleResponse {}
 
 // ─── Governance messages ──────────────────────────────────────────────────────
 
@@ -236,26 +313,42 @@ message MsgUpdateParams {
 
 message MsgUpdateParamsResponse {}
 
-message MsgUpdateExtendedParams {
+// ─── Scraped source registry messages ─────────────────────────────────────────
+
+message MsgAddScrapedSource {
   option (cosmos.msg.v1.signer) = "authority";
 
-  string authority  = 1;
-  string params_json = 2; // JSON-encoded ExtendedParams blob
+  string authority       = 1;
+  string platform        = 2;
+  string domain          = 3;
+  string description     = 4;
+  uint64 novelty_penalty = 5;
 }
 
-message MsgUpdateExtendedParamsResponse {}
+message MsgAddScrapedSourceResponse {
+  string id = 1;
+}
 
-// ─── Research fund governance messages ───────────────────────────────────────
+message MsgRemoveScrapedSource {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1;
+  string id        = 2;
+}
+
+message MsgRemoveScrapedSourceResponse {}
+
+// ─── Research fund governance messages ────────────────────────────────────────
 
 message MsgProposeResearchFund {
   option (cosmos.msg.v1.signer) = "proposer";
 
-  string proposer               = 1;
-  string title                  = 2;
-  string description            = 3;
-  string amount                 = 4; // uzrn amount
-  string recipient              = 5;
-  uint64 voting_period_blocks   = 6;
+  string proposer             = 1;
+  string title                = 2;
+  string description          = 3;
+  string amount               = 4; // uzrn amount
+  string recipient            = 5;
+  uint64 voting_period_blocks = 6;
 }
 
 message MsgProposeResearchFundResponse {
@@ -267,7 +360,7 @@ message MsgVoteResearchProposal {
 
   string voter       = 1;
   string proposal_id = 2;
-  bool   vote        = 3; // true = yes, false = no
+  bool   vote        = 3;
 }
 
 message MsgVoteResearchProposalResponse {}
@@ -281,60 +374,21 @@ message MsgExecuteResearchProposal {
 
 message MsgExecuteResearchProposalResponse {}
 
-// ─── Scraped source registry governance messages ────────────────────────────
+// ─── Authority messages ───────────────────────────────────────────────────────
 
-message MsgAddScrapedSource {
+message MsgAddSample {
   option (cosmos.msg.v1.signer) = "authority";
 
-  string authority    = 1;
-  string platform     = 2;
-  string domain       = 3;
-  string description  = 4;
-  uint64 novelty_penalty = 5;
+  string     authority      = 1;
+  string     content        = 2;
+  SampleType sample_type    = 3;
+  string     domain         = 4;
+  string     source_uri     = 5;
+  string     original_author = 6;
+  string     license        = 7;
+  uint64     quality_score  = 8; // initial quality (0-1,000,000)
 }
 
-message MsgAddScrapedSourceResponse {
-  string id = 1;
+message MsgAddSampleResponse {
+  string sample_id = 1;
 }
-
-message MsgRemoveScrapedSource {
-  option (cosmos.msg.v1.signer) = "authority";
-
-  string authority = 1;
-  string id        = 2;  // Scraped source entry ID
-}
-
-message MsgRemoveScrapedSourceResponse {}
-
-// ─── Training demand messages ───────────────────────────────────────────────
-
-message MsgReportDemand {
-    option (cosmos.msg.v1.signer) = "reporter";
-
-    string reporter = 1;  // Context server address (whitelisted)
-    repeated DemandReport reports = 2;
-}
-
-message DemandReport {
-    string domain     = 1;
-    string subject    = 2;
-    uint64 queries    = 3;  // Total queries in this batch
-    uint64 fulfilled  = 4;  // How many returned results
-    uint64 unfulfilled = 5;
-}
-
-message MsgReportDemandResponse {}
-
-// ─── Sample rating messages ────────────────────────────────────────────────
-
-// MsgRateSample allows a consumer to provide quality feedback on a sample.
-message MsgRateSample {
-    option (cosmos.msg.v1.signer) = "rater";
-
-    string rater     = 1;  // Address of the rating consumer
-    string sample_id = 2;  // Sample being rated
-    bool   useful    = 3;  // true = satisfied, false = dissatisfied
-    string memo      = 4;  // Optional: brief reason (max 256 chars)
-}
-
-message MsgRateSampleResponse {}
