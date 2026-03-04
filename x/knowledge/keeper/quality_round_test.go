@@ -806,3 +806,198 @@ func TestSampleCreation_ThreadSamples(t *testing.T) {
 	require.Equal(t, samples[0].Id, samples[1].ParentSampleId)
 	require.Equal(t, samples[1].Id, samples[2].ParentSampleId)
 }
+
+// ─── Integration & Edge-Case tests ─────────────────────────────────────────
+
+func TestEndToEnd_SubmitToSample(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	// Submit data
+	resp, err := k.SubmitData(ctx, &types.MsgSubmitData{
+		Submitter:  testAddr,
+		Content:    "end to end test content",
+		SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+		Domain:     "technology",
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		Stake:      "1000000",
+	})
+	require.NoError(t, err)
+
+	roundID, found := k.GetRoundBySubmission(ctx, resp.SubmissionId)
+	require.True(t, found)
+
+	// Add verifiers (simulating VRF selection)
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	round.SelectedVerifiers = []string{verifier1, verifier2, verifier3}
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	// Full commit+reveal+aggregate cycle
+	votes := []*types.QualityVote{
+		{OverallQuality: 900000, ReasoningDepth: 800000, Novelty: 750000, Toxicity: 1000, FactualAccuracy: 950000, ConsentValid: true},
+		{OverallQuality: 880000, ReasoningDepth: 780000, Novelty: 730000, Toxicity: 2000, FactualAccuracy: 930000, ConsentValid: true},
+		{OverallQuality: 910000, ReasoningDepth: 810000, Novelty: 760000, Toxicity: 500, FactualAccuracy: 960000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	// Verify sample exists with correct data
+	samples := k.GetSamplesByDomain(ctx, "technology")
+	require.Len(t, samples, 1)
+
+	sample, found := k.GetSample(ctx, samples[0])
+	require.True(t, found)
+	require.Equal(t, "gold", sample.QualityTier)
+	require.Equal(t, "end to end test content", sample.Content)
+	require.Equal(t, types.SampleStatus_SAMPLE_STATUS_GOLD, sample.Status)
+
+	// Submission should be ACCEPTED
+	sub, found := k.GetSubmission(ctx, resp.SubmissionId)
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED, sub.Status)
+
+	// Round should be COMPLETE and removed from active
+	round, found = k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_COMPLETE, round.Phase)
+	actives := k.GetActiveRounds(ctx)
+	require.NotContains(t, actives, roundID)
+}
+
+func TestAggregateQualityRound_NoReveals_Noop(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id: "s1", Domain: "technology", Status: types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, err := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	// No reveals submitted
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	// Round should remain without verdict (early return, no changes)
+	round, found = k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_UNSPECIFIED, round.Verdict)
+}
+
+func TestAggregateQualityRound_RoundNotFound(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	err := k.AggregateQualityRound(ctx, "nonexistent")
+	require.ErrorIs(t, err, types.ErrRoundNotFound)
+}
+
+func TestMultipleRoundsActive(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	for _, id := range []string{"s1", "s2"} {
+		sub := &types.Submission{Id: id, Domain: "technology", Status: types.SubmissionStatus_SUBMISSION_STATUS_PENDING}
+		require.NoError(t, k.SetSubmission(ctx, sub))
+	}
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	r1, err := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+	require.NoError(t, err)
+	r2, err := k.InitiateQualityRound(ctx, "s2", "", verifiers)
+	require.NoError(t, err)
+
+	actives := k.GetActiveRounds(ctx)
+	require.Contains(t, actives, r1)
+	require.Contains(t, actives, r2)
+	require.Len(t, actives, 2)
+}
+
+func TestCommitAllVerifiers_RevealPartial(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id: "s1", Domain: "technology", Submitter: testAddr,
+		Content: "test", Stake: "1000000",
+		Status:  types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+		Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, err := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+	require.NoError(t, err)
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 850000, ConsentValid: true},
+		{OverallQuality: 840000, ConsentValid: true},
+		{OverallQuality: 830000, ConsentValid: true},
+	}
+	salts := [][]byte{[]byte("s1"), []byte("s2"), []byte("s3")}
+
+	for i, v := range verifiers {
+		hash := types.ComputeQualityCommitHash(roundID, votes[i], salts[i])
+		require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+			Verifier: v, RoundId: roundID, CommitHash: hash,
+		}))
+	}
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	// Only 2 of 3 reveal
+	for i, v := range []string{verifier1, verifier2} {
+		require.NoError(t, k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+			Verifier: v, RoundId: roundID, Scores: votes[i], Salt: salts[i],
+		}))
+	}
+
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	round, found = k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_GOLD, round.Verdict)
+}
+
+func TestRejectVerdict_NoSampleCreated(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id: "s1", Domain: "technology", Submitter: testAddr,
+		Content: "low quality", Stake: "1000000",
+		Status:  types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+		Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, err := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+	require.NoError(t, err)
+
+	// Very low quality -> reject
+	votes := []*types.QualityVote{
+		{OverallQuality: 100000, ConsentValid: true},
+		{OverallQuality: 150000, ConsentValid: true},
+		{OverallQuality: 120000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	// No samples should exist
+	samples := k.GetSamplesByDomain(ctx, "technology")
+	require.Len(t, samples, 0)
+
+	// Submission should be REJECTED
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
+}
