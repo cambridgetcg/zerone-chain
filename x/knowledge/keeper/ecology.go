@@ -200,3 +200,20 @@ func ApplyNoveltyAdjustment(noveltyScore, saturation uint64) uint64 {
 	penalty := (saturation - saturationThreshold) * 500_000 / 1_000_000
 	return noveltyScore * (1_000_000 - penalty) / 1_000_000
 }
+
+// ─── Thread Bonus ───────────────────────────────────────────────────────────
+
+// ComputeThreadBonus returns a fitness bonus for samples in a conversation thread.
+// Bonus scales with thread length, capped at maxThreadBonus (300,000 = 30%).
+func (k Keeper) ComputeThreadBonus(ctx context.Context, sample *types.Sample) uint64 {
+	if sample.ThreadId == "" {
+		return 0
+	}
+	threadSampleIDs := k.GetSamplesByThread(ctx, sample.ThreadId)
+	threadLength := uint64(len(threadSampleIDs))
+	bonus := threadLength * threadBonusPerMessage
+	if bonus > maxThreadBonus {
+		bonus = maxThreadBonus
+	}
+	return bonus
+}

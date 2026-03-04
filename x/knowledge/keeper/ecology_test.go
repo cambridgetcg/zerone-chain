@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/zerone-chain/zerone/x/knowledge/keeper"
@@ -511,5 +512,66 @@ func TestApplyNoveltyAdjustment_MaxSaturation(t *testing.T) {
 	expected := uint64(750_000)
 	if adjusted != expected {
 		t.Fatalf("expected %d, got %d", expected, adjusted)
+	}
+}
+
+// ─── Thread Bonus Tests ─────────────────────────────────────────────────────
+
+func TestComputeThreadBonus_NoThread(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	sample := &types.Sample{Id: "1", ThreadId: ""}
+	bonus := k.ComputeThreadBonus(ctx, sample)
+	if bonus != 0 {
+		t.Fatalf("expected 0 for no thread, got %d", bonus)
+	}
+}
+
+func TestComputeThreadBonus_TwoMessages(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	s1 := &types.Sample{Id: "1", ThreadId: "thread_1", Content: "a"}
+	s2 := &types.Sample{Id: "2", ThreadId: "thread_1", Content: "b"}
+	_ = k.SetSample(ctx, s1)
+	_ = k.SetSample(ctx, s2)
+	_ = k.SetSampleThreadIndex(ctx, "thread_1", "1")
+	_ = k.SetSampleThreadIndex(ctx, "thread_1", "2")
+
+	bonus := k.ComputeThreadBonus(ctx, s1)
+	expected := uint64(100_000) // 2 * 50,000
+	if bonus != expected {
+		t.Fatalf("expected %d, got %d", expected, bonus)
+	}
+}
+
+func TestComputeThreadBonus_FiveMessages(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	for i := 1; i <= 5; i++ {
+		id := strconv.Itoa(i)
+		_ = k.SetSample(ctx, &types.Sample{Id: id, ThreadId: "t1", Content: id})
+		_ = k.SetSampleThreadIndex(ctx, "t1", id)
+	}
+
+	sample := &types.Sample{Id: "1", ThreadId: "t1"}
+	bonus := k.ComputeThreadBonus(ctx, sample)
+	expected := uint64(250_000) // 5 * 50,000
+	if bonus != expected {
+		t.Fatalf("expected %d, got %d", expected, bonus)
+	}
+}
+
+func TestComputeThreadBonus_CappedAt300k(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	for i := 1; i <= 15; i++ {
+		id := strconv.Itoa(i)
+		_ = k.SetSample(ctx, &types.Sample{Id: id, ThreadId: "t2", Content: id})
+		_ = k.SetSampleThreadIndex(ctx, "t2", id)
+	}
+
+	sample := &types.Sample{Id: "1", ThreadId: "t2"}
+	bonus := k.ComputeThreadBonus(ctx, sample)
+	if bonus != 300_000 {
+		t.Fatalf("expected capped at 300000, got %d", bonus)
 	}
 }
