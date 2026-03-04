@@ -73,3 +73,46 @@ func parseUzrn(s string) uint64 {
 	}
 	return v
 }
+
+// ─── Energy Metabolism ──────────────────────────────────────────────────────
+
+// initializeSampleEnergy sets a new sample's energy fields to defaults.
+func initializeSampleEnergy(sample *types.Sample) {
+	sample.EnergyCap = DefaultEnergyCap
+	sample.Energy = DefaultEnergyCap
+}
+
+// DecayEnergy reduces a sample's energy by the decay rate.
+// A minimum decay of 1 is applied when energy > 0 to prevent
+// samples from becoming immortal at low energy values.
+func (k Keeper) DecayEnergy(ctx context.Context, sample *types.Sample, params *types.Params) {
+	if sample.Energy == 0 {
+		return
+	}
+	decay := sample.Energy * params.EnergyDecayRate / 1_000_000
+	if decay == 0 {
+		decay = 1
+	}
+	if decay > sample.Energy {
+		sample.Energy = 0
+	} else {
+		sample.Energy -= decay
+	}
+}
+
+// RestoreEnergyOnAccess adds energy when a sample is accessed (purchased).
+func (k Keeper) RestoreEnergyOnAccess(ctx context.Context, sample *types.Sample, params *types.Params) {
+	sample.Energy += params.EnergyPerAccess
+	if sample.Energy > sample.EnergyCap {
+		sample.Energy = sample.EnergyCap
+	}
+	sample.AtRiskSinceEpoch = 0
+}
+
+// CheckAtRiskTransition marks a sample as at-risk if energy is 0.
+func (k Keeper) CheckAtRiskTransition(ctx context.Context, sample *types.Sample, currentEpoch uint64, params *types.Params) {
+	if sample.Energy == 0 && sample.AtRiskSinceEpoch == 0 {
+		sample.AtRiskSinceEpoch = currentEpoch
+		_ = k.SetAtRiskIndex(ctx, sample.Id)
+	}
+}

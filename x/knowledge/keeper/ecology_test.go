@@ -244,3 +244,130 @@ func TestParseUzrn(t *testing.T) {
 		})
 	}
 }
+
+// ─── Energy Metabolism Tests ────────────────────────────────────────────────
+
+func TestDecayEnergy_NormalDecay(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams() // EnergyDecayRate = 50,000 (5%)
+
+	sample := &types.Sample{Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	k.DecayEnergy(ctx, sample, &params)
+	// 5% of 1,000,000 = 50,000 decay → remaining 950,000
+	if sample.Energy != 950_000 {
+		t.Fatalf("expected 950000 after decay, got %d", sample.Energy)
+	}
+}
+
+func TestDecayEnergy_MultipleCycles(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	for i := 0; i < 3; i++ {
+		k.DecayEnergy(ctx, sample, &params)
+	}
+	// 1M * 0.95^3 = 857375
+	expected := uint64(857_375)
+	if sample.Energy != expected {
+		t.Fatalf("expected %d after 3 decays, got %d", expected, sample.Energy)
+	}
+}
+
+func TestDecayEnergy_FloorAtZero(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{Id: "1", Energy: 10, EnergyCap: 1_000_000, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	for i := 0; i < 100; i++ {
+		k.DecayEnergy(ctx, sample, &params)
+	}
+	if sample.Energy != 0 {
+		t.Fatalf("expected 0 after many decays, got %d", sample.Energy)
+	}
+}
+
+func TestRestoreEnergyOnAccess(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams() // EnergyPerAccess = 1,000
+
+	sample := &types.Sample{Id: "1", Energy: 500_000, EnergyCap: 1_000_000, AtRiskSinceEpoch: 5, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	k.RestoreEnergyOnAccess(ctx, sample, &params)
+	if sample.Energy != 501_000 {
+		t.Fatalf("expected 501000, got %d", sample.Energy)
+	}
+	if sample.AtRiskSinceEpoch != 0 {
+		t.Fatalf("expected at_risk cleared, got %d", sample.AtRiskSinceEpoch)
+	}
+}
+
+func TestRestoreEnergyOnAccess_CappedAtMax(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{Id: "1", Energy: 999_500, EnergyCap: 1_000_000, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	k.RestoreEnergyOnAccess(ctx, sample, &params)
+	if sample.Energy != 1_000_000 {
+		t.Fatalf("expected capped at 1000000, got %d", sample.Energy)
+	}
+}
+
+func TestAtRiskTransition_WhenEnergyHitsZero(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{Id: "1", Energy: 0, EnergyCap: 1_000_000, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	k.CheckAtRiskTransition(ctx, sample, 42, &params)
+	if sample.AtRiskSinceEpoch != 42 {
+		t.Fatalf("expected at_risk_since_epoch=42, got %d", sample.AtRiskSinceEpoch)
+	}
+}
+
+func TestAtRiskTransition_AlreadyAtRisk_NoUpdate(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{Id: "1", Energy: 0, EnergyCap: 1_000_000, AtRiskSinceEpoch: 30, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	k.CheckAtRiskTransition(ctx, sample, 42, &params)
+	if sample.AtRiskSinceEpoch != 30 {
+		t.Fatalf("expected 30 (unchanged), got %d", sample.AtRiskSinceEpoch)
+	}
+}
+
+func TestAtRiskTransition_EnergyAboveZero_NotAtRisk(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{Id: "1", Energy: 100, EnergyCap: 1_000_000, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	k.CheckAtRiskTransition(ctx, sample, 42, &params)
+	if sample.AtRiskSinceEpoch != 0 {
+		t.Fatalf("expected 0 (not at risk), got %d", sample.AtRiskSinceEpoch)
+	}
+}
+
+func TestInitializeSampleEnergy(t *testing.T) {
+	sample := &types.Sample{Id: "1"}
+	keeper.InitializeSampleEnergy(sample)
+	if sample.Energy != keeper.DefaultEnergyCap {
+		t.Fatalf("expected %d, got %d", keeper.DefaultEnergyCap, sample.Energy)
+	}
+	if sample.EnergyCap != keeper.DefaultEnergyCap {
+		t.Fatalf("expected cap %d, got %d", keeper.DefaultEnergyCap, sample.EnergyCap)
+	}
+}
