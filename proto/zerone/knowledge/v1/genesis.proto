@@ -8,202 +8,76 @@ import "zerone/knowledge/v1/types.proto";
 // Params are the governance parameters for the knowledge module.
 // All BPS values use a 1,000,000 scale (1,000,000 = 100%).
 message Params {
-  // ─── Core quality validation ───────────────────────────────────────────────
-  uint64 min_verifiers            = 1;  // default: 3
-  uint64 max_verifiers            = 2;  // default: 22
-  uint64 commit_phase_blocks      = 3;  // default: 4
-  uint64 reveal_phase_blocks      = 4;  // default: 4
-  uint64 aggregation_phase_blocks = 5;  // default: 3
-  uint64 claim_cooldown_blocks    = 6;  // default: 50
+  // ─── Submission ─────────────────────────────────────────────────────────────
+  string min_submission_stake         = 1;   // uzrn — default: "1000000" (1 ZRN)
+  uint64 max_content_bytes            = 2;   // Max content size per submission — default: 50000 (50KB)
+  uint64 max_thread_size              = 3;   // Max submissions per thread batch — default: 20
 
-  // ─── Quality scoring ──────────────────────────────────────────────────
-  uint64 initial_confidence               = 7;  // default: 500,000 (50%)
-  uint64 confidence_boost_per_verification = 8;  // default: 50,000  (5%)
-  uint64 confidence_threshold             = 9;  // default: 770,000 (77%) acceptance
-  uint64 quorum_threshold                 = 10; // default: 660,000 (66%)
+  // ─── Quality validation ─────────────────────────────────────────────────────
+  uint64 commit_period_blocks         = 4;   // default: 4
+  uint64 reveal_period_blocks         = 5;   // default: 4
+  uint64 min_validators_per_round     = 6;   // default: 3
+  uint64 max_validators_per_round     = 7;   // default: 22
+  uint64 gold_threshold               = 8;   // Quality score >= this → gold (BPS) — default: 800000 (80%)
+  uint64 silver_threshold             = 9;   // >= this → silver — default: 600000 (60%)
+  uint64 bronze_threshold             = 10;  // >= this → bronze (below = reject) — default: 400000 (40%)
+  uint64 max_toxicity_threshold       = 11;  // Above this → auto-reject — default: 200000 (20%)
+  uint64 consent_required_weight      = 12;  // How much consent_valid matters (BPS) — default: 200000 (20%)
 
-  // ─── Slashing — MUST be non-zero (B22-3 audit) ──────────────────────────
-  uint64 wrong_verification_slash_bps = 11; // default: 50,000  (5%)
-  uint64 missed_reveal_slash_bps      = 12; // default: 100,000 (10%)
-  uint64 equivocation_slash_bps       = 13; // default: 200,000 (20%)
-  uint64 invalid_claim_slash_bps      = 14; // DEPRECATED (R19-6): no longer used — review fee is non-refundable
+  // ─── Slashing ───────────────────────────────────────────────────────────────
+  uint64 wrong_validation_slash_bps   = 13;  // default: 50000 (5%)
+  uint64 missed_reveal_slash_bps      = 14;  // default: 100000 (10%)
+  uint64 equivocation_slash_bps       = 15;  // default: 200000 (20%)
 
-  // ─── Rewards ─────────────────────────────────────────────────────────────
-  string verification_reward           = 15; // default: "3000000" (3 ZRN in uzrn)
-  uint64 verification_reward_decay_bps = 16; // default: 999,000 (0.999× per epoch)
+  // ─── Economics ──────────────────────────────────────────────────────────────
+  string submitter_revenue_share_bps  = 16;  // 5500 = 55%
+  string validator_revenue_share_bps  = 17;  // 2200 = 22%
+  uint64 gold_quality_multiplier      = 18;  // 30000 = 3x (in BPS/10000)
+  uint64 silver_quality_multiplier    = 19;  // 20000 = 2x
+  uint64 bronze_quality_multiplier    = 20;  // 10000 = 1x
+  string access_fee_per_sample        = 21;  // Default uzrn per access — default: "100000" (0.1 ZRN)
 
-  // ─── Submission validation ────────────────────────────────────────────────
-  uint64 min_claim_text_length = 17; // default: 20
-  uint64 max_claim_text_length = 18; // default: 10,000
-  string min_review_fee        = 19; // default: "100000" (0.1 ZRN) — non-refundable review fee
+  // ─── Consent multipliers ────────────────────────────────────────────────────
+  uint64 self_authored_multiplier     = 22;  // 15000 = 1.5x
+  uint64 opt_in_multiplier            = 23;  // 13000 = 1.3x
+  uint64 public_license_multiplier    = 24;  // 10000 = 1.0x
+  uint64 platform_tos_multiplier      = 25;  // 8000 = 0.8x
+  uint64 fair_use_multiplier          = 26;  // 5000 = 0.5x
 
-  // ─── Adversarial verification ────────────────────────────────────────────
-  bool   adversarial_verification_enabled = 20; // default: true
-  uint64 provisional_threshold            = 21; // default: 500,000 (50%)
-  uint64 reject_threshold                 = 22; // default: 300,000 (30%)
-  uint64 challenge_duration_blocks        = 23; // default: 34,272 (1 day)
-  string min_challenge_stake              = 24; // default: "11000000" (11 ZRN)
-  uint64 failed_challenge_slash_bps       = 25; // default: 220,000 (22%)
-  uint64 successful_challenge_reward_bps  = 26; // default: 300,000 (30%)
-  uint64 max_concurrent_challenges        = 27; // default: 3
+  // ─── Ecology (kept from knowledge) ──────────────────────────────────────────
+  uint64 energy_decay_rate            = 27;  // BPS per epoch — default: 50000 (5%)
+  uint64 energy_per_access            = 28;  // Energy earned per sample access — default: 1000
+  uint64 prune_grace_epochs           = 29;  // Epochs before pruning zero-energy samples — default: 10
+  uint64 niche_saturation_threshold   = 30;  // Max samples in a niche before penalties — default: 50
+  uint64 novelty_bonus_bps            = 31;  // Bonus for novel submissions — default: 100000 (10%)
 
-  // ─── Citation economics ──────────────────────────────────────────────────
-  uint64 citation_share_bps    = 28; // default: 150,000 (15%)
-  uint64 cross_domain_bonus_bps = 29; // default: 200,000 (20%)
+  // ─── Bounties ───────────────────────────────────────────────────────────────
+  uint64 auto_bounty_threshold        = 32;  // Demand count that triggers auto-bounty — default: 100
+  string auto_bounty_amount           = 33;  // uzrn per auto-bounty — default: "10000000" (10 ZRN)
 
-  // ─── Extended governance params ─────────────────────────────────────────
-  uint64 max_facts_per_domain        = 30; // default: 100,000
-  uint64 fact_expiry_blocks          = 31; // default: 0 (no expiry)
-  uint64 cross_stratum_discount_bps  = 32; // default: 0
-  uint64 novelty_bonus_bps           = 33; // default: 0
-  uint64 max_validators_per_round    = 34; // default: 22
-  uint64 max_citations_per_claim     = 35; // default: 50
-  uint64 citation_decay_per_level    = 36; // default: 500,000 (50% per ancestor level)
-  uint64 self_citation_discount_bps  = 37; // default: 500,000 (50%)
-  uint64 confidence_growth_epoch     = 38; // default: 1,111 blocks
-  uint64 confidence_growth_per_epoch_bps = 39; // default: 11,000 (1.1%)
-  uint64 max_survival_confidence     = 40; // default: 770,000 (77%)
-  uint64 survived_challenge_confidence_cap = 41; // default: 880,000 (88%)
-  uint64 max_apprentice_validators   = 42; // default: 111 (Sybil cap)
-
-  // ─── FARM anti-gaming params ─────────────────────────────────────────────
-  uint64 conformity_threshold_bps          = 43; // default: 950,000 (FARM-1)
-  uint64 calibration_trivial_threshold     = 44; // default: 950,000 (FARM-2)
-  uint64 misbehavior_rejection_threshold   = 45; // default: 300,000 (FARM-6)
-  uint64 min_domain_contributors_for_novelty = 46; // default: 3 (FARM-7)
-  uint64 min_participation_rate_bps        = 47; // default: 500,000 (FARM-8)
-  uint64 challenge_stake_ratio_min_bps     = 48; // default: 500,000 (FARM-9)
-
-  // ─── Research fund ───────────────────────────────────────────────────────
-  uint64 research_fund_share_bps = 49; // default: 130,000 (13%)
-
-  // ─── Malformed submission slashing ──────────────────────────────────────
-  uint64 malformed_claim_slash_bps = 50; // default: 500,000 (50%)
-
-  // ─── Fitness scoring ─────────────────────────────────────────────────────
-  uint64 fitness_epoch_blocks        = 51;
-  uint64 fitness_weight_query_bps    = 52;
-  uint64 fitness_weight_citation_bps = 53;
-  uint64 fitness_weight_bridge_bps   = 54;
-  uint64 fitness_weight_depth_bps    = 55;
-  uint64 fitness_weight_patron_bps   = 56;
-  uint64 fitness_weight_unique_bps   = 57;
-  uint64 fitness_weight_age_bps      = 58;
-  uint64 fitness_initial_score       = 59;
-  uint64 fitness_grace_epochs        = 60;
-
-  // ─── Bootstrap fund (R19-7) ────────────────────────────────────────────
-  bool   bootstrap_fund_enabled         = 61;
-  string bootstrap_fund_max_per_address = 62;
-  string bootstrap_fund_max_per_epoch   = 63;
-  uint64 bootstrap_fund_epoch_blocks    = 64;
-  string bootstrap_fund_fee_cap         = 65;
-
-  // ─── Metabolism ──────────────────────────────────────────────────────────
-  uint64 metabolism_base_cost                = 66;
-  uint64 metabolism_content_length_bps       = 67;
-  uint64 metabolism_domain_competition_bps   = 68;
-  uint64 metabolism_energy_per_query         = 69;
-  uint64 metabolism_energy_per_citation      = 70;
-  uint64 metabolism_energy_per_patronage     = 71;
-  uint64 metabolism_energy_challenge_survival = 72;
-  uint64 metabolism_energy_cap               = 73;
-  uint64 metabolism_initial_energy           = 74;
-  uint64 metabolism_at_risk_epochs           = 75;
-  uint64 metabolism_expired_to_pruned_epochs = 76;
-
-  // ─── Reproduction ────────────────────────────────────────────────────
-  uint64 reproduction_royalty_bps                   = 77;
-  uint64 reproduction_royalty_decay_bps             = 78;
-  uint64 reproduction_max_royalty_depth             = 79;
-  uint64 reproduction_parent_energy_bonus           = 80;
-  uint64 reproduction_child_fitness_inheritance_bps = 81;
-  uint64 reproduction_max_children                  = 82;
-
-  // ─── Novelty detection ──────────────────────────────────────────────────
-  uint64 novelty_common_knowledge_penalty_bps = 83;
-  uint64 novelty_subject_overlap_penalty_bps  = 84;
-  uint64 novelty_precision_bonus_bps          = 85;
-  uint64 novelty_cross_domain_bonus_bps       = 86;
-  uint64 novelty_max_overlap_facts            = 87;
-
-  // ─── Training demand ────────────────────────────────────────────
-  uint64 demand_bounty_threshold         = 88;
-  string demand_bounty_base_reward       = 89;
-  string demand_bounty_per_query_bonus   = 90;
-  uint64 demand_bounty_expiry_epochs     = 91;
-  uint64 demand_multiplier_cap           = 92;
-  bool   demand_tracking_enabled         = 93;
-  repeated string authorized_demand_reporters = 94;
-
-  // ─── Competition (niche dynamics) ──────────────────────────────────
-  uint64 competition_niche_dominance_bonus_bps = 95;
-  uint64 competition_redundancy_threshold_bps  = 96;
-  uint64 competition_max_niche_size            = 97;
-  uint64 competition_symbiosis_bonus_bps       = 98;
-
-  // ─── Query satisfaction ──────────────────────────────────────────────
-  uint64 fitness_weight_satisfaction_bps = 99;
-  uint64 satisfaction_min_ratings        = 100;
-
-  // ─── Consensus diversity (R28-2) ──────────────────────────────────
-  uint64 diversity_conformity_alert_threshold = 101;
-  uint64 diversity_conformity_alert_epochs    = 102;
-
-  // ─── Retroactive vindication (R28-1) ──────────────────────────────
-  bool   vindication_refund_enabled  = 103;
-  uint64 vindication_bonus_bps       = 104;
-  uint64 vindication_slash_bps       = 105;
-  uint64 vindication_window_blocks   = 106;
-
-  // ─── Multi-level energy thresholds (R28-4) ──────────────────────────
-  uint64 metabolism_active_threshold     = 107;
-  uint64 metabolism_extinction_threshold = 108;
-  uint64 max_confidence                  = 109;
-
-  // ─── Role bonuses (R28-5) ──────────────────────────────────────────────
-  uint64 human_empirical_bonus_bps     = 110;
-  uint64 agent_computational_bonus_bps = 111;
-  uint64 agent_verification_bonus_bps  = 112;
-  uint64 human_patronage_bonus_bps     = 113;
-  uint64 dual_validation_bonus_bps     = 114;
-
-  // ─── Domain carrying capacity (R29-1) ──────────────────────────────────
-  uint64 domain_base_capacity              = 115;
-  uint64 domain_capacity_growth_per_citation = 116;
-  uint64 overcrowding_decay_multiplier_bps = 117;
-  uint64 underpopulation_birth_bonus_bps   = 118;
-
-  // ─── Epistemic temperature (R29-2) ──────────────────────────────────
-  uint64 epistemic_temperature_decay_bps        = 119;
-  uint64 epistemic_conformity_cooling_bps       = 120;
-  uint64 epistemic_vindication_heating_bps      = 121;
-  uint64 epistemic_cold_confidence_cap_bps      = 122;
-  uint64 epistemic_hot_confidence_growth_bps    = 123;
-  uint64 epistemic_temperature_window_blocks    = 124;
-
-  // ─── Domain role elasticity (R29-3) ──────────────────────────────────
-  uint64 role_elasticity_min_calls          = 125;
-  uint64 role_elasticity_max_multiplier_bps = 126;
-  uint64 role_elasticity_min_multiplier_bps = 127;
-  uint64 role_elasticity_decay_epochs       = 128;
-
-  // ─── Mentorship dividends (R31-5) ──────────────────────────────────
-  uint64 mentorship_dividend_energy   = 129;
-  uint64 mentorship_capacity_bonus    = 130;
-
-  // ─── Social verification adjustment (R31-2) ──────────────────────────
-  uint64 social_saturation_threshold = 131;
-  uint64 observation_window_blocks   = 132;
+  // ─── Research fund (kept) ───────────────────────────────────────────────────
+  uint64 research_tax_bps             = 34;  // default: 70000 (7%)
+  string research_fund_address        = 35;
+  uint64 founder_share_bps            = 36;  // default: 80000 (8%)
+  string founder_address              = 37;
+  uint64 ai_operations_share_bps      = 38;  // default: 30000 (3%)
+  string ai_operations_address        = 39;
 }
 
 // GenesisState is the genesis state of the knowledge module.
 message GenesisState {
-  Params                         params              = 1;
-  repeated Sample                samples             = 2;
-  repeated Submission            pending_submissions  = 3;
-  repeated QualityRound          active_rounds        = 4;
-  repeated Domain                domains              = 5;
-  string bootstrap_fund_allocation                    = 6; // Initial fund allocation (uzrn) — one-time genesis mint
-  repeated ScrapedSourceEntry    scraped_sources      = 7; // Seeded scraped source entries
+  Params                         params               = 1;
+  repeated Sample                samples              = 2;   // Seed samples
+  repeated Submission            submissions           = 3;   // Pending at export
+  repeated QualityRound          quality_rounds        = 4;   // Active rounds at export
+  repeated Domain                domains               = 5;   // Seed domains
+  repeated Dataset               datasets              = 6;
+  repeated TrainingDemand        demands               = 7;
+  repeated DataBounty            bounties              = 8;
+  repeated ScrapedSourceEntry    scraped_sources       = 9;
+  repeated ValidatorInfo         validators            = 10;
+  uint64                         next_sample_seq       = 11;
+  uint64                         next_submission_seq   = 12;
+  uint64                         next_round_seq        = 13;
+  uint64                         next_dataset_seq      = 14;
 }
