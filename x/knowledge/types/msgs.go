@@ -199,3 +199,28 @@ func (m *MsgSponsorSample) ValidateBasic() error {
 	}
 	return nil
 }
+
+// ValidateBasic performs stateless validation for MsgProposeDomain.
+func (m *MsgProposeDomain) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Proposer); err != nil {
+		return fmt.Errorf("invalid proposer address: %w", err)
+	}
+	if len(m.Name) == 0 {
+		return ErrInvalidDomain.Wrap("domain name must not be empty")
+	}
+	if len(m.Name) > 64 {
+		return ErrInvalidDomain.Wrap("domain name must be <= 64 characters")
+	}
+	return nil
+}
+
+// ValidateBasic performs stateless validation for MsgEndorseDomainProposal.
+func (m *MsgEndorseDomainProposal) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Endorser); err != nil {
+		return fmt.Errorf("invalid endorser address: %w", err)
+	}
+	if len(m.ProposalId) == 0 {
+		return ErrDomainNotFound.Wrap("proposal_id must not be empty")
+	}
+	return nil
+}

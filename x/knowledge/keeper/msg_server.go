@@ -51,12 +51,12 @@ func (m msgServer) SponsorSample(ctx context.Context, msg *types.MsgSponsorSampl
 	return m.keeper.SponsorSample(ctx, msg)
 }
 
-func (m msgServer) ProposeDomain(_ context.Context, _ *types.MsgProposeDomain) (*types.MsgProposeDomainResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "ProposeDomain not implemented (R37)")
+func (m msgServer) ProposeDomain(ctx context.Context, msg *types.MsgProposeDomain) (*types.MsgProposeDomainResponse, error) {
+	return m.keeper.ProposeDomain(ctx, msg)
 }
 
-func (m msgServer) EndorseDomainProposal(_ context.Context, _ *types.MsgEndorseDomainProposal) (*types.MsgEndorseDomainProposalResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "EndorseDomainProposal not implemented (R37)")
+func (m msgServer) EndorseDomainProposal(ctx context.Context, msg *types.MsgEndorseDomainProposal) (*types.MsgEndorseDomainProposalResponse, error) {
+	return m.keeper.EndorseDomainProposal(ctx, msg)
 }
 
 func (m msgServer) CreateDataset(_ context.Context, _ *types.MsgCreateDataset) (*types.MsgCreateDatasetResponse, error) {
