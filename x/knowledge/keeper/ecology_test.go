@@ -371,3 +371,83 @@ func TestInitializeSampleEnergy(t *testing.T) {
 		t.Fatalf("expected cap %d, got %d", keeper.DefaultEnergyCap, sample.EnergyCap)
 	}
 }
+
+// ─── Niche Dynamics Tests ───────────────────────────────────────────────────
+
+func TestComputeNicheKey_Deterministic(t *testing.T) {
+	key1 := keeper.ComputeNicheKey("technology", types.SampleType_SAMPLE_TYPE_DISCUSSION, "golang")
+	key2 := keeper.ComputeNicheKey("technology", types.SampleType_SAMPLE_TYPE_DISCUSSION, "golang")
+	if key1 != key2 {
+		t.Fatalf("niche keys not deterministic: %s vs %s", key1, key2)
+	}
+}
+
+func TestComputeNicheKey_DifferentInputs(t *testing.T) {
+	key1 := keeper.ComputeNicheKey("technology", types.SampleType_SAMPLE_TYPE_DISCUSSION, "golang")
+	key2 := keeper.ComputeNicheKey("science", types.SampleType_SAMPLE_TYPE_DISCUSSION, "golang")
+	key3 := keeper.ComputeNicheKey("technology", types.SampleType_SAMPLE_TYPE_TUTORIAL, "golang")
+	key4 := keeper.ComputeNicheKey("technology", types.SampleType_SAMPLE_TYPE_DISCUSSION, "rust")
+
+	if key1 == key2 || key1 == key3 || key1 == key4 {
+		t.Fatal("different inputs should produce different niche keys")
+	}
+}
+
+func TestComputeNicheKey_EmptyTopic(t *testing.T) {
+	key := keeper.ComputeNicheKey("technology", types.SampleType_SAMPLE_TYPE_DISCUSSION, "")
+	if len(key) != 16 {
+		t.Fatalf("expected 16 char hex key, got %d: %s", len(key), key)
+	}
+}
+
+func TestComputeCompetitionTax_SmallNiche(t *testing.T) {
+	tax := keeper.ComputeCompetitionTax(5, 50)
+	if tax != 0 {
+		t.Fatalf("expected 0 tax for small niche, got %d", tax)
+	}
+}
+
+func TestComputeCompetitionTax_SaturatedNiche(t *testing.T) {
+	tax := keeper.ComputeCompetitionTax(100, 50)
+	if tax != 500_000 {
+		t.Fatalf("expected 500000 for saturated niche, got %d", tax)
+	}
+}
+
+func TestComputeCompetitionTax_AtThreshold(t *testing.T) {
+	tax := keeper.ComputeCompetitionTax(50, 50)
+	if tax != 0 {
+		t.Fatalf("expected 0 at threshold, got %d", tax)
+	}
+}
+
+func TestUpdateNicheLeader(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	s1 := &types.Sample{Id: "1", NicheKey: "niche_a", FitnessScore: 800_000, Content: "a"}
+	s2 := &types.Sample{Id: "2", NicheKey: "niche_a", FitnessScore: 900_000, Content: "b"}
+	s3 := &types.Sample{Id: "3", NicheKey: "niche_a", FitnessScore: 700_000, Content: "c"}
+	_ = k.SetSample(ctx, s1)
+	_ = k.SetSample(ctx, s2)
+	_ = k.SetSample(ctx, s3)
+	_ = k.SetNicheIndex(ctx, "niche_a", "1")
+	_ = k.SetNicheIndex(ctx, "niche_a", "2")
+	_ = k.SetNicheIndex(ctx, "niche_a", "3")
+
+	k.UpdateNicheLeader(ctx, "niche_a")
+
+	s2Updated, _ := k.GetSample(ctx, "2")
+	if !s2Updated.NicheLeader {
+		t.Fatal("expected sample 2 to be niche leader")
+	}
+
+	s1Updated, _ := k.GetSample(ctx, "1")
+	if s1Updated.NicheLeader {
+		t.Fatal("expected sample 1 to NOT be niche leader")
+	}
+}
+
+func TestUpdateNicheLeader_EmptyNiche(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	k.UpdateNicheLeader(ctx, "empty_niche")
+}

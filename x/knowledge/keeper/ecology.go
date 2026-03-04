@@ -2,6 +2,8 @@ package keeper
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"strconv"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -114,5 +116,60 @@ func (k Keeper) CheckAtRiskTransition(ctx context.Context, sample *types.Sample,
 	if sample.Energy == 0 && sample.AtRiskSinceEpoch == 0 {
 		sample.AtRiskSinceEpoch = currentEpoch
 		_ = k.SetAtRiskIndex(ctx, sample.Id)
+	}
+}
+
+// ─── Niche Dynamics ─────────────────────────────────────────────────────────
+
+// ComputeNicheKey produces a deterministic 16-char hex key from domain + sample type + primary topic.
+func ComputeNicheKey(domain string, sampleType types.SampleType, primaryTopic string) string {
+	h := sha256.Sum256([]byte(domain + "|" + sampleType.String() + "|" + primaryTopic))
+	return hex.EncodeToString(h[:8])
+}
+
+// computeCompetitionTax calculates the extra maintenance cost for saturated niches.
+// Returns BPS (0–500,000). Niches below threshold pay no tax.
+func computeCompetitionTax(nicheSize, saturationThreshold uint64) uint64 {
+	if nicheSize <= saturationThreshold {
+		return 0
+	}
+	tax := (nicheSize - saturationThreshold) * 10_000
+	if tax > 500_000 {
+		tax = 500_000
+	}
+	return tax
+}
+
+// UpdateNicheLeader finds the highest-fitness sample in a niche and marks it as leader.
+func (k Keeper) UpdateNicheLeader(ctx context.Context, nicheKey string) {
+	ids := k.GetSamplesByNiche(ctx, nicheKey)
+	if len(ids) == 0 {
+		return
+	}
+
+	var bestID string
+	var bestFitness uint64
+	for _, id := range ids {
+		s, ok := k.GetSample(ctx, id)
+		if !ok {
+			continue
+		}
+		if s.FitnessScore > bestFitness {
+			bestFitness = s.FitnessScore
+			bestID = id
+		}
+	}
+
+	for _, id := range ids {
+		s, ok := k.GetSample(ctx, id)
+		if !ok {
+			continue
+		}
+		wasLeader := s.NicheLeader
+		isLeader := id == bestID
+		if wasLeader != isLeader {
+			s.NicheLeader = isLeader
+			_ = k.SetSample(ctx, s)
+		}
 	}
 }

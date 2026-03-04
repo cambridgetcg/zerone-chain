@@ -5,4 +5,5 @@ var (
 	Normalize              = normalize
 	ParseUzrn              = parseUzrn
 	InitializeSampleEnergy = initializeSampleEnergy
+	ComputeCompetitionTax  = computeCompetitionTax
 )
