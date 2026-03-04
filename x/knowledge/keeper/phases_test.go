@@ -9,7 +9,10 @@ import (
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
-func TestBeginBlocker_CommitToRevealTransition(t *testing.T) {
+// TestBeginBlocker_CommitDeadline_NoCommits_ExpiresRound verifies that a round
+// with 0 commits (below MinValidatorsPerRound=3) is expired when the commit
+// deadline passes, rather than transitioning to REVEAL.
+func TestBeginBlocker_CommitDeadline_NoCommits_ExpiresRound(t *testing.T) {
 	k, ctx := setupKeeper(t)
 	setupDefaultDomains(t, k, ctx)
 
@@ -20,6 +23,94 @@ func TestBeginBlocker_CommitToRevealTransition(t *testing.T) {
 	roundID, _ := k.InitiateQualityRound(ctx, "s1", "", verifiers)
 
 	// Block 100 → commit deadline 104. Advance to block 105.
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(105).WithEventManager(sdk.NewEventManager())
+
+	require.NoError(t, k.BeginBlocker(ctx))
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_EXPIRED, round.Phase)
+
+	actives := k.GetActiveRounds(ctx)
+	require.NotContains(t, actives, roundID)
+
+	// Submission should be reset to PENDING
+	sub2, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_PENDING, sub2.Status)
+}
+
+// TestBeginBlocker_CommitToReveal_InsufficientCommits_ExpiresRound tests that
+// a round with fewer commits than MinValidatorsPerRound is expired, with stake
+// returned to the submitter.
+func TestBeginBlocker_CommitToReveal_InsufficientCommits_ExpiresRound(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id: "s1", Domain: "technology", Submitter: testAddr,
+		Stake:  "1000000",
+		Status: types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, _ := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+
+	// Only 1 commit (below MinValidatorsPerRound=3)
+	vote := &types.QualityVote{OverallQuality: 800000, ConsentValid: true}
+	salt := []byte("s1")
+	hash := types.ComputeQualityCommitHash(roundID, vote, salt)
+	require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+		Verifier: verifier1, RoundId: roundID, CommitHash: hash,
+	}))
+
+	// Advance past commit deadline
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(105).WithEventManager(sdk.NewEventManager())
+
+	require.NoError(t, k.BeginBlocker(ctx))
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_EXPIRED, round.Phase)
+
+	actives := k.GetActiveRounds(ctx)
+	require.NotContains(t, actives, roundID)
+
+	// Stake should be returned
+	require.True(t, len(bk.moduleToAccountCalls) > 0, "expected stake return")
+}
+
+// TestBeginBlocker_CommitToReveal_EnoughCommits_TransitionsToReveal verifies that
+// when enough validators commit (>= MinValidatorsPerRound), the round transitions
+// to REVEAL phase as expected.
+func TestBeginBlocker_CommitToReveal_EnoughCommits_TransitionsToReveal(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{Id: "s1", Domain: "technology", Status: types.SubmissionStatus_SUBMISSION_STATUS_PENDING}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, _ := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+
+	// All 3 commit
+	votes := []*types.QualityVote{
+		{OverallQuality: 800000, ConsentValid: true},
+		{OverallQuality: 800000, ConsentValid: true},
+		{OverallQuality: 800000, ConsentValid: true},
+	}
+	salts := [][]byte{[]byte("s1"), []byte("s2"), []byte("s3")}
+	for i, v := range verifiers {
+		hash := types.ComputeQualityCommitHash(roundID, votes[i], salts[i])
+		require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+			Verifier: v, RoundId: roundID, CommitHash: hash,
+		}))
+	}
+
+	// Advance past commit deadline
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	ctx = sdkCtx.WithBlockHeight(105).WithEventManager(sdk.NewEventManager())
 
@@ -85,6 +176,9 @@ func TestBeginBlocker_NoActiveRounds(t *testing.T) {
 	require.NoError(t, k.BeginBlocker(ctx))
 }
 
+// TestBeginBlocker_ExpiredRound_NoReveals verifies that a round with no commits
+// at all is expired in a single BeginBlocker call (the min-validators check
+// catches it at commit deadline, before ever entering REVEAL phase).
 func TestBeginBlocker_ExpiredRound_NoReveals(t *testing.T) {
 	k, ctx := setupKeeper(t)
 	setupDefaultDomains(t, k, ctx)
@@ -99,11 +193,7 @@ func TestBeginBlocker_ExpiredRound_NoReveals(t *testing.T) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	ctx = sdkCtx.WithBlockHeight(200).WithEventManager(sdk.NewEventManager())
 
-	// First BeginBlocker: commit → reveal transition
-	require.NoError(t, k.BeginBlocker(ctx))
-
-	// The round should now be in reveal phase (commit deadline passed)
-	// Run BeginBlocker again for reveal → expired transition
+	// Single BeginBlocker: commit deadline passed with 0 commits → expired directly
 	require.NoError(t, k.BeginBlocker(ctx))
 
 	round, found := k.GetQualityRound(ctx, roundID)

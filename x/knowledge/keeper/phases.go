@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -12,6 +13,7 @@ import (
 func (k Keeper) BeginBlocker(ctx context.Context) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	block := uint64(sdkCtx.BlockHeight())
+	params, _ := k.GetParams(ctx)
 
 	activeRoundIDs := k.GetActiveRounds(ctx)
 	for _, roundID := range activeRoundIDs {
@@ -24,8 +26,16 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		switch round.Phase {
 		case types.VerificationPhase_VERIFICATION_PHASE_COMMIT:
 			if block > round.CommitDeadline {
-				round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
-				_ = k.SetQualityRound(ctx, round)
+				minValidators := uint64(3)
+				if params != nil && params.MinValidatorsPerRound > 0 {
+					minValidators = params.MinValidatorsPerRound
+				}
+				if uint64(len(round.Commits)) >= minValidators {
+					round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+					_ = k.SetQualityRound(ctx, round)
+				} else {
+					k.expireRound(ctx, round)
+				}
 			}
 
 		case types.VerificationPhase_VERIFICATION_PHASE_REVEAL:
@@ -33,19 +43,43 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 				if len(round.Reveals) > 0 {
 					_ = k.AggregateQualityRound(ctx, roundID)
 				} else {
-					round.Phase = types.VerificationPhase_VERIFICATION_PHASE_EXPIRED
-					_ = k.SetQualityRound(ctx, round)
-					_ = k.DeleteActiveRound(ctx, roundID)
+					k.expireRound(ctx, round)
 				}
 			}
 		}
 	}
 
-	// ─── Ecology epoch processing (R37-3) ───────────────────────────────
-	if block > 0 && block%EcologyEpochBlocks == 0 {
-		epoch := block / EcologyEpochBlocks
-		k.RunEcologyEpoch(ctx, epoch)
+	return nil
+}
+
+// expireRound marks a round as expired, removes from active index, and returns stake to submitter.
+func (k Keeper) expireRound(ctx context.Context, round *types.QualityRound) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_EXPIRED
+	_ = k.SetQualityRound(ctx, round)
+	_ = k.DeleteActiveRound(ctx, round.Id)
+
+	// Return stake to submitter and reset submission status
+	sub, found := k.GetSubmission(ctx, round.SubmissionId)
+	if found {
+		if sub.Submitter != "" && sub.Stake != "" {
+			submitterAddr, addrErr := sdk.AccAddressFromBech32(sub.Submitter)
+			if addrErr == nil {
+				stakeAmt, ok := sdkmath.NewIntFromString(sub.Stake)
+				if ok && stakeAmt.IsPositive() {
+					stakeCoin := sdk.NewCoin("uzrn", stakeAmt)
+					_ = k.bankKeeper.SendCoinsFromModuleToAccount(sdkCtx, types.ModuleName, submitterAddr, sdk.NewCoins(stakeCoin))
+				}
+			}
+		}
+		sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_PENDING
+		_ = k.SetSubmission(ctx, sub)
 	}
 
-	return nil
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"quality_round_expired",
+		sdk.NewAttribute("round_id", round.Id),
+		sdk.NewAttribute("submission_id", round.SubmissionId),
+	))
 }
