@@ -43,8 +43,8 @@ func (m msgServer) SubmitReveal(ctx context.Context, msg *types.MsgSubmitReveal)
 	return &types.MsgSubmitRevealResponse{}, nil
 }
 
-func (m msgServer) ContestSample(_ context.Context, _ *types.MsgContestSample) (*types.MsgContestSampleResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "ContestSample not implemented (R37)")
+func (m msgServer) ContestSample(ctx context.Context, msg *types.MsgContestSample) (*types.MsgContestSampleResponse, error) {
+	return m.keeper.ContestSample(ctx, msg)
 }
 
 func (m msgServer) SponsorSample(_ context.Context, _ *types.MsgSponsorSample) (*types.MsgSponsorSampleResponse, error) {
