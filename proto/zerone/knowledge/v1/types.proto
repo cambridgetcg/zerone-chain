@@ -88,6 +88,16 @@ enum DomainStatus {
   DOMAIN_STATUS_PROPOSED    = 3;
 }
 
+// ContestType classifies the reason for contesting a sample.
+enum ContestType {
+  CONTEST_TYPE_UNSPECIFIED  = 0;
+  CONTEST_TYPE_CONSENT      = 1;  // Consent proof is invalid
+  CONTEST_TYPE_QUALITY      = 2;  // Quality was mis-scored
+  CONTEST_TYPE_DUPLICATE    = 3;  // Already exists in dataset
+  CONTEST_TYPE_TOXIC        = 4;  // Harmful content not labeled
+  CONTEST_TYPE_COPYRIGHT    = 5;  // Copyright violation
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Core Messages
 // ═══════════════════════════════════════════════════════════════════════════════
