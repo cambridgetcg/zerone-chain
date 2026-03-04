@@ -47,8 +47,8 @@ func (m msgServer) ContestSample(ctx context.Context, msg *types.MsgContestSampl
 	return m.keeper.ContestSample(ctx, msg)
 }
 
-func (m msgServer) SponsorSample(_ context.Context, _ *types.MsgSponsorSample) (*types.MsgSponsorSampleResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "SponsorSample not implemented (R37)")
+func (m msgServer) SponsorSample(ctx context.Context, msg *types.MsgSponsorSample) (*types.MsgSponsorSampleResponse, error) {
+	return m.keeper.SponsorSample(ctx, msg)
 }
 
 func (m msgServer) ProposeDomain(_ context.Context, _ *types.MsgProposeDomain) (*types.MsgProposeDomainResponse, error) {
