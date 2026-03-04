@@ -524,6 +524,176 @@ func (k Keeper) GetTopicCount(ctx context.Context, domain, topic string) uint64 
 	return binary.BigEndian.Uint64(bz)
 }
 
+// ─── TrainingDemand CRUD ────────────────────────────────────────────────────
+
+func (k Keeper) SetTrainingDemand(ctx context.Context, demand *types.TrainingDemand) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(demand)
+	if err != nil {
+		return fmt.Errorf("failed to marshal training demand: %w", err)
+	}
+	return store.Set(types.TrainingDemandKeyFn(demand.Domain, demand.Subject), bz)
+}
+
+func (k Keeper) GetTrainingDemand(ctx context.Context, domain, subject string) (*types.TrainingDemand, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.TrainingDemandKeyFn(domain, subject))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var demand types.TrainingDemand
+	if err := proto.Unmarshal(bz, &demand); err != nil {
+		return nil, false
+	}
+	return &demand, true
+}
+
+func (k Keeper) IterateTrainingDemands(ctx context.Context, cb func(demand *types.TrainingDemand) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.TrainingDemandKey, prefixEndBytes(types.TrainingDemandKey))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var demand types.TrainingDemand
+		if err := proto.Unmarshal(iter.Value(), &demand); err != nil {
+			continue
+		}
+		if cb(&demand) {
+			break
+		}
+	}
+}
+
+// ─── DataBounty CRUD ────────────────────────────────────────────────────────
+
+func (k Keeper) SetDataBounty(ctx context.Context, bounty *types.DataBounty) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(bounty)
+	if err != nil {
+		return fmt.Errorf("failed to marshal data bounty: %w", err)
+	}
+	return store.Set(types.DataBountyKey(bounty.Id), bz)
+}
+
+func (k Keeper) GetDataBounty(ctx context.Context, id string) (*types.DataBounty, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.DataBountyKey(id))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var bounty types.DataBounty
+	if err := proto.Unmarshal(bz, &bounty); err != nil {
+		return nil, false
+	}
+	return &bounty, true
+}
+
+func (k Keeper) DeleteDataBounty(ctx context.Context, id string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.DataBountyKey(id))
+}
+
+func (k Keeper) SetBountyDomainIndex(ctx context.Context, domain, bountyID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.BountyDomainIndexKey(domain, bountyID), []byte{0x01})
+}
+
+func (k Keeper) DeleteBountyDomainIndex(ctx context.Context, domain, bountyID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.BountyDomainIndexKey(domain, bountyID))
+}
+
+func (k Keeper) GetActiveBounties(ctx context.Context, domain string) []*types.DataBounty {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.BountyDomainByDomainPrefix(domain)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var bounties []*types.DataBounty
+	for ; iter.Valid(); iter.Next() {
+		id := string(iter.Key()[len(prefix):])
+		bounty, found := k.GetDataBounty(ctx, id)
+		if found && !bounty.Claimed {
+			bounties = append(bounties, bounty)
+		}
+	}
+	return bounties
+}
+
+func (k Keeper) NextBountyID(ctx context.Context) string {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.BountySeqKey)
+	var seq uint64 = 1
+	if err == nil && len(bz) == 8 {
+		seq = binary.BigEndian.Uint64(bz)
+	}
+	id := fmt.Sprintf("%x", seq)
+	next := make([]byte, 8)
+	binary.BigEndian.PutUint64(next, seq+1)
+	_ = store.Set(types.BountySeqKey, next)
+	return id
+}
+
+// ─── ScrapedSource CRUD ─────────────────────────────────────────────────────
+
+func (k Keeper) SetScrapedSource(ctx context.Context, entry *types.ScrapedSourceEntry) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(entry)
+	if err != nil {
+		return fmt.Errorf("failed to marshal scraped source: %w", err)
+	}
+	return store.Set(types.ScrapedSourceKeyFn(entry.Id), bz)
+}
+
+func (k Keeper) GetScrapedSource(ctx context.Context, id string) (*types.ScrapedSourceEntry, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.ScrapedSourceKeyFn(id))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var entry types.ScrapedSourceEntry
+	if err := proto.Unmarshal(bz, &entry); err != nil {
+		return nil, false
+	}
+	return &entry, true
+}
+
+func (k Keeper) DeleteScrapedSource(ctx context.Context, id string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.ScrapedSourceKeyFn(id))
+}
+
+func (k Keeper) GetScrapedSourcePenalty(ctx context.Context, platform, domain string) uint64 {
+	id := platform + "/" + domain
+	entry, found := k.GetScrapedSource(ctx, id)
+	if !found {
+		return 0
+	}
+	return entry.NoveltyPenalty
+}
+
+func (k Keeper) IterateScrapedSources(ctx context.Context, cb func(entry *types.ScrapedSourceEntry) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.ScrapedSourceKey, prefixEndBytes(types.ScrapedSourceKey))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var entry types.ScrapedSourceEntry
+		if err := proto.Unmarshal(iter.Value(), &entry); err != nil {
+			continue
+		}
+		if cb(&entry) {
+			break
+		}
+	}
+}
+
 // ─── Store helpers ───────────────────────────────────────────────────────────
 
 func prefixEndBytes(pfx []byte) []byte {

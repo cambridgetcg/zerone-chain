@@ -48,6 +48,7 @@ var (
 	SubmissionSeqKey = []byte{0x81} // uint64 next submission ID
 	RoundSeqKey      = []byte{0x82} // uint64 next round ID
 	DatasetSeqKey    = []byte{0x83} // uint64 next dataset ID
+	BountySeqKey     = []byte{0x84} // uint64 next bounty ID
 
 	// ─── Submission → round mapping ──────────────────────────────────────────
 	SubmissionRoundIndexPrefix = []byte{0x10} // submissionID → roundID
@@ -190,6 +191,19 @@ func DataBountyKey(id string) []byte {
 // ScrapedSourceKeyFn returns the store key for a scraped source.
 func ScrapedSourceKeyFn(id string) []byte {
 	return append(append([]byte{}, ScrapedSourceKey...), []byte(id)...)
+}
+
+// BountyDomainIndexKey returns the index key for a bounty within a domain.
+func BountyDomainIndexKey(domain, bountyID string) []byte {
+	key := append(append([]byte{}, BountyByDomainSubjectPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(bountyID)...)
+}
+
+// BountyDomainByDomainPrefix returns the prefix for iterating bounties in a domain.
+func BountyDomainByDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, BountyByDomainSubjectPrefix...), []byte(domain)...)
+	return append(key, '/')
 }
 
 // ValidatorInfoKeyFn returns the store key for a validator info entry.
