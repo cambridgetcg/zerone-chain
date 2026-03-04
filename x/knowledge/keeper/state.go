@@ -189,6 +189,64 @@ func (k Keeper) GetSubmissionsBySubmitter(ctx context.Context, submitter string)
 	return ids
 }
 
+// ─── QualityRound CRUD ──────────────────────────────────────────────────────
+
+func (k Keeper) SetQualityRound(ctx context.Context, round *types.QualityRound) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(round)
+	if err != nil {
+		return fmt.Errorf("failed to marshal quality round: %w", err)
+	}
+	return store.Set(types.QualityRoundKey(round.Id), bz)
+}
+
+func (k Keeper) GetQualityRound(ctx context.Context, id string) (*types.QualityRound, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.QualityRoundKey(id))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var round types.QualityRound
+	if err := proto.Unmarshal(bz, &round); err != nil {
+		return nil, false
+	}
+	return &round, true
+}
+
+func (k Keeper) DeleteQualityRound(ctx context.Context, id string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.QualityRoundKey(id))
+}
+
+// ─── Sample CRUD ────────────────────────────────────────────────────────────
+
+func (k Keeper) SetSample(ctx context.Context, sample *types.Sample) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(sample)
+	if err != nil {
+		return fmt.Errorf("failed to marshal sample: %w", err)
+	}
+	return store.Set(types.SampleKey(sample.Id), bz)
+}
+
+func (k Keeper) GetSample(ctx context.Context, id string) (*types.Sample, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.SampleKey(id))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var sample types.Sample
+	if err := proto.Unmarshal(bz, &sample); err != nil {
+		return nil, false
+	}
+	return &sample, true
+}
+
+func (k Keeper) DeleteSample(ctx context.Context, id string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.SampleKey(id))
+}
+
 // ─── Sequences ──────────────────────────────────────────────────────────────
 
 func (k Keeper) NextSubmissionID(ctx context.Context) string {
@@ -203,6 +261,149 @@ func (k Keeper) NextSubmissionID(ctx context.Context) string {
 	binary.BigEndian.PutUint64(next, seq+1)
 	_ = store.Set(types.SubmissionSeqKey, next)
 	return id
+}
+
+func (k Keeper) NextRoundID(ctx context.Context) string {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.RoundSeqKey)
+	var seq uint64 = 1
+	if err == nil && len(bz) == 8 {
+		seq = binary.BigEndian.Uint64(bz)
+	}
+	id := fmt.Sprintf("%x", seq)
+	next := make([]byte, 8)
+	binary.BigEndian.PutUint64(next, seq+1)
+	_ = store.Set(types.RoundSeqKey, next)
+	return id
+}
+
+func (k Keeper) NextSampleID(ctx context.Context) string {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.SampleSeqKey)
+	var seq uint64 = 1
+	if err == nil && len(bz) == 8 {
+		seq = binary.BigEndian.Uint64(bz)
+	}
+	id := fmt.Sprintf("%x", seq)
+	next := make([]byte, 8)
+	binary.BigEndian.PutUint64(next, seq+1)
+	_ = store.Set(types.SampleSeqKey, next)
+	return id
+}
+
+// ─── Active round index ─────────────────────────────────────────────────────
+
+func (k Keeper) SetActiveRound(ctx context.Context, roundID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	key := append(append([]byte{}, types.ActiveRoundIndexPrefix...), []byte(roundID)...)
+	return store.Set(key, []byte{0x01})
+}
+
+func (k Keeper) DeleteActiveRound(ctx context.Context, roundID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	key := append(append([]byte{}, types.ActiveRoundIndexPrefix...), []byte(roundID)...)
+	return store.Delete(key)
+}
+
+func (k Keeper) GetActiveRounds(ctx context.Context) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.ActiveRoundIndexPrefix
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var ids []string
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		id := string(key[len(prefix):])
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// ─── Submission → Round index ───────────────────────────────────────────────
+
+func (k Keeper) SetSubmissionRoundIndex(ctx context.Context, submissionID, roundID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.SubmissionRoundIndexKey(submissionID), []byte(roundID))
+}
+
+func (k Keeper) GetRoundBySubmission(ctx context.Context, submissionID string) (string, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.SubmissionRoundIndexKey(submissionID))
+	if err != nil || bz == nil {
+		return "", false
+	}
+	return string(bz), true
+}
+
+// ─── Sample indexes ─────────────────────────────────────────────────────────
+
+func (k Keeper) SetSampleDomainIndex(ctx context.Context, domain, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.DomainSampleIndexKey(domain, sampleID), []byte{0x01})
+}
+
+func (k Keeper) SetSampleSubmitterIndex(ctx context.Context, submitter, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.SubmitterIndexKey(submitter, sampleID), []byte{0x01})
+}
+
+func (k Keeper) SetSampleThreadIndex(ctx context.Context, threadID, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.ThreadIndexKey(threadID, sampleID), []byte{0x01})
+}
+
+func (k Keeper) GetSamplesByDomain(ctx context.Context, domain string) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.DomainSampleByDomainPrefix(domain)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var ids []string
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		id := string(key[len(prefix):])
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func (k Keeper) GetSamplesBySubmitter(ctx context.Context, submitter string) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.SubmitterIndexBySubmitterPrefix(submitter)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var ids []string
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		id := string(key[len(prefix):])
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func (k Keeper) GetSamplesByThread(ctx context.Context, threadID string) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.ThreadIndexByThreadPrefix(threadID)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var ids []string
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		id := string(key[len(prefix):])
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 // ─── Store helpers ───────────────────────────────────────────────────────────
