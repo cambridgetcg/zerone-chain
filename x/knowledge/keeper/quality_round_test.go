@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	"context"
+	"sort"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -582,4 +583,112 @@ func TestAggregateQualityRound_ToxicityThreshold(t *testing.T) {
 	sub, found := k.GetSubmission(ctx, "s1")
 	require.True(t, found)
 	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
+}
+
+// ─── Sample creation tests ──────────────────────────────────────────────────
+
+func TestSampleCreation_FieldMapping(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id: "s1", Domain: "technology", Submitter: testAddr,
+		Content:         "detailed test content",
+		SampleType:      types.SampleType_SAMPLE_TYPE_EXPLANATION,
+		SourceUri:       "https://example.com",
+		SourcePlatform:  "web",
+		SourceTimestamp:  1234567890,
+		OriginalAuthor:  "author1",
+		License:         "MIT",
+		Tags:            []string{"go", "testing"},
+		Language:        "en",
+		ThreadId:        "",
+		Stake:           "1000000",
+		Status:          types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+		Consent:         &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		ContentHash:     "abc123",
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, _ := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 850000, ReasoningDepth: 700000, Novelty: 600000, Toxicity: 5000, FactualAccuracy: 900000, ConsentValid: true},
+		{OverallQuality: 850000, ReasoningDepth: 700000, Novelty: 600000, Toxicity: 5000, FactualAccuracy: 900000, ConsentValid: true},
+		{OverallQuality: 850000, ReasoningDepth: 700000, Novelty: 600000, Toxicity: 5000, FactualAccuracy: 900000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	sampleIDs := k.GetSamplesByDomain(ctx, "technology")
+	require.Len(t, sampleIDs, 1)
+
+	sample, found := k.GetSample(ctx, sampleIDs[0])
+	require.True(t, found)
+	require.Equal(t, "detailed test content", sample.Content)
+	require.Equal(t, types.SampleType_SAMPLE_TYPE_EXPLANATION, sample.SampleType)
+	require.Equal(t, "technology", sample.Domain)
+	require.Equal(t, "https://example.com", sample.SourceUri)
+	require.Equal(t, testAddr, sample.Submitter)
+	require.Equal(t, "author1", sample.OriginalAuthor)
+	require.Equal(t, "MIT", sample.License)
+	require.Equal(t, "en", sample.Language)
+	require.Equal(t, "s1", sample.SubmissionId)
+	require.Equal(t, "gold", sample.QualityTier)
+	require.Equal(t, uint64(850000), sample.QualityScore)
+	require.Equal(t, uint64(700000), sample.ReasoningDepth)
+	require.Equal(t, uint64(600000), sample.NoveltyScore)
+	require.Equal(t, types.SampleStatus_SAMPLE_STATUS_GOLD, sample.Status)
+	require.Equal(t, uint64(100), sample.VerifiedAtBlock)
+	require.NotNil(t, sample.Consent)
+}
+
+func TestSampleCreation_ThreadSamples(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	for i, id := range []string{"s1", "s2", "s3"} {
+		sub := &types.Submission{
+			Id: id, Domain: "technology", Submitter: testAddr,
+			Content:  "content " + id,
+			ThreadId: "thread-1",
+			Stake:    "1000000",
+			Status:   types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+			Consent:  &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		}
+		if i > 0 {
+			sub.ParentSubmissionId = []string{"s1", "s2"}[i-1]
+		}
+		require.NoError(t, k.SetSubmission(ctx, sub))
+	}
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, _ := k.InitiateQualityRound(ctx, "s1", "thread-1", verifiers)
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 850000, ConsentValid: true},
+		{OverallQuality: 850000, ConsentValid: true},
+		{OverallQuality: 850000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	threadSamples := k.GetSamplesByThread(ctx, "thread-1")
+	require.Len(t, threadSamples, 3)
+
+	// Verify parent-child linking
+	samples := make([]*types.Sample, 3)
+	for i, id := range threadSamples {
+		s, found := k.GetSample(ctx, id)
+		require.True(t, found)
+		samples[i] = s
+	}
+	sort.Slice(samples, func(i, j int) bool {
+		return samples[i].SubmissionId < samples[j].SubmissionId
+	})
+
+	require.Equal(t, "", samples[0].ParentSampleId)
+	require.Equal(t, samples[0].Id, samples[1].ParentSampleId)
+	require.Equal(t, samples[1].Id, samples[2].ParentSampleId)
 }

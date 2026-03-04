@@ -304,6 +304,9 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 		verdict == types.QualityVerdict_QUALITY_VERDICT_BRONZE
 
 	if accepted {
+		if err := k.createSampleFromSubmission(ctx, sub, verdict, aggregated); err != nil {
+			return err
+		}
 		sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED
 	} else {
 		sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_REJECTED
@@ -334,6 +337,156 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 		sdk.NewAttribute("verdict", verdict.String()),
 		sdk.NewAttribute("overall_quality", strconv.FormatUint(aggregated.OverallQuality, 10)),
 	))
+
+	return nil
+}
+
+// verdictToSampleStatus maps a QualityVerdict to a SampleStatus.
+func verdictToSampleStatus(v types.QualityVerdict) types.SampleStatus {
+	switch v {
+	case types.QualityVerdict_QUALITY_VERDICT_GOLD:
+		return types.SampleStatus_SAMPLE_STATUS_GOLD
+	case types.QualityVerdict_QUALITY_VERDICT_SILVER:
+		return types.SampleStatus_SAMPLE_STATUS_SILVER
+	case types.QualityVerdict_QUALITY_VERDICT_BRONZE:
+		return types.SampleStatus_SAMPLE_STATUS_BRONZE
+	default:
+		return types.SampleStatus_SAMPLE_STATUS_REJECTED
+	}
+}
+
+// createSampleFromSubmission promotes an accepted submission to a Sample.
+func (k Keeper) createSampleFromSubmission(
+	ctx context.Context,
+	sub *types.Submission,
+	verdict types.QualityVerdict,
+	scores *types.QualityVote,
+) error {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	tier := types.QualityVerdictToTier(verdict)
+
+	sampleID := k.NextSampleID(ctx)
+	sample := &types.Sample{
+		Id:              sampleID,
+		Content:         sub.Content,
+		SampleType:      sub.SampleType,
+		Domain:          sub.Domain,
+		SourceUri:       sub.SourceUri,
+		SourcePlatform:  sub.SourcePlatform,
+		SourceTimestamp:  sub.SourceTimestamp,
+		QualityScore:    scores.OverallQuality,
+		QualityTier:     string(tier),
+		NoveltyScore:    scores.Novelty,
+		ReasoningDepth:  scores.ReasoningDepth,
+		Submitter:       sub.Submitter,
+		OriginalAuthor:  sub.OriginalAuthor,
+		Consent:         sub.Consent,
+		License:         sub.License,
+		SubmissionId:    sub.Id,
+		ThreadId:        sub.ThreadId,
+		Tags:            sub.Tags,
+		Language:        sub.Language,
+		Status:          verdictToSampleStatus(verdict),
+		VerifiedAtBlock: uint64(sdkCtx.BlockHeight()),
+	}
+
+	if err := k.SetSample(ctx, sample); err != nil {
+		return err
+	}
+	if err := k.SetSampleDomainIndex(ctx, sub.Domain, sampleID); err != nil {
+		return err
+	}
+	if err := k.SetSampleSubmitterIndex(ctx, sub.Submitter, sampleID); err != nil {
+		return err
+	}
+	if sub.ThreadId != "" {
+		if err := k.SetSampleThreadIndex(ctx, sub.ThreadId, sampleID); err != nil {
+			return err
+		}
+	}
+
+	// If thread: create samples for all other thread submissions
+	if sub.ThreadId != "" {
+		return k.createThreadSamples(ctx, sub, verdict, scores, sampleID)
+	}
+
+	return nil
+}
+
+// createThreadSamples creates samples for sibling thread submissions.
+func (k Keeper) createThreadSamples(
+	ctx context.Context,
+	primarySub *types.Submission,
+	verdict types.QualityVerdict,
+	scores *types.QualityVote,
+	primarySampleID string,
+) error {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	tier := types.QualityVerdictToTier(verdict)
+	status := verdictToSampleStatus(verdict)
+
+	subToSample := map[string]string{primarySub.Id: primarySampleID}
+
+	var threadSubs []*types.Submission
+	k.IterateSubmissions(ctx, func(s *types.Submission) bool {
+		if s.ThreadId == primarySub.ThreadId && s.Id != primarySub.Id {
+			threadSubs = append(threadSubs, s)
+		}
+		return false
+	})
+
+	sort.Slice(threadSubs, func(i, j int) bool {
+		return threadSubs[i].Id < threadSubs[j].Id
+	})
+
+	for _, sub := range threadSubs {
+		sampleID := k.NextSampleID(ctx)
+		sample := &types.Sample{
+			Id:              sampleID,
+			Content:         sub.Content,
+			SampleType:      sub.SampleType,
+			Domain:          sub.Domain,
+			SourceUri:       sub.SourceUri,
+			SourcePlatform:  sub.SourcePlatform,
+			SourceTimestamp:  sub.SourceTimestamp,
+			QualityScore:    scores.OverallQuality,
+			QualityTier:     string(tier),
+			NoveltyScore:    scores.Novelty,
+			ReasoningDepth:  scores.ReasoningDepth,
+			Submitter:       sub.Submitter,
+			OriginalAuthor:  sub.OriginalAuthor,
+			Consent:         sub.Consent,
+			License:         sub.License,
+			SubmissionId:    sub.Id,
+			ThreadId:        sub.ThreadId,
+			Tags:            sub.Tags,
+			Language:        sub.Language,
+			Status:          status,
+			VerifiedAtBlock: uint64(sdkCtx.BlockHeight()),
+		}
+
+		if parentSampleID, ok := subToSample[sub.ParentSubmissionId]; ok {
+			sample.ParentSampleId = parentSampleID
+		}
+
+		if err := k.SetSample(ctx, sample); err != nil {
+			return err
+		}
+		if err := k.SetSampleDomainIndex(ctx, sub.Domain, sampleID); err != nil {
+			return err
+		}
+		if err := k.SetSampleSubmitterIndex(ctx, sub.Submitter, sampleID); err != nil {
+			return err
+		}
+		if err := k.SetSampleThreadIndex(ctx, sub.ThreadId, sampleID); err != nil {
+			return err
+		}
+
+		subToSample[sub.Id] = sampleID
+
+		sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED
+		_ = k.SetSubmission(ctx, sub)
+	}
 
 	return nil
 }
