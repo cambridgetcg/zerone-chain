@@ -36,8 +36,11 @@ func (m msgServer) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCom
 	return &types.MsgSubmitCommitmentResponse{}, nil
 }
 
-func (m msgServer) SubmitReveal(_ context.Context, _ *types.MsgSubmitReveal) (*types.MsgSubmitRevealResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "SubmitReveal not implemented (R37)")
+func (m msgServer) SubmitReveal(ctx context.Context, msg *types.MsgSubmitReveal) (*types.MsgSubmitRevealResponse, error) {
+	if err := m.keeper.SubmitReveal(ctx, msg); err != nil {
+		return nil, err
+	}
+	return &types.MsgSubmitRevealResponse{}, nil
 }
 
 func (m msgServer) ContestSample(_ context.Context, _ *types.MsgContestSample) (*types.MsgContestSampleResponse, error) {

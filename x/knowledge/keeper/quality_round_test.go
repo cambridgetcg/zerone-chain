@@ -203,3 +203,145 @@ func TestSubmitCommitment_RoundNotFound(t *testing.T) {
 	})
 	require.ErrorIs(t, err, types.ErrRoundNotFound)
 }
+
+// ─── SubmitReveal tests ─────────────────────────────────────────────────────
+
+func setupRoundInRevealPhase(t *testing.T) (keeper.Keeper, context.Context, *mockBankKeeper, string, []*types.QualityVote, [][]byte) {
+	t.Helper()
+	k, ctx, bk, roundID := setupRoundInCommitPhase(t)
+
+	salt1, salt2, salt3 := []byte("salt1"), []byte("salt2"), []byte("salt3")
+	votes := []*types.QualityVote{
+		{OverallQuality: 800000, ReasoningDepth: 700000, Novelty: 600000, Toxicity: 10000, FactualAccuracy: 900000, ConsentValid: true},
+		{OverallQuality: 750000, ReasoningDepth: 650000, Novelty: 550000, Toxicity: 20000, FactualAccuracy: 850000, ConsentValid: true},
+		{OverallQuality: 850000, ReasoningDepth: 750000, Novelty: 650000, Toxicity: 5000, FactualAccuracy: 950000, ConsentValid: true},
+	}
+	salts := [][]byte{salt1, salt2, salt3}
+
+	for i, v := range []string{verifier1, verifier2, verifier3} {
+		hash := types.ComputeQualityCommitHash(roundID, votes[i], salts[i])
+		require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+			Verifier: v, RoundId: roundID, CommitHash: hash,
+		}))
+	}
+
+	round, _ := k.GetQualityRound(ctx, roundID)
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	return k, ctx, bk, roundID, votes, salts
+}
+
+func TestSubmitReveal_Success(t *testing.T) {
+	k, ctx, _, roundID, votes, salts := setupRoundInRevealPhase(t)
+
+	err := k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+		Verifier: verifier1, RoundId: roundID, Scores: votes[0], Salt: salts[0],
+	})
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Len(t, round.Reveals, 1)
+	require.Equal(t, verifier1, round.Reveals[0].Verifier)
+}
+
+func TestSubmitReveal_HashMismatch(t *testing.T) {
+	k, ctx, _, roundID, _, _ := setupRoundInRevealPhase(t)
+
+	wrongVote := &types.QualityVote{OverallQuality: 999999}
+	err := k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+		Verifier: verifier1, RoundId: roundID, Scores: wrongVote, Salt: []byte("salt1"),
+	})
+	require.ErrorIs(t, err, types.ErrRevealMismatch)
+}
+
+func TestSubmitReveal_WrongPhase(t *testing.T) {
+	k, ctx, _, roundID := setupRoundInCommitPhase(t)
+	// Round is still in commit phase
+
+	err := k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+		Verifier: verifier1, RoundId: roundID,
+		Scores: &types.QualityVote{OverallQuality: 800000}, Salt: []byte("salt1"),
+	})
+	require.ErrorIs(t, err, types.ErrWrongPhase)
+}
+
+func TestSubmitReveal_DeadlinePassed(t *testing.T) {
+	k, ctx, _, roundID, votes, salts := setupRoundInRevealPhase(t)
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(300)
+
+	err := k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+		Verifier: verifier1, RoundId: roundID, Scores: votes[0], Salt: salts[0],
+	})
+	require.ErrorIs(t, err, types.ErrDeadlinePassed)
+}
+
+func TestSubmitReveal_NotSelectedValidator(t *testing.T) {
+	k, ctx, _, roundID, _, _ := setupRoundInRevealPhase(t)
+
+	err := k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+		Verifier: testAddr, RoundId: roundID,
+		Scores: &types.QualityVote{OverallQuality: 800000}, Salt: []byte("salt1"),
+	})
+	require.ErrorIs(t, err, types.ErrNotSelectedValidator)
+}
+
+func TestSubmitReveal_NoCommitment(t *testing.T) {
+	k, ctx, _, roundID, _, _ := setupRoundInRevealPhase(t)
+
+	// Remove verifier1's commit
+	round, _ := k.GetQualityRound(ctx, roundID)
+	round.Commits = round.Commits[1:]
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	err := k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+		Verifier: verifier1, RoundId: roundID,
+		Scores: &types.QualityVote{OverallQuality: 800000}, Salt: []byte("salt1"),
+	})
+	require.ErrorIs(t, err, types.ErrNoCommitment)
+}
+
+func TestSubmitReveal_DuplicateReveal(t *testing.T) {
+	k, ctx, _, roundID, votes, salts := setupRoundInRevealPhase(t)
+
+	msg := &types.MsgSubmitReveal{
+		Verifier: verifier1, RoundId: roundID, Scores: votes[0], Salt: salts[0],
+	}
+	require.NoError(t, k.SubmitReveal(ctx, msg))
+	err := k.SubmitReveal(ctx, msg)
+	require.ErrorIs(t, err, types.ErrAlreadyRevealed)
+}
+
+func TestSubmitReveal_ScoreOutOfRange(t *testing.T) {
+	k, ctx, _, roundID, _, _ := setupRoundInRevealPhase(t)
+
+	vote := &types.QualityVote{OverallQuality: 1_500_000}
+	salt := []byte("salt-oob")
+
+	// Update verifier1's commit to match this vote
+	round, _ := k.GetQualityRound(ctx, roundID)
+	hash := types.ComputeQualityCommitHash(roundID, vote, salt)
+	for i, c := range round.Commits {
+		if c.Verifier == verifier1 {
+			round.Commits[i].CommitHash = hash
+		}
+	}
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	err := k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+		Verifier: verifier1, RoundId: roundID, Scores: vote, Salt: salt,
+	})
+	require.ErrorIs(t, err, types.ErrInvalidQualityScore)
+}
+
+func TestSubmitReveal_RoundNotFound(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	err := k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+		Verifier: verifier1, RoundId: "nonexistent",
+		Scores: &types.QualityVote{OverallQuality: 800000}, Salt: []byte("s"),
+	})
+	require.ErrorIs(t, err, types.ErrRoundNotFound)
+}
