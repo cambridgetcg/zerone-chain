@@ -3,14 +3,17 @@ package keeper_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"sort"
 	"testing"
 
 	"cosmossdk.io/core/store"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/stretchr/testify/require"
 
 	"github.com/zerone-chain/zerone/x/knowledge/keeper"
+	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
 const testAddr = "zrn1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqulc3kt"
@@ -122,14 +125,88 @@ func (m *mockStoreService) OpenKVStore(_ context.Context) store.KVStore {
 	return m.kvStore
 }
 
+// ─── mockBankKeeper ─────────────────────────────────────────────────────────
+
+type bankTransfer struct {
+	from   string
+	to     string
+	amount sdk.Coins
+}
+
+type mockBankKeeper struct {
+	accountToModuleCalls []bankTransfer
+	moduleToModuleCalls  []bankTransfer
+	failNextSend         bool
+}
+
+func newMockBankKeeper() *mockBankKeeper {
+	return &mockBankKeeper{}
+}
+
+func (m *mockBankKeeper) SendCoins(_ context.Context, _, _ sdk.AccAddress, _ sdk.Coins) error {
+	return nil
+}
+
+func (m *mockBankKeeper) SendCoinsFromAccountToModule(_ context.Context, sender sdk.AccAddress, module string, amt sdk.Coins) error {
+	if m.failNextSend {
+		m.failNextSend = false
+		return fmt.Errorf("insufficient funds")
+	}
+	m.accountToModuleCalls = append(m.accountToModuleCalls, bankTransfer{from: sender.String(), to: module, amount: amt})
+	return nil
+}
+
+func (m *mockBankKeeper) SendCoinsFromModuleToAccount(_ context.Context, module string, recipient sdk.AccAddress, amt sdk.Coins) error {
+	return nil
+}
+
+func (m *mockBankKeeper) SendCoinsFromModuleToModule(_ context.Context, from, to string, amt sdk.Coins) error {
+	if m.failNextSend {
+		m.failNextSend = false
+		return fmt.Errorf("insufficient module funds")
+	}
+	m.moduleToModuleCalls = append(m.moduleToModuleCalls, bankTransfer{from: from, to: to, amount: amt})
+	return nil
+}
+
+func (m *mockBankKeeper) MintCoins(_ context.Context, _ string, _ sdk.Coins) error {
+	return nil
+}
+
+func (m *mockBankKeeper) GetBalance(_ context.Context, _ sdk.AccAddress, denom string) sdk.Coin {
+	return sdk.NewInt64Coin(denom, 0)
+}
+
 // ─── setupKeeper ────────────────────────────────────────────────────────────
 
 func setupKeeper(t *testing.T) (keeper.Keeper, context.Context) {
 	t.Helper()
 	ss := newMockStoreService()
-	k := keeper.NewKeeper(ss, nil, "authority", nil, nil)
+	bk := newMockBankKeeper()
+	k := keeper.NewKeeper(ss, nil, "authority", bk, nil)
 	ctx := sdk.Context{}.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
 	return k, ctx
+}
+
+// setupKeeperWithBank returns the keeper and the mock bank for tests that need to inspect calls.
+func setupKeeperWithBank(t *testing.T) (keeper.Keeper, context.Context, *mockBankKeeper) {
+	t.Helper()
+	ss := newMockStoreService()
+	bk := newMockBankKeeper()
+	k := keeper.NewKeeper(ss, nil, "authority", bk, nil)
+	ctx := sdk.Context{}.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
+	return k, ctx, bk
+}
+
+// setupDefaultDomains creates active domains for testing.
+func setupDefaultDomains(t *testing.T, k keeper.Keeper, ctx context.Context) {
+	t.Helper()
+	for _, name := range []string{"technology", "science", "culture", "creative"} {
+		require.NoError(t, k.SetDomain(ctx, &types.Domain{
+			Name:   name,
+			Status: types.DomainStatus_DOMAIN_STATUS_ACTIVE,
+		}))
+	}
 }
 
 // ─── TestMain ───────────────────────────────────────────────────────────────

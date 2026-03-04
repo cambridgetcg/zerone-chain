@@ -21,8 +21,8 @@ func NewMsgServerImpl(keeper Keeper) types.MsgServer {
 	return &msgServer{keeper: keeper}
 }
 
-func (m msgServer) SubmitData(_ context.Context, _ *types.MsgSubmitData) (*types.MsgSubmitDataResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "SubmitData not implemented (R37)")
+func (m msgServer) SubmitData(ctx context.Context, msg *types.MsgSubmitData) (*types.MsgSubmitDataResponse, error) {
+	return m.keeper.SubmitData(ctx, msg)
 }
 
 func (m msgServer) SubmitThread(_ context.Context, _ *types.MsgSubmitThread) (*types.MsgSubmitThreadResponse, error) {
