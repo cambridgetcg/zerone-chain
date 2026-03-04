@@ -225,6 +225,34 @@ func (m *MsgEndorseDomainProposal) ValidateBasic() error {
 	return nil
 }
 
+// ValidateBasic performs stateless validation for MsgAddScrapedSource.
+func (m *MsgAddScrapedSource) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Authority); err != nil {
+		return fmt.Errorf("invalid authority address: %w", err)
+	}
+	if len(m.Platform) == 0 {
+		return ErrInvalidSubmission.Wrap("platform must not be empty")
+	}
+	if len(m.Domain) == 0 {
+		return ErrInvalidDomain.Wrap("domain must not be empty")
+	}
+	if m.NoveltyPenalty > MaxBPS {
+		return ErrInvalidQualityScore.Wrapf("novelty_penalty %d exceeds max BPS %d", m.NoveltyPenalty, MaxBPS)
+	}
+	return nil
+}
+
+// ValidateBasic performs stateless validation for MsgRemoveScrapedSource.
+func (m *MsgRemoveScrapedSource) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Authority); err != nil {
+		return fmt.Errorf("invalid authority address: %w", err)
+	}
+	if len(m.Id) == 0 {
+		return ErrInvalidSubmission.Wrap("id must not be empty")
+	}
+	return nil
+}
+
 // ValidateBasic performs stateless validation for MsgReportDemand.
 func (m *MsgReportDemand) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(m.Reporter); err != nil {

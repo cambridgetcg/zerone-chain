@@ -87,12 +87,12 @@ func (m msgServer) UpdateParams(_ context.Context, _ *types.MsgUpdateParams) (*t
 	return nil, status.Error(codes.Unimplemented, "UpdateParams not implemented (R37)")
 }
 
-func (m msgServer) AddScrapedSource(_ context.Context, _ *types.MsgAddScrapedSource) (*types.MsgAddScrapedSourceResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "AddScrapedSource not implemented (R37)")
+func (m msgServer) AddScrapedSource(ctx context.Context, msg *types.MsgAddScrapedSource) (*types.MsgAddScrapedSourceResponse, error) {
+	return m.keeper.AddScrapedSource(ctx, msg)
 }
 
-func (m msgServer) RemoveScrapedSource(_ context.Context, _ *types.MsgRemoveScrapedSource) (*types.MsgRemoveScrapedSourceResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "RemoveScrapedSource not implemented (R37)")
+func (m msgServer) RemoveScrapedSource(ctx context.Context, msg *types.MsgRemoveScrapedSource) (*types.MsgRemoveScrapedSourceResponse, error) {
+	return m.keeper.RemoveScrapedSource(ctx, msg)
 }
 
 func (m msgServer) ProposeResearchFund(_ context.Context, _ *types.MsgProposeResearchFund) (*types.MsgProposeResearchFundResponse, error) {
