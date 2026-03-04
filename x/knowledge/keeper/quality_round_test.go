@@ -1,11 +1,13 @@
 package keeper_test
 
 import (
+	"context"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
+	"github.com/zerone-chain/zerone/x/knowledge/keeper"
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
@@ -95,4 +97,109 @@ func TestInitiateQualityRound_Thread(t *testing.T) {
 		require.True(t, found)
 		require.Equal(t, roundID, gotRoundID)
 	}
+}
+
+// ─── SubmitCommitment tests ─────────────────────────────────────────────────
+
+func setupRoundInCommitPhase(t *testing.T) (keeper.Keeper, context.Context, *mockBankKeeper, string) {
+	t.Helper()
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id:     "s1",
+		Domain: "technology",
+		Status: types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, err := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+	require.NoError(t, err)
+	return k, ctx, bk, roundID
+}
+
+func TestSubmitCommitment_Success(t *testing.T) {
+	k, ctx, _, roundID := setupRoundInCommitPhase(t)
+
+	commitHash := types.ComputeQualityCommitHash(roundID, &types.QualityVote{
+		OverallQuality: 800000,
+	}, []byte("salt1"))
+
+	err := k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+		Verifier:   verifier1,
+		RoundId:    roundID,
+		CommitHash: commitHash,
+	})
+	require.NoError(t, err)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Len(t, round.Commits, 1)
+	require.Equal(t, verifier1, round.Commits[0].Verifier)
+	require.Equal(t, commitHash, round.Commits[0].CommitHash)
+}
+
+func TestSubmitCommitment_NotSelectedValidator(t *testing.T) {
+	k, ctx, _, roundID := setupRoundInCommitPhase(t)
+
+	err := k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+		Verifier:   testAddr,
+		RoundId:    roundID,
+		CommitHash: []byte("fake"),
+	})
+	require.ErrorIs(t, err, types.ErrNotSelectedValidator)
+}
+
+func TestSubmitCommitment_WrongPhase(t *testing.T) {
+	k, ctx, _, roundID := setupRoundInCommitPhase(t)
+
+	round, _ := k.GetQualityRound(ctx, roundID)
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	err := k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+		Verifier:   verifier1,
+		RoundId:    roundID,
+		CommitHash: []byte("hash"),
+	})
+	require.ErrorIs(t, err, types.ErrWrongPhase)
+}
+
+func TestSubmitCommitment_DeadlinePassed(t *testing.T) {
+	k, ctx, _, roundID := setupRoundInCommitPhase(t)
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(200)
+
+	err := k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+		Verifier:   verifier1,
+		RoundId:    roundID,
+		CommitHash: []byte("hash"),
+	})
+	require.ErrorIs(t, err, types.ErrDeadlinePassed)
+}
+
+func TestSubmitCommitment_DuplicateCommit(t *testing.T) {
+	k, ctx, _, roundID := setupRoundInCommitPhase(t)
+
+	msg := &types.MsgSubmitCommitment{
+		Verifier:   verifier1,
+		RoundId:    roundID,
+		CommitHash: []byte("hash"),
+	}
+	require.NoError(t, k.SubmitCommitment(ctx, msg))
+	err := k.SubmitCommitment(ctx, msg)
+	require.ErrorIs(t, err, types.ErrAlreadyCommitted)
+}
+
+func TestSubmitCommitment_RoundNotFound(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	err := k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+		Verifier:   verifier1,
+		RoundId:    "nonexistent",
+		CommitHash: []byte("hash"),
+	})
+	require.ErrorIs(t, err, types.ErrRoundNotFound)
 }

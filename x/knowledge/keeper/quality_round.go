@@ -83,3 +83,46 @@ func (k Keeper) InitiateQualityRound(
 
 	return roundID, nil
 }
+
+// SubmitCommitment handles MsgSubmitCommitment — stores a blinded quality vote commitment.
+func (k Keeper) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCommitment) error {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	round, found := k.GetQualityRound(ctx, msg.RoundId)
+	if !found {
+		return types.ErrRoundNotFound.Wrapf("round %q not found", msg.RoundId)
+	}
+
+	if round.Phase != types.VerificationPhase_VERIFICATION_PHASE_COMMIT {
+		return types.ErrWrongPhase.Wrap("round is not in commit phase")
+	}
+
+	if uint64(sdkCtx.BlockHeight()) > round.CommitDeadline {
+		return types.ErrDeadlinePassed.Wrap("commit deadline has passed")
+	}
+
+	selected := false
+	for _, v := range round.SelectedVerifiers {
+		if v == msg.Verifier {
+			selected = true
+			break
+		}
+	}
+	if !selected {
+		return types.ErrNotSelectedValidator.Wrapf("verifier %s not selected", msg.Verifier)
+	}
+
+	for _, c := range round.Commits {
+		if c.Verifier == msg.Verifier {
+			return types.ErrAlreadyCommitted.Wrapf("verifier %s already committed", msg.Verifier)
+		}
+	}
+
+	round.Commits = append(round.Commits, &types.CommitEntry{
+		Verifier:         msg.Verifier,
+		CommitHash:       msg.CommitHash,
+		CommittedAtBlock: uint64(sdkCtx.BlockHeight()),
+	})
+
+	return k.SetQualityRound(ctx, round)
+}

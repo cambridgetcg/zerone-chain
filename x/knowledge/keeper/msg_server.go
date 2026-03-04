@@ -29,8 +29,11 @@ func (m msgServer) SubmitThread(ctx context.Context, msg *types.MsgSubmitThread)
 	return m.keeper.SubmitThread(ctx, msg)
 }
 
-func (m msgServer) SubmitCommitment(_ context.Context, _ *types.MsgSubmitCommitment) (*types.MsgSubmitCommitmentResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "SubmitCommitment not implemented (R37)")
+func (m msgServer) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCommitment) (*types.MsgSubmitCommitmentResponse, error) {
+	if err := m.keeper.SubmitCommitment(ctx, msg); err != nil {
+		return nil, err
+	}
+	return &types.MsgSubmitCommitmentResponse{}, nil
 }
 
 func (m msgServer) SubmitReveal(_ context.Context, _ *types.MsgSubmitReveal) (*types.MsgSubmitRevealResponse, error) {
