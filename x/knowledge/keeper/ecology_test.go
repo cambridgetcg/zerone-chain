@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"testing"
 
+	"github.com/zerone-chain/zerone/x/knowledge/keeper"
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
@@ -125,5 +126,121 @@ func TestTopicSaturation_UnknownIsZero(t *testing.T) {
 	count := k.GetTopicCount(ctx, "unknown", "topic")
 	if count != 0 {
 		t.Fatalf("expected 0 for unknown, got %d", count)
+	}
+}
+
+// ─── Fitness Scoring Tests ──────────────────────────────────────────────────
+
+func TestComputeSampleFitness_AllMax(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{
+		QualityScore:   1_000_000,
+		AccessCount:    1000,
+		NoveltyScore:   1_000_000,
+		DiversityScore: 1_000_000,
+		ReasoningDepth: 1_000_000,
+		TotalRevenue:   "1000000000",
+	}
+
+	fitness := k.ComputeSampleFitness(ctx, sample, &params)
+	if fitness != 1_000_000 {
+		t.Fatalf("expected 1,000,000 for all-max, got %d", fitness)
+	}
+}
+
+func TestComputeSampleFitness_AllZero(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{
+		TotalRevenue: "0",
+	}
+	fitness := k.ComputeSampleFitness(ctx, sample, &params)
+	if fitness != 0 {
+		t.Fatalf("expected 0 for all-zero, got %d", fitness)
+	}
+}
+
+func TestComputeSampleFitness_MixedValues(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{
+		QualityScore:   800_000,
+		AccessCount:    500,
+		NoveltyScore:   600_000,
+		DiversityScore: 400_000,
+		ReasoningDepth: 300_000,
+		TotalRevenue:   "200000000",
+	}
+
+	// quality*25 + access*25 + novelty*20 + diversity*10 + reasoning*10 + revenue*10
+	// 800000*25 + 500000*25 + 600000*20 + 400000*10 + 300000*10 + 200000*10
+	// = 20000000 + 12500000 + 12000000 + 4000000 + 3000000 + 2000000 = 53500000
+	// / 100 = 535000
+	expected := uint64(535_000)
+	fitness := k.ComputeSampleFitness(ctx, sample, &params)
+	if fitness != expected {
+		t.Fatalf("expected %d, got %d", expected, fitness)
+	}
+}
+
+func TestComputeSampleFitness_OverMaxAccess_ClampedToMax(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{
+		AccessCount:  5000,
+		TotalRevenue: "0",
+	}
+	fitness := k.ComputeSampleFitness(ctx, sample, &params)
+	// access component clamped to 1,000,000: 1,000,000 * 25 / 100 = 250,000
+	if fitness != 250_000 {
+		t.Fatalf("expected 250000 with clamped access, got %d", fitness)
+	}
+}
+
+func TestNormalize(t *testing.T) {
+	tests := []struct {
+		name     string
+		value    uint64
+		max      uint64
+		expected uint64
+	}{
+		{"zero", 0, 1000, 0},
+		{"half", 500, 1000, 500_000},
+		{"full", 1000, 1000, 1_000_000},
+		{"over", 2000, 1000, 1_000_000},
+		{"max_zero", 100, 0, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := keeper.Normalize(tt.value, tt.max)
+			if got != tt.expected {
+				t.Fatalf("Normalize(%d, %d) = %d, want %d", tt.value, tt.max, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseUzrn(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected uint64
+	}{
+		{"0", 0},
+		{"1000000", 1_000_000},
+		{"", 0},
+		{"invalid", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := keeper.ParseUzrn(tt.input)
+			if got != tt.expected {
+				t.Fatalf("ParseUzrn(%q) = %d, want %d", tt.input, got, tt.expected)
+			}
+		})
 	}
 }
