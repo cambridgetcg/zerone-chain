@@ -83,3 +83,64 @@ func (k Keeper) expireRound(ctx context.Context, round *types.QualityRound) {
 		sdk.NewAttribute("submission_id", round.SubmissionId),
 	))
 }
+
+// EndBlocker processes epoch boundaries, patronage expiry, and bounty expiry.
+func (k Keeper) EndBlocker(ctx context.Context) error {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	blockHeight := uint64(sdkCtx.BlockHeight())
+	params, err := k.GetParams(ctx)
+	if err != nil || params == nil {
+		return nil
+	}
+
+	// 1. Epoch boundary processing
+	if blockHeight > 0 && blockHeight%EcologyEpochBlocks == 0 {
+		epoch := blockHeight / EcologyEpochBlocks
+		k.RunEcologyEpoch(ctx, epoch)
+	}
+
+	// 2. Expire patronage (every block)
+	k.expirePatronage(ctx, blockHeight)
+
+	// 3. Expire bounties at epoch boundaries
+	if blockHeight > 0 && blockHeight%EcologyEpochBlocks == 0 {
+		k.expireBounties(ctx, blockHeight)
+	}
+
+	return nil
+}
+
+// expirePatronage clears patronage_expiry_block on samples whose patronage has lapsed.
+func (k Keeper) expirePatronage(ctx context.Context, blockHeight uint64) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	k.IterateSamples(ctx, func(sample *types.Sample) bool {
+		if sample.PatronageExpiryBlock > 0 && blockHeight >= sample.PatronageExpiryBlock {
+			sample.PatronageExpiryBlock = 0
+			_ = k.SetSample(ctx, sample)
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"patronage_expired",
+				sdk.NewAttribute("sample_id", sample.Id),
+			))
+		}
+		return false
+	})
+}
+
+// expireBounties removes unclaimed bounties past their expiry block.
+func (k Keeper) expireBounties(ctx context.Context, blockHeight uint64) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	var toDelete []string
+	k.IterateDataBounties(ctx, func(bounty *types.DataBounty) bool {
+		if !bounty.Claimed && bounty.ExpiresAtBlock > 0 && blockHeight >= bounty.ExpiresAtBlock {
+			toDelete = append(toDelete, bounty.Id)
+		}
+		return false
+	})
+	for _, id := range toDelete {
+		_ = k.DeleteDataBounty(ctx, id)
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"bounty_expired",
+			sdk.NewAttribute("bounty_id", id),
+		))
+	}
+}

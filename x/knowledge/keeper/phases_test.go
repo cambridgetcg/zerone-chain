@@ -203,3 +203,146 @@ func TestBeginBlocker_ExpiredRound_NoReveals(t *testing.T) {
 	actives := k.GetActiveRounds(ctx)
 	require.NotContains(t, actives, roundID)
 }
+
+// ─── EndBlocker Tests ───────────────────────────────────────────────────────
+
+func TestEndBlocker_NoError_NoParams(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.NoError(t, k.EndBlocker(ctx))
+}
+
+func TestEndBlocker_EcologyEpochBoundary(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD, Content: "x",
+		TotalRevenue: "0", QualityScore: 500_000,
+	})
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
+
+	require.NoError(t, k.EndBlocker(ctx))
+
+	s, _ := k.GetSample(ctx, "1")
+	require.Less(t, s.Energy, uint64(1_000_000))
+	require.Greater(t, s.FitnessScore, uint64(0))
+}
+
+func TestEndBlocker_NonEpoch_NoDecay(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD, Content: "x",
+		TotalRevenue: "0",
+	})
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(101).WithEventManager(sdk.NewEventManager())
+
+	require.NoError(t, k.EndBlocker(ctx))
+
+	s, _ := k.GetSample(ctx, "1")
+	require.Equal(t, uint64(1_000_000), s.Energy)
+}
+
+func TestEndBlocker_SponsoredSampleSkipsDecay(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD, Content: "x",
+		TotalRevenue:         "0",
+		PatronageExpiryBlock: 200,
+	})
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
+
+	require.NoError(t, k.EndBlocker(ctx))
+
+	s, _ := k.GetSample(ctx, "1")
+	require.Equal(t, uint64(1_000_000), s.Energy)
+}
+
+func TestEndBlocker_PatronageExpiry(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD, Content: "x",
+		TotalRevenue:         "0",
+		PatronageExpiryBlock: 50,
+	})
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
+
+	require.NoError(t, k.EndBlocker(ctx))
+
+	s, _ := k.GetSample(ctx, "1")
+	require.Equal(t, uint64(0), s.PatronageExpiryBlock)
+}
+
+func TestEndBlocker_BountyExpiry(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	_ = k.SetDataBounty(ctx, &types.DataBounty{
+		Id: "b1", Domain: "tech", ExpiresAtBlock: 50,
+		RewardAmount: "1000000",
+	})
+	_ = k.SetDataBounty(ctx, &types.DataBounty{
+		Id: "b2", Domain: "sci", ExpiresAtBlock: 200,
+		RewardAmount: "2000000",
+	})
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
+
+	require.NoError(t, k.EndBlocker(ctx))
+
+	_, found := k.GetDataBounty(ctx, "b1")
+	require.False(t, found)
+
+	_, found2 := k.GetDataBounty(ctx, "b2")
+	require.True(t, found2)
+}
+
+func TestEndBlocker_NicheRankingUpdate(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", NicheKey: "niche_a", Energy: 1_000_000, EnergyCap: 1_000_000,
+		QualityScore: 500_000, Status: types.SampleStatus_SAMPLE_STATUS_GOLD,
+		Content: "a", TotalRevenue: "0",
+	})
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "2", NicheKey: "niche_a", Energy: 1_000_000, EnergyCap: 1_000_000,
+		QualityScore: 900_000, Status: types.SampleStatus_SAMPLE_STATUS_GOLD,
+		Content: "b", TotalRevenue: "0",
+	})
+	_ = k.SetNicheIndex(ctx, "niche_a", "1")
+	_ = k.SetNicheIndex(ctx, "niche_a", "2")
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	ctx = sdkCtx.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
+
+	require.NoError(t, k.EndBlocker(ctx))
+
+	s2, _ := k.GetSample(ctx, "2")
+	require.True(t, s2.NicheLeader)
+}

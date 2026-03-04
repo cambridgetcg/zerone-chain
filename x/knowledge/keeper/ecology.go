@@ -6,6 +6,8 @@ import (
 	"encoding/hex"
 	"strconv"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
@@ -256,17 +258,36 @@ func (k Keeper) PruneSamples(ctx context.Context, currentEpoch uint64, params *t
 // ─── Ecology Epoch Processing ───────────────────────────────────────────────
 
 // RunEcologyEpoch performs all ecology processing for the current epoch.
-// Called from BeginBlocker every EcologyEpochBlocks.
+// Called from EndBlocker every EcologyEpochBlocks.
 func (k Keeper) RunEcologyEpoch(ctx context.Context, currentEpoch uint64) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	currentBlock := uint64(sdkCtx.BlockHeight())
 	params, err := k.GetParams(ctx)
 	if err != nil || params == nil {
 		return
 	}
 
+	// Track niches seen for ranking update
+	nichesSeen := make(map[string]bool)
+
 	// Phase 1: Iterate all active samples — decay energy, compute fitness, check at-risk
 	k.IterateSamples(ctx, func(sample *types.Sample) bool {
 		if sample.Status == types.SampleStatus_SAMPLE_STATUS_PRUNED ||
 			sample.Status == types.SampleStatus_SAMPLE_STATUS_REJECTED {
+			return false
+		}
+
+		// Track niche for ranking update
+		if sample.NicheKey != "" {
+			nichesSeen[sample.NicheKey] = true
+		}
+
+		// Skip decay for sponsored samples
+		if sample.PatronageExpiryBlock > 0 && currentBlock < sample.PatronageExpiryBlock {
+			// Still compute fitness for sponsored samples
+			sample.FitnessScore = k.ComputeSampleFitness(ctx, sample, params)
+			sample.FitnessUpdatedBlock = currentEpoch * EcologyEpochBlocks
+			_ = k.SetSample(ctx, sample)
 			return false
 		}
 
@@ -285,6 +306,11 @@ func (k Keeper) RunEcologyEpoch(ctx context.Context, currentEpoch uint64) {
 		return false
 	})
 
-	// Phase 2: Prune samples past grace period
+	// Phase 2: Update niche rankings
+	for nicheKey := range nichesSeen {
+		k.UpdateNicheLeader(ctx, nicheKey)
+	}
+
+	// Phase 3: Prune samples past grace period
 	k.PruneSamples(ctx, currentEpoch, params)
 }
