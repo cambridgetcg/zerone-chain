@@ -389,9 +389,18 @@ func (k Keeper) createSampleFromSubmission(
 		ThreadId:        sub.ThreadId,
 		Tags:            sub.Tags,
 		Language:        sub.Language,
+		Topics:          sub.Tags, // Use tags as topics for now
 		Status:          verdictToSampleStatus(verdict),
 		VerifiedAtBlock: uint64(sdkCtx.BlockHeight()),
 	}
+
+	// Initialize ecology fields
+	initializeSampleEnergy(sample)
+	primaryTopic := ""
+	if len(sub.Tags) > 0 {
+		primaryTopic = sub.Tags[0]
+	}
+	sample.NicheKey = ComputeNicheKey(sub.Domain, sub.SampleType, primaryTopic)
 
 	if err := k.SetSample(ctx, sample); err != nil {
 		return err
@@ -402,10 +411,17 @@ func (k Keeper) createSampleFromSubmission(
 	if err := k.SetSampleSubmitterIndex(ctx, sub.Submitter, sampleID); err != nil {
 		return err
 	}
+	if err := k.SetNicheIndex(ctx, sample.NicheKey, sampleID); err != nil {
+		return err
+	}
 	if sub.ThreadId != "" {
 		if err := k.SetSampleThreadIndex(ctx, sub.ThreadId, sampleID); err != nil {
 			return err
 		}
+	}
+	// Track topic saturation
+	for _, tag := range sub.Tags {
+		_ = k.IncrementTopicCount(ctx, sub.Domain, tag)
 	}
 
 	// If thread: create samples for all other thread submissions
@@ -468,6 +484,15 @@ func (k Keeper) createThreadSamples(
 			VerifiedAtBlock: uint64(sdkCtx.BlockHeight()),
 		}
 
+		// Initialize ecology fields for thread sibling
+		initializeSampleEnergy(sample)
+		siblingPrimaryTopic := ""
+		if len(sub.Tags) > 0 {
+			siblingPrimaryTopic = sub.Tags[0]
+		}
+		sample.NicheKey = ComputeNicheKey(sub.Domain, sub.SampleType, siblingPrimaryTopic)
+		sample.Topics = sub.Tags
+
 		if parentSampleID, ok := subToSample[sub.ParentSubmissionId]; ok {
 			sample.ParentSampleId = parentSampleID
 		}
@@ -483,6 +508,12 @@ func (k Keeper) createThreadSamples(
 		}
 		if err := k.SetSampleThreadIndex(ctx, sub.ThreadId, sampleID); err != nil {
 			return err
+		}
+		if err := k.SetNicheIndex(ctx, sample.NicheKey, sampleID); err != nil {
+			return err
+		}
+		for _, tag := range sub.Tags {
+			_ = k.IncrementTopicCount(ctx, sub.Domain, tag)
 		}
 
 		subToSample[sub.Id] = sampleID

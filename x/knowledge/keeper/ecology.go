@@ -249,3 +249,39 @@ func (k Keeper) PruneSamples(ctx context.Context, currentEpoch uint64, params *t
 		_ = k.DeleteAtRiskIndex(ctx, id)
 	}
 }
+
+// ─── Ecology Epoch Processing ───────────────────────────────────────────────
+
+// RunEcologyEpoch performs all ecology processing for the current epoch.
+// Called from BeginBlocker every EcologyEpochBlocks.
+func (k Keeper) RunEcologyEpoch(ctx context.Context, currentEpoch uint64) {
+	params, err := k.GetParams(ctx)
+	if err != nil || params == nil {
+		return
+	}
+
+	// Phase 1: Iterate all active samples — decay energy, compute fitness, check at-risk
+	k.IterateSamples(ctx, func(sample *types.Sample) bool {
+		if sample.Status == types.SampleStatus_SAMPLE_STATUS_PRUNED ||
+			sample.Status == types.SampleStatus_SAMPLE_STATUS_REJECTED {
+			return false
+		}
+
+		// Decay energy
+		k.DecayEnergy(ctx, sample, params)
+
+		// Compute fitness
+		sample.FitnessScore = k.ComputeSampleFitness(ctx, sample, params)
+		sample.FitnessUpdatedBlock = currentEpoch * EcologyEpochBlocks
+		sample.EnergyLastUpdated = currentEpoch * EcologyEpochBlocks
+
+		// Check at-risk
+		k.CheckAtRiskTransition(ctx, sample, currentEpoch, params)
+
+		_ = k.SetSample(ctx, sample)
+		return false
+	})
+
+	// Phase 2: Prune samples past grace period
+	k.PruneSamples(ctx, currentEpoch, params)
+}

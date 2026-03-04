@@ -41,5 +41,11 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		}
 	}
 
+	// ─── Ecology epoch processing (R37-3) ───────────────────────────────
+	if block > 0 && block%EcologyEpochBlocks == 0 {
+		epoch := block / EcologyEpochBlocks
+		k.RunEcologyEpoch(ctx, epoch)
+	}
+
 	return nil
 }

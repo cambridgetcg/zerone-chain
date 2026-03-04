@@ -680,3 +680,177 @@ func TestPruneSamples_ZeroAtRiskEpoch_NotPruned(t *testing.T) {
 		t.Fatal("should not prune sample with at_risk_since_epoch=0")
 	}
 }
+
+// ─── Integration Tests ──────────────────────────────────────────────────────
+
+func TestCreateSample_InitializesEcologyFields(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id:         "s1",
+		Content:    "test content",
+		Domain:     "technology",
+		Submitter:  testAddr,
+		SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION,
+		Tags:       []string{"golang", "testing"},
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		License:    "MIT",
+		Stake:      "1000000",
+		Status:     types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+	}
+	_ = k.SetSubmission(ctx, sub)
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, err := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 850_000, Novelty: 700_000, ReasoningDepth: 600_000, ConsentValid: true},
+		{OverallQuality: 850_000, Novelty: 700_000, ReasoningDepth: 600_000, ConsentValid: true},
+		{OverallQuality: 850_000, Novelty: 700_000, ReasoningDepth: 600_000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	if err := k.AggregateQualityRound(ctx, roundID); err != nil {
+		t.Fatal(err)
+	}
+
+	sampleIDs := k.GetSamplesByDomain(ctx, "technology")
+	if len(sampleIDs) == 0 {
+		t.Fatal("no samples created")
+	}
+
+	sample, ok := k.GetSample(ctx, sampleIDs[0])
+	if !ok {
+		t.Fatal("sample not found")
+	}
+
+	if sample.Energy != keeper.DefaultEnergyCap {
+		t.Fatalf("expected energy %d, got %d", keeper.DefaultEnergyCap, sample.Energy)
+	}
+	if sample.EnergyCap != keeper.DefaultEnergyCap {
+		t.Fatalf("expected energy cap %d, got %d", keeper.DefaultEnergyCap, sample.EnergyCap)
+	}
+	if sample.NicheKey == "" {
+		t.Fatal("expected niche key to be set")
+	}
+	if len(sample.Topics) == 0 || sample.Topics[0] != "golang" {
+		t.Fatalf("expected topics propagated, got %v", sample.Topics)
+	}
+}
+
+func TestCreateSample_IncreasesTopicSaturation(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id:         "s1",
+		Content:    "test content",
+		Domain:     "technology",
+		Submitter:  testAddr,
+		SampleType: types.SampleType_SAMPLE_TYPE_TUTORIAL,
+		Tags:       []string{"golang"},
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		License:    "MIT",
+		Stake:      "1000000",
+		Status:     types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+	}
+	_ = k.SetSubmission(ctx, sub)
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, err := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 800_000, ConsentValid: true},
+		{OverallQuality: 800_000, ConsentValid: true},
+		{OverallQuality: 800_000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+
+	if err := k.AggregateQualityRound(ctx, roundID); err != nil {
+		t.Fatal(err)
+	}
+
+	count := k.GetTopicCount(ctx, "technology", "golang")
+	if count != 1 {
+		t.Fatalf("expected topic count 1, got %d", count)
+	}
+}
+
+func TestEcologyEpoch_DecaysAndPrunes(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD, Content: "alive",
+		TotalRevenue: "0",
+	})
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "2", Energy: 0, EnergyCap: 1_000_000, AtRiskSinceEpoch: 1,
+		Status: types.SampleStatus_SAMPLE_STATUS_BRONZE, Content: "dying",
+	})
+	_ = k.SetAtRiskIndex(ctx, "2")
+
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	k.RunEcologyEpoch(ctx, 12) // epoch 12: s2 grace=11>=10
+
+	s1, _ := k.GetSample(ctx, "1")
+	if s1.Energy >= 1_000_000 {
+		t.Fatal("expected energy to decay")
+	}
+
+	s2, _ := k.GetSample(ctx, "2")
+	if s2.Status != types.SampleStatus_SAMPLE_STATUS_PRUNED {
+		t.Fatalf("expected sample 2 pruned, got %v", s2.Status)
+	}
+}
+
+func TestEcologyEpoch_MarksAtRisk(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 0, EnergyCap: 1_000_000, AtRiskSinceEpoch: 0,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD, Content: "x",
+		TotalRevenue: "0",
+	})
+
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	k.RunEcologyEpoch(ctx, 5)
+
+	s, _ := k.GetSample(ctx, "1")
+	if s.AtRiskSinceEpoch != 5 {
+		t.Fatalf("expected at_risk_since_epoch=5, got %d", s.AtRiskSinceEpoch)
+	}
+}
+
+func TestEcologyEpoch_UpdatesFitness(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000,
+		QualityScore: 800_000, NoveltyScore: 600_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD, Content: "x",
+		TotalRevenue: "0",
+	})
+
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	k.RunEcologyEpoch(ctx, 1)
+
+	s, _ := k.GetSample(ctx, "1")
+	if s.FitnessScore == 0 {
+		t.Fatal("expected fitness score to be computed")
+	}
+}
