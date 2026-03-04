@@ -157,9 +157,12 @@ func (k Keeper) SubmitData(ctx context.Context, msg *types.MsgSubmitData) (*type
 		return nil, err
 	}
 
-	// 9-10. TODO(R37-2): Check DataBounty matches + Initiate quality round
+	// 9. Initiate quality round
+	if _, err := k.InitiateQualityRound(ctx, submissionID, msg.ThreadId, []string{}); err != nil {
+		return nil, err
+	}
 
-	// 11. Emit event
+	// 10. Emit event
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"submit_data",
 		sdk.NewAttribute("submission_id", submissionID),
@@ -283,7 +286,10 @@ func (k Keeper) SubmitThread(ctx context.Context, msg *types.MsgSubmitThread) (*
 		prevID = subID
 	}
 
-	// 7. TODO(R37-2): Initiate ONE quality round for the entire thread
+	// 7. Initiate ONE quality round for the entire thread
+	if _, err := k.InitiateQualityRound(ctx, submissionIDs[0], msg.ThreadId, []string{}); err != nil {
+		return nil, err
+	}
 
 	// 8. Emit event
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(

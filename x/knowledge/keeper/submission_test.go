@@ -138,7 +138,7 @@ func TestSubmitData_Success(t *testing.T) {
 	require.Equal(t, msg.Content, sub.Content)
 	require.Equal(t, msg.Domain, sub.Domain)
 	require.Equal(t, msg.Submitter, sub.Submitter)
-	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_PENDING, sub.Status)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_PENDING_REVIEW, sub.Status)
 	require.NotEmpty(t, sub.ContentHash)
 	require.Equal(t, uint64(100), sub.SubmittedAtBlock)
 
@@ -694,4 +694,59 @@ func TestSubmitThread_StakeLocking(t *testing.T) {
 	// Single stake for entire thread
 	require.Len(t, bk.accountToModuleCalls, 1)
 	require.Equal(t, "knowledge", bk.accountToModuleCalls[0].to)
+}
+
+// ─── Quality round wiring tests ─────────────────────────────────────────────
+
+func TestSubmitData_InitiatesQualityRound(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	resp, err := k.SubmitData(ctx, &types.MsgSubmitData{
+		Submitter:  testAddr,
+		Content:    "quality round test",
+		SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+		Domain:     "technology",
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		Stake:      "1000000",
+	})
+	require.NoError(t, err)
+
+	roundID, found := k.GetRoundBySubmission(ctx, resp.SubmissionId)
+	require.True(t, found)
+	require.NotEmpty(t, roundID)
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	require.Equal(t, resp.SubmissionId, round.SubmissionId)
+	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_COMMIT, round.Phase)
+
+	sub, found := k.GetSubmission(ctx, resp.SubmissionId)
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_PENDING_REVIEW, sub.Status)
+}
+
+func TestSubmitThread_InitiatesOneQualityRound(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	resp, err := k.SubmitThread(ctx, &types.MsgSubmitThread{
+		Submitter: testAddr,
+		ThreadId:  "thread-test",
+		Domain:    "technology",
+		Stake:     "1000000",
+		Items: []*types.MsgSubmitData{
+			{Content: "msg1", Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}, SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION},
+			{Content: "msg2", Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}, SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION},
+		},
+	})
+	require.NoError(t, err)
+
+	var roundIDs []string
+	for _, sid := range resp.SubmissionIds {
+		rid, found := k.GetRoundBySubmission(ctx, sid)
+		require.True(t, found)
+		roundIDs = append(roundIDs, rid)
+	}
+	require.Equal(t, roundIDs[0], roundIDs[1], "all thread submissions should share one round")
 }
