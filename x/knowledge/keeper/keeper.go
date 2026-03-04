@@ -119,3 +119,14 @@ func (k Keeper) IncreaseVerificationThreshold(ctx context.Context, domain string
 	binary.BigEndian.PutUint64(buf[12:20], uint64(sdkCtx.BlockHeight()))
 	return kvStore.Set(key, buf)
 }
+
+// RecordChallengeRoleImpact is a no-op stub (role elasticity removed in training data protocol).
+// Satisfies capture_challenge/types.KnowledgeKeeper.
+func (k Keeper) RecordChallengeRoleImpact(_ context.Context, _, _ string, _ bool) error {
+	return nil
+}
+
+// ApplyMentorshipDividend is a no-op stub (mentorship dividends removed in training data protocol).
+// Called by partnerships/keeper.KnowledgeDividendAdapter.
+func (k Keeper) ApplyMentorshipDividend(_ context.Context, _, _, _ string) {
+}

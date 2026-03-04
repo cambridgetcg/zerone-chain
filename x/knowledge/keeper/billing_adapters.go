@@ -22,43 +22,22 @@ func NewBillingKnowledgeAdapter(k Keeper) *BillingKnowledgeAdapter {
 // Ensure compile-time interface compliance.
 var _ billingtypes.KnowledgeKeeper = (*BillingKnowledgeAdapter)(nil)
 
-func (a *BillingKnowledgeAdapter) GetFactConfidence(ctx context.Context, factId string) (uint64, bool) {
-	fact, found := a.k.GetFact(ctx, factId)
-	if !found {
-		return 0, false
-	}
-	return fact.Confidence, true
+func (a *BillingKnowledgeAdapter) GetFactConfidence(_ context.Context, _ string) (uint64, bool) {
+	return 0, false // Facts removed in training data protocol
 }
 
-func (a *BillingKnowledgeAdapter) GetFactCitationCount(ctx context.Context, factId string) (uint64, bool) {
-	fact, found := a.k.GetFact(ctx, factId)
-	if !found {
-		return 0, false
-	}
-	return fact.CitationCount + fact.IncomingCitationCount, true
+func (a *BillingKnowledgeAdapter) GetFactCitationCount(_ context.Context, _ string) (uint64, bool) {
+	return 0, false
 }
 
-func (a *BillingKnowledgeAdapter) GetFactSubmitter(ctx context.Context, factId string) (string, bool) {
-	fact, found := a.k.GetFact(ctx, factId)
-	if !found {
-		return "", false
-	}
-	return fact.Submitter, true
+func (a *BillingKnowledgeAdapter) GetFactSubmitter(_ context.Context, _ string) (string, bool) {
+	return "", false
 }
 
-func (a *BillingKnowledgeAdapter) GetFactCreatedBlock(ctx context.Context, factId string) (uint64, bool) {
-	fact, found := a.k.GetFact(ctx, factId)
-	if !found {
-		return 0, false
-	}
-	return fact.VerifiedAtBlock, true
+func (a *BillingKnowledgeAdapter) GetFactCreatedBlock(_ context.Context, _ string) (uint64, bool) {
+	return 0, false
 }
 
-func (a *BillingKnowledgeAdapter) IncrementCitationCount(ctx context.Context, factId string) error {
-	fact, found := a.k.GetFact(ctx, factId)
-	if !found {
-		return fmt.Errorf("fact not found: %s", factId)
-	}
-	fact.CitationCount++
-	return a.k.SetFact(ctx, fact)
+func (a *BillingKnowledgeAdapter) IncrementCitationCount(_ context.Context, factId string) error {
+	return fmt.Errorf("fact not found: %s (training data protocol)", factId)
 }

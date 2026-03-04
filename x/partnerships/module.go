@@ -15,16 +15,19 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
 	"github.com/zerone-chain/zerone/x/partnerships/client/cli"
 	"github.com/zerone-chain/zerone/x/partnerships/keeper"
+	partnershipssim "github.com/zerone-chain/zerone/x/partnerships/simulation"
 	"github.com/zerone-chain/zerone/x/partnerships/types"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
-	_ module.AppModuleBasic = AppModuleBasic{}
-	_ appmodule.AppModule   = AppModule{}
+	_ module.AppModule           = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.AppModuleSimulation = AppModule{}
+	_ appmodule.AppModule        = AppModule{}
 )
 
 // AppModuleBasic implements the AppModuleBasic interface.
@@ -79,11 +82,23 @@ func (AppModuleBasic) GetQueryCmd() *cobra.Command {
 	return cli.NewQueryCmd()
 }
 
+// SimAccountKeeper is the minimal account keeper interface needed by simulation.
+type SimAccountKeeper interface {
+	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+}
+
+// SimBankKeeper is the minimal bank keeper interface needed by simulation.
+type SimBankKeeper interface {
+	SpendableCoins(ctx context.Context, addr sdk.AccAddress) sdk.Coins
+}
+
 // AppModule implements the AppModule interface.
 type AppModule struct {
 	AppModuleBasic
 
-	keeper keeper.Keeper
+	keeper      keeper.Keeper
+	simAccountK SimAccountKeeper
+	simBankK    SimBankKeeper
 }
 
 // NewAppModule creates a new AppModule.
@@ -92,6 +107,12 @@ func NewAppModule(cdc codec.Codec, keeper keeper.Keeper) AppModule {
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         keeper,
 	}
+}
+
+// SetSimulationKeepers sets the account/bank keepers needed for simulation.
+func (am *AppModule) SetSimulationKeepers(ak SimAccountKeeper, bk SimBankKeeper) {
+	am.simAccountK = ak
+	am.simBankK = bk
 }
 
 // IsOnePerModuleType implements the depinject.OnePerModuleType interface.
@@ -169,4 +190,20 @@ func (am AppModule) EndBlock(ctx context.Context) error {
 	am.keeper.AutoGraduateMentorships(sdkCtx)
 	am.keeper.RunFormationMatching(sdkCtx)
 	return nil
+}
+
+// ── Simulation interface (AppModuleSimulation) ──
+
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {}
+
+func (AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
+
+func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+	if am.simAccountK == nil || am.simBankK == nil {
+		return nil
+	}
+	return partnershipssim.WeightedOperations(
+		simState.AppParams, simState.Cdc, simState.TxConfig,
+		am.simAccountK, am.simBankK, am.keeper,
+	)
 }

@@ -1,5 +1,5 @@
 .PHONY: build install test lint proto-gen proto-swagger-gen proto-check clean pr-check cosmovisor-init boot-test genesis-check \
-       build-linux-amd64 build-linux-arm64 build-darwin-arm64 build-all release
+       build-linux-amd64 build-linux-arm64 build-darwin-arm64 build-all release docker-build-local e2e-test sim-test
 
 VERSION := $(shell git describe --tags --always 2>/dev/null || echo "dev")
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -76,3 +76,19 @@ boot-test: build
 
 genesis-check:
 	@go run tools/genesis-check/main.go --genesis $(GENESIS)
+
+# ── Simulation ────────────────────────────────────────────────────────
+
+sim-test:
+	go test -v -run TestFullAppSimulation_Deterministic -timeout 30m ./app/...
+
+sim-bench:
+	go test -v -bench BenchmarkFullAppSimulation -benchmem -timeout 60m -run ^$$ ./app/...
+
+# ── Docker & E2E ──────────────────────────────────────────────────────
+
+docker-build-local:
+	docker build -t zerone:local .
+
+e2e-test: docker-build-local
+	go test -v -timeout 20m ./tests/e2e/...

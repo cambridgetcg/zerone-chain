@@ -10,6 +10,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
@@ -19,10 +20,11 @@ import (
 )
 
 var (
-	_ module.AppModuleBasic = AppModuleBasic{}
-	_ module.HasGenesis     = AppModule{}
-	_ module.HasServices    = AppModule{}
-	_ module.AppModule      = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.HasGenesis          = AppModule{}
+	_ module.HasServices         = AppModule{}
+	_ module.AppModule           = AppModule{}
+	_ module.AppModuleSimulation = AppModule{}
 )
 
 // ---------- AppModuleBasic ----------
@@ -128,5 +130,15 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 // EndBlock runs at the end of each block.
 func (am AppModule) EndBlock(ctx context.Context) error {
 	am.keeper.EndBlocker(sdk.UnwrapSDKContext(ctx))
+	return nil
+}
+
+// ── Simulation interface (AppModuleSimulation) ──
+
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {}
+
+func (AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
+
+func (AppModule) WeightedOperations(_ module.SimulationState) []simtypes.WeightedOperation {
 	return nil
 }

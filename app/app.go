@@ -626,7 +626,7 @@ func NewZeroneApp(
 		appCodec,
 		sdkruntime.NewKVStoreService(keys[banktypes.StoreKey]),
 		app.AccountKeeper,
-		blockedModuleAccountAddrs(),
+		BlockedModuleAccountAddrs(),
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 		logger,
 	)
@@ -1192,6 +1192,19 @@ func NewZeroneApp(
 	app.IBCKeeper.SetRouter(ibcRouter)
 
 	// ---- Module Manager ----
+	// Priority simulation modules are extracted so we can wire simulation keepers
+	// via pointer (mutations visible to SimulationManager).
+	knowledgeMod := zeroneknowledge.NewAppModule(appCodec, app.KnowledgeKeeper)
+	knowledgeMod.SetSimulationKeepers(app.AccountKeeper, app.BankKeeper)
+	partnershipsMod := zeronepartnerships.NewAppModule(appCodec, app.PartnershipsKeeper)
+	partnershipsMod.SetSimulationKeepers(app.AccountKeeper, app.BankKeeper)
+	govMod := zeronegov.NewAppModule(appCodec, app.ZeroneGovKeeper)
+	govMod.SetSimulationKeepers(app.AccountKeeper, app.BankKeeper)
+	captureDefenseMod := zeronecapturedefense.NewAppModule(appCodec, app.CaptureDefenseKeeper)
+	captureDefenseMod.SetSimulationKeepers(app.AccountKeeper, app.BankKeeper)
+	vestingRewardsMod := vestingrewards.NewAppModule(appCodec, app.VestingRewardsKeeper)
+	vestingRewardsMod.SetSimulationKeepers(app.AccountKeeper, app.BankKeeper)
+
 	app.ModuleManager = module.NewManager(
 		genutil.NewAppModule(app.AccountKeeper, app.StakingKeeper, app, txConfig),
 		auth.NewAppModule(appCodec, app.AccountKeeper, nil, nil),
@@ -1213,13 +1226,13 @@ func NewZeroneApp(
 		// ===== Zerone custom modules — added by batch =====
 		zeroneauth.NewAppModule(appCodec, app.ZeroneAuthKeeper),
 		zeronestaking.NewAppModule(app.ZeroneStakingKeeper),
-		vestingrewards.NewAppModule(appCodec, app.VestingRewardsKeeper),
+		&vestingRewardsMod,
 		zeroneontology.NewAppModule(appCodec, app.ZeroneOntologyKeeper),
-		zeroneknowledge.NewAppModule(appCodec, app.KnowledgeKeeper),
+		&knowledgeMod, // pointer so SetSimulationKeepers mutations are visible to SimulationManager
 		zeronetokens.NewAppModule(appCodec, app.TokensKeeper),
 		zeronebilling.NewAppModule(appCodec, app.BillingKeeper),
 		zeroneliquiditypool.NewAppModule(appCodec, app.LiquidityPoolKeeper),
-		zeronegov.NewAppModule(appCodec, app.ZeroneGovKeeper),
+		&govMod,
 		zeronechannels.NewAppModule(appCodec, app.ChannelsKeeper),
 		zeroneschedule.NewAppModule(appCodec, app.ScheduleKeeper),
 		zeronecomputepool.NewAppModule(appCodec, app.ComputePoolKeeper),
@@ -1228,7 +1241,7 @@ func NewZeroneApp(
 		zeronedisputes.NewAppModule(appCodec, app.DisputesKeeper),
 		zeronequalification.NewAppModule(appCodec, app.QualificationKeeper),
 		zeroneemergency.NewAppModule(appCodec, app.EmergencyKeeper),
-		zeronecapturedefense.NewAppModule(appCodec, app.CaptureDefenseKeeper),
+		&captureDefenseMod,
 		zeronecapturechallenge.NewAppModule(appCodec, app.CaptureChallengeKeeper),
 		zeroneibcratelimit.NewAppModule(appCodec, app.IBCRateLimitKeeper),
 		zeroneicaauth.NewAppModule(appCodec, app.ICAAuthKeeper),
@@ -1239,7 +1252,7 @@ func NewZeroneApp(
 		zeroneclaimingpot.NewAppModule(appCodec, app.ClaimingPotKeeper),
 		zeronetree.NewAppModule(appCodec, app.TreeKeeper),               // R7-5: x/tree
 		zeronehome.NewAppModule(appCodec, app.HomeKeeper),                // R8-1: x/home
-		zeronepartnerships.NewAppModule(appCodec, app.PartnershipsKeeper), // R8-1: x/partnerships
+		&partnershipsMod, // R8-1: x/partnerships
 		zeronetoolbox.NewAppModule(appCodec, app.ToolboxKeeper),          // R8-1: x/toolbox
 	)
 
@@ -1398,6 +1411,11 @@ func NewZeroneApp(
 	if err := app.ModuleManager.RegisterServices(app.configurator); err != nil {
 		panic(fmt.Sprintf("failed to register module services: %s", err))
 	}
+
+	// Initialize simulation manager — discovers all modules implementing
+	// AppModuleSimulation and wires them for SDK-style fuzz testing.
+	app.sm = module.NewSimulationManagerFromAppModules(app.ModuleManager.Modules, nil)
+	app.sm.RegisterStoreDecoders()
 
 	// Register upgrade handlers (must be after RegisterServices, before LoadLatestVersion).
 	app.RegisterUpgradeHandlers()
@@ -1644,9 +1662,9 @@ func (app *ZeroneApp) RegisterNodeService(clientCtx client.Context, cfg config.C
 	nodeservice.RegisterNodeService(clientCtx, app.GRPCQueryRouter(), cfg)
 }
 
-// blockedModuleAccountAddrs returns the set of module account addresses that
+// BlockedModuleAccountAddrs returns the set of module account addresses that
 // are blocked from receiving funds (all module accounts except governance).
-func blockedModuleAccountAddrs() map[string]bool {
+func BlockedModuleAccountAddrs() map[string]bool {
 	modAccAddrs := make(map[string]bool)
 	for acc := range maccPerms {
 		modAccAddrs[authtypes.NewModuleAddress(acc).String()] = true

@@ -11,6 +11,7 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
@@ -19,9 +20,10 @@ import (
 )
 
 var (
-	_ module.AppModuleBasic = AppModuleBasic{}
-	_ module.AppModule      = AppModule{}
-	_ appmodule.AppModule   = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.AppModule           = AppModule{}
+	_ module.AppModuleSimulation = AppModule{}
+	_ appmodule.AppModule        = AppModule{}
 )
 
 // ModuleName is exported for use in app.go ordering.
@@ -114,5 +116,15 @@ func (am AppModule) BeginBlock(goCtx context.Context) error {
 }
 
 func (am AppModule) EndBlock(_ context.Context) error {
+	return nil
+}
+
+// ── Simulation interface (AppModuleSimulation) ──
+
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {}
+
+func (AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
+
+func (AppModule) WeightedOperations(_ module.SimulationState) []simtypes.WeightedOperation {
 	return nil
 }

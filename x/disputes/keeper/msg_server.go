@@ -34,15 +34,15 @@ func (m msgServer) InitiateDispute(goCtx context.Context, msg *types.MsgInitiate
 		return nil, fmt.Errorf("invalid challenger address: %w", err)
 	}
 
-	// Validate target exists (only for FACT type currently)
+	// Validate target exists (FACT→Sample in training data protocol)
 	var defender string
 	if msg.TargetType == types.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT {
 		if m.knowledgeKeeper != nil {
-			fact, found := m.knowledgeKeeper.GetFact(ctx, msg.TargetId)
+			sample, found := m.knowledgeKeeper.GetSample(ctx, msg.TargetId)
 			if !found {
-				return nil, fmt.Errorf("%w: fact %s", types.ErrTargetNotFound, msg.TargetId)
+				return nil, fmt.Errorf("%w: sample %s", types.ErrTargetNotFound, msg.TargetId)
 			}
-			defender = fact.GetSubmitter()
+			defender = sample.GetSubmitter()
 		}
 	}
 	if defender == "" {

@@ -4,7 +4,6 @@ import (
 	"context"
 
 	alignmenttypes "github.com/zerone-chain/zerone/x/alignment/types"
-	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
 // AlignmentKnowledgeAdapter wraps the knowledge Keeper to satisfy
@@ -21,54 +20,27 @@ func NewAlignmentKnowledgeAdapter(k Keeper) *AlignmentKnowledgeAdapter {
 // Ensure compile-time interface compliance.
 var _ alignmenttypes.KnowledgeKeeper = (*AlignmentKnowledgeAdapter)(nil)
 
-// GetVerificationRate computes accepted / terminal claims in BPS.
-func (a *AlignmentKnowledgeAdapter) GetVerificationRate(ctx context.Context) uint64 {
-	var accepted, terminal uint64
-	a.k.IterateClaims(ctx, func(claim *types.Claim) bool {
-		switch claim.Status {
-		case types.ClaimStatus_CLAIM_STATUS_ACCEPTED:
-			accepted++
-			terminal++
-		case types.ClaimStatus_CLAIM_STATUS_REJECTED,
-			types.ClaimStatus_CLAIM_STATUS_MALFORMED,
-			types.ClaimStatus_CLAIM_STATUS_INSUFFICIENT:
-			terminal++
-		}
-		return false
-	})
-	if terminal == 0 {
-		return 500_000 // NeutralBPS — no data yet
-	}
-	rate := accepted * 1_000_000 / terminal
-	if rate > 1_000_000 {
-		return 1_000_000
-	}
-	return rate
+// GetVerificationRate returns neutral BPS (no verification data in training data protocol).
+func (a *AlignmentKnowledgeAdapter) GetVerificationRate(_ context.Context) uint64 {
+	return 500_000 // NeutralBPS
 }
 
-// GetTotalFacts counts all accepted claims (facts).
-func (a *AlignmentKnowledgeAdapter) GetTotalFacts(ctx context.Context) uint64 {
-	var count uint64
-	a.k.IterateClaims(ctx, func(claim *types.Claim) bool {
-		if claim.Status == types.ClaimStatus_CLAIM_STATUS_ACCEPTED {
-			count++
-		}
-		return false
-	})
-	return count
+// GetTotalFacts returns 0 (fact concept removed in training data protocol).
+func (a *AlignmentKnowledgeAdapter) GetTotalFacts(_ context.Context) uint64 {
+	return 0
 }
 
-// GetConsensusDiversity returns the global consensus diversity score in BPS.
-func (a *AlignmentKnowledgeAdapter) GetConsensusDiversity(ctx context.Context) uint64 {
-	return a.k.GetGlobalConsensusDiversity(ctx)
+// GetConsensusDiversity returns neutral BPS.
+func (a *AlignmentKnowledgeAdapter) GetConsensusDiversity(_ context.Context) uint64 {
+	return 500_000
 }
 
-// GetPendingVerificationRatio returns pending claims / active facts in BPS (R31-1).
-func (a *AlignmentKnowledgeAdapter) GetPendingVerificationRatio(ctx context.Context) uint64 {
-	return a.k.GetPendingVerificationRatio(ctx)
+// GetPendingVerificationRatio returns 0 (no pending claims in training data protocol).
+func (a *AlignmentKnowledgeAdapter) GetPendingVerificationRatio(_ context.Context) uint64 {
+	return 0
 }
 
-// GetVerificationHealth returns verification health metrics for the alignment sensor (R31-2).
-func (a *AlignmentKnowledgeAdapter) GetVerificationHealth(ctx context.Context) (uint64, uint64, uint64) {
-	return a.k.GetVerificationHealth(ctx)
+// GetVerificationHealth returns neutral defaults.
+func (a *AlignmentKnowledgeAdapter) GetVerificationHealth(_ context.Context) (uint64, uint64, uint64) {
+	return 500_000, 0, 0
 }

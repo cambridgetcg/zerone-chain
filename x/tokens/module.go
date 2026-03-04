@@ -15,15 +15,17 @@ import (
 	cdctypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 
 	"github.com/zerone-chain/zerone/x/tokens/keeper"
 	"github.com/zerone-chain/zerone/x/tokens/types"
 )
 
 var (
-	_ module.AppModule      = AppModule{}
-	_ module.AppModuleBasic = AppModuleBasic{}
-	_ appmodule.AppModule   = AppModule{}
+	_ module.AppModule           = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.AppModuleSimulation = AppModule{}
+	_ appmodule.AppModule        = AppModule{}
 )
 
 // AppModuleBasic implements the AppModuleBasic interface.
@@ -136,5 +138,15 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 
 // EndBlock executes end-block logic. No-op.
 func (am AppModule) EndBlock(ctx context.Context) error {
+	return nil
+}
+
+// ── Simulation interface (AppModuleSimulation) ──
+
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {}
+
+func (AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
+
+func (AppModule) WeightedOperations(_ module.SimulationState) []simtypes.WeightedOperation {
 	return nil
 }

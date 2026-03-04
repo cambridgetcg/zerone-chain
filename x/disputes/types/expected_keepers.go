@@ -23,5 +23,5 @@ type StakingKeeper interface {
 
 // KnowledgeKeeper defines the expected knowledge module interface.
 type KnowledgeKeeper interface {
-	GetFact(ctx context.Context, factID string) (*knowledgetypes.Fact, bool)
+	GetSample(ctx context.Context, sampleID string) (*knowledgetypes.Sample, bool)
 }

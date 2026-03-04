@@ -23,7 +23,7 @@ RPC_URL="http://127.0.0.1:26601"
 AXIOMS_FILE="${PROJECT_ROOT}/x/knowledge/types/genesis_axioms.json"
 
 STEP=0
-total_steps=12
+total_steps=13
 STARTED=false
 
 pass() { STEP=$((STEP+1)); echo -e "\n\033[1;32m[$STEP/$total_steps] PASS:\033[0m $1"; }
@@ -90,8 +90,8 @@ submit_tx() {
   echo "$tx_hash"
 }
 
-# Common tx flags
-TX_FLAGS="--node ${RPC_URL} --home ${COORDINATOR_HOME} --keyring-backend ${KEYRING} --chain-id ${CHAIN_ID} --gas auto --gas-adjustment 1.5 --gas-prices 1${DENOM} --yes --broadcast-mode sync --output json"
+# Common tx flags (fixed gas — avoids gas-auto simulation hangs)
+COMMON_FLAGS="--node ${RPC_URL} --home ${COORDINATOR_HOME} --keyring-backend ${KEYRING} --chain-id ${CHAIN_ID} --gas 300000 --gas-prices 1${DENOM} --yes --broadcast-mode sync --output json"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════════"
@@ -237,17 +237,107 @@ FACT_COUNT=$(echo "$FACTS_RAW" | jq '.facts | length' 2>/dev/null || echo "0")
 pass "Knowledge module has $FACT_COUNT facts"
 
 # ═══════════════════════════════════════════════════════════════
-# Phase 6: PoT Round (Step 9)
+# Phase 5b: Zerone Account Registration (Step 9)
+# ═══════════════════════════════════════════════════════════════
+
+info "Phase 5b: Zerone Account Registration"
+
+# The ZeroneCapabilityDecorator requires accounts to be registered
+# in the Zerone auth module before they can submit claims, vote, etc.
+# Each registration needs a random Ed25519 identity key + derived DID.
+
+ACCOUNTS_TO_REGISTER=(faucet val0 val1 val2 val3)
+
+# Pre-check: verify RPC is still responsive before attempting txs
+info "  Verifying node is responsive..."
+PRE_HEIGHT=$(curl -s --connect-timeout 5 "${RPC_URL}/status" 2>/dev/null | jq -r '.result.sync_info.latest_block_height // empty' 2>/dev/null || echo "")
+if [ -z "$PRE_HEIGHT" ]; then
+  fail "Node not responsive at ${RPC_URL} before registration"
+fi
+info "  Node OK at height ${PRE_HEIGHT}"
+
+# Debug: test that the CLI can reach the node at all (non-tx query)
+info "  Testing CLI connectivity..."
+CLI_TEST=$(${BINARY} query bank total --node "${RPC_URL}" --output json 2>&1 < /dev/null) || true
+info "  [DIAG] CLI query test: ${CLI_TEST:0:200}"
+
+REG_FAIL=0
+for acct in "${ACCOUNTS_TO_REGISTER[@]}"; do
+  # Generate random 32-byte Ed25519 identity key (64 hex chars)
+  IDENTITY_KEY=$(openssl rand -hex 32)
+  IDENTITY_DID="did:zrn:${IDENTITY_KEY:0:32}"
+
+  info "  Registering ${acct}..."
+
+  # Run tx command in background with timeout to prevent hangs
+  REG_TMPFILE=$(mktemp)
+  ${BINARY} tx zerone_auth register-account \
+      "${IDENTITY_DID}" "${IDENTITY_KEY}" agent \
+      --from "${acct}" ${COMMON_FLAGS} > "${REG_TMPFILE}" 2>&1 < /dev/null &
+  REG_PID=$!
+
+  # Wait up to 30 seconds
+  REG_ELAPSED=0
+  while [ $REG_ELAPSED -lt 30 ]; do
+    if ! kill -0 "$REG_PID" 2>/dev/null; then
+      break
+    fi
+    sleep 1
+    REG_ELAPSED=$((REG_ELAPSED + 1))
+  done
+
+  # Check if process is still running (hung)
+  if kill -0 "$REG_PID" 2>/dev/null; then
+    kill "$REG_PID" 2>/dev/null || true
+    wait "$REG_PID" 2>/dev/null || true
+    REG_PARTIAL=$(cat "${REG_TMPFILE}" 2>/dev/null || echo "(empty)")
+    info "  [DIAG] ${acct} registration TIMED OUT after 30s"
+    info "  [DIAG] partial output: ${REG_PARTIAL:0:500}"
+    rm -f "${REG_TMPFILE}"
+    REG_FAIL=1
+    continue
+  fi
+
+  wait "$REG_PID" 2>/dev/null || true
+  REG_RESULT=$(cat "${REG_TMPFILE}" 2>/dev/null || echo "")
+  rm -f "${REG_TMPFILE}"
+
+  REG_TX=$(echo "$REG_RESULT" | jq -r '.txhash // empty' 2>/dev/null || echo "")
+  if [ -z "$REG_TX" ]; then
+    REG_CODE=$(echo "$REG_RESULT" | jq -r '.code // empty' 2>/dev/null || echo "")
+    REG_LOG=$(echo "$REG_RESULT" | jq -r '.raw_log // empty' 2>/dev/null || echo "")
+    info "  [DIAG] ${acct} registration broadcast failed: code=${REG_CODE} log=${REG_LOG:0:300}"
+    info "  [DIAG] raw: ${REG_RESULT:0:500}"
+    REG_FAIL=1
+    continue
+  fi
+
+  WAIT_RC=0
+  wait_tx "$REG_TX" 30 || WAIT_RC=$?
+  if [ "$WAIT_RC" -eq 2 ]; then
+    info "  [DIAG] ${acct} registration tx failed execution"
+    REG_FAIL=1
+  elif [ "$WAIT_RC" -eq 1 ]; then
+    info "  [DIAG] ${acct} registration tx not included within 30s"
+    REG_FAIL=1
+  else
+    info "  ${acct} registered"
+  fi
+done
+
+[ "$REG_FAIL" -eq 0 ] || fail "One or more account registrations failed (see diagnostics above)"
+pass "All ${#ACCOUNTS_TO_REGISTER[@]} accounts registered in Zerone auth"
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 6: PoT Round (Step 10)
 # ═══════════════════════════════════════════════════════════════
 
 info "Phase 6: PoT Round"
 
-# Step 9: Submit a claim and run a full PoT verification round
+# Step 10: Submit a claim and run a full PoT verification round
 # Use direct commands with fixed gas — avoids eval/gas-auto hangs
 CLAIM_TEXT="Dress rehearsal verification claim for Zerone testnet launch readiness"
 REVIEW_FEE="1000000"
-
-COMMON_FLAGS="--node ${RPC_URL} --home ${COORDINATOR_HOME} --keyring-backend ${KEYRING} --chain-id ${CHAIN_ID} --gas 300000 --gas-prices 1${DENOM} --yes --broadcast-mode sync --output json"
 
 info "  Submitting claim..."
 CLAIM_RESULT=$(${BINARY} tx knowledge submit-claim \
@@ -351,12 +441,12 @@ else
 fi
 
 # ═══════════════════════════════════════════════════════════════
-# Phase 7: Governance (Step 10)
+# Phase 7: Governance (Step 11)
 # ═══════════════════════════════════════════════════════════════
 
 info "Phase 7: Governance (LIP lifecycle)"
 
-# Step 10: Submit a LIP, stake, advance, vote, verify passage
+# Step 11: Submit a LIP, stake, advance, vote, verify passage
 info "  Submitting LIP..."
 LIP_RESULT=$(${BINARY} tx zerone_gov submit-lip \
     "Dress Rehearsal Parameter Test" \
@@ -436,12 +526,12 @@ else
 fi
 
 # ═══════════════════════════════════════════════════════════════
-# Phase 8: Bank Transfer (Step 11)
+# Phase 8: Bank Transfer (Step 12)
 # ═══════════════════════════════════════════════════════════════
 
 info "Phase 8: Bank Transfer"
 
-# Step 11: Token transfer between accounts
+# Step 12: Token transfer between accounts
 # Use faucet (not val0) — avoids sequence conflicts from PoT/governance steps
 FAUCET_ADDR=$(${BINARY} keys show faucet -a --keyring-backend ${KEYRING} --home "${COORDINATOR_HOME}" 2>/dev/null)
 ADDR1=$(${BINARY} keys show test1 -a --keyring-backend ${KEYRING} --home "${COORDINATOR_HOME}" 2>/dev/null)
@@ -483,12 +573,12 @@ BAL_AFTER=$(${BINARY} query bank balances "$ADDR1" \
 pass "Bank transfer verified (faucet -> test1, +1 ZRN)"
 
 # ═══════════════════════════════════════════════════════════════
-# Phase 9: Shutdown & Final (Step 12)
+# Phase 9: Shutdown & Final (Step 13)
 # ═══════════════════════════════════════════════════════════════
 
 info "Phase 9: Shutdown & Test Suite"
 
-# Step 12: Clean shutdown + full test suite
+# Step 13: Clean shutdown + full test suite
 scripts/localnet.sh stop
 STARTED=false
 sleep 3

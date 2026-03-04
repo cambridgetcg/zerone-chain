@@ -10,17 +10,20 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
 	"github.com/zerone-chain/zerone/x/gov/keeper"
+	govsim "github.com/zerone-chain/zerone/x/gov/simulation"
 	"github.com/zerone-chain/zerone/x/gov/types"
 )
 
 var (
-	_ module.AppModuleBasic = AppModuleBasic{}
-	_ module.HasGenesis     = AppModule{}
-	_ module.HasServices    = AppModule{}
-	_ module.AppModule      = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.HasGenesis          = AppModule{}
+	_ module.HasServices         = AppModule{}
+	_ module.AppModule           = AppModule{}
+	_ module.AppModuleSimulation = AppModule{}
 )
 
 // ---------- AppModuleBasic ----------
@@ -56,11 +59,23 @@ func (AppModuleBasic) ValidateGenesis(_ codec.JSONCodec, _ client.TxEncodingConf
 
 func (AppModuleBasic) RegisterGRPCGatewayRoutes(_ client.Context, _ *runtime.ServeMux) {}
 
+// SimAccountKeeper is the minimal account keeper interface needed by simulation.
+type SimAccountKeeper interface {
+	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+}
+
+// SimBankKeeper is the minimal bank keeper interface needed by simulation.
+type SimBankKeeper interface {
+	SpendableCoins(ctx context.Context, addr sdk.AccAddress) sdk.Coins
+}
+
 // ---------- AppModule ----------
 
 type AppModule struct {
 	AppModuleBasic
-	keeper keeper.Keeper
+	keeper      keeper.Keeper
+	simAccountK SimAccountKeeper
+	simBankK    SimBankKeeper
 }
 
 func NewAppModule(_ codec.Codec, k keeper.Keeper) AppModule {
@@ -68,6 +83,12 @@ func NewAppModule(_ codec.Codec, k keeper.Keeper) AppModule {
 		AppModuleBasic: AppModuleBasic{},
 		keeper:         k,
 	}
+}
+
+// SetSimulationKeepers sets the account/bank keepers needed for simulation.
+func (am *AppModule) SetSimulationKeepers(ak SimAccountKeeper, bk SimBankKeeper) {
+	am.simAccountK = ak
+	am.simBankK = bk
 }
 
 func (AppModule) IsOnePerModuleType() {}
@@ -109,4 +130,20 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 
 func (am AppModule) EndBlock(_ context.Context) error {
 	return nil
+}
+
+// ── Simulation interface (AppModuleSimulation) ──
+
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {}
+
+func (AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
+
+func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+	if am.simAccountK == nil || am.simBankK == nil {
+		return nil
+	}
+	return govsim.WeightedOperations(
+		simState.AppParams, simState.Cdc, simState.TxConfig,
+		am.simAccountK, am.simBankK, am.keeper,
+	)
 }

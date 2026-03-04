@@ -22,6 +22,6 @@ func NewDisputesKnowledgeAdapter(k Keeper) *DisputesKnowledgeAdapter {
 // Ensure compile-time interface compliance.
 var _ disputestypes.KnowledgeKeeper = (*DisputesKnowledgeAdapter)(nil)
 
-func (a *DisputesKnowledgeAdapter) GetFact(ctx context.Context, factID string) (*knowledgetypes.Fact, bool) {
-	return a.k.GetFact(ctx, factID)
+func (a *DisputesKnowledgeAdapter) GetSample(_ context.Context, _ string) (*knowledgetypes.Sample, bool) {
+	return nil, false // Stub: samples not yet stored (R37)
 }

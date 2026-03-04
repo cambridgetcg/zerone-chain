@@ -15,7 +15,6 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 
@@ -388,136 +387,8 @@ func (app *ZeroneApp) processVoteExtensions(
 	return inj
 }
 
-// ProcessVoteExtInjection processes a vote extension injection tx by storing
-// commitments and reveals in the knowledge keeper state.
-// Called from PreBlocker before BeginBlock phase transitions.
+// ProcessVoteExtInjection processes a vote extension injection tx.
+// Stubbed: old PoT commit/reveal verification rounds removed in training data pivot (R36-5).
 func (app *ZeroneApp) ProcessVoteExtInjection(ctx sdk.Context, data []byte) {
-	logger := ctx.Logger().With("module", "abci", "handler", "PreBlocker")
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Error("PANIC in ProcessVoteExtInjection — skipping injection",
-				"height", ctx.BlockHeight(), "panic", fmt.Sprintf("%v", r))
-		}
-	}()
-
-	inj, err := DecodeVoteExtInjection(data)
-	if err != nil {
-		logger.Error("failed to decode vote extension injection", "err", err)
-		return
-	}
-
-	height := uint64(ctx.BlockHeight())
-	storedCommitments := 0
-	storedReveals := 0
-
-	// Store commitments in keeper state
-	for _, c := range inj.Commitments {
-		// Re-verify VRF proof before storing each commitment.
-		// A malicious proposer could construct a fake injection with invalid proofs.
-		if c.VRFOutput == "" || c.VRFProof == "" {
-			logger.Warn("injected commitment missing VRF proof — discarding",
-				"round_id", c.RoundID,
-				"validator", c.Validator,
-			)
-			continue
-		}
-
-		vrfOutput, err := hex.DecodeString(c.VRFOutput)
-		if err != nil {
-			logger.Warn("invalid VRF output hex in commitment", "round_id", c.RoundID)
-			continue
-		}
-		vrfProof, err := hex.DecodeString(c.VRFProof)
-		if err != nil {
-			logger.Warn("invalid VRF proof hex in commitment", "round_id", c.RoundID)
-			continue
-		}
-
-		selected, err := app.KnowledgeKeeper.VerifyValidatorVRFSelection(
-			ctx, c.RoundID, c.Validator, vrfOutput, vrfProof,
-		)
-		if err != nil || !selected {
-			logger.Warn("VRF selection verification failed for injected commitment",
-				"round_id", c.RoundID,
-				"validator", c.Validator,
-				"err", err,
-			)
-			continue
-		}
-
-		commitHash, err := hex.DecodeString(c.CommitmentHash)
-		if err != nil {
-			logger.Warn("invalid commitment hash hex", "round_id", c.RoundID)
-			continue
-		}
-
-		commitment := &knowledgetypes.CommitEntry{
-			Verifier:         c.Validator,
-			CommitHash:       commitHash,
-			CommittedAtBlock: height,
-		}
-
-		if err := app.KnowledgeKeeper.StoreCommitmentInRound(ctx, c.RoundID, commitment); err != nil {
-			if errors.Is(err, knowledgetypes.ErrEquivocation) {
-				logger.Error("EQUIVOCATION in vote extension commitment",
-					"round_id", c.RoundID,
-					"validator", c.Validator,
-					"error", err.Error(),
-				)
-			} else {
-				logger.Debug("skipped commitment from vote extension",
-					"round_id", c.RoundID,
-					"validator", c.Validator,
-					"reason", err.Error(),
-				)
-			}
-			continue
-		}
-		storedCommitments++
-	}
-
-	// Store reveals in keeper state
-	for _, r := range inj.Reveals {
-		saltBytes, err := hex.DecodeString(r.Salt)
-		if err != nil {
-			logger.Warn("invalid salt hex in reveal", "round_id", r.RoundID)
-			continue
-		}
-
-		reveal := &knowledgetypes.RevealEntry{
-			Verifier:        r.Validator,
-			Vote:            r.Verdict,
-			Salt:            saltBytes,
-			RevealedAtBlock: height,
-		}
-
-		if err := app.KnowledgeKeeper.StoreRevealInRound(ctx, r.RoundID, reveal, r.Confidence); err != nil {
-			if errors.Is(err, knowledgetypes.ErrEquivocation) {
-				logger.Error("EQUIVOCATION in vote extension reveal",
-					"round_id", r.RoundID,
-					"validator", r.Validator,
-					"error", err.Error(),
-				)
-			} else {
-				logger.Debug("skipped reveal from vote extension",
-					"round_id", r.RoundID,
-					"validator", r.Validator,
-					"reason", err.Error(),
-				)
-			}
-			continue
-		}
-		storedReveals++
-	}
-
-	if storedCommitments > 0 || storedReveals > 0 {
-		logger.Info("processed vote extension injection",
-			"height", height,
-			"commitments_stored", storedCommitments,
-			"commitments_total", len(inj.Commitments),
-			"reveals_stored", storedReveals,
-			"reveals_total", len(inj.Reveals),
-		)
-	}
+	// No-op: verification rounds no longer exist in the training data protocol.
 }

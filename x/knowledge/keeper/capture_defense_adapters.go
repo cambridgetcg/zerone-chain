@@ -21,25 +21,17 @@ func NewCaptureDefenseKnowledgeAdapter(k Keeper) *CaptureDefenseKnowledgeAdapter
 // Ensure compile-time interface compliance.
 var _ cdtypes.KnowledgeKeeper = (*CaptureDefenseKnowledgeAdapter)(nil)
 
-// GetFactDomain returns the domain of a fact by its ID.
-func (a *CaptureDefenseKnowledgeAdapter) GetFactDomain(ctx context.Context, factId string) (string, bool) {
-	fact, found := a.k.GetFact(ctx, factId)
-	if !found {
-		return "", false
-	}
-	return fact.Domain, true
+// GetFactDomain returns empty (facts removed in training data protocol).
+func (a *CaptureDefenseKnowledgeAdapter) GetFactDomain(_ context.Context, _ string) (string, bool) {
+	return "", false
 }
 
-// GetFactSubmitter returns the submitter of a fact by its ID.
-func (a *CaptureDefenseKnowledgeAdapter) GetFactSubmitter(ctx context.Context, factId string) (string, bool) {
-	fact, found := a.k.GetFact(ctx, factId)
-	if !found {
-		return "", false
-	}
-	return fact.Submitter, true
+// GetFactSubmitter returns empty (facts removed in training data protocol).
+func (a *CaptureDefenseKnowledgeAdapter) GetFactSubmitter(_ context.Context, _ string) (string, bool) {
+	return "", false
 }
 
-// GetDomainVerificationActivity returns the verification activity level for a domain (R31-4).
-func (a *CaptureDefenseKnowledgeAdapter) GetDomainVerificationActivity(ctx context.Context, domain string) uint64 {
-	return a.k.GetDomainVerificationActivity(ctx, domain)
+// GetDomainVerificationActivity returns 0 (verification activity tracking removed).
+func (a *CaptureDefenseKnowledgeAdapter) GetDomainVerificationActivity(_ context.Context, _ string) uint64 {
+	return 0
 }

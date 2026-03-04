@@ -21,10 +21,6 @@ func NewBVMKnowledgeAdapter(k Keeper) *BVMKnowledgeAdapter {
 // Ensure compile-time interface compliance.
 var _ bvmtypes.KnowledgeKeeper = (*BVMKnowledgeAdapter)(nil)
 
-func (a *BVMKnowledgeAdapter) GetFactConfidence(ctx context.Context, factId string) (uint64, bool) {
-	fact, found := a.k.GetFact(ctx, factId)
-	if !found {
-		return 0, false
-	}
-	return fact.Confidence, true
+func (a *BVMKnowledgeAdapter) GetFactConfidence(_ context.Context, _ string) (uint64, bool) {
+	return 0, false // Facts removed in training data protocol
 }
