@@ -355,3 +355,114 @@ func TestContestIndex_SetGetDelete(t *testing.T) {
 	_, found = k.GetContestRound(ctx, "sample-1")
 	require.False(t, found)
 }
+
+// ─── TrainingDemand CRUD ────────────────────────────────────────────────────
+
+func TestSetGetTrainingDemand(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	demand := &types.TrainingDemand{
+		Domain:           "science",
+		Subject:          "quantum_computing",
+		QueryCount:       10,
+		FulfilledCount:   3,
+		UnfulfilledCount: 7,
+		LastQueryBlock:   100,
+	}
+	require.NoError(t, k.SetTrainingDemand(ctx, demand))
+	got, found := k.GetTrainingDemand(ctx, "science", "quantum_computing")
+	require.True(t, found)
+	require.Equal(t, uint64(10), got.QueryCount)
+	require.Equal(t, uint64(7), got.UnfulfilledCount)
+	_, found = k.GetTrainingDemand(ctx, "science", "nonexistent")
+	require.False(t, found)
+}
+
+func TestIterateTrainingDemands(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.NoError(t, k.SetTrainingDemand(ctx, &types.TrainingDemand{Domain: "science", Subject: "physics"}))
+	require.NoError(t, k.SetTrainingDemand(ctx, &types.TrainingDemand{Domain: "science", Subject: "chemistry"}))
+	require.NoError(t, k.SetTrainingDemand(ctx, &types.TrainingDemand{Domain: "tech", Subject: "golang"}))
+	var count int
+	k.IterateTrainingDemands(ctx, func(_ *types.TrainingDemand) bool { count++; return false })
+	require.Equal(t, 3, count)
+}
+
+// ─── DataBounty CRUD ────────────────────────────────────────────────────────
+
+func TestSetGetDataBounty(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	bounty := &types.DataBounty{Id: "1", Domain: "science", Subject: "quantum_computing", RewardAmount: "10000000"}
+	require.NoError(t, k.SetDataBounty(ctx, bounty))
+	got, found := k.GetDataBounty(ctx, "1")
+	require.True(t, found)
+	require.Equal(t, "10000000", got.RewardAmount)
+	_, found = k.GetDataBounty(ctx, "nonexistent")
+	require.False(t, found)
+}
+
+func TestDeleteDataBounty(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.NoError(t, k.SetDataBounty(ctx, &types.DataBounty{Id: "1", Domain: "science"}))
+	require.NoError(t, k.DeleteDataBounty(ctx, "1"))
+	_, found := k.GetDataBounty(ctx, "1")
+	require.False(t, found)
+}
+
+func TestGetActiveBounties(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.NoError(t, k.SetDataBounty(ctx, &types.DataBounty{Id: "1", Domain: "science", Claimed: false}))
+	require.NoError(t, k.SetBountyDomainIndex(ctx, "science", "1"))
+	require.NoError(t, k.SetDataBounty(ctx, &types.DataBounty{Id: "2", Domain: "science", Claimed: true}))
+	require.NoError(t, k.SetBountyDomainIndex(ctx, "science", "2"))
+	require.NoError(t, k.SetDataBounty(ctx, &types.DataBounty{Id: "3", Domain: "tech", Claimed: false}))
+	require.NoError(t, k.SetBountyDomainIndex(ctx, "tech", "3"))
+	bounties := k.GetActiveBounties(ctx, "science")
+	require.Len(t, bounties, 1)
+	require.Equal(t, "1", bounties[0].Id)
+}
+
+func TestNextBountyID(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.Equal(t, "1", k.NextBountyID(ctx))
+	require.Equal(t, "2", k.NextBountyID(ctx))
+	require.Equal(t, "3", k.NextBountyID(ctx))
+}
+
+// ─── ScrapedSource CRUD ─────────────────────────────────────────────────────
+
+func TestSetGetScrapedSource(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	entry := &types.ScrapedSourceEntry{Id: "reddit/science", Platform: "reddit", Domain: "science", NoveltyPenalty: 200000}
+	require.NoError(t, k.SetScrapedSource(ctx, entry))
+	got, found := k.GetScrapedSource(ctx, "reddit/science")
+	require.True(t, found)
+	require.Equal(t, uint64(200000), got.NoveltyPenalty)
+	_, found = k.GetScrapedSource(ctx, "nonexistent")
+	require.False(t, found)
+}
+
+func TestDeleteScrapedSource(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.NoError(t, k.SetScrapedSource(ctx, &types.ScrapedSourceEntry{Id: "reddit/science"}))
+	require.NoError(t, k.DeleteScrapedSource(ctx, "reddit/science"))
+	_, found := k.GetScrapedSource(ctx, "reddit/science")
+	require.False(t, found)
+}
+
+func TestGetScrapedSourcePenalty(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.NoError(t, k.SetScrapedSource(ctx, &types.ScrapedSourceEntry{
+		Id: "stackoverflow/technology", Platform: "stackoverflow", Domain: "technology", NoveltyPenalty: 300000,
+	}))
+	require.Equal(t, uint64(300000), k.GetScrapedSourcePenalty(ctx, "stackoverflow", "technology"))
+	require.Equal(t, uint64(0), k.GetScrapedSourcePenalty(ctx, "unknown", "technology"))
+}
+
+func TestIterateScrapedSources(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.NoError(t, k.SetScrapedSource(ctx, &types.ScrapedSourceEntry{Id: "reddit/science"}))
+	require.NoError(t, k.SetScrapedSource(ctx, &types.ScrapedSourceEntry{Id: "stackoverflow/tech"}))
+	var count int
+	k.IterateScrapedSources(ctx, func(_ *types.ScrapedSourceEntry) bool { count++; return false })
+	require.Equal(t, 2, count)
+}
