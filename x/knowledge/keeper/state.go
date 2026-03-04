@@ -406,6 +406,103 @@ func (k Keeper) GetSamplesByThread(ctx context.Context, threadID string) []strin
 	return ids
 }
 
+// ─── Sample iteration ───────────────────────────────────────────────────────
+
+func (k Keeper) IterateSamples(ctx context.Context, cb func(sample *types.Sample) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.SampleKeyPrefix, prefixEndBytes(types.SampleKeyPrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var sample types.Sample
+		if err := proto.Unmarshal(iter.Value(), &sample); err != nil {
+			continue
+		}
+		if cb(&sample) {
+			break
+		}
+	}
+}
+
+// ─── Niche index ────────────────────────────────────────────────────────────
+
+func (k Keeper) SetNicheIndex(ctx context.Context, nicheKey, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.NicheIndexKey(nicheKey, sampleID), []byte{0x01})
+}
+
+func (k Keeper) DeleteNicheIndex(ctx context.Context, nicheKey, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.NicheIndexKey(nicheKey, sampleID))
+}
+
+func (k Keeper) GetSamplesByNiche(ctx context.Context, nicheKey string) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.NicheIndexByNichePrefix(nicheKey)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var ids []string
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		id := string(key[len(prefix):])
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// ─── At-risk sample index ───────────────────────────────────────────────────
+
+func (k Keeper) SetAtRiskIndex(ctx context.Context, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.AtRiskSampleKey(sampleID), []byte{0x01})
+}
+
+func (k Keeper) DeleteAtRiskIndex(ctx context.Context, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.AtRiskSampleKey(sampleID))
+}
+
+func (k Keeper) IterateAtRiskSamples(ctx context.Context, cb func(sampleID string) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.AtRiskSampleIndexPrefix
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		id := string(iter.Key()[len(prefix):])
+		if cb(id) {
+			break
+		}
+	}
+}
+
+// ─── Topic saturation counters ──────────────────────────────────────────────
+
+func (k Keeper) IncrementTopicCount(ctx context.Context, domain, topic string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	key := types.TopicSaturationKey(domain, topic)
+	current := k.GetTopicCount(ctx, domain, topic)
+	next := make([]byte, 8)
+	binary.BigEndian.PutUint64(next, current+1)
+	return store.Set(key, next)
+}
+
+func (k Keeper) GetTopicCount(ctx context.Context, domain, topic string) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.TopicSaturationKey(domain, topic))
+	if err != nil || len(bz) != 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
 // ─── Store helpers ───────────────────────────────────────────────────────────
 
 func prefixEndBytes(pfx []byte) []byte {

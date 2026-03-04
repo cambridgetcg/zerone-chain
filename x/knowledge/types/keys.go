@@ -141,6 +141,8 @@ var (
 	PruningQueuePrefix               = []byte{0xa3}
 	VerifierConformityPrefix         = []byte{0xa4}
 	ValidatorParticipationPrefix     = []byte{0xa5}
+	TopicSaturationPrefix            = []byte{0xa6} // domain/topic → uint64 count
+	AtRiskSampleIndexPrefix          = []byte{0xa7} // sampleID → exists (at-risk samples)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -290,6 +292,18 @@ func QueryReceiptKey(rater, sampleID string) []byte {
 	key := append(append([]byte{}, QueryReceiptPrefix...), []byte(rater)...)
 	key = append(key, '/')
 	return append(key, []byte(sampleID)...)
+}
+
+// TopicSaturationKey returns the key for a topic's sample count.
+func TopicSaturationKey(domain, topic string) []byte {
+	key := append(append([]byte{}, TopicSaturationPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(topic)...)
+}
+
+// AtRiskSampleKey returns the index key for an at-risk sample.
+func AtRiskSampleKey(sampleID string) []byte {
+	return append(append([]byte{}, AtRiskSampleIndexPrefix...), []byte(sampleID)...)
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────
