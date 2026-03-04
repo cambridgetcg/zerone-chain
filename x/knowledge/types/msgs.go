@@ -224,3 +224,22 @@ func (m *MsgEndorseDomainProposal) ValidateBasic() error {
 	}
 	return nil
 }
+
+// ValidateBasic performs stateless validation for MsgReportDemand.
+func (m *MsgReportDemand) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Reporter); err != nil {
+		return fmt.Errorf("invalid reporter address: %w", err)
+	}
+	if len(m.Reports) == 0 {
+		return ErrInvalidSubmission.Wrap("reports must not be empty")
+	}
+	for i, r := range m.Reports {
+		if len(r.Domain) == 0 {
+			return ErrInvalidDomain.Wrapf("report[%d]: domain must not be empty", i)
+		}
+		if len(r.Subject) == 0 {
+			return ErrInvalidSubmission.Wrapf("report[%d]: subject must not be empty", i)
+		}
+	}
+	return nil
+}

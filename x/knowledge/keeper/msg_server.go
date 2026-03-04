@@ -71,8 +71,8 @@ func (m msgServer) AccessSample(_ context.Context, _ *types.MsgAccessSample) (*t
 	return nil, status.Error(codes.Unimplemented, "AccessSample not implemented (R37)")
 }
 
-func (m msgServer) ReportDemand(_ context.Context, _ *types.MsgReportDemand) (*types.MsgReportDemandResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "ReportDemand not implemented (R37)")
+func (m msgServer) ReportDemand(ctx context.Context, msg *types.MsgReportDemand) (*types.MsgReportDemandResponse, error) {
+	return m.keeper.ReportDemand(ctx, msg)
 }
 
 func (m msgServer) FundBounty(_ context.Context, _ *types.MsgFundBounty) (*types.MsgFundBountyResponse, error) {
