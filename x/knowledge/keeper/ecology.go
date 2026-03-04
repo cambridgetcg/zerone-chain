@@ -91,6 +91,9 @@ func (k Keeper) DecayEnergy(ctx context.Context, sample *types.Sample, params *t
 	if sample.Energy == 0 {
 		return
 	}
+	if params.EnergyDecayRate == 0 {
+		return
+	}
 	decay := sample.Energy * params.EnergyDecayRate / 1_000_000
 	if decay == 0 {
 		decay = 1

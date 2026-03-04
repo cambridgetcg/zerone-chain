@@ -854,3 +854,179 @@ func TestEcologyEpoch_UpdatesFitness(t *testing.T) {
 		t.Fatal("expected fitness score to be computed")
 	}
 }
+
+// ─── Edge Case Tests ────────────────────────────────────────────────────────
+
+func TestDecayEnergy_ZeroDecayRate(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	params.EnergyDecayRate = 0
+
+	sample := &types.Sample{Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	k.DecayEnergy(ctx, sample, &params)
+	if sample.Energy != 1_000_000 {
+		t.Fatalf("expected no decay with rate=0, got %d", sample.Energy)
+	}
+}
+
+func TestDecayEnergy_MaxDecayRate(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	params.EnergyDecayRate = 1_000_000 // 100%
+
+	sample := &types.Sample{Id: "1", Energy: 500_000, EnergyCap: 1_000_000, Content: "x"}
+	_ = k.SetSample(ctx, sample)
+
+	k.DecayEnergy(ctx, sample, &params)
+	if sample.Energy != 0 {
+		t.Fatalf("expected 0 with 100%% decay, got %d", sample.Energy)
+	}
+}
+
+func TestComputeSampleFitness_EmptyRevenue(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{
+		QualityScore: 500_000,
+		TotalRevenue: "",
+	}
+	fitness := k.ComputeSampleFitness(ctx, sample, &params)
+	if fitness != 125_000 {
+		t.Fatalf("expected 125000, got %d", fitness)
+	}
+}
+
+func TestComputeNicheKey_Length(t *testing.T) {
+	key := keeper.ComputeNicheKey("a", types.SampleType_SAMPLE_TYPE_UNSPECIFIED, "b")
+	if len(key) != 16 {
+		t.Fatalf("expected 16 char hex string, got %d: %s", len(key), key)
+	}
+}
+
+func TestRestoreEnergyOnAccess_ClearsAtRiskIndex(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{
+		Id: "1", Energy: 0, EnergyCap: 1_000_000,
+		AtRiskSinceEpoch: 42, Content: "x",
+	}
+	_ = k.SetSample(ctx, sample)
+	_ = k.SetAtRiskIndex(ctx, "1")
+
+	k.RestoreEnergyOnAccess(ctx, sample, &params)
+
+	if sample.AtRiskSinceEpoch != 0 {
+		t.Fatal("at-risk should be cleared on access")
+	}
+	if sample.Energy != params.EnergyPerAccess {
+		t.Fatalf("expected %d, got %d", params.EnergyPerAccess, sample.Energy)
+	}
+}
+
+func TestPruneSamples_NoAtRiskSamples(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	// Should not panic when no at-risk samples exist
+	k.PruneSamples(ctx, 100, &params)
+}
+
+func TestComputeCompetitionTax_VeryLargeNiche(t *testing.T) {
+	tax := keeper.ComputeCompetitionTax(10000, 50)
+	if tax != 500_000 {
+		t.Fatalf("expected capped at 500,000, got %d", tax)
+	}
+}
+
+func TestRunEcologyEpoch_SkipsPrunedSamples(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_PRUNED, Content: "",
+		TotalRevenue: "0",
+	})
+
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	k.RunEcologyEpoch(ctx, 1)
+
+	s, _ := k.GetSample(ctx, "1")
+	if s.Energy != 1_000_000 {
+		t.Fatalf("expected pruned sample energy unchanged, got %d", s.Energy)
+	}
+}
+
+func TestRunEcologyEpoch_SkipsRejectedSamples(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Energy: 1_000_000, EnergyCap: 1_000_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_REJECTED, Content: "",
+		TotalRevenue: "0",
+	})
+
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	k.RunEcologyEpoch(ctx, 1)
+
+	s, _ := k.GetSample(ctx, "1")
+	if s.Energy != 1_000_000 {
+		t.Fatalf("expected rejected sample energy unchanged, got %d", s.Energy)
+	}
+}
+
+// ─── Full Lifecycle Test ────────────────────────────────────────────────────
+
+func TestFullEcologyLifecycle(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+	_ = k.SetParams(ctx, &params)
+
+	// 1. Create sample with full energy
+	sample := &types.Sample{
+		Id: "lifecycle", Content: "test lifecycle", Energy: keeper.DefaultEnergyCap,
+		EnergyCap: keeper.DefaultEnergyCap, QualityScore: 800_000, NoveltyScore: 600_000,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD, TotalRevenue: "0",
+	}
+	_ = k.SetSample(ctx, sample)
+
+	// 2. Run ecology — energy should decay
+	k.RunEcologyEpoch(ctx, 1)
+	s, _ := k.GetSample(ctx, "lifecycle")
+	if s.Energy >= keeper.DefaultEnergyCap {
+		t.Fatal("energy should have decayed")
+	}
+	if s.FitnessScore == 0 {
+		t.Fatal("fitness should be computed")
+	}
+
+	// 3. Run many epochs without access — energy drops to 0
+	// At 5% multiplicative decay with min-decay-of-1, ~231 epochs to reach 0 from 1M.
+	for epoch := uint64(2); epoch <= 300; epoch++ {
+		k.RunEcologyEpoch(ctx, epoch)
+	}
+
+	s, _ = k.GetSample(ctx, "lifecycle")
+	if s.Energy != 0 {
+		t.Fatalf("expected energy 0 after many epochs, got %d", s.Energy)
+	}
+	if s.AtRiskSinceEpoch == 0 {
+		t.Fatal("expected sample to be at-risk")
+	}
+
+	// 4. Access restores energy
+	k.RestoreEnergyOnAccess(ctx, s, &params)
+	_ = k.SetSample(ctx, s)
+	if s.Energy == 0 {
+		t.Fatal("expected energy restored after access")
+	}
+	if s.AtRiskSinceEpoch != 0 {
+		t.Fatal("expected at-risk cleared after access")
+	}
+}
