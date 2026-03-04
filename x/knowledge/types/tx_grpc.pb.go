@@ -20,24 +20,26 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Msg_SubmitData_FullMethodName              = "/zerone.knowledge.v1.Msg/SubmitData"
+	Msg_SubmitThread_FullMethodName            = "/zerone.knowledge.v1.Msg/SubmitThread"
 	Msg_SubmitCommitment_FullMethodName        = "/zerone.knowledge.v1.Msg/SubmitCommitment"
 	Msg_SubmitReveal_FullMethodName            = "/zerone.knowledge.v1.Msg/SubmitReveal"
 	Msg_ContestSample_FullMethodName           = "/zerone.knowledge.v1.Msg/ContestSample"
-	Msg_AddSample_FullMethodName               = "/zerone.knowledge.v1.Msg/AddSample"
 	Msg_SponsorSample_FullMethodName           = "/zerone.knowledge.v1.Msg/SponsorSample"
 	Msg_ProposeDomain_FullMethodName           = "/zerone.knowledge.v1.Msg/ProposeDomain"
 	Msg_EndorseDomainProposal_FullMethodName   = "/zerone.knowledge.v1.Msg/EndorseDomainProposal"
-	Msg_ChallengeDomainProposal_FullMethodName = "/zerone.knowledge.v1.Msg/ChallengeDomainProposal"
-	Msg_RegisterStratum_FullMethodName         = "/zerone.knowledge.v1.Msg/RegisterStratum"
+	Msg_CreateDataset_FullMethodName           = "/zerone.knowledge.v1.Msg/CreateDataset"
+	Msg_AccessDataset_FullMethodName           = "/zerone.knowledge.v1.Msg/AccessDataset"
+	Msg_AccessSample_FullMethodName            = "/zerone.knowledge.v1.Msg/AccessSample"
+	Msg_ReportDemand_FullMethodName            = "/zerone.knowledge.v1.Msg/ReportDemand"
+	Msg_FundBounty_FullMethodName              = "/zerone.knowledge.v1.Msg/FundBounty"
+	Msg_RateSample_FullMethodName              = "/zerone.knowledge.v1.Msg/RateSample"
 	Msg_UpdateParams_FullMethodName            = "/zerone.knowledge.v1.Msg/UpdateParams"
-	Msg_UpdateExtendedParams_FullMethodName    = "/zerone.knowledge.v1.Msg/UpdateExtendedParams"
+	Msg_AddScrapedSource_FullMethodName        = "/zerone.knowledge.v1.Msg/AddScrapedSource"
+	Msg_RemoveScrapedSource_FullMethodName     = "/zerone.knowledge.v1.Msg/RemoveScrapedSource"
 	Msg_ProposeResearchFund_FullMethodName     = "/zerone.knowledge.v1.Msg/ProposeResearchFund"
 	Msg_VoteResearchProposal_FullMethodName    = "/zerone.knowledge.v1.Msg/VoteResearchProposal"
 	Msg_ExecuteResearchProposal_FullMethodName = "/zerone.knowledge.v1.Msg/ExecuteResearchProposal"
-	Msg_AddScrapedSource_FullMethodName        = "/zerone.knowledge.v1.Msg/AddScrapedSource"
-	Msg_RemoveScrapedSource_FullMethodName     = "/zerone.knowledge.v1.Msg/RemoveScrapedSource"
-	Msg_ReportDemand_FullMethodName            = "/zerone.knowledge.v1.Msg/ReportDemand"
-	Msg_RateSample_FullMethodName              = "/zerone.knowledge.v1.Msg/RateSample"
+	Msg_AddSample_FullMethodName               = "/zerone.knowledge.v1.Msg/AddSample"
 )
 
 // MsgClient is the client API for Msg service.
@@ -46,44 +48,40 @@ const (
 //
 // Msg defines the knowledge module's transaction service.
 type MsgClient interface {
-	// SubmitData submits a new training data submission for quality validation.
+	// SubmitData submits discourse for quality validation.
 	SubmitData(ctx context.Context, in *MsgSubmitData, opts ...grpc.CallOption) (*MsgSubmitDataResponse, error)
-	// SubmitCommitment submits a blinded commitment during the commit phase.
+	// SubmitThread submits a complete conversation thread (batch).
+	SubmitThread(ctx context.Context, in *MsgSubmitThread, opts ...grpc.CallOption) (*MsgSubmitThreadResponse, error)
+	// SubmitCommitment submits a blinded quality score during commit phase.
 	SubmitCommitment(ctx context.Context, in *MsgSubmitCommitment, opts ...grpc.CallOption) (*MsgSubmitCommitmentResponse, error)
-	// SubmitReveal reveals a validator's quality vote during the reveal phase.
+	// SubmitReveal reveals a validator's quality scores during reveal phase.
 	SubmitReveal(ctx context.Context, in *MsgSubmitReveal, opts ...grpc.CallOption) (*MsgSubmitRevealResponse, error)
-	// ContestSample challenges a validated sample and opens a new quality round.
+	// ContestSample disputes a validated sample (consent, quality, duplication).
 	ContestSample(ctx context.Context, in *MsgContestSample, opts ...grpc.CallOption) (*MsgContestSampleResponse, error)
-	// AddSample governance-creates a sample (authority-gated).
-	AddSample(ctx context.Context, in *MsgAddSample, opts ...grpc.CallOption) (*MsgAddSampleResponse, error)
 	// SponsorSample funds a sample to prevent it from being pruned.
 	SponsorSample(ctx context.Context, in *MsgSponsorSample, opts ...grpc.CallOption) (*MsgSponsorSampleResponse, error)
-	// ProposeDomain proposes a new data domain.
 	ProposeDomain(ctx context.Context, in *MsgProposeDomain, opts ...grpc.CallOption) (*MsgProposeDomainResponse, error)
-	// EndorseDomainProposal endorses a pending domain proposal.
 	EndorseDomainProposal(ctx context.Context, in *MsgEndorseDomainProposal, opts ...grpc.CallOption) (*MsgEndorseDomainProposalResponse, error)
-	// ChallengeDomainProposal challenges a pending domain proposal.
-	ChallengeDomainProposal(ctx context.Context, in *MsgChallengeDomainProposal, opts ...grpc.CallOption) (*MsgChallengeDomainProposalResponse, error)
-	// RegisterStratum registers a new data stratum (authority-gated).
-	RegisterStratum(ctx context.Context, in *MsgRegisterStratum, opts ...grpc.CallOption) (*MsgRegisterStratumResponse, error)
-	// UpdateParams updates module parameters. Governance authority only.
-	UpdateParams(ctx context.Context, in *MsgUpdateParams, opts ...grpc.CallOption) (*MsgUpdateParamsResponse, error)
-	// UpdateExtendedParams updates the JSON-encoded extended parameters.
-	UpdateExtendedParams(ctx context.Context, in *MsgUpdateExtendedParams, opts ...grpc.CallOption) (*MsgUpdateExtendedParamsResponse, error)
-	// ProposeResearchFund proposes a disbursement from the research fund.
-	ProposeResearchFund(ctx context.Context, in *MsgProposeResearchFund, opts ...grpc.CallOption) (*MsgProposeResearchFundResponse, error)
-	// VoteResearchProposal votes on a research fund proposal.
-	VoteResearchProposal(ctx context.Context, in *MsgVoteResearchProposal, opts ...grpc.CallOption) (*MsgVoteResearchProposalResponse, error)
-	// ExecuteResearchProposal executes an approved research fund proposal.
-	ExecuteResearchProposal(ctx context.Context, in *MsgExecuteResearchProposal, opts ...grpc.CallOption) (*MsgExecuteResearchProposalResponse, error)
-	// AddScrapedSource adds an entry to the scraped source registry (authority-only).
-	AddScrapedSource(ctx context.Context, in *MsgAddScrapedSource, opts ...grpc.CallOption) (*MsgAddScrapedSourceResponse, error)
-	// RemoveScrapedSource removes an entry from the scraped source registry (authority-only).
-	RemoveScrapedSource(ctx context.Context, in *MsgRemoveScrapedSource, opts ...grpc.CallOption) (*MsgRemoveScrapedSourceResponse, error)
-	// ReportDemand reports training data demand (authorized reporters only).
+	// CreateDataset creates a curated dataset definition.
+	CreateDataset(ctx context.Context, in *MsgCreateDataset, opts ...grpc.CallOption) (*MsgCreateDatasetResponse, error)
+	// AccessDataset records a consumer accessing a dataset (triggers payment).
+	AccessDataset(ctx context.Context, in *MsgAccessDataset, opts ...grpc.CallOption) (*MsgAccessDatasetResponse, error)
+	// AccessSample records individual sample access (triggers micro-payment).
+	AccessSample(ctx context.Context, in *MsgAccessSample, opts ...grpc.CallOption) (*MsgAccessSampleResponse, error)
+	// ReportDemand reports training data demand from AI labs.
 	ReportDemand(ctx context.Context, in *MsgReportDemand, opts ...grpc.CallOption) (*MsgReportDemandResponse, error)
-	// RateSample allows a consumer to provide quality feedback on a sample.
+	// FundBounty creates or adds to a data collection bounty.
+	FundBounty(ctx context.Context, in *MsgFundBounty, opts ...grpc.CallOption) (*MsgFundBountyResponse, error)
+	// RateSample provides downstream quality feedback on a sample.
 	RateSample(ctx context.Context, in *MsgRateSample, opts ...grpc.CallOption) (*MsgRateSampleResponse, error)
+	UpdateParams(ctx context.Context, in *MsgUpdateParams, opts ...grpc.CallOption) (*MsgUpdateParamsResponse, error)
+	AddScrapedSource(ctx context.Context, in *MsgAddScrapedSource, opts ...grpc.CallOption) (*MsgAddScrapedSourceResponse, error)
+	RemoveScrapedSource(ctx context.Context, in *MsgRemoveScrapedSource, opts ...grpc.CallOption) (*MsgRemoveScrapedSourceResponse, error)
+	ProposeResearchFund(ctx context.Context, in *MsgProposeResearchFund, opts ...grpc.CallOption) (*MsgProposeResearchFundResponse, error)
+	VoteResearchProposal(ctx context.Context, in *MsgVoteResearchProposal, opts ...grpc.CallOption) (*MsgVoteResearchProposalResponse, error)
+	ExecuteResearchProposal(ctx context.Context, in *MsgExecuteResearchProposal, opts ...grpc.CallOption) (*MsgExecuteResearchProposalResponse, error)
+	// AddSample governance-creates a sample (authority-gated, for seed data).
+	AddSample(ctx context.Context, in *MsgAddSample, opts ...grpc.CallOption) (*MsgAddSampleResponse, error)
 }
 
 type msgClient struct {
@@ -98,6 +96,16 @@ func (c *msgClient) SubmitData(ctx context.Context, in *MsgSubmitData, opts ...g
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MsgSubmitDataResponse)
 	err := c.cc.Invoke(ctx, Msg_SubmitData_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) SubmitThread(ctx context.Context, in *MsgSubmitThread, opts ...grpc.CallOption) (*MsgSubmitThreadResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgSubmitThreadResponse)
+	err := c.cc.Invoke(ctx, Msg_SubmitThread_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -134,16 +142,6 @@ func (c *msgClient) ContestSample(ctx context.Context, in *MsgContestSample, opt
 	return out, nil
 }
 
-func (c *msgClient) AddSample(ctx context.Context, in *MsgAddSample, opts ...grpc.CallOption) (*MsgAddSampleResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgAddSampleResponse)
-	err := c.cc.Invoke(ctx, Msg_AddSample_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *msgClient) SponsorSample(ctx context.Context, in *MsgSponsorSample, opts ...grpc.CallOption) (*MsgSponsorSampleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MsgSponsorSampleResponse)
@@ -174,20 +172,60 @@ func (c *msgClient) EndorseDomainProposal(ctx context.Context, in *MsgEndorseDom
 	return out, nil
 }
 
-func (c *msgClient) ChallengeDomainProposal(ctx context.Context, in *MsgChallengeDomainProposal, opts ...grpc.CallOption) (*MsgChallengeDomainProposalResponse, error) {
+func (c *msgClient) CreateDataset(ctx context.Context, in *MsgCreateDataset, opts ...grpc.CallOption) (*MsgCreateDatasetResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgChallengeDomainProposalResponse)
-	err := c.cc.Invoke(ctx, Msg_ChallengeDomainProposal_FullMethodName, in, out, cOpts...)
+	out := new(MsgCreateDatasetResponse)
+	err := c.cc.Invoke(ctx, Msg_CreateDataset_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *msgClient) RegisterStratum(ctx context.Context, in *MsgRegisterStratum, opts ...grpc.CallOption) (*MsgRegisterStratumResponse, error) {
+func (c *msgClient) AccessDataset(ctx context.Context, in *MsgAccessDataset, opts ...grpc.CallOption) (*MsgAccessDatasetResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgRegisterStratumResponse)
-	err := c.cc.Invoke(ctx, Msg_RegisterStratum_FullMethodName, in, out, cOpts...)
+	out := new(MsgAccessDatasetResponse)
+	err := c.cc.Invoke(ctx, Msg_AccessDataset_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) AccessSample(ctx context.Context, in *MsgAccessSample, opts ...grpc.CallOption) (*MsgAccessSampleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAccessSampleResponse)
+	err := c.cc.Invoke(ctx, Msg_AccessSample_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) ReportDemand(ctx context.Context, in *MsgReportDemand, opts ...grpc.CallOption) (*MsgReportDemandResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgReportDemandResponse)
+	err := c.cc.Invoke(ctx, Msg_ReportDemand_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) FundBounty(ctx context.Context, in *MsgFundBounty, opts ...grpc.CallOption) (*MsgFundBountyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgFundBountyResponse)
+	err := c.cc.Invoke(ctx, Msg_FundBounty_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) RateSample(ctx context.Context, in *MsgRateSample, opts ...grpc.CallOption) (*MsgRateSampleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgRateSampleResponse)
+	err := c.cc.Invoke(ctx, Msg_RateSample_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -204,10 +242,20 @@ func (c *msgClient) UpdateParams(ctx context.Context, in *MsgUpdateParams, opts 
 	return out, nil
 }
 
-func (c *msgClient) UpdateExtendedParams(ctx context.Context, in *MsgUpdateExtendedParams, opts ...grpc.CallOption) (*MsgUpdateExtendedParamsResponse, error) {
+func (c *msgClient) AddScrapedSource(ctx context.Context, in *MsgAddScrapedSource, opts ...grpc.CallOption) (*MsgAddScrapedSourceResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgUpdateExtendedParamsResponse)
-	err := c.cc.Invoke(ctx, Msg_UpdateExtendedParams_FullMethodName, in, out, cOpts...)
+	out := new(MsgAddScrapedSourceResponse)
+	err := c.cc.Invoke(ctx, Msg_AddScrapedSource_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) RemoveScrapedSource(ctx context.Context, in *MsgRemoveScrapedSource, opts ...grpc.CallOption) (*MsgRemoveScrapedSourceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgRemoveScrapedSourceResponse)
+	err := c.cc.Invoke(ctx, Msg_RemoveScrapedSource_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -244,40 +292,10 @@ func (c *msgClient) ExecuteResearchProposal(ctx context.Context, in *MsgExecuteR
 	return out, nil
 }
 
-func (c *msgClient) AddScrapedSource(ctx context.Context, in *MsgAddScrapedSource, opts ...grpc.CallOption) (*MsgAddScrapedSourceResponse, error) {
+func (c *msgClient) AddSample(ctx context.Context, in *MsgAddSample, opts ...grpc.CallOption) (*MsgAddSampleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgAddScrapedSourceResponse)
-	err := c.cc.Invoke(ctx, Msg_AddScrapedSource_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *msgClient) RemoveScrapedSource(ctx context.Context, in *MsgRemoveScrapedSource, opts ...grpc.CallOption) (*MsgRemoveScrapedSourceResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgRemoveScrapedSourceResponse)
-	err := c.cc.Invoke(ctx, Msg_RemoveScrapedSource_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *msgClient) ReportDemand(ctx context.Context, in *MsgReportDemand, opts ...grpc.CallOption) (*MsgReportDemandResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgReportDemandResponse)
-	err := c.cc.Invoke(ctx, Msg_ReportDemand_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *msgClient) RateSample(ctx context.Context, in *MsgRateSample, opts ...grpc.CallOption) (*MsgRateSampleResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MsgRateSampleResponse)
-	err := c.cc.Invoke(ctx, Msg_RateSample_FullMethodName, in, out, cOpts...)
+	out := new(MsgAddSampleResponse)
+	err := c.cc.Invoke(ctx, Msg_AddSample_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -290,44 +308,40 @@ func (c *msgClient) RateSample(ctx context.Context, in *MsgRateSample, opts ...g
 //
 // Msg defines the knowledge module's transaction service.
 type MsgServer interface {
-	// SubmitData submits a new training data submission for quality validation.
+	// SubmitData submits discourse for quality validation.
 	SubmitData(context.Context, *MsgSubmitData) (*MsgSubmitDataResponse, error)
-	// SubmitCommitment submits a blinded commitment during the commit phase.
+	// SubmitThread submits a complete conversation thread (batch).
+	SubmitThread(context.Context, *MsgSubmitThread) (*MsgSubmitThreadResponse, error)
+	// SubmitCommitment submits a blinded quality score during commit phase.
 	SubmitCommitment(context.Context, *MsgSubmitCommitment) (*MsgSubmitCommitmentResponse, error)
-	// SubmitReveal reveals a validator's quality vote during the reveal phase.
+	// SubmitReveal reveals a validator's quality scores during reveal phase.
 	SubmitReveal(context.Context, *MsgSubmitReveal) (*MsgSubmitRevealResponse, error)
-	// ContestSample challenges a validated sample and opens a new quality round.
+	// ContestSample disputes a validated sample (consent, quality, duplication).
 	ContestSample(context.Context, *MsgContestSample) (*MsgContestSampleResponse, error)
-	// AddSample governance-creates a sample (authority-gated).
-	AddSample(context.Context, *MsgAddSample) (*MsgAddSampleResponse, error)
 	// SponsorSample funds a sample to prevent it from being pruned.
 	SponsorSample(context.Context, *MsgSponsorSample) (*MsgSponsorSampleResponse, error)
-	// ProposeDomain proposes a new data domain.
 	ProposeDomain(context.Context, *MsgProposeDomain) (*MsgProposeDomainResponse, error)
-	// EndorseDomainProposal endorses a pending domain proposal.
 	EndorseDomainProposal(context.Context, *MsgEndorseDomainProposal) (*MsgEndorseDomainProposalResponse, error)
-	// ChallengeDomainProposal challenges a pending domain proposal.
-	ChallengeDomainProposal(context.Context, *MsgChallengeDomainProposal) (*MsgChallengeDomainProposalResponse, error)
-	// RegisterStratum registers a new data stratum (authority-gated).
-	RegisterStratum(context.Context, *MsgRegisterStratum) (*MsgRegisterStratumResponse, error)
-	// UpdateParams updates module parameters. Governance authority only.
-	UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error)
-	// UpdateExtendedParams updates the JSON-encoded extended parameters.
-	UpdateExtendedParams(context.Context, *MsgUpdateExtendedParams) (*MsgUpdateExtendedParamsResponse, error)
-	// ProposeResearchFund proposes a disbursement from the research fund.
-	ProposeResearchFund(context.Context, *MsgProposeResearchFund) (*MsgProposeResearchFundResponse, error)
-	// VoteResearchProposal votes on a research fund proposal.
-	VoteResearchProposal(context.Context, *MsgVoteResearchProposal) (*MsgVoteResearchProposalResponse, error)
-	// ExecuteResearchProposal executes an approved research fund proposal.
-	ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error)
-	// AddScrapedSource adds an entry to the scraped source registry (authority-only).
-	AddScrapedSource(context.Context, *MsgAddScrapedSource) (*MsgAddScrapedSourceResponse, error)
-	// RemoveScrapedSource removes an entry from the scraped source registry (authority-only).
-	RemoveScrapedSource(context.Context, *MsgRemoveScrapedSource) (*MsgRemoveScrapedSourceResponse, error)
-	// ReportDemand reports training data demand (authorized reporters only).
+	// CreateDataset creates a curated dataset definition.
+	CreateDataset(context.Context, *MsgCreateDataset) (*MsgCreateDatasetResponse, error)
+	// AccessDataset records a consumer accessing a dataset (triggers payment).
+	AccessDataset(context.Context, *MsgAccessDataset) (*MsgAccessDatasetResponse, error)
+	// AccessSample records individual sample access (triggers micro-payment).
+	AccessSample(context.Context, *MsgAccessSample) (*MsgAccessSampleResponse, error)
+	// ReportDemand reports training data demand from AI labs.
 	ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error)
-	// RateSample allows a consumer to provide quality feedback on a sample.
+	// FundBounty creates or adds to a data collection bounty.
+	FundBounty(context.Context, *MsgFundBounty) (*MsgFundBountyResponse, error)
+	// RateSample provides downstream quality feedback on a sample.
 	RateSample(context.Context, *MsgRateSample) (*MsgRateSampleResponse, error)
+	UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error)
+	AddScrapedSource(context.Context, *MsgAddScrapedSource) (*MsgAddScrapedSourceResponse, error)
+	RemoveScrapedSource(context.Context, *MsgRemoveScrapedSource) (*MsgRemoveScrapedSourceResponse, error)
+	ProposeResearchFund(context.Context, *MsgProposeResearchFund) (*MsgProposeResearchFundResponse, error)
+	VoteResearchProposal(context.Context, *MsgVoteResearchProposal) (*MsgVoteResearchProposalResponse, error)
+	ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error)
+	// AddSample governance-creates a sample (authority-gated, for seed data).
+	AddSample(context.Context, *MsgAddSample) (*MsgAddSampleResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -341,6 +355,9 @@ type UnimplementedMsgServer struct{}
 func (UnimplementedMsgServer) SubmitData(context.Context, *MsgSubmitData) (*MsgSubmitDataResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SubmitData not implemented")
 }
+func (UnimplementedMsgServer) SubmitThread(context.Context, *MsgSubmitThread) (*MsgSubmitThreadResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitThread not implemented")
+}
 func (UnimplementedMsgServer) SubmitCommitment(context.Context, *MsgSubmitCommitment) (*MsgSubmitCommitmentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SubmitCommitment not implemented")
 }
@@ -349,9 +366,6 @@ func (UnimplementedMsgServer) SubmitReveal(context.Context, *MsgSubmitReveal) (*
 }
 func (UnimplementedMsgServer) ContestSample(context.Context, *MsgContestSample) (*MsgContestSampleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ContestSample not implemented")
-}
-func (UnimplementedMsgServer) AddSample(context.Context, *MsgAddSample) (*MsgAddSampleResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method AddSample not implemented")
 }
 func (UnimplementedMsgServer) SponsorSample(context.Context, *MsgSponsorSample) (*MsgSponsorSampleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SponsorSample not implemented")
@@ -362,17 +376,32 @@ func (UnimplementedMsgServer) ProposeDomain(context.Context, *MsgProposeDomain) 
 func (UnimplementedMsgServer) EndorseDomainProposal(context.Context, *MsgEndorseDomainProposal) (*MsgEndorseDomainProposalResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method EndorseDomainProposal not implemented")
 }
-func (UnimplementedMsgServer) ChallengeDomainProposal(context.Context, *MsgChallengeDomainProposal) (*MsgChallengeDomainProposalResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ChallengeDomainProposal not implemented")
+func (UnimplementedMsgServer) CreateDataset(context.Context, *MsgCreateDataset) (*MsgCreateDatasetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateDataset not implemented")
 }
-func (UnimplementedMsgServer) RegisterStratum(context.Context, *MsgRegisterStratum) (*MsgRegisterStratumResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RegisterStratum not implemented")
+func (UnimplementedMsgServer) AccessDataset(context.Context, *MsgAccessDataset) (*MsgAccessDatasetResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AccessDataset not implemented")
+}
+func (UnimplementedMsgServer) AccessSample(context.Context, *MsgAccessSample) (*MsgAccessSampleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AccessSample not implemented")
+}
+func (UnimplementedMsgServer) ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ReportDemand not implemented")
+}
+func (UnimplementedMsgServer) FundBounty(context.Context, *MsgFundBounty) (*MsgFundBountyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FundBounty not implemented")
+}
+func (UnimplementedMsgServer) RateSample(context.Context, *MsgRateSample) (*MsgRateSampleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RateSample not implemented")
 }
 func (UnimplementedMsgServer) UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateParams not implemented")
 }
-func (UnimplementedMsgServer) UpdateExtendedParams(context.Context, *MsgUpdateExtendedParams) (*MsgUpdateExtendedParamsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method UpdateExtendedParams not implemented")
+func (UnimplementedMsgServer) AddScrapedSource(context.Context, *MsgAddScrapedSource) (*MsgAddScrapedSourceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddScrapedSource not implemented")
+}
+func (UnimplementedMsgServer) RemoveScrapedSource(context.Context, *MsgRemoveScrapedSource) (*MsgRemoveScrapedSourceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RemoveScrapedSource not implemented")
 }
 func (UnimplementedMsgServer) ProposeResearchFund(context.Context, *MsgProposeResearchFund) (*MsgProposeResearchFundResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ProposeResearchFund not implemented")
@@ -383,17 +412,8 @@ func (UnimplementedMsgServer) VoteResearchProposal(context.Context, *MsgVoteRese
 func (UnimplementedMsgServer) ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExecuteResearchProposal not implemented")
 }
-func (UnimplementedMsgServer) AddScrapedSource(context.Context, *MsgAddScrapedSource) (*MsgAddScrapedSourceResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method AddScrapedSource not implemented")
-}
-func (UnimplementedMsgServer) RemoveScrapedSource(context.Context, *MsgRemoveScrapedSource) (*MsgRemoveScrapedSourceResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RemoveScrapedSource not implemented")
-}
-func (UnimplementedMsgServer) ReportDemand(context.Context, *MsgReportDemand) (*MsgReportDemandResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method ReportDemand not implemented")
-}
-func (UnimplementedMsgServer) RateSample(context.Context, *MsgRateSample) (*MsgRateSampleResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method RateSample not implemented")
+func (UnimplementedMsgServer) AddSample(context.Context, *MsgAddSample) (*MsgAddSampleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AddSample not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -430,6 +450,24 @@ func _Msg_SubmitData_Handler(srv interface{}, ctx context.Context, dec func(inte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MsgServer).SubmitData(ctx, req.(*MsgSubmitData))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_SubmitThread_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgSubmitThread)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).SubmitThread(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_SubmitThread_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).SubmitThread(ctx, req.(*MsgSubmitThread))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -488,24 +526,6 @@ func _Msg_ContestSample_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_AddSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgAddSample)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MsgServer).AddSample(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Msg_AddSample_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).AddSample(ctx, req.(*MsgAddSample))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _Msg_SponsorSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MsgSponsorSample)
 	if err := dec(in); err != nil {
@@ -560,38 +580,110 @@ func _Msg_EndorseDomainProposal_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_ChallengeDomainProposal_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgChallengeDomainProposal)
+func _Msg_CreateDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgCreateDataset)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).ChallengeDomainProposal(ctx, in)
+		return srv.(MsgServer).CreateDataset(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_ChallengeDomainProposal_FullMethodName,
+		FullMethod: Msg_CreateDataset_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).ChallengeDomainProposal(ctx, req.(*MsgChallengeDomainProposal))
+		return srv.(MsgServer).CreateDataset(ctx, req.(*MsgCreateDataset))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_RegisterStratum_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgRegisterStratum)
+func _Msg_AccessDataset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAccessDataset)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).RegisterStratum(ctx, in)
+		return srv.(MsgServer).AccessDataset(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_RegisterStratum_FullMethodName,
+		FullMethod: Msg_AccessDataset_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).RegisterStratum(ctx, req.(*MsgRegisterStratum))
+		return srv.(MsgServer).AccessDataset(ctx, req.(*MsgAccessDataset))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_AccessSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAccessSample)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AccessSample(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AccessSample_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AccessSample(ctx, req.(*MsgAccessSample))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_ReportDemand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgReportDemand)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).ReportDemand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_ReportDemand_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).ReportDemand(ctx, req.(*MsgReportDemand))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_FundBounty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgFundBounty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).FundBounty(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_FundBounty_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).FundBounty(ctx, req.(*MsgFundBounty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_RateSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRateSample)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RateSample(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_RateSample_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RateSample(ctx, req.(*MsgRateSample))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -614,20 +706,38 @@ func _Msg_UpdateParams_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_UpdateExtendedParams_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgUpdateExtendedParams)
+func _Msg_AddScrapedSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAddScrapedSource)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).UpdateExtendedParams(ctx, in)
+		return srv.(MsgServer).AddScrapedSource(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_UpdateExtendedParams_FullMethodName,
+		FullMethod: Msg_AddScrapedSource_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).UpdateExtendedParams(ctx, req.(*MsgUpdateExtendedParams))
+		return srv.(MsgServer).AddScrapedSource(ctx, req.(*MsgAddScrapedSource))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_RemoveScrapedSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRemoveScrapedSource)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RemoveScrapedSource(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_RemoveScrapedSource_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RemoveScrapedSource(ctx, req.(*MsgRemoveScrapedSource))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -686,74 +796,20 @@ func _Msg_ExecuteResearchProposal_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Msg_AddScrapedSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgAddScrapedSource)
+func _Msg_AddSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAddSample)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MsgServer).AddScrapedSource(ctx, in)
+		return srv.(MsgServer).AddSample(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Msg_AddScrapedSource_FullMethodName,
+		FullMethod: Msg_AddSample_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).AddScrapedSource(ctx, req.(*MsgAddScrapedSource))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Msg_RemoveScrapedSource_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgRemoveScrapedSource)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MsgServer).RemoveScrapedSource(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Msg_RemoveScrapedSource_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).RemoveScrapedSource(ctx, req.(*MsgRemoveScrapedSource))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Msg_ReportDemand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgReportDemand)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MsgServer).ReportDemand(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Msg_ReportDemand_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).ReportDemand(ctx, req.(*MsgReportDemand))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Msg_RateSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgRateSample)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MsgServer).RateSample(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Msg_RateSample_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MsgServer).RateSample(ctx, req.(*MsgRateSample))
+		return srv.(MsgServer).AddSample(ctx, req.(*MsgAddSample))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -770,6 +826,10 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Msg_SubmitData_Handler,
 		},
 		{
+			MethodName: "SubmitThread",
+			Handler:    _Msg_SubmitThread_Handler,
+		},
+		{
 			MethodName: "SubmitCommitment",
 			Handler:    _Msg_SubmitCommitment_Handler,
 		},
@@ -780,10 +840,6 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ContestSample",
 			Handler:    _Msg_ContestSample_Handler,
-		},
-		{
-			MethodName: "AddSample",
-			Handler:    _Msg_AddSample_Handler,
 		},
 		{
 			MethodName: "SponsorSample",
@@ -798,20 +854,40 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Msg_EndorseDomainProposal_Handler,
 		},
 		{
-			MethodName: "ChallengeDomainProposal",
-			Handler:    _Msg_ChallengeDomainProposal_Handler,
+			MethodName: "CreateDataset",
+			Handler:    _Msg_CreateDataset_Handler,
 		},
 		{
-			MethodName: "RegisterStratum",
-			Handler:    _Msg_RegisterStratum_Handler,
+			MethodName: "AccessDataset",
+			Handler:    _Msg_AccessDataset_Handler,
+		},
+		{
+			MethodName: "AccessSample",
+			Handler:    _Msg_AccessSample_Handler,
+		},
+		{
+			MethodName: "ReportDemand",
+			Handler:    _Msg_ReportDemand_Handler,
+		},
+		{
+			MethodName: "FundBounty",
+			Handler:    _Msg_FundBounty_Handler,
+		},
+		{
+			MethodName: "RateSample",
+			Handler:    _Msg_RateSample_Handler,
 		},
 		{
 			MethodName: "UpdateParams",
 			Handler:    _Msg_UpdateParams_Handler,
 		},
 		{
-			MethodName: "UpdateExtendedParams",
-			Handler:    _Msg_UpdateExtendedParams_Handler,
+			MethodName: "AddScrapedSource",
+			Handler:    _Msg_AddScrapedSource_Handler,
+		},
+		{
+			MethodName: "RemoveScrapedSource",
+			Handler:    _Msg_RemoveScrapedSource_Handler,
 		},
 		{
 			MethodName: "ProposeResearchFund",
@@ -826,20 +902,8 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Msg_ExecuteResearchProposal_Handler,
 		},
 		{
-			MethodName: "AddScrapedSource",
-			Handler:    _Msg_AddScrapedSource_Handler,
-		},
-		{
-			MethodName: "RemoveScrapedSource",
-			Handler:    _Msg_RemoveScrapedSource_Handler,
-		},
-		{
-			MethodName: "ReportDemand",
-			Handler:    _Msg_ReportDemand_Handler,
-		},
-		{
-			MethodName: "RateSample",
-			Handler:    _Msg_RateSample_Handler,
+			MethodName: "AddSample",
+			Handler:    _Msg_AddSample_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

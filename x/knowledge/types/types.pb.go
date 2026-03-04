@@ -467,6 +467,65 @@ func (DomainStatus) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
+// ContestType classifies the reason for contesting a sample.
+type ContestType int32
+
+const (
+	ContestType_CONTEST_TYPE_UNSPECIFIED ContestType = 0
+	ContestType_CONTEST_TYPE_CONSENT     ContestType = 1 // Consent proof is invalid
+	ContestType_CONTEST_TYPE_QUALITY     ContestType = 2 // Quality was mis-scored
+	ContestType_CONTEST_TYPE_DUPLICATE   ContestType = 3 // Already exists in dataset
+	ContestType_CONTEST_TYPE_TOXIC       ContestType = 4 // Harmful content not labeled
+	ContestType_CONTEST_TYPE_COPYRIGHT   ContestType = 5 // Copyright violation
+)
+
+// Enum value maps for ContestType.
+var (
+	ContestType_name = map[int32]string{
+		0: "CONTEST_TYPE_UNSPECIFIED",
+		1: "CONTEST_TYPE_CONSENT",
+		2: "CONTEST_TYPE_QUALITY",
+		3: "CONTEST_TYPE_DUPLICATE",
+		4: "CONTEST_TYPE_TOXIC",
+		5: "CONTEST_TYPE_COPYRIGHT",
+	}
+	ContestType_value = map[string]int32{
+		"CONTEST_TYPE_UNSPECIFIED": 0,
+		"CONTEST_TYPE_CONSENT":     1,
+		"CONTEST_TYPE_QUALITY":     2,
+		"CONTEST_TYPE_DUPLICATE":   3,
+		"CONTEST_TYPE_TOXIC":       4,
+		"CONTEST_TYPE_COPYRIGHT":   5,
+	}
+)
+
+func (x ContestType) Enum() *ContestType {
+	p := new(ContestType)
+	*p = x
+	return p
+}
+
+func (x ContestType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ContestType) Descriptor() protoreflect.EnumDescriptor {
+	return file_zerone_knowledge_v1_types_proto_enumTypes[7].Descriptor()
+}
+
+func (ContestType) Type() protoreflect.EnumType {
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[7]
+}
+
+func (x ContestType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ContestType.Descriptor instead.
+func (ContestType) EnumDescriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
+}
+
 // ConsentProof records how consent was obtained for using source content.
 type ConsentProof struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
@@ -2602,7 +2661,14 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x19DOMAIN_STATUS_UNSPECIFIED\x10\x00\x12\x18\n" +
 	"\x14DOMAIN_STATUS_ACTIVE\x10\x01\x12\x1c\n" +
 	"\x18DOMAIN_STATUS_DEPRECATED\x10\x02\x12\x1a\n" +
-	"\x16DOMAIN_STATUS_PROPOSED\x10\x03B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
+	"\x16DOMAIN_STATUS_PROPOSED\x10\x03*\xaf\x01\n" +
+	"\vContestType\x12\x1c\n" +
+	"\x18CONTEST_TYPE_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14CONTEST_TYPE_CONSENT\x10\x01\x12\x18\n" +
+	"\x14CONTEST_TYPE_QUALITY\x10\x02\x12\x1a\n" +
+	"\x16CONTEST_TYPE_DUPLICATE\x10\x03\x12\x16\n" +
+	"\x12CONTEST_TYPE_TOXIC\x10\x04\x12\x1a\n" +
+	"\x16CONTEST_TYPE_COPYRIGHT\x10\x05B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
 	file_zerone_knowledge_v1_types_proto_rawDescOnce sync.Once
@@ -2616,7 +2682,7 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_knowledge_v1_types_proto_rawDescData
 }
 
-var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
 var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(SampleType)(0),            // 0: zerone.knowledge.v1.SampleType
@@ -2626,35 +2692,36 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(QualityVerdict)(0),        // 4: zerone.knowledge.v1.QualityVerdict
 	(ConsentType)(0),           // 5: zerone.knowledge.v1.ConsentType
 	(DomainStatus)(0),          // 6: zerone.knowledge.v1.DomainStatus
-	(*ConsentProof)(nil),       // 7: zerone.knowledge.v1.ConsentProof
-	(*Submission)(nil),         // 8: zerone.knowledge.v1.Submission
-	(*Sample)(nil),             // 9: zerone.knowledge.v1.Sample
-	(*QualityVote)(nil),        // 10: zerone.knowledge.v1.QualityVote
-	(*QualityRound)(nil),       // 11: zerone.knowledge.v1.QualityRound
-	(*CommitEntry)(nil),        // 12: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),        // 13: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),           // 14: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),             // 15: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),      // 16: zerone.knowledge.v1.ValidatorInfo
-	(*TrainingDemand)(nil),     // 17: zerone.knowledge.v1.TrainingDemand
-	(*DataBounty)(nil),         // 18: zerone.knowledge.v1.DataBounty
-	(*ScrapedSourceEntry)(nil), // 19: zerone.knowledge.v1.ScrapedSourceEntry
-	(*Dataset)(nil),            // 20: zerone.knowledge.v1.Dataset
-	(*CompletedRoundMeta)(nil), // 21: zerone.knowledge.v1.CompletedRoundMeta
+	(ContestType)(0),           // 7: zerone.knowledge.v1.ContestType
+	(*ConsentProof)(nil),       // 8: zerone.knowledge.v1.ConsentProof
+	(*Submission)(nil),         // 9: zerone.knowledge.v1.Submission
+	(*Sample)(nil),             // 10: zerone.knowledge.v1.Sample
+	(*QualityVote)(nil),        // 11: zerone.knowledge.v1.QualityVote
+	(*QualityRound)(nil),       // 12: zerone.knowledge.v1.QualityRound
+	(*CommitEntry)(nil),        // 13: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),        // 14: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),           // 15: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),             // 16: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),      // 17: zerone.knowledge.v1.ValidatorInfo
+	(*TrainingDemand)(nil),     // 18: zerone.knowledge.v1.TrainingDemand
+	(*DataBounty)(nil),         // 19: zerone.knowledge.v1.DataBounty
+	(*ScrapedSourceEntry)(nil), // 20: zerone.knowledge.v1.ScrapedSourceEntry
+	(*Dataset)(nil),            // 21: zerone.knowledge.v1.Dataset
+	(*CompletedRoundMeta)(nil), // 22: zerone.knowledge.v1.CompletedRoundMeta
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.ConsentProof.type:type_name -> zerone.knowledge.v1.ConsentType
 	0,  // 1: zerone.knowledge.v1.Submission.sample_type:type_name -> zerone.knowledge.v1.SampleType
-	7,  // 2: zerone.knowledge.v1.Submission.consent:type_name -> zerone.knowledge.v1.ConsentProof
+	8,  // 2: zerone.knowledge.v1.Submission.consent:type_name -> zerone.knowledge.v1.ConsentProof
 	2,  // 3: zerone.knowledge.v1.Submission.status:type_name -> zerone.knowledge.v1.SubmissionStatus
 	0,  // 4: zerone.knowledge.v1.Sample.sample_type:type_name -> zerone.knowledge.v1.SampleType
-	7,  // 5: zerone.knowledge.v1.Sample.consent:type_name -> zerone.knowledge.v1.ConsentProof
+	8,  // 5: zerone.knowledge.v1.Sample.consent:type_name -> zerone.knowledge.v1.ConsentProof
 	1,  // 6: zerone.knowledge.v1.Sample.status:type_name -> zerone.knowledge.v1.SampleStatus
 	3,  // 7: zerone.knowledge.v1.QualityRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	12, // 8: zerone.knowledge.v1.QualityRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	13, // 9: zerone.knowledge.v1.QualityRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	13, // 8: zerone.knowledge.v1.QualityRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	14, // 9: zerone.knowledge.v1.QualityRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
 	4,  // 10: zerone.knowledge.v1.QualityRound.verdict:type_name -> zerone.knowledge.v1.QualityVerdict
-	10, // 11: zerone.knowledge.v1.QualityRound.aggregate_scores:type_name -> zerone.knowledge.v1.QualityVote
+	11, // 11: zerone.knowledge.v1.QualityRound.aggregate_scores:type_name -> zerone.knowledge.v1.QualityVote
 	6,  // 12: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
 	0,  // 13: zerone.knowledge.v1.TrainingDemand.preferred_type:type_name -> zerone.knowledge.v1.SampleType
 	0,  // 14: zerone.knowledge.v1.Dataset.filter_type:type_name -> zerone.knowledge.v1.SampleType
@@ -2675,7 +2742,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
-			NumEnums:      7,
+			NumEnums:      8,
 			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
