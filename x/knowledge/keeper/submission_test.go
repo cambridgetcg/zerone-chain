@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -311,4 +312,135 @@ func TestSubmitData_SelfFundedInsufficientFunds(t *testing.T) {
 
 	_, err := k.SubmitData(ctx, msg)
 	require.ErrorIs(t, err, types.ErrInsufficientStake)
+}
+
+// ─── SubmitThread tests ─────────────────────────────────────────────────────
+
+func TestSubmitThread_Success(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	msg := &types.MsgSubmitThread{
+		Submitter: testAddr,
+		ThreadId:  "thread-1",
+		Domain:    "technology",
+		Stake:     "1000000",
+		Items: []*types.MsgSubmitData{
+			{Content: "First message", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: "Second message", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: "Third message", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+		},
+	}
+
+	resp, err := k.SubmitThread(ctx, msg)
+	require.NoError(t, err)
+	require.Len(t, resp.SubmissionIds, 3)
+	require.Equal(t, "thread-1", resp.ThreadId)
+
+	// Verify parent chain linking
+	for i, id := range resp.SubmissionIds {
+		sub, found := k.GetSubmission(ctx, id)
+		require.True(t, found)
+		require.Equal(t, "thread-1", sub.ThreadId)
+		require.Equal(t, "technology", sub.Domain)
+		require.Equal(t, testAddr, sub.Submitter)
+		if i > 0 {
+			require.Equal(t, resp.SubmissionIds[i-1], sub.ParentSubmissionId)
+		} else {
+			require.Empty(t, sub.ParentSubmissionId)
+		}
+	}
+}
+
+func TestSubmitThread_TooLarge(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	items := make([]*types.MsgSubmitData, 21)
+	for i := range items {
+		items[i] = &types.MsgSubmitData{
+			Content:    fmt.Sprintf("item %d", i),
+			SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION,
+			Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		}
+	}
+
+	_, err := k.SubmitThread(ctx, &types.MsgSubmitThread{
+		Submitter: testAddr, ThreadId: "thread-big", Domain: "technology", Stake: "1000000", Items: items,
+	})
+	require.ErrorIs(t, err, types.ErrThreadTooLarge)
+}
+
+func TestSubmitThread_DuplicateInThread(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	_, err := k.SubmitThread(ctx, &types.MsgSubmitThread{
+		Submitter: testAddr, ThreadId: "thread-dup", Domain: "technology", Stake: "1000000",
+		Items: []*types.MsgSubmitData{
+			{Content: "same content", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: "same content", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+		},
+	})
+	require.ErrorIs(t, err, types.ErrDuplicateContent)
+}
+
+func TestSubmitThread_InvalidDomain(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_, err := k.SubmitThread(ctx, &types.MsgSubmitThread{
+		Submitter: testAddr, ThreadId: "t", Domain: "nonexistent", Stake: "1000000",
+		Items: []*types.MsgSubmitData{
+			{Content: "a", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: "b", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+		},
+	})
+	require.ErrorIs(t, err, types.ErrDomainNotFound)
+}
+
+func TestSubmitThread_InsufficientStake(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	_, err := k.SubmitThread(ctx, &types.MsgSubmitThread{
+		Submitter: testAddr, ThreadId: "t-low", Domain: "technology", Stake: "100",
+		Items: []*types.MsgSubmitData{
+			{Content: "a", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: "b", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+		},
+	})
+	require.ErrorIs(t, err, types.ErrInsufficientStake)
+}
+
+func TestSubmitThread_ItemConsentInvalid(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	_, err := k.SubmitThread(ctx, &types.MsgSubmitThread{
+		Submitter: testAddr, ThreadId: "t-consent", Domain: "technology", Stake: "1000000",
+		Items: []*types.MsgSubmitData{
+			{Content: "ok", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: "bad", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_OPT_IN}},
+		},
+	})
+	require.ErrorIs(t, err, types.ErrInvalidConsent)
+}
+
+func TestSubmitThread_ItemContentTooLarge(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	big := make([]byte, 50_001)
+	for i := range big {
+		big[i] = 'x'
+	}
+
+	_, err := k.SubmitThread(ctx, &types.MsgSubmitThread{
+		Submitter: testAddr, ThreadId: "t-big", Domain: "technology", Stake: "1000000",
+		Items: []*types.MsgSubmitData{
+			{Content: "small", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: string(big), SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+		},
+	})
+	require.ErrorIs(t, err, types.ErrContentTooLarge)
 }

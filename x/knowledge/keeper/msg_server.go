@@ -25,8 +25,8 @@ func (m msgServer) SubmitData(ctx context.Context, msg *types.MsgSubmitData) (*t
 	return m.keeper.SubmitData(ctx, msg)
 }
 
-func (m msgServer) SubmitThread(_ context.Context, _ *types.MsgSubmitThread) (*types.MsgSubmitThreadResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "SubmitThread not implemented (R37)")
+func (m msgServer) SubmitThread(ctx context.Context, msg *types.MsgSubmitThread) (*types.MsgSubmitThreadResponse, error) {
+	return m.keeper.SubmitThread(ctx, msg)
 }
 
 func (m msgServer) SubmitCommitment(_ context.Context, _ *types.MsgSubmitCommitment) (*types.MsgSubmitCommitmentResponse, error) {

@@ -171,3 +171,131 @@ func (k Keeper) SubmitData(ctx context.Context, msg *types.MsgSubmitData) (*type
 
 	return &types.MsgSubmitDataResponse{SubmissionId: submissionID}, nil
 }
+
+// SubmitThread handles MsgSubmitThread — validates and stores each item as a linked submission.
+func (k Keeper) SubmitThread(ctx context.Context, msg *types.MsgSubmitThread) (*types.MsgSubmitThreadResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// 1. Validate thread size
+	if uint64(len(msg.Items)) > params.MaxThreadSize {
+		return nil, types.ErrThreadTooLarge.Wrapf("thread has %d items, max %d", len(msg.Items), params.MaxThreadSize)
+	}
+
+	// 2. Validate domain
+	domain, found := k.GetDomain(ctx, msg.Domain)
+	if !found {
+		return nil, types.ErrDomainNotFound.Wrapf("domain %q not found", msg.Domain)
+	}
+	if domain.Status != types.DomainStatus_DOMAIN_STATUS_ACTIVE {
+		return nil, types.ErrInvalidDomain.Wrapf("domain %q is not active", msg.Domain)
+	}
+
+	// 3. Validate stake
+	stakeAmt, ok := sdkmath.NewIntFromString(msg.Stake)
+	if !ok || stakeAmt.IsNegative() {
+		return nil, types.ErrInsufficientStake.Wrap("invalid stake amount")
+	}
+	minStake, _ := sdkmath.NewIntFromString(params.MinSubmissionStake)
+	if stakeAmt.LT(minStake) {
+		return nil, types.ErrInsufficientStake.Wrapf("stake %s < minimum %s", msg.Stake, params.MinSubmissionStake)
+	}
+
+	// 4. Pre-validate all items before locking stake
+	type itemPrep struct {
+		contentHash string
+	}
+	preps := make([]itemPrep, len(msg.Items))
+	for i, item := range msg.Items {
+		if uint64(len(item.Content)) > params.MaxContentBytes {
+			return nil, types.ErrContentTooLarge.Wrapf("item[%d]: content %d bytes exceeds max %d", i, len(item.Content), params.MaxContentBytes)
+		}
+		hash := k.ComputeContentHash(item.Content)
+		if err := k.CheckDuplicate(ctx, hash); err != nil {
+			return nil, types.ErrDuplicateContent.Wrapf("item[%d]: duplicate content", i)
+		}
+		if err := k.ValidateConsent(item.Consent); err != nil {
+			return nil, err
+		}
+		// Check intra-thread duplicates
+		for j := 0; j < i; j++ {
+			if preps[j].contentHash == hash {
+				return nil, types.ErrDuplicateContent.Wrapf("item[%d] duplicates item[%d]", i, j)
+			}
+		}
+		preps[i] = itemPrep{contentHash: hash}
+	}
+
+	// 5. Lock stake (single stake covers whole thread)
+	submitterAddr, _ := sdk.AccAddressFromBech32(msg.Submitter)
+	stakeCoin := sdk.NewCoin("uzrn", stakeAmt)
+	if err := k.bankKeeper.SendCoinsFromAccountToModule(
+		sdkCtx, submitterAddr, types.ModuleName, sdk.NewCoins(stakeCoin),
+	); err != nil {
+		return nil, types.ErrInsufficientStake.Wrap(err.Error())
+	}
+
+	// 6. Create submissions linked via parent chain
+	submissionIDs := make([]string, len(msg.Items))
+	var prevID string
+	for i, item := range msg.Items {
+		subID := k.NextSubmissionID(ctx)
+		submission := &types.Submission{
+			Id:                 subID,
+			Submitter:          msg.Submitter,
+			Content:            item.Content,
+			SampleType:         item.SampleType,
+			Domain:             msg.Domain,
+			SourceUri:          item.SourceUri,
+			SourcePlatform:     item.SourcePlatform,
+			SourceTimestamp:    item.SourceTimestamp,
+			ParentSubmissionId: prevID,
+			ContextIds:         item.ContextIds,
+			ThreadId:           msg.ThreadId,
+			Consent:            item.Consent,
+			OriginalAuthor:     item.OriginalAuthor,
+			License:            item.License,
+			Tags:               item.Tags,
+			Language:           item.Language,
+			Stake:              msg.Stake,
+			SubmittedAtBlock:   uint64(sdkCtx.BlockHeight()),
+			Status:             types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+			ContentHash:        preps[i].contentHash,
+		}
+
+		if err := k.SetSubmission(ctx, submission); err != nil {
+			return nil, err
+		}
+		if err := k.SetContentHash(ctx, preps[i].contentHash, subID); err != nil {
+			return nil, err
+		}
+		if err := k.SetSubmissionDomainIndex(ctx, msg.Domain, subID); err != nil {
+			return nil, err
+		}
+		if err := k.SetSubmissionSubmitterIndex(ctx, msg.Submitter, subID); err != nil {
+			return nil, err
+		}
+
+		submissionIDs[i] = subID
+		prevID = subID
+	}
+
+	// 7. TODO(R37-2): Initiate ONE quality round for the entire thread
+
+	// 8. Emit event
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"submit_thread",
+		sdk.NewAttribute("thread_id", msg.ThreadId),
+		sdk.NewAttribute("submitter", msg.Submitter),
+		sdk.NewAttribute("domain", msg.Domain),
+		sdk.NewAttribute("item_count", strconv.Itoa(len(msg.Items))),
+	))
+
+	return &types.MsgSubmitThreadResponse{
+		SubmissionIds: submissionIDs,
+		ThreadId:      msg.ThreadId,
+	}, nil
+}
