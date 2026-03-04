@@ -8,52 +8,53 @@ import (
 
 // RegisterCodec registers the knowledge module's types with the legacy amino codec.
 func RegisterCodec(cdc *codec.LegacyAmino) {
-	cdc.RegisterConcrete(&MsgSubmitClaim{}, "zerone_knowledge/SubmitClaim", nil)
+	cdc.RegisterConcrete(&MsgSubmitData{}, "zerone_knowledge/SubmitData", nil)
+	cdc.RegisterConcrete(&MsgSubmitThread{}, "zerone_knowledge/SubmitThread", nil)
 	cdc.RegisterConcrete(&MsgSubmitCommitment{}, "zerone_knowledge/SubmitCommitment", nil)
 	cdc.RegisterConcrete(&MsgSubmitReveal{}, "zerone_knowledge/SubmitReveal", nil)
-	cdc.RegisterConcrete(&MsgChallengeFact{}, "zerone_knowledge/ChallengeFact", nil)
-	cdc.RegisterConcrete(&MsgAddFact{}, "zerone_knowledge/AddFact", nil)
-	cdc.RegisterConcrete(&MsgSubmitContradiction{}, "zerone_knowledge/SubmitContradiction", nil)
-	cdc.RegisterConcrete(&MsgPatronizeFact{}, "zerone_knowledge/PatronizeFact", nil)
+	cdc.RegisterConcrete(&MsgContestSample{}, "zerone_knowledge/ContestSample", nil)
+	cdc.RegisterConcrete(&MsgSponsorSample{}, "zerone_knowledge/SponsorSample", nil)
 	cdc.RegisterConcrete(&MsgProposeDomain{}, "zerone_knowledge/ProposeDomain", nil)
 	cdc.RegisterConcrete(&MsgEndorseDomainProposal{}, "zerone_knowledge/EndorseDomainProposal", nil)
-	cdc.RegisterConcrete(&MsgChallengeDomainProposal{}, "zerone_knowledge/ChallengeDomainProposal", nil)
-	cdc.RegisterConcrete(&MsgRegisterStratum{}, "zerone_knowledge/RegisterStratum", nil)
-	cdc.RegisterConcrete(&MsgChallengeProvisionalFact{}, "zerone_knowledge/ChallengeProvisionalFact", nil)
+	cdc.RegisterConcrete(&MsgCreateDataset{}, "zerone_knowledge/CreateDataset", nil)
+	cdc.RegisterConcrete(&MsgAccessDataset{}, "zerone_knowledge/AccessDataset", nil)
+	cdc.RegisterConcrete(&MsgAccessSample{}, "zerone_knowledge/AccessSample", nil)
+	cdc.RegisterConcrete(&MsgReportDemand{}, "zerone_knowledge/ReportDemand", nil)
+	cdc.RegisterConcrete(&MsgFundBounty{}, "zerone_knowledge/FundBounty", nil)
+	cdc.RegisterConcrete(&MsgRateSample{}, "zerone_knowledge/RateSample", nil)
 	cdc.RegisterConcrete(&MsgUpdateParams{}, "zerone_knowledge/UpdateParams", nil)
-	cdc.RegisterConcrete(&MsgUpdateExtendedParams{}, "zerone_knowledge/UpdateExtendedParams", nil)
+	cdc.RegisterConcrete(&MsgAddScrapedSource{}, "zerone_knowledge/AddScrapedSource", nil)
+	cdc.RegisterConcrete(&MsgRemoveScrapedSource{}, "zerone_knowledge/RemoveScrapedSource", nil)
 	cdc.RegisterConcrete(&MsgProposeResearchFund{}, "zerone_knowledge/ProposeResearchFund", nil)
 	cdc.RegisterConcrete(&MsgVoteResearchProposal{}, "zerone_knowledge/VoteResearchProposal", nil)
 	cdc.RegisterConcrete(&MsgExecuteResearchProposal{}, "zerone_knowledge/ExecuteResearchProposal", nil)
-	cdc.RegisterConcrete(&MsgAddCommonKnowledge{}, "zerone_knowledge/AddCommonKnowledge", nil)
-	cdc.RegisterConcrete(&MsgRemoveCommonKnowledge{}, "zerone_knowledge/RemoveCommonKnowledge", nil)
-	cdc.RegisterConcrete(&MsgRateFact{}, "zerone_knowledge/RateFact", nil)
+	cdc.RegisterConcrete(&MsgAddSample{}, "zerone_knowledge/AddSample", nil)
 }
 
 // RegisterInterfaces registers the knowledge module's interface implementations.
 func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 	registry.RegisterImplementations((*sdk.Msg)(nil),
-		&MsgSubmitClaim{},
+		&MsgSubmitData{},
+		&MsgSubmitThread{},
 		&MsgSubmitCommitment{},
 		&MsgSubmitReveal{},
-		&MsgChallengeFact{},
-		&MsgAddFact{},
-		&MsgSubmitContradiction{},
-		&MsgPatronizeFact{},
+		&MsgContestSample{},
+		&MsgSponsorSample{},
 		&MsgProposeDomain{},
 		&MsgEndorseDomainProposal{},
-		&MsgChallengeDomainProposal{},
-		&MsgRegisterStratum{},
-		&MsgChallengeProvisionalFact{},
+		&MsgCreateDataset{},
+		&MsgAccessDataset{},
+		&MsgAccessSample{},
+		&MsgReportDemand{},
+		&MsgFundBounty{},
+		&MsgRateSample{},
 		&MsgUpdateParams{},
-		&MsgUpdateExtendedParams{},
+		&MsgAddScrapedSource{},
+		&MsgRemoveScrapedSource{},
 		&MsgProposeResearchFund{},
 		&MsgVoteResearchProposal{},
 		&MsgExecuteResearchProposal{},
-		&MsgAddCommonKnowledge{},
-		&MsgRemoveCommonKnowledge{},
-		&MsgReportDemand{},
-		&MsgRateFact{},
+		&MsgAddSample{},
 	)
 }
 
