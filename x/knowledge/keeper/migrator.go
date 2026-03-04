@@ -4,6 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	v3 "github.com/zerone-chain/zerone/x/knowledge/migrations/v3"
+	v4 "github.com/zerone-chain/zerone/x/knowledge/migrations/v4"
 )
 
 // Migrator handles in-place store migrations.
@@ -27,4 +28,10 @@ func (m Migrator) Migrate1to2(ctx sdk.Context) error {
 // Backfills R29 param defaults for zero-valued fields after upgrade.
 func (m Migrator) Migrate2to3(ctx sdk.Context) error {
 	return v3.Migrate(ctx, m.keeper)
+}
+
+// Migrate3to4 migrates from version 3 to version 4.
+// Fact-claim system → training data protocol (testnet: fresh params).
+func (m Migrator) Migrate3to4(ctx sdk.Context) error {
+	return v4.Migrate(ctx, m.keeper)
 }

@@ -11,18 +11,21 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
+	simtypes "github.com/cosmos/cosmos-sdk/types/simulation"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/cobra"
 
 	"github.com/zerone-chain/zerone/x/knowledge/client/cli"
 	"github.com/zerone-chain/zerone/x/knowledge/keeper"
+	knowledgesim "github.com/zerone-chain/zerone/x/knowledge/simulation"
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
 var (
-	_ module.AppModuleBasic = AppModuleBasic{}
-	_ module.AppModule      = AppModule{}
-	_ appmodule.AppModule   = AppModule{}
+	_ module.AppModuleBasic      = AppModuleBasic{}
+	_ module.AppModule           = AppModule{}
+	_ module.AppModuleSimulation = AppModule{}
+	_ appmodule.AppModule        = AppModule{}
 )
 
 // AppModuleBasic implements module.AppModuleBasic for the knowledge module.
@@ -72,10 +75,22 @@ func (AppModuleBasic) GetTxCmd() *cobra.Command { return cli.GetTxCmd() }
 // GetQueryCmd returns the root query command.
 func (AppModuleBasic) GetQueryCmd() *cobra.Command { return cli.GetQueryCmd() }
 
+// SimAccountKeeper is the minimal account keeper interface needed by simulation.
+type SimAccountKeeper interface {
+	GetAccount(ctx context.Context, addr sdk.AccAddress) sdk.AccountI
+}
+
+// SimBankKeeper is the minimal bank keeper interface needed by simulation.
+type SimBankKeeper interface {
+	SpendableCoins(ctx context.Context, addr sdk.AccAddress) sdk.Coins
+}
+
 // AppModule implements module.AppModule for the knowledge module.
 type AppModule struct {
 	AppModuleBasic
-	keeper keeper.Keeper
+	keeper        keeper.Keeper
+	simAccountK   SimAccountKeeper
+	simBankK      SimBankKeeper
 }
 
 // NewAppModule creates a new AppModule.
@@ -84,6 +99,13 @@ func NewAppModule(cdc codec.Codec, keeper keeper.Keeper) AppModule {
 		AppModuleBasic: AppModuleBasic{cdc: cdc},
 		keeper:         keeper,
 	}
+}
+
+// SetSimulationKeepers sets the account/bank keepers needed for simulation.
+// Called from app.go after module construction.
+func (am *AppModule) SetSimulationKeepers(ak SimAccountKeeper, bk SimBankKeeper) {
+	am.simAccountK = ak
+	am.simBankK = bk
 }
 
 // IsOnePerModuleType implements depinject.OnePerModuleType.
@@ -106,6 +128,9 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	}
 	if err := cfg.RegisterMigration(types.ModuleName, 2, migrator.Migrate2to3); err != nil {
 		panic(fmt.Sprintf("failed to register %s migration v2→v3: %v", types.ModuleName, err))
+	}
+	if err := cfg.RegisterMigration(types.ModuleName, 3, migrator.Migrate3to4); err != nil {
+		panic(fmt.Sprintf("failed to register %s migration v3→v4: %v", types.ModuleName, err))
 	}
 }
 
@@ -133,4 +158,20 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 }
 
 // ConsensusVersion returns the module's consensus version.
-func (AppModule) ConsensusVersion() uint64 { return 3 }
+func (AppModule) ConsensusVersion() uint64 { return 4 }
+
+// ── Simulation interface (AppModuleSimulation) ──
+
+func (AppModule) GenerateGenesisState(simState *module.SimulationState) {}
+
+func (AppModule) RegisterStoreDecoder(_ simtypes.StoreDecoderRegistry) {}
+
+func (am AppModule) WeightedOperations(simState module.SimulationState) []simtypes.WeightedOperation {
+	if am.simAccountK == nil || am.simBankK == nil {
+		return nil // simulation keepers not wired — skip operations
+	}
+	return knowledgesim.WeightedOperations(
+		simState.AppParams, simState.Cdc, simState.TxConfig,
+		am.simAccountK, am.simBankK, am.keeper,
+	)
+}
