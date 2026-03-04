@@ -20,52 +20,35 @@ const (
 )
 
 // Store key prefixes — one byte per sub-namespace.
-// KV prefix ranges for knowledge module state.
 var (
 	// ─── Core state ──────────────────────────────────────────────────────────
-	FactKeyPrefix              = []byte{0x01} // factID → Fact
-	ClaimKeyPrefix             = []byte{0x02} // claimID → Claim
-	VerificationRoundKeyPrefix = []byte{0x03} // roundID → VerificationRound
-	FactReferenceKeyPrefix     = []byte{0x04} // factID:refID → exists
-	DomainFactIndexPrefix      = []byte{0x05} // domain/factID → exists
-	ParamsKey                  = []byte{0x06} // singleton Params
-	DomainKeyPrefix            = []byte{0x07} // domainName → Domain
-	IncomingRefIndexPrefix     = []byte{0x08} // toFactID:fromFactID → exists
-	ContentHashIndexPrefix     = []byte{0x09} // contentHash → claimID (dedup)
-	ClaimRoundIndexPrefix      = []byte{0x0a} // claimID → roundID
-	EquivocationKeyPrefix      = []byte{0x0b} // roundID:validator → evidence
+	SampleKeyPrefix     = []byte{0x01} // sampleID → Sample
+	SubmissionKeyPrefix = []byte{0x02} // submissionID → Submission
+	QualityRoundPrefix  = []byte{0x03} // roundID → QualityRound
+	DomainKeyPrefix     = []byte{0x04} // domainName → Domain
+	DatasetKeyPrefix    = []byte{0x05} // datasetID → Dataset
+	TrainingDemandKey   = []byte{0x06} // domain/subject → TrainingDemand
+	DataBountyKeyPrefix = []byte{0x07} // bountyID → DataBounty
+	ScrapedSourceKey    = []byte{0x08} // sourceID → ScrapedSourceEntry
+	ValidatorInfoKey    = []byte{0x09} // address → ValidatorInfo
+	ParamsKey           = []byte{0x0F} // singleton Params
 
-	// ─── Adversarial verification ────────────────────────────────────────────
-	ProvisionalChallengeKeyPrefix = []byte{0x0c}
-	ChallengerCooldownKeyPrefix   = []byte{0x0d}
-	PendingEvalClaimIndexPrefix   = []byte{0x0e}
-	SubmitterCalibrationPrefix    = []byte{0x0f}
+	// ─── Indexes ─────────────────────────────────────────────────────────────
+	ThreadIndexPrefix       = []byte{0x0A} // thread_id/sample_id → exists
+	DomainSampleIndexPrefix = []byte{0x0B} // domain/sample_id → exists
+	SubmitterIndexPrefix    = []byte{0x0C} // submitter/sample_id → exists
+	NicheIndexPrefix        = []byte{0x0D} // niche_key/sample_id → exists
+	ContentHashIndexPrefix  = []byte{0x0E} // content_hash → submission_id (dedup)
 
-	// ─── Negative knowledge ──────────────────────────────────────────────────
-	CounterFactKeyPrefix             = []byte{0x10}
-	CounterFactByFactIndexPrefix     = []byte{0x11}
-	CounterFactByDomainIndexPrefix   = []byte{0x12}
-	CounterFactByHeightIndexPrefix   = []byte{0x13}
-	FactNegationLinkPrefix           = []byte{0x14}
-	ContradictionCooldownPrefix      = []byte{0x15}
-	FalsificationEpochPaidPrefix     = []byte{0x16}
-	FalsificationCarryForwardPrefix  = []byte{0x17}
-	CounterFactChallengeKeyPrefix    = []byte{0x18}
-	CounterFactChallengeWindowPrefix = []byte{0x19}
-	ExtendedParamsKey                = []byte{0x1a} // singleton JSON ExtendedParams
-	PatronageRecordPrefix            = []byte{0x1b}
-	PruningQueuePrefix               = []byte{0x1c}
-	VerifierConformityPrefix         = []byte{0x1d} // FARM-1
-	ValidatorParticipationPrefix     = []byte{0x1e} // FARM-8
+	// ─── Sequences ───────────────────────────────────────────────────────────
+	SampleSeqKey     = []byte{0x80} // uint64 next sample ID
+	SubmissionSeqKey = []byte{0x81} // uint64 next submission ID
+	RoundSeqKey      = []byte{0x82} // uint64 next round ID
+	DatasetSeqKey    = []byte{0x83} // uint64 next dataset ID
 
-	// ─── Secondary query indexes ─────────────────────────────────────────────
-	FactBySubmitterIndexPrefix = []byte{0x1f} // submitter/factID → exists
-	FactByDomainIndexPrefix    = []byte{0x20} // domain/factID → exists (mirror of 0x05)
+	// ─── Submission → round mapping ──────────────────────────────────────────
+	SubmissionRoundIndexPrefix = []byte{0x10} // submissionID → roundID
 	ActiveRoundIndexPrefix     = []byte{0x21} // roundID → exists
-
-	// ─── Citation and domain strata ──────────────────────────────────────────
-	CitationSourcePrefix = []byte{0x27} // FARM-11 citation-source tracking
-	DomainStratumPrefix  = []byte{0x28} // FARM-12 domain-to-stratum mapping
 
 	// ─── Research fund governance ────────────────────────────────────────────
 	ResearchProposalPrefix  = []byte{0x29}
@@ -75,84 +58,103 @@ var (
 	// ─── Partnership citation stats ──────────────────────────────────────────
 	PartnershipCitationStatsPrefix = []byte{0x2c}
 
-	// ─── Semantic relations (knowledge graph edges) ──────────────────────────
-	FactRelationPrefix        = []byte{0x30} // 0x30 | source_fact_id / target_fact_id → FactRelation
-	FactRelationReversePrefix = []byte{0x31} // 0x31 | target_fact_id / source_fact_id → FactRelation (reverse index)
+	// ─── Niche competition ──────────────────────────────────────────────────
+	NicheMembersPrefix = []byte{0x3d} // niche_key → exists
 
-	// ─── Structured claim indexes ────────────────────────────────────────────
-	FactSubjectPrefix = []byte{0x32} // 0x32 | domain / subject_hash → fact_id
-	FactTagPrefix     = []byte{0x33} // 0x33 | tag / fact_id → []byte{1}
+	// ─── Query satisfaction ─────────────────────────────────────────────────
+	QueryReceiptPrefix = []byte{0x3e} // rater/sample_id → block height
 
-	// ─── Canonical form dedup ────────────────────────────────────────────────
-	CanonicalHashPrefix = []byte{0x34} // 0x34 | canonical_hash → claim_id/fact_id
+	// ─── Consensus diversity (R28-2) ────────────────────────────────────────
+	RoundDiversityPrefix         = []byte{0x40} // roundID → RoundDiversity (JSON)
+	DomainDiversityPrefix        = []byte{0x41} // domain/epoch_bytes → DomainDiversityScore (JSON)
+	ValidatorIndependencePrefix  = []byte{0x42} // validatorAddr → ValidatorIndependence (JSON)
+	ConformityStreakPrefix       = []byte{0x43} // domain → ConformityStreak (JSON)
+	DomainEpochRoundIndexPrefix = []byte{0x44} // domain/epoch_bytes/roundID → 0x01
 
-	// ─── Bootstrap fund tracking ─────────────────────────────────────────────
-	BootstrapClaimCountPrefix = []byte{0x35} // 0x35 | address → uint64 (lifetime sponsored count)
-	BootstrapEpochCountPrefix = []byte{0x36} // 0x36 | epoch_number → uint64 (epoch-wide count)
+	// ─── Retroactive vindication (R28-1) ────────────────────────────────────
+	VindicationPendingPrefix = []byte{0x50} // sampleID → []VindicationEntry (JSON)
+	VindicationRecordPrefix  = []byte{0x51} // sampleID/verifier → VindicationRecord (JSON)
 
-	// ─── Metabolism tracking ────────────────────────────────────────────────
-	NewCitationsEpochPrefix = []byte{0x37} // 0x37 | fact_id → uint64 (new citations this epoch)
+	// ─── Capture defense overrides (R28-8) ──────────────────────────────────
+	VerificationThresholdOverrideKeyPrefix = []byte{0x52} // domain → threshold override
 
-	// ─── Novelty detection ──────────────────────────────────────────────────
-	CommonKnowledgePrefix = []byte{0x38} // 0x38 | domain / subject_hash → CommonKnowledgeEntry
+	// ─── Epistemic temperature (R29-2) ─────────────────────────────────────
+	EpistemicStatePrefix = []byte{0x53} // domain → DomainEpistemicState (JSON)
 
-	// ─── Agent demand tracking ─────────────────────────────────────────
-	DemandSignalPrefix          = []byte{0x39} // domain / subject_hash → DemandSignal
-	BountyPrefix                = []byte{0x3a} // bounty_id → KnowledgeBounty
-	BountyByDomainSubjectPrefix = []byte{0x3b} // domain / subject_hash → bounty_id (active index)
+	// ─── Domain carrying capacity (R29-1) ──────────────────────────────────
+	DomainStatsPrefix = []byte{0x54} // domain → DomainStats (JSON)
 
-	// ─── Niche competition ──────────────────────────────────────────────
-	NicheIndexPrefix   = []byte{0x3c} // 0x3c | niche_key | fact_id → []byte{1}
-	NicheMembersPrefix = []byte{0x3d} // 0x3d | niche_key → []byte{1} (niche existence)
+	// ─── Domain role elasticity (R29-3) ────────────────────────────────────
+	DomainRoleRecordPrefix = []byte{0x55} // domain → DomainRoleRecord (JSON)
 
-	// ─── Query satisfaction ─────────────────────────────────────────────
-	QueryReceiptPrefix = []byte{0x3e} // 0x3e | rater / fact_id → block height (query receipt)
+	// ─── Adaptive pacing (R29-6) ───────────────────────────────────────────
+	LastSubmissionHeightKeyPrefix = []byte{0x56} // submitter → uint64 (last submission block)
 
-	// ─── Consensus diversity (R28-2) ────────────────────────────────────
-	RoundDiversityPrefix         = []byte{0x40} // 0x40 | roundID → RoundDiversity (JSON)
-	DomainDiversityPrefix        = []byte{0x41} // 0x41 | domain / epoch_bytes → DomainDiversityScore (JSON)
-	ValidatorIndependencePrefix  = []byte{0x42} // 0x42 | validatorAddr → ValidatorIndependence (JSON)
-	ConformityStreakPrefix       = []byte{0x43} // 0x43 | domain → ConformityStreak (JSON)
-	DomainEpochRoundIndexPrefix = []byte{0x44} // 0x44 | domain / epoch_bytes / roundID → 0x01
+	// ─── Completion index (R31-2) ──────────────────────────────────────────
+	CompletedRoundIndexPrefix = []byte{0x57} // verdictBlock(8)/roundID → CompletedRoundMeta
 
-	// ─── Retroactive vindication (R28-1) ────────────────────────────────
-	VindicationPendingPrefix = []byte{0x50} // 0x50 | factID → []VindicationEntry (JSON)
-	VindicationRecordPrefix  = []byte{0x51} // 0x51 | factID / verifier → VindicationRecord (JSON)
-
-	// ─── Capture defense overrides (R28-8) ──────────────────────────────
-	VerificationThresholdOverrideKeyPrefix = []byte{0x52} // 0x52 | domain → threshold override (binary)
-
-	// ─── Epistemic temperature (R29-2) ─────────────────────────────────
-	EpistemicStatePrefix = []byte{0x53} // 0x53 | domain → DomainEpistemicState (JSON)
-
-	// ─── Domain carrying capacity (R29-1) ──────────────────────────────
-	DomainStatsPrefix = []byte{0x54} // 0x54 | domain → DomainStats (JSON)
-
-	// ─── Domain role elasticity (R29-3) ────────────────────────────────
-	DomainRoleRecordPrefix = []byte{0x55} // 0x55 | domain → DomainRoleRecord (JSON)
-
-	// ─── Adaptive pacing (R29-6) ───────────────────────────────────────
-	LastClaimHeightKeyPrefix = []byte{0x56} // 0x56 | submitter → uint64 (last claim block height)
-
-	// ─── Completion index (R31-2: Fire activity metrics) ──────────────
-	CompletedRoundIndexPrefix = []byte{0x57} // 0x57 | verdictBlock(8) | roundID → CompletedRoundMeta (proto)
+	// ─── Deprecated aliases (used by keeper until migration) ───────────────
+	// TODO(R36-5): remove after keeper migration
+	FactKeyPrefix              = SampleKeyPrefix
+	ClaimKeyPrefix             = SubmissionKeyPrefix
+	VerificationRoundKeyPrefix = QualityRoundPrefix
+	ClaimRoundIndexPrefix      = SubmissionRoundIndexPrefix
+	FactBySubmitterIndexPrefix = SubmitterIndexPrefix
+	DomainFactIndexPrefix      = DomainSampleIndexPrefix
+	LastClaimHeightKeyPrefix   = LastSubmissionHeightKeyPrefix
+	EquivocationKeyPrefix      = []byte{0x90} // legacy, moved out of core range
+	FactReferenceKeyPrefix     = []byte{0x91} // legacy
+	IncomingRefIndexPrefix     = []byte{0x92} // legacy
+	FactRelationPrefix         = []byte{0x30} // legacy semantic relations
+	FactRelationReversePrefix  = []byte{0x31} // legacy reverse index
+	FactSubjectPrefix          = []byte{0x32} // legacy structured claim index
+	FactTagPrefix              = []byte{0x33} // legacy tag index
+	CanonicalHashPrefix        = []byte{0x34} // legacy canonical form dedup
+	BountyPrefix               = DataBountyKeyPrefix
+	BountyByDomainSubjectPrefix = []byte{0x3b}
+	DemandSignalPrefix          = TrainingDemandKey
+	CommonKnowledgePrefix       = ScrapedSourceKey
+	BootstrapClaimCountPrefix   = []byte{0x35}
+	BootstrapEpochCountPrefix   = []byte{0x36}
+	NewCitationsEpochPrefix     = []byte{0x37}
+	CitationSourcePrefix        = []byte{0x27}
+	DomainStratumPrefix         = []byte{0x28}
+	ProvisionalChallengeKeyPrefix = []byte{0x93}
+	ChallengerCooldownKeyPrefix   = []byte{0x94}
+	PendingEvalClaimIndexPrefix   = []byte{0x95}
+	SubmitterCalibrationPrefix    = []byte{0x96}
+	CounterFactKeyPrefix             = []byte{0x97}
+	CounterFactByFactIndexPrefix     = []byte{0x98}
+	CounterFactByDomainIndexPrefix   = []byte{0x99}
+	CounterFactByHeightIndexPrefix   = []byte{0x9a}
+	FactNegationLinkPrefix           = []byte{0x9b}
+	ContradictionCooldownPrefix      = []byte{0x9c}
+	FalsificationEpochPaidPrefix     = []byte{0x9d}
+	FalsificationCarryForwardPrefix  = []byte{0x9e}
+	CounterFactChallengeKeyPrefix    = []byte{0x9f}
+	CounterFactChallengeWindowPrefix = []byte{0xa0}
+	ExtendedParamsKey                = []byte{0xa1}
+	PatronageRecordPrefix            = []byte{0xa2}
+	PruningQueuePrefix               = []byte{0xa3}
+	VerifierConformityPrefix         = []byte{0xa4}
+	ValidatorParticipationPrefix     = []byte{0xa5}
 )
 
-// ─── Key constructors ─────────────────────────────────────────────────────────
+// ─── New key constructors ───────────────────────────────────────────────────
 
-// FactKey returns the store key for a fact.
-func FactKey(id string) []byte {
-	return append(append([]byte{}, FactKeyPrefix...), []byte(id)...)
+// SampleKey returns the store key for a sample.
+func SampleKey(id string) []byte {
+	return append(append([]byte{}, SampleKeyPrefix...), []byte(id)...)
 }
 
-// ClaimKey returns the store key for a claim.
-func ClaimKey(id string) []byte {
-	return append(append([]byte{}, ClaimKeyPrefix...), []byte(id)...)
+// SubmissionKey returns the store key for a submission.
+func SubmissionKey(id string) []byte {
+	return append(append([]byte{}, SubmissionKeyPrefix...), []byte(id)...)
 }
 
-// RoundKey returns the store key for a verification round.
-func RoundKey(id string) []byte {
-	return append(append([]byte{}, VerificationRoundKeyPrefix...), []byte(id)...)
+// QualityRoundKey returns the store key for a quality round.
+func QualityRoundKey(id string) []byte {
+	return append(append([]byte{}, QualityRoundPrefix...), []byte(id)...)
 }
 
 // DomainKey returns the store key for a domain.
@@ -160,138 +162,214 @@ func DomainKey(name string) []byte {
 	return append(append([]byte{}, DomainKeyPrefix...), []byte(name)...)
 }
 
-// ContentHashKey returns the index key for a content hash.
+// DatasetKey returns the store key for a dataset.
+func DatasetKey(id string) []byte {
+	return append(append([]byte{}, DatasetKeyPrefix...), []byte(id)...)
+}
+
+// TrainingDemandKeyFn returns the store key for a training demand signal.
+func TrainingDemandKeyFn(domain, subject string) []byte {
+	key := append(append([]byte{}, TrainingDemandKey...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(subject)...)
+}
+
+// DataBountyKey returns the store key for a data bounty.
+func DataBountyKey(id string) []byte {
+	return append(append([]byte{}, DataBountyKeyPrefix...), []byte(id)...)
+}
+
+// ScrapedSourceKeyFn returns the store key for a scraped source.
+func ScrapedSourceKeyFn(id string) []byte {
+	return append(append([]byte{}, ScrapedSourceKey...), []byte(id)...)
+}
+
+// ValidatorInfoKeyFn returns the store key for a validator info entry.
+func ValidatorInfoKeyFn(addr string) []byte {
+	return append(append([]byte{}, ValidatorInfoKey...), []byte(addr)...)
+}
+
+// ThreadIndexKey returns the index key for a sample within a thread.
+func ThreadIndexKey(threadID, sampleID string) []byte {
+	key := append(append([]byte{}, ThreadIndexPrefix...), []byte(threadID)...)
+	key = append(key, '/')
+	return append(key, []byte(sampleID)...)
+}
+
+// ThreadIndexByThreadPrefix returns the prefix for iterating all samples in a thread.
+func ThreadIndexByThreadPrefix(threadID string) []byte {
+	key := append(append([]byte{}, ThreadIndexPrefix...), []byte(threadID)...)
+	return append(key, '/')
+}
+
+// DomainSampleIndexKey returns the index key for a sample within a domain.
+func DomainSampleIndexKey(domain, sampleID string) []byte {
+	key := append(append([]byte{}, DomainSampleIndexPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(sampleID)...)
+}
+
+// DomainSampleByDomainPrefix returns the prefix for iterating samples in a domain.
+func DomainSampleByDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, DomainSampleIndexPrefix...), []byte(domain)...)
+	return append(key, '/')
+}
+
+// SubmitterIndexKey returns the index key for a sample by submitter.
+func SubmitterIndexKey(submitter, sampleID string) []byte {
+	key := append(append([]byte{}, SubmitterIndexPrefix...), []byte(submitter)...)
+	key = append(key, '/')
+	return append(key, []byte(sampleID)...)
+}
+
+// SubmitterIndexBySubmitterPrefix returns the prefix for iterating samples by submitter.
+func SubmitterIndexBySubmitterPrefix(submitter string) []byte {
+	key := append(append([]byte{}, SubmitterIndexPrefix...), []byte(submitter)...)
+	return append(key, '/')
+}
+
+// NicheIndexKey returns the index key for a sample within a niche.
+func NicheIndexKey(nicheKey, sampleID string) []byte {
+	key := append(append([]byte{}, NicheIndexPrefix...), []byte(nicheKey)...)
+	key = append(key, '/')
+	return append(key, []byte(sampleID)...)
+}
+
+// NicheIndexByNichePrefix returns the prefix for iterating samples in a niche.
+func NicheIndexByNichePrefix(nicheKey string) []byte {
+	key := append(append([]byte{}, NicheIndexPrefix...), []byte(nicheKey)...)
+	return append(key, '/')
+}
+
+// ContentHashKey returns the index key for content hash dedup.
 func ContentHashKey(hash string) []byte {
 	return append(append([]byte{}, ContentHashIndexPrefix...), []byte(hash)...)
 }
 
-// ClaimRoundIndexKey returns the index key mapping a claim to its round.
-func ClaimRoundIndexKey(claimID string) []byte {
-	return append(append([]byte{}, ClaimRoundIndexPrefix...), []byte(claimID)...)
+// SubmissionRoundIndexKey returns the index key mapping a submission to its round.
+func SubmissionRoundIndexKey(submissionID string) []byte {
+	return append(append([]byte{}, SubmissionRoundIndexPrefix...), []byte(submissionID)...)
 }
 
-// FactBySubmitterKey returns the composite index key for facts by submitter.
-func FactBySubmitterKey(submitter, factID string) []byte {
-	key := append(append([]byte{}, FactBySubmitterIndexPrefix...), []byte(submitter)...)
+// NicheMembersKey returns the key for a niche's existence marker.
+func NicheMembersKey(nicheKey string) []byte {
+	return append(append([]byte{}, NicheMembersPrefix...), []byte(nicheKey)...)
+}
+
+// QueryReceiptKey returns the key for a query receipt.
+func QueryReceiptKey(rater, sampleID string) []byte {
+	key := append(append([]byte{}, QueryReceiptPrefix...), []byte(rater)...)
 	key = append(key, '/')
-	return append(key, []byte(factID)...)
+	return append(key, []byte(sampleID)...)
 }
 
-// FactByDomainKey returns the composite index key for facts by domain.
-func FactByDomainKey(domain, factID string) []byte {
-	key := append(append([]byte{}, DomainFactIndexPrefix...), []byte(domain)...)
-	key = append(key, '/')
-	return append(key, []byte(factID)...)
-}
+// ─── Deprecated key constructors (keeper migration pending) ─────────────────
 
-// FactRelationKey returns the forward index key for a fact relation.
+// FactKey returns the store key for a fact (deprecated: use SampleKey).
+func FactKey(id string) []byte { return SampleKey(id) }
+
+// ClaimKey returns the store key for a claim (deprecated: use SubmissionKey).
+func ClaimKey(id string) []byte { return SubmissionKey(id) }
+
+// RoundKey returns the store key for a round (deprecated: use QualityRoundKey).
+func RoundKey(id string) []byte { return QualityRoundKey(id) }
+
+// ClaimRoundIndexKey returns the claim→round index key (deprecated: use SubmissionRoundIndexKey).
+func ClaimRoundIndexKey(claimID string) []byte { return SubmissionRoundIndexKey(claimID) }
+
+// FactBySubmitterKey returns the fact-by-submitter index key (deprecated: use SubmitterIndexKey).
+func FactBySubmitterKey(submitter, factID string) []byte { return SubmitterIndexKey(submitter, factID) }
+
+// FactByDomainKey returns the fact-by-domain index key (deprecated: use DomainSampleIndexKey).
+func FactByDomainKey(domain, factID string) []byte { return DomainSampleIndexKey(domain, factID) }
+
+// FactRelationKey returns the forward index key for a fact relation (deprecated).
 func FactRelationKey(sourceFactID, targetFactID string) []byte {
 	key := append(append([]byte{}, FactRelationPrefix...), []byte(sourceFactID)...)
 	key = append(key, '/')
 	return append(key, []byte(targetFactID)...)
 }
 
-// FactRelationReverseKey returns the reverse index key for a fact relation.
+// FactRelationReverseKey returns the reverse index key for a fact relation (deprecated).
 func FactRelationReverseKey(targetFactID, sourceFactID string) []byte {
 	key := append(append([]byte{}, FactRelationReversePrefix...), []byte(targetFactID)...)
 	key = append(key, '/')
 	return append(key, []byte(sourceFactID)...)
 }
 
-// FactRelationsBySourcePrefix returns the prefix for iterating all relations from a source fact.
+// FactRelationsBySourcePrefix returns the prefix for relations from a source fact (deprecated).
 func FactRelationsBySourcePrefix(sourceFactID string) []byte {
 	key := append(append([]byte{}, FactRelationPrefix...), []byte(sourceFactID)...)
 	return append(key, '/')
 }
 
-// FactRelationsByTargetPrefix returns the prefix for iterating all relations to a target fact.
+// FactRelationsByTargetPrefix returns the prefix for relations to a target fact (deprecated).
 func FactRelationsByTargetPrefix(targetFactID string) []byte {
 	key := append(append([]byte{}, FactRelationReversePrefix...), []byte(targetFactID)...)
 	return append(key, '/')
 }
 
-// FactSubjectKey returns the index key for a fact's subject within a domain.
-// Subject is stored as a SHA-256 hash to normalize and bound key length.
+// FactSubjectKey returns the subject index key (deprecated).
 func FactSubjectKey(domain, subjectHash string) []byte {
 	key := append(append([]byte{}, FactSubjectPrefix...), []byte(domain)...)
 	key = append(key, '/')
 	return append(key, []byte(subjectHash)...)
 }
 
-// FactTagKey returns the index key for a fact tagged with a given tag.
+// FactTagKey returns the tag index key (deprecated).
 func FactTagKey(tag, factID string) []byte {
 	key := append(append([]byte{}, FactTagPrefix...), []byte(tag)...)
 	key = append(key, '/')
 	return append(key, []byte(factID)...)
 }
 
-// FactTagsByTagPrefix returns the prefix for iterating all facts with a given tag.
+// FactTagsByTagPrefix returns the prefix for iterating facts by tag (deprecated).
 func FactTagsByTagPrefix(tag string) []byte {
 	key := append(append([]byte{}, FactTagPrefix...), []byte(tag)...)
 	return append(key, '/')
 }
 
-// CanonicalHashKey returns the index key for a canonical form hash.
+// CanonicalHashKey returns the canonical hash index key (deprecated).
 func CanonicalHashKey(hash string) []byte {
 	return append(append([]byte{}, CanonicalHashPrefix...), []byte(hash)...)
 }
 
-// CommonKnowledgeKey returns the store key for a common knowledge entry by domain and subject hash.
+// CommonKnowledgeKey returns the common knowledge key (deprecated: use ScrapedSourceKeyFn).
 func CommonKnowledgeKey(domain, subjectHash string) []byte {
 	key := append(append([]byte{}, CommonKnowledgePrefix...), []byte(domain)...)
 	key = append(key, '/')
 	return append(key, []byte(subjectHash)...)
 }
 
-// CommonKnowledgeByDomainPrefix returns the prefix for iterating all common knowledge entries in a domain.
+// CommonKnowledgeByDomainPrefix returns the common knowledge domain prefix (deprecated).
 func CommonKnowledgeByDomainPrefix(domain string) []byte {
 	key := append(append([]byte{}, CommonKnowledgePrefix...), []byte(domain)...)
 	return append(key, '/')
 }
 
-// DemandSignalKey returns the store key for a demand signal.
+// DemandSignalKey returns the demand signal key (deprecated: use TrainingDemandKeyFn).
 func DemandSignalKey(domain, subjectHash string) []byte {
 	key := append(append([]byte{}, DemandSignalPrefix...), []byte(domain)...)
 	key = append(key, '/')
 	return append(key, []byte(subjectHash)...)
 }
 
-// BountyKey returns the store key for a bounty.
-func BountyKey(id string) []byte {
-	return append(append([]byte{}, BountyPrefix...), []byte(id)...)
-}
+// BountyKey returns the bounty key (deprecated: use DataBountyKey).
+func BountyKey(id string) []byte { return DataBountyKey(id) }
 
-// BountyByDomainSubjectKey returns the index key for active bounties by domain/subject.
+// BountyByDomainSubjectKey returns the bounty domain/subject index key (deprecated).
 func BountyByDomainSubjectKey(domain, subjectHash string) []byte {
 	key := append(append([]byte{}, BountyByDomainSubjectPrefix...), []byte(domain)...)
 	key = append(key, '/')
 	return append(key, []byte(subjectHash)...)
 }
 
-// NicheIndexKey returns the composite index key for a fact within a niche.
-func NicheIndexKey(nicheKey, factID string) []byte {
-	key := append(append([]byte{}, NicheIndexPrefix...), []byte(nicheKey)...)
-	key = append(key, '/')
-	return append(key, []byte(factID)...)
+// LastClaimHeightKey returns the last claim height key (deprecated: use LastSubmissionHeightKey).
+func LastClaimHeightKey(submitter string) []byte {
+	return append(append([]byte{}, LastClaimHeightKeyPrefix...), []byte(submitter)...)
 }
 
-// NicheIndexByNichePrefix returns the prefix for iterating all facts in a niche.
-func NicheIndexByNichePrefix(nicheKey string) []byte {
-	key := append(append([]byte{}, NicheIndexPrefix...), []byte(nicheKey)...)
-	return append(key, '/')
-}
-
-// NicheMembersKey returns the key for registering a niche's existence.
-func NicheMembersKey(nicheKey string) []byte {
-	return append(append([]byte{}, NicheMembersPrefix...), []byte(nicheKey)...)
-}
-
-// QueryReceiptKey returns the key for a query receipt: 0x3e | rater / factID.
-func QueryReceiptKey(rater, factID string) []byte {
-	key := append(append([]byte{}, QueryReceiptPrefix...), []byte(rater)...)
-	key = append(key, '/')
-	return append(key, []byte(factID)...)
-}
+// ─── Shared key constructors (used by both old and new keeper) ──────────────
 
 // RoundDiversityKey returns the store key for a round's diversity data.
 func RoundDiversityKey(roundID string) []byte {
@@ -344,26 +422,31 @@ func DomainEpochRoundPrefix(domain string, epoch uint64) []byte {
 	return append(key, '/')
 }
 
-// VindicationPendingKey returns the store key for pending vindications for a fact.
-func VindicationPendingKey(factId string) []byte {
-	return append(append([]byte{}, VindicationPendingPrefix...), []byte(factId)...)
+// VindicationPendingKey returns the store key for pending vindications.
+func VindicationPendingKey(sampleId string) []byte {
+	return append(append([]byte{}, VindicationPendingPrefix...), []byte(sampleId)...)
 }
 
 // VindicationRecordKey returns the store key for a vindication record.
-func VindicationRecordKey(factId, verifier string) []byte {
+func VindicationRecordKey(sampleId, verifier string) []byte {
 	key := append([]byte{}, VindicationRecordPrefix...)
-	key = append(key, []byte(factId)...)
+	key = append(key, []byte(sampleId)...)
 	key = append(key, '/')
 	key = append(key, []byte(verifier)...)
 	return key
 }
 
-// VindicationRecordPrefixForFact returns the prefix for iterating all records for a fact.
-func VindicationRecordPrefixForFact(factId string) []byte {
+// VindicationRecordPrefixForSample returns the prefix for iterating records for a sample.
+func VindicationRecordPrefixForSample(sampleId string) []byte {
 	key := append([]byte{}, VindicationRecordPrefix...)
-	key = append(key, []byte(factId)...)
+	key = append(key, []byte(sampleId)...)
 	key = append(key, '/')
 	return key
+}
+
+// VindicationRecordPrefixForFact is an alias for VindicationRecordPrefixForSample (deprecated).
+func VindicationRecordPrefixForFact(factId string) []byte {
+	return VindicationRecordPrefixForSample(factId)
 }
 
 // EpistemicStateKey returns the store key for a domain's epistemic state.
@@ -381,9 +464,9 @@ func DomainRoleRecordKey(domain string) []byte {
 	return append(append([]byte{}, DomainRoleRecordPrefix...), []byte(domain)...)
 }
 
-// LastClaimHeightKey returns the store key for a submitter's last claim height.
-func LastClaimHeightKey(submitter string) []byte {
-	return append(append([]byte{}, LastClaimHeightKeyPrefix...), []byte(submitter)...)
+// LastSubmissionHeightKey returns the store key for a submitter's last submission height.
+func LastSubmissionHeightKey(submitter string) []byte {
+	return append(append([]byte{}, LastSubmissionHeightKeyPrefix...), []byte(submitter)...)
 }
 
 // CompletedRoundKey returns the index key for a completed round by verdict block.
@@ -397,8 +480,7 @@ func CompletedRoundKey(verdictBlock uint64, roundID string) []byte {
 	return key
 }
 
-// CompletedRoundBlockPrefix returns the prefix for iterating completed rounds starting at a block.
-// Use with start=CompletedRoundBlockPrefix(startBlock) and end=CompletedRoundBlockPrefix(endBlock+1).
+// CompletedRoundBlockPrefix returns the prefix for iterating completed rounds at a block.
 func CompletedRoundBlockPrefix(block uint64) []byte {
 	key := make([]byte, 0, 1+8)
 	key = append(key, CompletedRoundIndexPrefix...)
