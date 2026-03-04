@@ -350,6 +350,47 @@ func TestMsgAccessDataset_ValidateBasic(t *testing.T) {
 	})
 }
 
+// ─── Quality Commitment Hash ─────────────────────────────────────────────────
+
+func TestComputeQualityCommitmentHash(t *testing.T) {
+	vote := &types.QualityVote{
+		OverallQuality:  800000,
+		ReasoningDepth:  700000,
+		Novelty:         600000,
+		Toxicity:        10000,
+		FactualAccuracy: 900000,
+		ConsentValid:    true,
+		Duplicate:       false,
+	}
+	salt := []byte("test-salt-1234")
+	roundID := "r1"
+
+	hash1 := types.ComputeQualityCommitHash(roundID, vote, salt)
+	require.NotNil(t, hash1)
+	require.Len(t, hash1, 32)
+
+	// Determinism
+	hash2 := types.ComputeQualityCommitHash(roundID, vote, salt)
+	require.Equal(t, hash1, hash2)
+
+	// Different salt → different hash
+	hash3 := types.ComputeQualityCommitHash(roundID, vote, []byte("other-salt"))
+	require.NotEqual(t, hash1, hash3)
+
+	// Different round → different hash
+	hash4 := types.ComputeQualityCommitHash("r2", vote, salt)
+	require.NotEqual(t, hash1, hash4)
+
+	// Different vote → different hash
+	vote2 := &types.QualityVote{OverallQuality: 500000, ReasoningDepth: 700000, Novelty: 600000, Toxicity: 10000, FactualAccuracy: 900000, ConsentValid: true}
+	hash5 := types.ComputeQualityCommitHash(roundID, vote2, salt)
+	require.NotEqual(t, hash1, hash5)
+
+	// Verify
+	require.True(t, types.VerifyQualityCommitHash(hash1, roundID, vote, salt))
+	require.False(t, types.VerifyQualityCommitHash(hash1, roundID, vote2, salt))
+}
+
 func TestMsgAccessSample_ValidateBasic(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 		msg := &types.MsgAccessSample{Consumer: testAddr, SampleId: "s1"}
