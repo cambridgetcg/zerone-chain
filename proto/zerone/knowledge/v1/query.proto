@@ -10,30 +10,34 @@ import "zerone/knowledge/v1/genesis.proto";
 
 // Query defines the gRPC query service for the knowledge module.
 service Query {
-  // Params queries module parameters.
-  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/params";
-  }
+  // ─── Samples ───────────────────────────────────────────────────────────────
 
   // Sample queries a single sample by ID.
   rpc Sample(QuerySampleRequest) returns (QuerySampleResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/samples/{id}";
   }
 
-  // Samples queries samples with optional domain, status, and type filters.
+  // Samples queries samples with optional filters.
   rpc Samples(QuerySamplesRequest) returns (QuerySamplesResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/samples";
   }
 
   // SamplesByDomain queries all samples in a domain.
-  rpc SamplesByDomain(QuerySamplesByDomainRequest) returns (QuerySamplesByDomainResponse) {
+  rpc SamplesByDomain(QuerySamplesByDomainRequest) returns (QuerySamplesResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/samples/domain/{domain}";
   }
 
+  // SamplesByThread queries all samples in a conversation thread.
+  rpc SamplesByThread(QuerySamplesByThreadRequest) returns (QuerySamplesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/samples/thread/{thread_id}";
+  }
+
   // SamplesBySubmitter queries all samples submitted by an address.
-  rpc SamplesBySubmitter(QuerySamplesBySubmitterRequest) returns (QuerySamplesBySubmitterResponse) {
+  rpc SamplesBySubmitter(QuerySamplesBySubmitterRequest) returns (QuerySamplesResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/samples/submitter/{submitter}";
   }
+
+  // ─── Submissions ───────────────────────────────────────────────────────────
 
   // Submission queries a single submission by ID.
   rpc Submission(QuerySubmissionRequest) returns (QuerySubmissionResponse) {
@@ -41,14 +45,42 @@ service Query {
   }
 
   // PendingSubmissions queries all pending submissions.
-  rpc PendingSubmissions(QueryPendingSubmissionsRequest) returns (QueryPendingSubmissionsResponse) {
+  rpc PendingSubmissions(QueryPendingSubmissionsRequest) returns (QuerySubmissionsResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/submissions/pending";
   }
+
+  // ─── Quality rounds ────────────────────────────────────────────────────────
 
   // QualityRound queries a quality round by ID.
   rpc QualityRound(QueryQualityRoundRequest) returns (QueryQualityRoundResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/rounds/{id}";
   }
+
+  // ─── Datasets ──────────────────────────────────────────────────────────────
+
+  // Dataset queries a dataset by ID.
+  rpc Dataset(QueryDatasetRequest) returns (QueryDatasetResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/datasets/{id}";
+  }
+
+  // Datasets queries all datasets with optional filters.
+  rpc Datasets(QueryDatasetsRequest) returns (QueryDatasetsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/datasets";
+  }
+
+  // ─── Demand & bounties ─────────────────────────────────────────────────────
+
+  // TrainingDemand queries training demand data.
+  rpc TrainingDemand(QueryTrainingDemandRequest) returns (QueryTrainingDemandResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/demand";
+  }
+
+  // DataBounties queries active data bounties.
+  rpc DataBounties(QueryDataBountiesRequest) returns (QueryDataBountiesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/bounties";
+  }
+
+  // ─── Domains ───────────────────────────────────────────────────────────────
 
   // Domain queries a domain by name.
   rpc Domain(QueryDomainRequest) returns (QueryDomainResponse) {
@@ -60,138 +92,30 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/domains";
   }
 
-  // SamplesByTag queries samples by a searchable tag.
-  rpc SamplesByTag(QuerySamplesByTagRequest) returns (QuerySamplesByTagResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/samples_by_tag/{tag}";
+  // ─── Stats ─────────────────────────────────────────────────────────────────
+
+  // DomainStats queries statistics for a specific domain.
+  rpc DomainStats(QueryDomainStatsRequest) returns (QueryDomainStatsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/stats/domain/{domain}";
   }
 
-  // SamplesByFitness queries samples sorted by fitness score.
-  rpc SamplesByFitness(QuerySamplesByFitnessRequest) returns (QuerySamplesByFitnessResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/samples_by_fitness";
+  // ProtocolStats queries aggregate protocol statistics.
+  rpc ProtocolStats(QueryProtocolStatsRequest) returns (QueryProtocolStatsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/stats";
   }
 
-  // BootstrapFundStatus queries the current state of the bootstrap fund.
-  rpc BootstrapFundStatus(QueryBootstrapFundStatusRequest) returns (QueryBootstrapFundStatusResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/bootstrap_fund";
-  }
+  // ─── Params ────────────────────────────────────────────────────────────────
 
-  // SamplesAtRisk queries samples whose energy has reached zero (at-risk of expiry).
-  rpc SamplesAtRisk(QuerySamplesAtRiskRequest) returns (QuerySamplesAtRiskResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/samples_at_risk";
-  }
-
-  // SampleThread traces a sample's thread context.
-  rpc SampleThread(QuerySampleThreadRequest) returns (QuerySampleThreadResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/sample/{sample_id}/thread";
-  }
-
-  // ─── Novelty detection ─────────────────────────────────────────────────
-
-  // ScrapedSources queries the scraped source registry.
-  rpc ScrapedSources(QueryScrapedSourcesRequest) returns (QueryScrapedSourcesResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/scraped_sources";
-  }
-
-  // CheckNovelty previews the novelty score a submission would receive.
-  rpc CheckNovelty(QueryCheckNoveltyRequest) returns (QueryCheckNoveltyResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/check_novelty";
-  }
-
-  // ─── Training demand queries ──────────────────────────────────────────
-
-  // ActiveBounties queries active (unclaimed) data bounties.
-  rpc ActiveBounties(QueryActiveBountiesRequest) returns (QueryActiveBountiesResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/bounties";
-  }
-
-  // DemandSignals queries training demand data for a domain.
-  rpc DemandSignals(QueryDemandSignalsRequest) returns (QueryDemandSignalsResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/demand";
-  }
-
-  // TopDemandGaps queries the top unfulfilled demand gaps.
-  rpc TopDemandGaps(QueryTopDemandGapsRequest) returns (QueryTopDemandGapsResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/demand_gaps";
-  }
-
-  // ─── Niche competition queries ─────────────────────────────────────
-
-  // NicheInfo queries members and metadata for a specific niche.
-  rpc NicheInfo(QueryNicheInfoRequest) returns (QueryNicheInfoResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/niche/{niche_key}";
-  }
-
-  // NichesByDomain queries all niches within a domain.
-  rpc NichesByDomain(QueryNichesByDomainRequest) returns (QueryNichesByDomainResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/niches/{domain}";
-  }
-
-  // ─── Consensus diversity queries ─────────────────────────────────────
-
-  // DomainDiversity queries consensus diversity for a domain (current epoch).
-  rpc DomainDiversity(QueryDomainDiversityRequest) returns (QueryDomainDiversityResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/diversity/domain/{domain}";
-  }
-
-  // DomainDiversityHistory queries historical diversity for a domain.
-  rpc DomainDiversityHistory(QueryDomainDiversityHistoryRequest) returns (QueryDomainDiversityHistoryResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/diversity/domain/{domain}/history";
-  }
-
-  // ValidatorIndependence queries a validator's independence score.
-  rpc ValidatorIndependence(QueryValidatorIndependenceRequest) returns (QueryValidatorIndependenceResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/diversity/validator/{validator}";
-  }
-
-  // ConformityAlerts queries domains with active conformity alerts.
-  rpc ConformityAlerts(QueryConformityAlertsRequest) returns (QueryConformityAlertsResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/diversity/conformity_alerts";
-  }
-
-  rpc MetabolismStatus(QueryMetabolismStatusRequest) returns (QueryMetabolismStatusResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/metabolism/status";
-  }
-
-  // DomainCapacity queries carrying capacity and pressure for a domain.
-  rpc DomainCapacity(QueryDomainCapacityRequest) returns (QueryDomainCapacityResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/domains/{domain}/capacity";
-  }
-
-  // EpistemicTemperature queries a domain's epistemic temperature state.
-  rpc EpistemicTemperature(QueryEpistemicTemperatureRequest) returns (QueryEpistemicTemperatureResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/epistemic_temperature/{domain}";
-  }
-
-  // RoleElasticity queries domain role elasticity and track record.
-  rpc RoleElasticity(QueryRoleElasticityRequest) returns (QueryRoleElasticityResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/role_elasticity/{domain}";
-  }
-
-  // ─── Dataset queries ──────────────────────────────────────────────────
-
-  // Dataset queries a dataset by ID.
-  rpc DatasetInfo(QueryDatasetRequest) returns (QueryDatasetResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/datasets/{id}";
-  }
-
-  // Datasets queries all datasets with optional filters.
-  rpc Datasets(QueryDatasetsRequest) returns (QueryDatasetsResponse) {
-    option (google.api.http).get = "/zerone/knowledge/v1/datasets";
+  // Params queries module parameters.
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/params";
   }
 }
 
-// ─── Request / Response messages ─────────────────────────────────────────────
-
-message QueryParamsRequest {}
-
-message QueryParamsResponse {
-  Params params = 1;
-}
+// ─── Sample query messages ────────────────────────────────────────────────────
 
 message QuerySampleRequest {
-  string id         = 1;
-  bool track_access = 2;  // Increment access counter (consumers set this)
-  string consumer   = 3;  // Address of the consumer (required if track_access=true)
+  string id = 1;
 }
 
 message QuerySampleResponse {
@@ -201,7 +125,7 @@ message QuerySampleResponse {
 message QuerySamplesRequest {
   string     domain      = 1;
   string     status      = 2;
-  SampleType sample_type = 3; // Optional filter by sample type
+  SampleType sample_type = 3;
   cosmos.base.query.v1beta1.PageRequest pagination = 4;
 }
 
@@ -215,9 +139,9 @@ message QuerySamplesByDomainRequest {
   cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
 
-message QuerySamplesByDomainResponse {
-  repeated Sample samples = 1;
-  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+message QuerySamplesByThreadRequest {
+  string thread_id = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
 
 message QuerySamplesBySubmitterRequest {
@@ -225,10 +149,7 @@ message QuerySamplesBySubmitterRequest {
   cosmos.base.query.v1beta1.PageRequest pagination = 2;
 }
 
-message QuerySamplesBySubmitterResponse {
-  repeated Sample samples = 1;
-  cosmos.base.query.v1beta1.PageResponse pagination = 2;
-}
+// ─── Submission query messages ────────────────────────────────────────────────
 
 message QuerySubmissionRequest {
   string id = 1;
@@ -242,10 +163,12 @@ message QueryPendingSubmissionsRequest {
   cosmos.base.query.v1beta1.PageRequest pagination = 1;
 }
 
-message QueryPendingSubmissionsResponse {
+message QuerySubmissionsResponse {
   repeated Submission submissions = 1;
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
+
+// ─── Quality round query messages ─────────────────────────────────────────────
 
 message QueryQualityRoundRequest {
   string id = 1;
@@ -254,6 +177,50 @@ message QueryQualityRoundRequest {
 message QueryQualityRoundResponse {
   QualityRound round = 1;
 }
+
+// ─── Dataset query messages ───────────────────────────────────────────────────
+
+message QueryDatasetRequest {
+  string id = 1;
+}
+
+message QueryDatasetResponse {
+  Dataset dataset = 1;
+}
+
+message QueryDatasetsRequest {
+  string domain = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryDatasetsResponse {
+  repeated Dataset datasets = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// ─── Demand & bounty query messages ───────────────────────────────────────────
+
+message QueryTrainingDemandRequest {
+  string domain = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryTrainingDemandResponse {
+  repeated TrainingDemand signals = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+message QueryDataBountiesRequest {
+  string domain = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryDataBountiesResponse {
+  repeated DataBounty bounties = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// ─── Domain query messages ────────────────────────────────────────────────────
 
 message QueryDomainRequest {
   string name = 1;
@@ -272,259 +239,40 @@ message QueryDomainsResponse {
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
-message QuerySamplesByTagRequest {
-  string tag = 1;
+// ─── Stats query messages ─────────────────────────────────────────────────────
+
+message QueryDomainStatsRequest {
+  string domain = 1;
 }
 
-message QuerySamplesByTagResponse {
-  repeated Sample samples = 1;
-}
-
-message QuerySamplesByFitnessRequest {
-  string domain          = 1;  // Optional domain filter
-  uint64 min_fitness     = 2;  // Minimum fitness score
-  uint64 limit           = 3;  // Max results (default 50)
-  string order           = 4;  // "desc" (default) or "asc"
-}
-
-message QuerySamplesByFitnessResponse {
-  repeated Sample samples = 1;
-}
-
-message QueryBootstrapFundStatusRequest {}
-
-message QueryBootstrapFundStatusResponse {
-  string balance                  = 1;  // Current fund balance (uzrn)
-  bool   enabled                  = 2;  // Whether sponsorship is active
-  string total_submissions_funded = 3;  // Lifetime count of sponsored submissions
-  string total_amount_spent       = 4;  // Lifetime amount distributed (uzrn)
-  string remaining_per_epoch      = 5;  // Remaining sponsored submissions this epoch
-}
-
-message QuerySamplesAtRiskRequest {
-  string domain = 1;  // Optional domain filter
-  uint64 limit  = 2;  // Max results (default 50)
-}
-
-message QuerySamplesAtRiskResponse {
-  repeated Sample samples = 1;
-}
-
-// ─── Thread queries ────────────────────────────────────────────────────────
-
-message QuerySampleThreadRequest {
-  string sample_id = 1;
-  uint64 depth     = 2;  // How deep to traverse (0 = full thread)
-}
-
-message QuerySampleThreadResponse {
-  repeated Sample thread = 1;  // Ordered by thread_position
-  string thread_id = 2;
-}
-
-// ─── Novelty detection queries ──────────────────────────────────────────────
-
-message QueryScrapedSourcesRequest {
-  string domain = 1;  // Optional domain filter (empty = all)
-}
-
-message QueryScrapedSourcesResponse {
-  repeated ScrapedSourceEntry entries = 1;
-}
-
-message QueryCheckNoveltyRequest {
+message QueryDomainStatsResponse {
   string domain          = 1;
-  string source_platform = 2;
-  string content         = 3;
+  uint64 sample_count    = 2;
+  uint64 pending_count   = 3;
+  uint64 gold_count      = 4;
+  uint64 silver_count    = 5;
+  uint64 bronze_count    = 6;
+  uint64 rejected_count  = 7;
+  string total_revenue   = 8;
+  uint64 active_bounties = 9;
 }
 
-message QueryCheckNoveltyResponse {
-  uint64 novelty_score          = 1;
-  bool   scraped_source_match   = 2;
-  string matched_entry          = 3;  // ID of matched scraped source entry (if any)
-  uint64 content_overlap_count  = 4;
+message QueryProtocolStatsRequest {}
+
+message QueryProtocolStatsResponse {
+  uint64 total_samples       = 1;
+  uint64 total_submissions   = 2;
+  uint64 total_datasets      = 3;
+  uint64 total_domains       = 4;
+  uint64 active_rounds       = 5;
+  string total_revenue       = 6;
+  uint64 total_access_count  = 7;
 }
 
-// ─── Training demand query messages ─────────────────────────────────────────
+// ─── Params query messages ────────────────────────────────────────────────────
 
-message QueryActiveBountiesRequest {
-  string domain = 1;  // Optional domain filter
-}
+message QueryParamsRequest {}
 
-message QueryActiveBountiesResponse {
-  repeated DataBounty bounties = 1;
-}
-
-message QueryDemandSignalsRequest {
-  string domain          = 1;  // Optional domain filter
-  uint64 min_unfulfilled = 2;  // Optional minimum unfulfilled count filter
-}
-
-message QueryDemandSignalsResponse {
-  repeated TrainingDemand signals = 1;
-}
-
-message QueryTopDemandGapsRequest {
-  uint64 limit = 1;  // Max results (default 20)
-}
-
-message QueryTopDemandGapsResponse {
-  repeated TrainingDemand gaps = 1;  // Sorted by unfulfilled count desc
-}
-
-// ─── Niche competition query messages ────────────────────────────────────────
-
-message QueryNicheInfoRequest {
-  string niche_key = 1;
-}
-
-message QueryNicheInfoResponse {
-  string niche_key         = 1;
-  string domain            = 2;
-  string subject           = 3;
-  Sample leader            = 4;
-  repeated Sample members  = 5;  // Sorted by fitness desc
-  uint64 total_energy      = 6;  // Sum of all member energy
-}
-
-message QueryNichesByDomainRequest {
-  string domain = 1;
-}
-
-message QueryNichesByDomainResponse {
-  repeated QueryNicheInfoResponse niches = 1;
-}
-
-// ─── Consensus diversity query messages ──────────────────────────────────────
-
-message QueryDomainDiversityRequest {
-  string domain = 1;
-}
-
-message QueryDomainDiversityResponse {
-  string  domain             = 1;
-  uint64  epoch              = 2;
-  uint64  mean_entropy_bps   = 3;
-  uint64  round_count        = 4;
-}
-
-message QueryDomainDiversityHistoryRequest {
-  string domain = 1;
-  uint64 epochs = 2;  // How many epochs to look back (default 10)
-}
-
-message QueryDomainDiversityHistoryResponse {
-  string domain = 1;
-  repeated DomainDiversityEpoch history = 2;
-}
-
-message DomainDiversityEpoch {
-  uint64 epoch            = 1;
-  uint64 mean_entropy_bps = 2;
-  uint64 round_count      = 3;
-}
-
-message QueryValidatorIndependenceRequest {
-  string validator = 1;
-}
-
-message QueryValidatorIndependenceResponse {
-  string validator            = 1;
-  uint64 total_votes          = 2;
-  uint64 dissenting_votes     = 3;
-  uint64 independence_bps     = 4;  // dissenting / total * 1_000_000
-}
-
-message QueryConformityAlertsRequest {}
-
-message QueryConformityAlertsResponse {
-  repeated ConformityAlert alerts = 1;
-}
-
-message ConformityAlert {
-  string domain             = 1;
-  uint64 consecutive_epochs = 2;
-  uint64 threshold_bps      = 3;
-}
-
-message QueryMetabolismStatusRequest {}
-message QueryMetabolismStatusResponse {
-  uint64 total_samples    = 1;
-  uint64 active_count     = 2;
-  uint64 at_risk_count    = 3;
-  uint64 expired_count    = 4;
-  uint64 pruned_count     = 5;
-  uint64 avg_energy       = 6;
-  uint64 current_epoch    = 7;
-  uint64 next_epoch_block = 8;
-}
-
-// ─── Domain carrying capacity ────────────────────────────────────────────────
-
-message QueryDomainCapacityRequest {
-  string domain = 1;
-}
-
-message QueryDomainCapacityResponse {
-  string domain         = 1;
-  uint64 active_count   = 2;
-  uint64 at_risk_count  = 3;
-  uint64 capacity       = 4;
-  uint64 pressure_bps   = 5;
-  string category       = 6;
-  uint64 total_energy   = 7;
-}
-
-// ─── Epistemic temperature query messages ────────────────────────────────────
-
-message QueryEpistemicTemperatureRequest {
-  string domain = 1;
-}
-
-message QueryEpistemicTemperatureResponse {
-  string domain                    = 1;
-  uint64 temperature_bps           = 2;
-  string category                  = 3;
-  uint64 conformity_streak         = 4;
-  uint64 recent_vindications       = 5;
-  uint64 effective_confidence_cap  = 6;
-  uint64 effective_growth_rate     = 7;
-}
-
-// ─── Role elasticity query messages ──────────────────────────────────────────
-
-message QueryRoleElasticityRequest {
-  string domain = 1;
-}
-
-message QueryRoleElasticityResponse {
-  string domain              = 1;
-  uint64 agent_correct       = 2;
-  uint64 agent_incorrect     = 3;
-  uint64 human_correct       = 4;
-  uint64 human_incorrect     = 5;
-  uint64 agent_bonus_bps     = 6;
-  uint64 human_bonus_bps     = 7;
-  uint64 agent_accuracy_bps  = 8;
-  uint64 human_accuracy_bps  = 9;
-}
-
-// ─── Dataset query messages ──────────────────────────────────────────────────
-
-message QueryDatasetRequest {
-  string id = 1;
-}
-
-message QueryDatasetResponse {
-  Dataset dataset = 1;
-}
-
-message QueryDatasetsRequest {
-  string domain = 1;  // Optional domain filter
-  cosmos.base.query.v1beta1.PageRequest pagination = 2;
-}
-
-message QueryDatasetsResponse {
-  repeated Dataset datasets = 1;
-  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+message QueryParamsResponse {
+  Params params = 1;
 }
