@@ -40,6 +40,9 @@ var (
 	NicheIndexPrefix        = []byte{0x0D} // niche_key/sample_id → exists
 	ContentHashIndexPrefix  = []byte{0x0E} // content_hash → submission_id (dedup)
 
+	SubmissionDomainIndexPrefix    = []byte{0x11} // domain/submissionID → exists
+	SubmissionSubmitterIndexPrefix = []byte{0x12} // submitter/submissionID → exists
+
 	// ─── Sequences ───────────────────────────────────────────────────────────
 	SampleSeqKey     = []byte{0x80} // uint64 next sample ID
 	SubmissionSeqKey = []byte{0x81} // uint64 next submission ID
@@ -244,6 +247,32 @@ func NicheIndexByNichePrefix(nicheKey string) []byte {
 // ContentHashKey returns the index key for content hash dedup.
 func ContentHashKey(hash string) []byte {
 	return append(append([]byte{}, ContentHashIndexPrefix...), []byte(hash)...)
+}
+
+// SubmissionDomainIndexKey returns the index key for a submission within a domain.
+func SubmissionDomainIndexKey(domain, submissionID string) []byte {
+	key := append(append([]byte{}, SubmissionDomainIndexPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(submissionID)...)
+}
+
+// SubmissionDomainByDomainPrefix returns the prefix for iterating submissions in a domain.
+func SubmissionDomainByDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, SubmissionDomainIndexPrefix...), []byte(domain)...)
+	return append(key, '/')
+}
+
+// SubmissionSubmitterIndexKey returns the index key for a submission by submitter.
+func SubmissionSubmitterIndexKey(submitter, submissionID string) []byte {
+	key := append(append([]byte{}, SubmissionSubmitterIndexPrefix...), []byte(submitter)...)
+	key = append(key, '/')
+	return append(key, []byte(submissionID)...)
+}
+
+// SubmissionSubmitterBySubmitterPrefix returns the prefix for iterating submissions by submitter.
+func SubmissionSubmitterBySubmitterPrefix(submitter string) []byte {
+	key := append(append([]byte{}, SubmissionSubmitterIndexPrefix...), []byte(submitter)...)
+	return append(key, '/')
 }
 
 // SubmissionRoundIndexKey returns the index key mapping a submission to its round.
