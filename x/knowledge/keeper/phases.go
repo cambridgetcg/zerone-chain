@@ -69,7 +69,10 @@ func (k Keeper) expireRound(ctx context.Context, round *types.QualityRound) {
 				stakeAmt, ok := sdkmath.NewIntFromString(sub.Stake)
 				if ok && stakeAmt.IsPositive() {
 					stakeCoin := sdk.NewCoin("uzrn", stakeAmt)
-					_ = k.bankKeeper.SendCoinsFromModuleToAccount(sdkCtx, types.ModuleName, submitterAddr, sdk.NewCoins(stakeCoin))
+					if err := k.bankKeeper.SendCoinsFromModuleToAccount(sdkCtx, types.ModuleName, submitterAddr, sdk.NewCoins(stakeCoin)); err != nil {
+						sdkCtx.Logger().Error("failed to return stake on round expiry",
+							"round_id", round.Id, "submitter", sub.Submitter, "error", err)
+					}
 				}
 			}
 		}
@@ -97,15 +100,11 @@ func (k Keeper) EndBlocker(ctx context.Context) error {
 	if blockHeight > 0 && blockHeight%EcologyEpochBlocks == 0 {
 		epoch := blockHeight / EcologyEpochBlocks
 		k.RunEcologyEpoch(ctx, epoch)
+		k.expireBounties(ctx, blockHeight)
 	}
 
 	// 2. Expire patronage (every block)
 	k.expirePatronage(ctx, blockHeight)
-
-	// 3. Expire bounties at epoch boundaries
-	if blockHeight > 0 && blockHeight%EcologyEpochBlocks == 0 {
-		k.expireBounties(ctx, blockHeight)
-	}
 
 	return nil
 }

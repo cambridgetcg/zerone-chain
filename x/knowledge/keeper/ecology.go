@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"sort"
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -306,8 +307,13 @@ func (k Keeper) RunEcologyEpoch(ctx context.Context, currentEpoch uint64) {
 		return false
 	})
 
-	// Phase 2: Update niche rankings
-	for nicheKey := range nichesSeen {
+	// Phase 2: Update niche rankings (sorted for determinism)
+	nicheKeys := make([]string, 0, len(nichesSeen))
+	for k := range nichesSeen {
+		nicheKeys = append(nicheKeys, k)
+	}
+	sort.Strings(nicheKeys)
+	for _, nicheKey := range nicheKeys {
 		k.UpdateNicheLeader(ctx, nicheKey)
 	}
 
