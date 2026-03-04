@@ -277,6 +277,9 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 		verdict = types.QualityVerdict_QUALITY_VERDICT_REJECT
 	}
 
+	// Score validators: reward consensus, slash outliers and missed reveals
+	k.scoreValidators(ctx, round, aggregated)
+
 	// Update round
 	round.Verdict = verdict
 	round.VerdictBlock = uint64(sdkCtx.BlockHeight())
@@ -514,4 +517,78 @@ func majorityBool(votes []*types.QualityVote, fn func(*types.QualityVote) bool) 
 		}
 	}
 	return count > len(votes)/2
+}
+
+// outlierThresholdBPS defines max deviation before a validator is outlier (200,000 = 20%).
+const outlierThresholdBPS = 200_000
+
+// scoreValidators rewards consensus validators and slashes outliers.
+func (k Keeper) scoreValidators(ctx context.Context, round *types.QualityRound, aggregated *types.QualityVote) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	// Build set of verifiers who revealed
+	revealedVerifiers := make(map[string]bool)
+	for _, r := range round.Reveals {
+		revealedVerifiers[r.Verifier] = true
+	}
+
+	// Slash validators who committed but didn't reveal
+	for _, c := range round.Commits {
+		if !revealedVerifiers[c.Verifier] {
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"validator_missed_reveal",
+				sdk.NewAttribute("verifier", c.Verifier),
+				sdk.NewAttribute("round_id", round.Id),
+			))
+		}
+	}
+
+	// Score revealed validators
+	for _, reveal := range round.Reveals {
+		var vote types.QualityVote
+		if err := json.Unmarshal([]byte(reveal.Vote), &vote); err != nil {
+			continue
+		}
+
+		deviation := computeDeviation(&vote, aggregated)
+		if deviation > outlierThresholdBPS {
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"validator_slashed",
+				sdk.NewAttribute("verifier", reveal.Verifier),
+				sdk.NewAttribute("round_id", round.Id),
+				sdk.NewAttribute("deviation", strconv.FormatUint(deviation, 10)),
+			))
+		} else {
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"validator_rewarded",
+				sdk.NewAttribute("verifier", reveal.Verifier),
+				sdk.NewAttribute("round_id", round.Id),
+			))
+		}
+	}
+}
+
+// computeDeviation returns the maximum BPS deviation between vote and aggregated scores.
+func computeDeviation(vote, aggregated *types.QualityVote) uint64 {
+	dims := []struct{ v, a uint64 }{
+		{vote.OverallQuality, aggregated.OverallQuality},
+		{vote.ReasoningDepth, aggregated.ReasoningDepth},
+		{vote.Novelty, aggregated.Novelty},
+		{vote.Toxicity, aggregated.Toxicity},
+		{vote.FactualAccuracy, aggregated.FactualAccuracy},
+	}
+
+	var maxDev uint64
+	for _, d := range dims {
+		var dev uint64
+		if d.v > d.a {
+			dev = d.v - d.a
+		} else {
+			dev = d.a - d.v
+		}
+		if dev > maxDev {
+			maxDev = dev
+		}
+	}
+	return maxDev
 }

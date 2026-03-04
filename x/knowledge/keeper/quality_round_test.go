@@ -585,6 +585,120 @@ func TestAggregateQualityRound_ToxicityThreshold(t *testing.T) {
 	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
 }
 
+// ─── Validator Scoring tests ─────────────────────────────────────────────────
+
+func TestValidatorScoring_OutlierSlashed(t *testing.T) {
+	k, ctx, bk, roundID := setupSubmissionWithRound(t)
+
+	// verifier3 is extreme outlier (100k vs ~845k median)
+	votes := []*types.QualityVote{
+		{OverallQuality: 850000, ConsentValid: true},
+		{OverallQuality: 840000, ConsentValid: true},
+		{OverallQuality: 100000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	events := sdkCtx.EventManager().Events()
+	slashFound := false
+	for _, e := range events {
+		if e.Type == "validator_slashed" {
+			for _, attr := range e.Attributes {
+				if attr.Key == "verifier" && attr.Value == verifier3 {
+					slashFound = true
+				}
+			}
+		}
+	}
+	require.True(t, slashFound, "expected verifier3 to be slashed as outlier")
+	_ = bk
+}
+
+func TestValidatorScoring_MissedRevealSlashed(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sub := &types.Submission{
+		Id: "s1", Domain: "technology", Submitter: testAddr,
+		Content: "test", Stake: "1000000",
+		Status:  types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+		Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{verifier1, verifier2, verifier3}
+	roundID, _ := k.InitiateQualityRound(ctx, "s1", "", verifiers)
+
+	// All 3 commit, only 2 reveal
+	votes := []*types.QualityVote{
+		{OverallQuality: 850000, ConsentValid: true},
+		{OverallQuality: 840000, ConsentValid: true},
+	}
+	salts := [][]byte{[]byte("s1"), []byte("s2")}
+
+	for i, v := range []string{verifier1, verifier2} {
+		hash := types.ComputeQualityCommitHash(roundID, votes[i], salts[i])
+		require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+			Verifier: v, RoundId: roundID, CommitHash: hash,
+		}))
+	}
+	// verifier3 commits but won't reveal
+	hash3 := types.ComputeQualityCommitHash(roundID, &types.QualityVote{OverallQuality: 800000}, []byte("s3"))
+	require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+		Verifier: verifier3, RoundId: roundID, CommitHash: hash3,
+	}))
+
+	round, _ := k.GetQualityRound(ctx, roundID)
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	for i, v := range []string{verifier1, verifier2} {
+		require.NoError(t, k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+			Verifier: v, RoundId: roundID, Scores: votes[i], Salt: salts[i],
+		}))
+	}
+
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	events := sdkCtx.EventManager().Events()
+	missedRevealFound := false
+	for _, e := range events {
+		if e.Type == "validator_missed_reveal" {
+			for _, attr := range e.Attributes {
+				if attr.Key == "verifier" && attr.Value == verifier3 {
+					missedRevealFound = true
+				}
+			}
+		}
+	}
+	require.True(t, missedRevealFound, "expected verifier3 missed-reveal event")
+}
+
+func TestValidatorScoring_ConsensusRewarded(t *testing.T) {
+	k, ctx, _, roundID := setupSubmissionWithRound(t)
+
+	// All close together → all rewarded
+	votes := []*types.QualityVote{
+		{OverallQuality: 850000, ConsentValid: true},
+		{OverallQuality: 845000, ConsentValid: true},
+		{OverallQuality: 855000, ConsentValid: true},
+	}
+	runFullRound(t, k, ctx, roundID, votes)
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	events := sdkCtx.EventManager().Events()
+	rewardCount := 0
+	for _, e := range events {
+		if e.Type == "validator_rewarded" {
+			rewardCount++
+		}
+	}
+	require.Equal(t, 3, rewardCount, "all 3 validators should be rewarded")
+}
+
 // ─── Sample creation tests ──────────────────────────────────────────────────
 
 func TestSampleCreation_FieldMapping(t *testing.T) {
