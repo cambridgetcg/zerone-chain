@@ -75,8 +75,8 @@ func (m msgServer) ReportDemand(ctx context.Context, msg *types.MsgReportDemand)
 	return m.keeper.ReportDemand(ctx, msg)
 }
 
-func (m msgServer) FundBounty(_ context.Context, _ *types.MsgFundBounty) (*types.MsgFundBountyResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "FundBounty not implemented (R37)")
+func (m msgServer) FundBounty(ctx context.Context, msg *types.MsgFundBounty) (*types.MsgFundBountyResponse, error) {
+	return m.keeper.FundBounty(ctx, msg)
 }
 
 func (m msgServer) RateSample(_ context.Context, _ *types.MsgRateSample) (*types.MsgRateSampleResponse, error) {

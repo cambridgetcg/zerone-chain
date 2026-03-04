@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"github.com/zerone-chain/zerone/x/knowledge/keeper"
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
@@ -979,6 +980,44 @@ func TestRunEcologyEpoch_SkipsRejectedSamples(t *testing.T) {
 	if s.Energy != 1_000_000 {
 		t.Fatalf("expected rejected sample energy unchanged, got %d", s.Energy)
 	}
+}
+
+// ─── Bounty State Tests ─────────────────────────────────────────────────────
+
+func TestDataBounty_SetGetDelete(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	bounty := &types.DataBounty{
+		Id:             "b1",
+		Domain:         "technology",
+		Subject:        "golang tutorials",
+		RewardAmount:   "1000000",
+		ExpiresAtBlock: 500,
+	}
+	require.NoError(t, k.SetDataBounty(ctx, bounty))
+
+	got, found := k.GetDataBounty(ctx, "b1")
+	require.True(t, found)
+	require.Equal(t, "technology", got.Domain)
+	require.Equal(t, uint64(500), got.ExpiresAtBlock)
+
+	require.NoError(t, k.DeleteDataBounty(ctx, "b1"))
+	_, found = k.GetDataBounty(ctx, "b1")
+	require.False(t, found)
+}
+
+func TestIterateDataBounties(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_ = k.SetDataBounty(ctx, &types.DataBounty{Id: "b1", Domain: "tech"})
+	_ = k.SetDataBounty(ctx, &types.DataBounty{Id: "b2", Domain: "sci"})
+
+	var ids []string
+	k.IterateDataBounties(ctx, func(b *types.DataBounty) bool {
+		ids = append(ids, b.Id)
+		return false
+	})
+	require.Equal(t, 2, len(ids))
 }
 
 // ─── Full Lifecycle Test ────────────────────────────────────────────────────

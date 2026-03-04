@@ -595,6 +595,24 @@ func (k Keeper) DeleteDataBounty(ctx context.Context, id string) error {
 	return store.Delete(types.DataBountyKey(id))
 }
 
+func (k Keeper) IterateDataBounties(ctx context.Context, cb func(bounty *types.DataBounty) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.DataBountyKeyPrefix, prefixEndBytes(types.DataBountyKeyPrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var bounty types.DataBounty
+		if err := proto.Unmarshal(iter.Value(), &bounty); err != nil {
+			continue
+		}
+		if cb(&bounty) {
+			break
+		}
+	}
+}
+
 func (k Keeper) SetBountyDomainIndex(ctx context.Context, domain, bountyID string) error {
 	store := k.storeService.OpenKVStore(ctx)
 	return store.Set(types.BountyDomainIndexKey(domain, bountyID), []byte{0x01})
