@@ -160,3 +160,155 @@ func TestReportDemand_MultipleReports(t *testing.T) {
 	require.True(t, found)
 	require.Equal(t, uint64(20), d2.QueryCount)
 }
+
+// ─── Manual Bounty Funding ──────────────────────────────────────────────────
+
+func TestFundBounty(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	resp, err := k.FundBounty(ctx, &types.MsgFundBounty{
+		Funder:        testAddr,
+		Domain:        "science",
+		Topic:         "quantum",
+		Amount:        "5000000",
+		ExpiresBlocks: 50000,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, resp.BountyId)
+
+	bounty, found := k.GetDataBounty(ctx, resp.BountyId)
+	require.True(t, found)
+	require.Equal(t, "science", bounty.Domain)
+	require.Equal(t, "quantum", bounty.Subject)
+	require.Equal(t, "5000000", bounty.RewardAmount)
+	require.False(t, bounty.Claimed)
+}
+
+func TestFundBounty_DomainNotFound(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	_, err := k.FundBounty(ctx, &types.MsgFundBounty{
+		Funder: testAddr,
+		Domain: "nonexistent",
+		Topic:  "topic",
+		Amount: "1000000",
+	})
+	require.ErrorIs(t, err, types.ErrDomainNotFound)
+}
+
+func TestFundBounty_InvalidAmount(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	_, err := k.FundBounty(ctx, &types.MsgFundBounty{
+		Funder: testAddr,
+		Domain: "science",
+		Topic:  "topic",
+		Amount: "0",
+	})
+	require.ErrorIs(t, err, types.ErrInsufficientPayment)
+}
+
+func TestFundBounty_InsufficientFunds(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	bk.failNextSend = true
+	_, err := k.FundBounty(ctx, &types.MsgFundBounty{
+		Funder: testAddr,
+		Domain: "science",
+		Topic:  "topic",
+		Amount: "1000000",
+	})
+	require.ErrorIs(t, err, types.ErrInsufficientPayment)
+}
+
+func TestFundBounty_DefaultExpiry(t *testing.T) {
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	resp, err := k.FundBounty(ctx, &types.MsgFundBounty{
+		Funder: testAddr,
+		Domain: "science",
+		Topic:  "topic",
+		Amount: "1000000",
+	})
+	require.NoError(t, err)
+
+	bounty, found := k.GetDataBounty(ctx, resp.BountyId)
+	require.True(t, found)
+	require.Equal(t, uint64(100)+100_000, bounty.ExpiresAtBlock) // blockHeight(100) + default
+}
+
+// ─── Bounty Fulfillment ─────────────────────────────────────────────────────
+
+func TestCheckBountyFulfillment_Match(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	require.NoError(t, k.SetDataBounty(ctx, &types.DataBounty{
+		Id: "b1", Domain: "science", Subject: "quantum", RewardAmount: "5000000", ExpiresAtBlock: 10000,
+	}))
+	require.NoError(t, k.SetBountyDomainIndex(ctx, "science", "b1"))
+
+	sample := &types.Sample{Id: "s1", Domain: "science", Submitter: testAddr, Topics: []string{"quantum", "physics"}}
+	k.CheckBountyFulfillment(ctx, sample)
+
+	bounty, found := k.GetDataBounty(ctx, "b1")
+	require.True(t, found)
+	require.True(t, bounty.Claimed)
+	require.Equal(t, "s1", bounty.ClaimedBySampleId)
+	require.Len(t, bk.moduleToAccountCalls, 1)
+}
+
+func TestCheckBountyFulfillment_NoMatch(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	require.NoError(t, k.SetDataBounty(ctx, &types.DataBounty{
+		Id: "b1", Domain: "science", Subject: "quantum", RewardAmount: "5000000", ExpiresAtBlock: 10000,
+	}))
+	require.NoError(t, k.SetBountyDomainIndex(ctx, "science", "b1"))
+
+	sample := &types.Sample{Id: "s1", Domain: "technology", Submitter: testAddr, Topics: []string{"quantum"}}
+	k.CheckBountyFulfillment(ctx, sample)
+
+	bounty, _ := k.GetDataBounty(ctx, "b1")
+	require.False(t, bounty.Claimed)
+	require.Len(t, bk.moduleToAccountCalls, 0)
+}
+
+func TestCheckBountyFulfillment_Expired(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	require.NoError(t, k.SetDataBounty(ctx, &types.DataBounty{
+		Id: "b1", Domain: "science", Subject: "quantum", RewardAmount: "5000000", ExpiresAtBlock: 50,
+	}))
+	require.NoError(t, k.SetBountyDomainIndex(ctx, "science", "b1"))
+
+	sample := &types.Sample{Id: "s1", Domain: "science", Submitter: testAddr, Topics: []string{"quantum"}}
+	k.CheckBountyFulfillment(ctx, sample)
+
+	bounty, _ := k.GetDataBounty(ctx, "b1")
+	require.False(t, bounty.Claimed)
+	require.Len(t, bk.moduleToAccountCalls, 0)
+}
+
+func TestCheckBountyFulfillment_SubjectEmpty(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	require.NoError(t, k.SetDataBounty(ctx, &types.DataBounty{
+		Id: "b1", Domain: "science", Subject: "", RewardAmount: "5000000", ExpiresAtBlock: 10000,
+	}))
+	require.NoError(t, k.SetBountyDomainIndex(ctx, "science", "b1"))
+
+	sample := &types.Sample{Id: "s1", Domain: "science", Submitter: testAddr}
+	k.CheckBountyFulfillment(ctx, sample)
+
+	bounty, _ := k.GetDataBounty(ctx, "b1")
+	require.True(t, bounty.Claimed)
+	require.Len(t, bk.moduleToAccountCalls, 1)
+}
