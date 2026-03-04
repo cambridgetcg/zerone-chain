@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 
 	"google.golang.org/protobuf/proto"
@@ -80,6 +81,128 @@ func (k Keeper) IterateDomains(ctx context.Context, cb func(domain *types.Domain
 			break
 		}
 	}
+}
+
+// ─── Submission CRUD ────────────────────────────────────────────────────────
+
+func (k Keeper) SetSubmission(ctx context.Context, sub *types.Submission) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(sub)
+	if err != nil {
+		return fmt.Errorf("failed to marshal submission: %w", err)
+	}
+	return store.Set(types.SubmissionKey(sub.Id), bz)
+}
+
+func (k Keeper) GetSubmission(ctx context.Context, id string) (*types.Submission, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.SubmissionKey(id))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var sub types.Submission
+	if err := proto.Unmarshal(bz, &sub); err != nil {
+		return nil, false
+	}
+	return &sub, true
+}
+
+func (k Keeper) DeleteSubmission(ctx context.Context, id string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.SubmissionKey(id))
+}
+
+func (k Keeper) IterateSubmissions(ctx context.Context, cb func(sub *types.Submission) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.SubmissionKeyPrefix, prefixEndBytes(types.SubmissionKeyPrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var sub types.Submission
+		if err := proto.Unmarshal(iter.Value(), &sub); err != nil {
+			continue
+		}
+		if cb(&sub) {
+			break
+		}
+	}
+}
+
+// ─── Content hash index ─────────────────────────────────────────────────────
+
+func (k Keeper) SetContentHash(ctx context.Context, hash, submissionID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.ContentHashKey(hash), []byte(submissionID))
+}
+
+func (k Keeper) HasContentHash(ctx context.Context, hash string) bool {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.ContentHashKey(hash))
+	return err == nil && bz != nil
+}
+
+// ─── Submission indexes ─────────────────────────────────────────────────────
+
+func (k Keeper) SetSubmissionDomainIndex(ctx context.Context, domain, submissionID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.SubmissionDomainIndexKey(domain, submissionID), []byte{0x01})
+}
+
+func (k Keeper) SetSubmissionSubmitterIndex(ctx context.Context, submitter, submissionID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.SubmissionSubmitterIndexKey(submitter, submissionID), []byte{0x01})
+}
+
+func (k Keeper) GetSubmissionsByDomain(ctx context.Context, domain string) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.SubmissionDomainByDomainPrefix(domain)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var ids []string
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		id := string(key[len(prefix):])
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+func (k Keeper) GetSubmissionsBySubmitter(ctx context.Context, submitter string) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.SubmissionSubmitterBySubmitterPrefix(submitter)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var ids []string
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		id := string(key[len(prefix):])
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// ─── Sequences ──────────────────────────────────────────────────────────────
+
+func (k Keeper) NextSubmissionID(ctx context.Context) string {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.SubmissionSeqKey)
+	var seq uint64 = 1
+	if err == nil && len(bz) == 8 {
+		seq = binary.BigEndian.Uint64(bz)
+	}
+	id := fmt.Sprintf("%x", seq)
+	next := make([]byte, 8)
+	binary.BigEndian.PutUint64(next, seq+1)
+	_ = store.Set(types.SubmissionSeqKey, next)
+	return id
 }
 
 // ─── Store helpers ───────────────────────────────────────────────────────────

@@ -100,6 +100,11 @@ func (k *Keeper) SetPacingKeeper(pk types.PacingKeeper) {
 	k.pacingKeeper = pk
 }
 
+// TestingSetStoreService allows tests to inject a mock store service. Test-only.
+func (k *Keeper) TestingSetStoreService(ss store.KVStoreService) {
+	k.storeService = ss
+}
+
 // Logger returns a module-scoped logger.
 func (k Keeper) Logger(ctx context.Context) log.Logger {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
