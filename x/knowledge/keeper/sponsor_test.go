@@ -223,3 +223,82 @@ func TestSponsorSample_InvalidAmount(t *testing.T) {
 	_, err := k.SponsorSample(ctx, msg)
 	require.ErrorIs(t, err, types.ErrInsufficientPayment)
 }
+
+func TestSponsorSample_MultipleSponsorships(t *testing.T) {
+	sponsor := sponsor1()
+	k, ctx, bk := setupKeeperWithBank(t)
+
+	// Create a gold sample with energy 200/1000
+	sample := createGoldSample(t, k, ctx, "sample-ms1")
+	sample.Energy = 200
+	sample.EnergyCap = 1000
+	sample.EnergyLastUpdated = 50
+	require.NoError(t, k.SetSample(ctx, sample))
+
+	// First sponsorship: 3M for 500 blocks
+	msg1 := &types.MsgSponsorSample{
+		Sponsor:        sponsor,
+		SampleId:       "sample-ms1",
+		Amount:         "3000000",
+		DurationBlocks: 500,
+	}
+	_, err := k.SponsorSample(ctx, msg1)
+	require.NoError(t, err)
+
+	s1, found := k.GetSample(ctx, "sample-ms1")
+	require.True(t, found)
+	require.Equal(t, "3000000", s1.PatronageAmount)
+	require.Equal(t, uint64(600), s1.PatronageExpiryBlock)  // 100 + 500
+	require.Equal(t, uint64(1000), s1.Energy)                // restored to cap
+
+	// Second sponsorship: 2M for 200 blocks — should accumulate
+	msg2 := &types.MsgSponsorSample{
+		Sponsor:        sponsor,
+		SampleId:       "sample-ms1",
+		Amount:         "2000000",
+		DurationBlocks: 200,
+	}
+	_, err = k.SponsorSample(ctx, msg2)
+	require.NoError(t, err)
+
+	s2, found := k.GetSample(ctx, "sample-ms1")
+	require.True(t, found)
+	require.Equal(t, "5000000", s2.PatronageAmount)          // 3M + 2M
+	require.Equal(t, uint64(800), s2.PatronageExpiryBlock)   // 600 + 200 (extends from existing expiry > current block)
+	require.Equal(t, uint64(1000), s2.Energy)                // still at cap
+
+	// Verify both bank calls happened
+	require.Len(t, bk.accountToModuleCalls, 2)
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 3000000), bk.accountToModuleCalls[0].amount[0])
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 2000000), bk.accountToModuleCalls[1].amount[0])
+}
+
+func TestSponsorSample_RestoresEnergy_ZeroCap(t *testing.T) {
+	sponsor := sponsor1()
+	k, ctx, _ := setupKeeperWithBank(t)
+
+	// Create a gold sample with energy_cap=0 (no energy cap set)
+	sample := createGoldSample(t, k, ctx, "sample-zc1")
+	sample.Energy = 0
+	sample.EnergyCap = 0
+	sample.EnergyLastUpdated = 50
+	require.NoError(t, k.SetSample(ctx, sample))
+
+	msg := &types.MsgSponsorSample{
+		Sponsor:        sponsor,
+		SampleId:       "sample-zc1",
+		Amount:         "1000000",
+		DurationBlocks: 100,
+	}
+
+	_, err := k.SponsorSample(ctx, msg)
+	require.NoError(t, err)
+
+	updated, found := k.GetSample(ctx, "sample-zc1")
+	require.True(t, found)
+	require.Equal(t, "1000000", updated.PatronageAmount)
+	require.Equal(t, uint64(200), updated.PatronageExpiryBlock)  // 100 + 100
+	// Energy stays at 0 because cap is 0 — the condition `if sample.EnergyCap > 0` is false
+	require.Equal(t, uint64(0), updated.Energy)
+	require.Equal(t, uint64(100), updated.EnergyLastUpdated)
+}

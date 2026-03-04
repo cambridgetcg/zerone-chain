@@ -365,3 +365,159 @@ func TestContestSample_EmitsEvent(t *testing.T) {
 	}
 	require.True(t, found, "expected sample_contested event")
 }
+
+func TestContestSample_AllContestTypes(t *testing.T) {
+	contestTypes := []types.ContestType{
+		types.ContestType_CONTEST_TYPE_CONSENT,
+		types.ContestType_CONTEST_TYPE_QUALITY,
+		types.ContestType_CONTEST_TYPE_DUPLICATE,
+		types.ContestType_CONTEST_TYPE_TOXIC,
+		types.ContestType_CONTEST_TYPE_COPYRIGHT,
+	}
+
+	for _, ct := range contestTypes {
+		ct := ct // capture range var
+		t.Run(ct.String(), func(t *testing.T) {
+			challenger := challengerAddr()
+			k, ctx, _ := setupKeeperWithBank(t)
+			setupDefaultDomains(t, k, ctx)
+
+			sampleID := "sample-ct-" + ct.String()
+			createGoldSample(t, k, ctx, sampleID)
+
+			msg := &types.MsgContestSample{
+				Challenger:  challenger,
+				SampleId:    sampleID,
+				Stake:       "1000000",
+				Reason:      "test all types",
+				ContestType: ct,
+			}
+
+			resp, err := k.ContestSample(ctx, msg)
+			require.NoError(t, err)
+			require.NotEmpty(t, resp.RoundId)
+
+			// Verify round was created
+			round, found := k.GetQualityRound(ctx, resp.RoundId)
+			require.True(t, found)
+			require.NotEmpty(t, round.SubmissionId)
+
+			// Verify sample is CONTESTED
+			updated, found := k.GetSample(ctx, sampleID)
+			require.True(t, found)
+			require.Equal(t, types.SampleStatus_SAMPLE_STATUS_CONTESTED, updated.Status)
+		})
+	}
+}
+
+func TestContestSample_CannotContestExpired(t *testing.T) {
+	challenger := challengerAddr()
+	k, ctx := setupKeeper(t)
+
+	require.NoError(t, k.SetSample(ctx, &types.Sample{
+		Id:        "expired-1",
+		Submitter: testAddr,
+		Status:    types.SampleStatus_SAMPLE_STATUS_EXPIRED,
+	}))
+
+	msg := &types.MsgContestSample{
+		Challenger:  challenger,
+		SampleId:    "expired-1",
+		Stake:       "1000000",
+		ContestType: types.ContestType_CONTEST_TYPE_QUALITY,
+	}
+
+	_, err := k.ContestSample(ctx, msg)
+	require.ErrorIs(t, err, types.ErrInvalidChallenge)
+}
+
+func TestContestSample_CannotContestPending(t *testing.T) {
+	challenger := challengerAddr()
+	k, ctx := setupKeeper(t)
+
+	require.NoError(t, k.SetSample(ctx, &types.Sample{
+		Id:        "pending-1",
+		Submitter: testAddr,
+		Status:    types.SampleStatus_SAMPLE_STATUS_PENDING,
+	}))
+
+	msg := &types.MsgContestSample{
+		Challenger:  challenger,
+		SampleId:    "pending-1",
+		Stake:       "1000000",
+		ContestType: types.ContestType_CONTEST_TYPE_QUALITY,
+	}
+
+	_, err := k.ContestSample(ctx, msg)
+	require.ErrorIs(t, err, types.ErrInvalidChallenge)
+}
+
+func TestContestSample_RoundHasCorrectSubmission(t *testing.T) {
+	challenger := challengerAddr()
+	k, ctx, _ := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	// Create a gold sample with specific content and domain
+	sample := &types.Sample{
+		Id:             "sample-sub-check",
+		Content:        "unique content for verification",
+		SampleType:     types.SampleType_SAMPLE_TYPE_DISCUSSION,
+		Domain:         "science",
+		SourceUri:      "https://example.com/verify",
+		SourcePlatform: "web",
+		Submitter:      testAddr,
+		OriginalAuthor: "original-author",
+		License:        "CC-BY",
+		Tags:           []string{"test", "verify"},
+		Language:       "en",
+		Status:         types.SampleStatus_SAMPLE_STATUS_GOLD,
+	}
+	require.NoError(t, k.SetSample(ctx, sample))
+
+	msg := &types.MsgContestSample{
+		Challenger:  challenger,
+		SampleId:    "sample-sub-check",
+		Stake:       "1000000",
+		Reason:      "verify submission content",
+		ContestType: types.ContestType_CONTEST_TYPE_QUALITY,
+	}
+
+	resp, err := k.ContestSample(ctx, msg)
+	require.NoError(t, err)
+
+	// Get the round, then the submission it references
+	round, found := k.GetQualityRound(ctx, resp.RoundId)
+	require.True(t, found)
+
+	sub, found := k.GetSubmission(ctx, round.SubmissionId)
+	require.True(t, found)
+
+	// Verify the submission faithfully reproduces the sample's content and domain
+	require.Equal(t, "unique content for verification", sub.Content)
+	require.Equal(t, "science", sub.Domain)
+	require.Equal(t, "https://example.com/verify", sub.SourceUri)
+	require.Equal(t, "web", sub.SourcePlatform)
+	require.Equal(t, "original-author", sub.OriginalAuthor)
+	require.Equal(t, "CC-BY", sub.License)
+	require.Equal(t, []string{"test", "verify"}, sub.Tags)
+	require.Equal(t, "en", sub.Language)
+	require.Equal(t, challenger, sub.Submitter)
+	require.Equal(t, "1000000", sub.Stake)
+}
+
+func TestContestSample_InvalidStakeString(t *testing.T) {
+	challenger := challengerAddr()
+	k, ctx := setupKeeper(t)
+
+	createGoldSample(t, k, ctx, "sample-badstake")
+
+	msg := &types.MsgContestSample{
+		Challenger:  challenger,
+		SampleId:    "sample-badstake",
+		Stake:       "not-a-number",
+		ContestType: types.ContestType_CONTEST_TYPE_QUALITY,
+	}
+
+	_, err := k.ContestSample(ctx, msg)
+	require.ErrorIs(t, err, types.ErrInsufficientStake)
+}
