@@ -217,3 +217,35 @@ func (k Keeper) ComputeThreadBonus(ctx context.Context, sample *types.Sample) ui
 	}
 	return bonus
 }
+
+// ─── Pruning ────────────────────────────────────────────────────────────────
+
+// PruneSamples removes samples that have been at-risk beyond the grace period.
+// Content is cleared to save storage, but the provenance record is kept.
+func (k Keeper) PruneSamples(ctx context.Context, currentEpoch uint64, params *types.Params) {
+	var toPrune []string
+
+	k.IterateAtRiskSamples(ctx, func(sampleID string) bool {
+		sample, ok := k.GetSample(ctx, sampleID)
+		if !ok {
+			toPrune = append(toPrune, sampleID) // orphaned index entry
+			return false
+		}
+		if sample.AtRiskSinceEpoch == 0 {
+			return false
+		}
+		gracePeriod := currentEpoch - sample.AtRiskSinceEpoch
+		if gracePeriod >= params.PruneGraceEpochs {
+			sample.Status = types.SampleStatus_SAMPLE_STATUS_PRUNED
+			sample.Content = ""
+			_ = k.SetSample(ctx, sample)
+			toPrune = append(toPrune, sampleID)
+		}
+		return false
+	})
+
+	// Clean up at-risk index for pruned samples
+	for _, id := range toPrune {
+		_ = k.DeleteAtRiskIndex(ctx, id)
+	}
+}

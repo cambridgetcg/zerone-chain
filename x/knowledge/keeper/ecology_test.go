@@ -575,3 +575,108 @@ func TestComputeThreadBonus_CappedAt300k(t *testing.T) {
 		t.Fatalf("expected capped at 300000, got %d", bonus)
 	}
 }
+
+// ─── Pruning Tests ──────────────────────────────────────────────────────────
+
+func TestPruneSamples_AfterGracePeriod(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams() // PruneGraceEpochs = 10
+
+	sample := &types.Sample{
+		Id:               "1",
+		Content:          "will be pruned",
+		Energy:           0,
+		AtRiskSinceEpoch: 5,
+		Status:           types.SampleStatus_SAMPLE_STATUS_GOLD,
+	}
+	_ = k.SetSample(ctx, sample)
+	_ = k.SetAtRiskIndex(ctx, "1")
+
+	k.PruneSamples(ctx, 16, &params) // epoch 16: grace = 16-5 = 11 >= 10
+
+	pruned, ok := k.GetSample(ctx, "1")
+	if !ok {
+		t.Fatal("sample should still exist (as record)")
+	}
+	if pruned.Status != types.SampleStatus_SAMPLE_STATUS_PRUNED {
+		t.Fatalf("expected PRUNED status, got %v", pruned.Status)
+	}
+	if pruned.Content != "" {
+		t.Fatal("expected content to be cleared after pruning")
+	}
+}
+
+func TestPruneSamples_WithinGracePeriod(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	sample := &types.Sample{
+		Id:               "1",
+		Content:          "still alive",
+		Energy:           0,
+		AtRiskSinceEpoch: 5,
+		Status:           types.SampleStatus_SAMPLE_STATUS_GOLD,
+	}
+	_ = k.SetSample(ctx, sample)
+	_ = k.SetAtRiskIndex(ctx, "1")
+
+	k.PruneSamples(ctx, 10, &params) // epoch 10: grace = 10-5 = 5 < 10
+
+	alive, ok := k.GetSample(ctx, "1")
+	if !ok {
+		t.Fatal("sample should exist")
+	}
+	if alive.Status == types.SampleStatus_SAMPLE_STATUS_PRUNED {
+		t.Fatal("sample should NOT be pruned within grace period")
+	}
+	if alive.Content == "" {
+		t.Fatal("content should still exist")
+	}
+}
+
+func TestPruneSamples_MultipleSamples_SelectivelyPrunes(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Content: "old", Energy: 0, AtRiskSinceEpoch: 1,
+		Status: types.SampleStatus_SAMPLE_STATUS_BRONZE,
+	})
+	_ = k.SetAtRiskIndex(ctx, "1")
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "2", Content: "new", Energy: 0, AtRiskSinceEpoch: 9,
+		Status: types.SampleStatus_SAMPLE_STATUS_SILVER,
+	})
+	_ = k.SetAtRiskIndex(ctx, "2")
+
+	k.PruneSamples(ctx, 12, &params) // s1 grace=11>=10 (prune), s2 grace=3<10 (keep)
+
+	s1, _ := k.GetSample(ctx, "1")
+	if s1.Status != types.SampleStatus_SAMPLE_STATUS_PRUNED {
+		t.Fatal("sample 1 should be pruned")
+	}
+
+	s2, _ := k.GetSample(ctx, "2")
+	if s2.Status == types.SampleStatus_SAMPLE_STATUS_PRUNED {
+		t.Fatal("sample 2 should NOT be pruned")
+	}
+}
+
+func TestPruneSamples_ZeroAtRiskEpoch_NotPruned(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	params := types.DefaultParams()
+
+	_ = k.SetSample(ctx, &types.Sample{
+		Id: "1", Content: "safe", Energy: 0, AtRiskSinceEpoch: 0,
+		Status: types.SampleStatus_SAMPLE_STATUS_GOLD,
+	})
+	_ = k.SetAtRiskIndex(ctx, "1")
+
+	k.PruneSamples(ctx, 100, &params)
+
+	s, _ := k.GetSample(ctx, "1")
+	if s.Status == types.SampleStatus_SAMPLE_STATUS_PRUNED {
+		t.Fatal("should not prune sample with at_risk_since_epoch=0")
+	}
+}
