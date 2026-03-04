@@ -483,6 +483,27 @@ func (k Keeper) IterateAtRiskSamples(ctx context.Context, cb func(sampleID strin
 	}
 }
 
+
+// ─── Contest index ──────────────────────────────────────────────────────────
+
+func (k Keeper) SetContestIndex(ctx context.Context, sampleID, roundID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.ContestIndexKey(sampleID), []byte(roundID))
+}
+
+func (k Keeper) GetContestRound(ctx context.Context, sampleID string) (string, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.ContestIndexKey(sampleID))
+	if err != nil || bz == nil {
+		return "", false
+	}
+	return string(bz), true
+}
+
+func (k Keeper) DeleteContestIndex(ctx context.Context, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.ContestIndexKey(sampleID))
+}
 // ─── Topic saturation counters ──────────────────────────────────────────────
 
 func (k Keeper) IncrementTopicCount(ctx context.Context, domain, topic string) error {

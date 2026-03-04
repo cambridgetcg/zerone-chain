@@ -332,3 +332,26 @@ func TestSampleIndexes(t *testing.T) {
 	require.Len(t, thread2IDs, 1)
 	require.Equal(t, "s3", thread2IDs[0])
 }
+
+// ─── Contest index ──────────────────────────────────────────────────────────
+
+func TestContestIndex_SetGetDelete(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	// Initially no contest
+	_, found := k.GetContestRound(ctx, "sample-1")
+	require.False(t, found)
+
+	// Set contest index
+	require.NoError(t, k.SetContestIndex(ctx, "sample-1", "round-42"))
+
+	// Get it back
+	roundID, found := k.GetContestRound(ctx, "sample-1")
+	require.True(t, found)
+	require.Equal(t, "round-42", roundID)
+
+	// Delete
+	require.NoError(t, k.DeleteContestIndex(ctx, "sample-1"))
+	_, found = k.GetContestRound(ctx, "sample-1")
+	require.False(t, found)
+}

@@ -143,6 +143,9 @@ var (
 	ValidatorParticipationPrefix     = []byte{0xa5}
 	TopicSaturationPrefix            = []byte{0xa6} // domain/topic → uint64 count
 	AtRiskSampleIndexPrefix          = []byte{0xa7} // sampleID → exists (at-risk samples)
+
+	// ─── Contest ────────────────────────────────────────────────────────
+	ContestIndexPrefix = []byte{0xa8} // sampleID → contestRoundID (active contest)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -304,6 +307,11 @@ func TopicSaturationKey(domain, topic string) []byte {
 // AtRiskSampleKey returns the index key for an at-risk sample.
 func AtRiskSampleKey(sampleID string) []byte {
 	return append(append([]byte{}, AtRiskSampleIndexPrefix...), []byte(sampleID)...)
+}
+
+// ContestIndexKey returns the index key mapping a contested sample to its re-validation round.
+func ContestIndexKey(sampleID string) []byte {
+	return append(append([]byte{}, ContestIndexPrefix...), []byte(sampleID)...)
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────
