@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -443,4 +444,254 @@ func TestSubmitThread_ItemContentTooLarge(t *testing.T) {
 		},
 	})
 	require.ErrorIs(t, err, types.ErrContentTooLarge)
+}
+
+// ─── Edge-case & event tests ────────────────────────────────────────────────
+
+func TestSubmitData_EventEmitted(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	msg := &types.MsgSubmitData{
+		Submitter:  testAddr,
+		Content:    "event test content",
+		SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+		Domain:     "technology",
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		Stake:      "1000000",
+	}
+
+	resp, err := k.SubmitData(sdkCtx, msg)
+	require.NoError(t, err)
+
+	events := sdkCtx.EventManager().Events()
+	var found bool
+	for _, e := range events {
+		if e.Type == "submit_data" {
+			found = true
+			for _, attr := range e.Attributes {
+				if attr.Key == "submission_id" {
+					require.Equal(t, resp.SubmissionId, attr.Value)
+				}
+			}
+		}
+	}
+	require.True(t, found, "submit_data event not emitted")
+}
+
+func TestSubmitThread_EventEmitted(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	msg := &types.MsgSubmitThread{
+		Submitter: testAddr,
+		ThreadId:  "thread-event",
+		Domain:    "technology",
+		Stake:     "1000000",
+		Items: []*types.MsgSubmitData{
+			{Content: "e1", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: "e2", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+		},
+	}
+
+	_, err := k.SubmitThread(sdkCtx, msg)
+	require.NoError(t, err)
+
+	events := sdkCtx.EventManager().Events()
+	var found bool
+	for _, e := range events {
+		if e.Type == "submit_thread" {
+			found = true
+		}
+	}
+	require.True(t, found, "submit_thread event not emitted")
+}
+
+func TestSubmitData_AllConsentTypes(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	consentCases := []struct {
+		name    string
+		consent *types.ConsentProof
+	}{
+		{"self_authored", &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+		{"opt_in_sig", &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_OPT_IN, AuthorSignature: "sig"}},
+		{"opt_in_uri", &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_OPT_IN, ProofUri: "https://x.com"}},
+		{"public_license", &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_PUBLIC_LICENSE, ProofUri: "https://mit.edu"}},
+		{"platform_tos", &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_PLATFORM_TOS, ProofUri: "https://tos.com"}},
+		{"fair_use", &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_FAIR_USE}},
+	}
+
+	for i, tc := range consentCases {
+		t.Run(tc.name, func(t *testing.T) {
+			msg := &types.MsgSubmitData{
+				Submitter:  testAddr,
+				Content:    fmt.Sprintf("consent test %d %s", i, tc.name),
+				SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+				Domain:     "technology",
+				Consent:    tc.consent,
+				Stake:      "1000000",
+			}
+			_, err := k.SubmitData(ctx, msg)
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestSubmitData_InactiveDomain(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	require.NoError(t, k.SetDomain(ctx, &types.Domain{
+		Name:   "inactive",
+		Status: types.DomainStatus_DOMAIN_STATUS_PROPOSED,
+	}))
+
+	msg := &types.MsgSubmitData{
+		Submitter:  testAddr,
+		Content:    "test",
+		SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+		Domain:     "inactive",
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		Stake:      "1000000",
+	}
+
+	_, err := k.SubmitData(ctx, msg)
+	require.ErrorIs(t, err, types.ErrInvalidDomain)
+}
+
+func TestSubmitData_ZeroStake(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	msg := &types.MsgSubmitData{
+		Submitter:  testAddr,
+		Content:    "zero stake test",
+		SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+		Domain:     "technology",
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		Stake:      "0",
+	}
+
+	_, err := k.SubmitData(ctx, msg)
+	require.ErrorIs(t, err, types.ErrInsufficientStake)
+}
+
+func TestSubmitData_EmptyStake(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	msg := &types.MsgSubmitData{
+		Submitter:  testAddr,
+		Content:    "empty stake test",
+		SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+		Domain:     "technology",
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		Stake:      "",
+	}
+
+	_, err := k.SubmitData(ctx, msg)
+	require.Error(t, err)
+}
+
+func TestSubmitData_WithThreadAndParent(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	msg := &types.MsgSubmitData{
+		Submitter:          testAddr,
+		Content:            "child content with thread",
+		SampleType:         types.SampleType_SAMPLE_TYPE_DISCUSSION,
+		Domain:             "technology",
+		Consent:            &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		Stake:              "1000000",
+		ThreadId:           "thread-x",
+		ParentSubmissionId: "parent-1",
+	}
+
+	resp, err := k.SubmitData(ctx, msg)
+	require.NoError(t, err)
+
+	sub, found := k.GetSubmission(ctx, resp.SubmissionId)
+	require.True(t, found)
+	require.Equal(t, "thread-x", sub.ThreadId)
+	require.Equal(t, "parent-1", sub.ParentSubmissionId)
+}
+
+func TestSubmitData_MultipleDomains(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	for _, domain := range []string{"technology", "science"} {
+		msg := &types.MsgSubmitData{
+			Submitter:  testAddr,
+			Content:    "content for " + domain,
+			SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+			Domain:     domain,
+			Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+			Stake:      "1000000",
+		}
+		_, err := k.SubmitData(ctx, msg)
+		require.NoError(t, err)
+	}
+
+	techIds := k.GetSubmissionsByDomain(ctx, "technology")
+	sciIds := k.GetSubmissionsByDomain(ctx, "science")
+	require.Len(t, techIds, 1)
+	require.Len(t, sciIds, 1)
+}
+
+func TestContentHash_Deterministic(t *testing.T) {
+	k, _ := setupKeeper(t)
+	content := "deterministic hash test"
+	h1 := k.ComputeContentHash(content)
+	h2 := k.ComputeContentHash(content)
+	require.Equal(t, h1, h2)
+	require.Len(t, h1, 64) // SHA-256 hex = 64 chars
+}
+
+func TestSubmitData_StakeLocking(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	msg := &types.MsgSubmitData{
+		Submitter:  testAddr,
+		Content:    "stake locking test",
+		SampleType: types.SampleType_SAMPLE_TYPE_EXPLANATION,
+		Domain:     "technology",
+		Consent:    &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		Stake:      "1000000",
+	}
+
+	_, err := k.SubmitData(ctx, msg)
+	require.NoError(t, err)
+
+	// Verify bank was called
+	require.Len(t, bk.accountToModuleCalls, 1)
+	require.Equal(t, testAddr, bk.accountToModuleCalls[0].from)
+	require.Equal(t, "knowledge", bk.accountToModuleCalls[0].to)
+}
+
+func TestSubmitThread_StakeLocking(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	msg := &types.MsgSubmitThread{
+		Submitter: testAddr,
+		ThreadId:  "thread-stake",
+		Domain:    "technology",
+		Stake:     "2000000",
+		Items: []*types.MsgSubmitData{
+			{Content: "s1", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+			{Content: "s2", SampleType: types.SampleType_SAMPLE_TYPE_DISCUSSION, Consent: &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED}},
+		},
+	}
+
+	_, err := k.SubmitThread(ctx, msg)
+	require.NoError(t, err)
+
+	// Single stake for entire thread
+	require.Len(t, bk.accountToModuleCalls, 1)
+	require.Equal(t, "knowledge", bk.accountToModuleCalls[0].to)
 }
