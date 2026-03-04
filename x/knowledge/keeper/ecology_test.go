@@ -451,3 +451,65 @@ func TestUpdateNicheLeader_EmptyNiche(t *testing.T) {
 	k, ctx := setupKeeper(t)
 	k.UpdateNicheLeader(ctx, "empty_niche")
 }
+
+// ─── Topic Saturation Tests ─────────────────────────────────────────────────
+
+func TestComputeTopicSaturation_NoSamples(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	sat := k.ComputeTopicSaturation(ctx, "tech", "golang")
+	if sat != 0 {
+		t.Fatalf("expected 0 for no samples, got %d", sat)
+	}
+}
+
+func TestComputeTopicSaturation_BelowMax(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	for i := 0; i < 10; i++ {
+		_ = k.IncrementTopicCount(ctx, "tech", "golang")
+	}
+	sat := k.ComputeTopicSaturation(ctx, "tech", "golang")
+	// 10 out of 100 max = 100,000 BPS
+	if sat != 100_000 {
+		t.Fatalf("expected 100000, got %d", sat)
+	}
+}
+
+func TestComputeTopicSaturation_AboveMax(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	for i := 0; i < 200; i++ {
+		_ = k.IncrementTopicCount(ctx, "tech", "golang")
+	}
+	sat := k.ComputeTopicSaturation(ctx, "tech", "golang")
+	if sat != 1_000_000 {
+		t.Fatalf("expected capped at 1,000,000, got %d", sat)
+	}
+}
+
+func TestApplyNoveltyAdjustment_LowSaturation(t *testing.T) {
+	adjusted := keeper.ApplyNoveltyAdjustment(800_000, 200_000)
+	if adjusted != 800_000 {
+		t.Fatalf("expected no adjustment at low saturation, got %d", adjusted)
+	}
+}
+
+func TestApplyNoveltyAdjustment_HighSaturation(t *testing.T) {
+	// saturation=800,000, threshold=500,000
+	// penalty = (800,000 - 500,000) * 500,000 / 1,000,000 = 150,000
+	// adjusted = 600,000 * (1,000,000 - 150,000) / 1,000,000 = 510,000
+	adjusted := keeper.ApplyNoveltyAdjustment(600_000, 800_000)
+	expected := uint64(510_000)
+	if adjusted != expected {
+		t.Fatalf("expected %d, got %d", expected, adjusted)
+	}
+}
+
+func TestApplyNoveltyAdjustment_MaxSaturation(t *testing.T) {
+	// saturation=1,000,000 → max penalty
+	// penalty = (1,000,000 - 500,000) * 500,000 / 1,000,000 = 250,000
+	// adjusted = 1,000,000 * (1,000,000 - 250,000) / 1,000,000 = 750,000
+	adjusted := keeper.ApplyNoveltyAdjustment(1_000_000, 1_000_000)
+	expected := uint64(750_000)
+	if adjusted != expected {
+		t.Fatalf("expected %d, got %d", expected, adjusted)
+	}
+}

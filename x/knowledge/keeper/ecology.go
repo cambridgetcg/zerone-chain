@@ -173,3 +173,30 @@ func (k Keeper) UpdateNicheLeader(ctx context.Context, nicheKey string) {
 		}
 	}
 }
+
+// ─── Topic Saturation ───────────────────────────────────────────────────────
+
+const (
+	// saturationThreshold is the BPS level above which novelty is penalized.
+	saturationThreshold uint64 = 500_000
+)
+
+// ComputeTopicSaturation returns a saturation score 0–1,000,000 for a domain+topic.
+// Uses the topic count relative to a max count of 100 (2x NicheSaturationThreshold default).
+func (k Keeper) ComputeTopicSaturation(ctx context.Context, domain, topic string) uint64 {
+	count := k.GetTopicCount(ctx, domain, topic)
+	if count == 0 {
+		return 0
+	}
+	maxCount := uint64(100)
+	return normalize(count, maxCount)
+}
+
+// ApplyNoveltyAdjustment reduces novelty score for over-saturated topics.
+func ApplyNoveltyAdjustment(noveltyScore, saturation uint64) uint64 {
+	if saturation <= saturationThreshold {
+		return noveltyScore
+	}
+	penalty := (saturation - saturationThreshold) * 500_000 / 1_000_000
+	return noveltyScore * (1_000_000 - penalty) / 1_000_000
+}
