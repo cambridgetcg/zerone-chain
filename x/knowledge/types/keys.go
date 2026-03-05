@@ -153,6 +153,10 @@ var (
 
 	// ─── Revenue queue ──────────────────────────────────────────────────
 	PendingRevenuePrefix = []byte{0xaa} // sampleID → uint64 accumulated uzrn
+
+	// ─── Consent audit ─────────────────────────────────────────────────
+	ConsentAuditPrefix = []byte{0xab} // sampleID/seq → ConsentEvent
+	ConsentAuditSeqKey = []byte{0xac} // sampleID → uint64 next event seq
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -350,6 +354,26 @@ func DatasetDomainByDomainPrefix(domain string) []byte {
 // PendingRevenueKey returns the store key for a sample's pending revenue.
 func PendingRevenueKey(sampleID string) []byte {
 	return append(append([]byte{}, PendingRevenuePrefix...), []byte(sampleID)...)
+}
+
+// ConsentAuditKey returns the store key for a consent event.
+func ConsentAuditKey(sampleID string, seq uint64) []byte {
+	key := append(append([]byte{}, ConsentAuditPrefix...), []byte(sampleID)...)
+	key = append(key, '/')
+	seqBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(seqBz, seq)
+	return append(key, seqBz...)
+}
+
+// ConsentAuditBySamplePrefix returns the prefix for iterating consent events for a sample.
+func ConsentAuditBySamplePrefix(sampleID string) []byte {
+	key := append(append([]byte{}, ConsentAuditPrefix...), []byte(sampleID)...)
+	return append(key, '/')
+}
+
+// ConsentAuditSeqKeyFn returns the store key for a sample's consent event sequence.
+func ConsentAuditSeqKeyFn(sampleID string) []byte {
+	return append(append([]byte{}, ConsentAuditSeqKey...), []byte(sampleID)...)
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────

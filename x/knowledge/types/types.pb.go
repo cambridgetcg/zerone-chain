@@ -2330,6 +2330,99 @@ func (x *Dataset) GetUpdatedAtBlock() uint64 {
 	return 0
 }
 
+// ConsentEvent records a consent-related action for audit purposes.
+type ConsentEvent struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	SampleId       string                 `protobuf:"bytes,1,opt,name=sample_id,json=sampleId,proto3" json:"sample_id,omitempty"`
+	EventType      string                 `protobuf:"bytes,2,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"` // "granted", "revocation", "upgraded", "challenged", "verified"
+	Actor          string                 `protobuf:"bytes,3,opt,name=actor,proto3" json:"actor,omitempty"`
+	Reason         string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	Block          uint64                 `protobuf:"varint,5,opt,name=block,proto3" json:"block,omitempty"`
+	OldConsentType ConsentType            `protobuf:"varint,6,opt,name=old_consent_type,json=oldConsentType,proto3,enum=zerone.knowledge.v1.ConsentType" json:"old_consent_type,omitempty"`
+	NewConsentType ConsentType            `protobuf:"varint,7,opt,name=new_consent_type,json=newConsentType,proto3,enum=zerone.knowledge.v1.ConsentType" json:"new_consent_type,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ConsentEvent) Reset() {
+	*x = ConsentEvent{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConsentEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConsentEvent) ProtoMessage() {}
+
+func (x *ConsentEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConsentEvent.ProtoReflect.Descriptor instead.
+func (*ConsentEvent) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ConsentEvent) GetSampleId() string {
+	if x != nil {
+		return x.SampleId
+	}
+	return ""
+}
+
+func (x *ConsentEvent) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *ConsentEvent) GetActor() string {
+	if x != nil {
+		return x.Actor
+	}
+	return ""
+}
+
+func (x *ConsentEvent) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ConsentEvent) GetBlock() uint64 {
+	if x != nil {
+		return x.Block
+	}
+	return 0
+}
+
+func (x *ConsentEvent) GetOldConsentType() ConsentType {
+	if x != nil {
+		return x.OldConsentType
+	}
+	return ConsentType_CONSENT_TYPE_UNSPECIFIED
+}
+
+func (x *ConsentEvent) GetNewConsentType() ConsentType {
+	if x != nil {
+		return x.NewConsentType
+	}
+	return ConsentType_CONSENT_TYPE_UNSPECIFIED
+}
+
 // CompletedRoundMeta stores metadata for completed quality rounds,
 // indexed by verdict block height for efficient window-based queries.
 type CompletedRoundMeta struct {
@@ -2343,7 +2436,7 @@ type CompletedRoundMeta struct {
 
 func (x *CompletedRoundMeta) Reset() {
 	*x = CompletedRoundMeta{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2355,7 +2448,7 @@ func (x *CompletedRoundMeta) String() string {
 func (*CompletedRoundMeta) ProtoMessage() {}
 
 func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2368,7 +2461,7 @@ func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompletedRoundMeta.ProtoReflect.Descriptor instead.
 func (*CompletedRoundMeta) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CompletedRoundMeta) GetDomain() string {
@@ -2594,7 +2687,16 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\vmin_quality\x18\x0e \x01(\x04R\n" +
 	"minQuality\x12(\n" +
 	"\x10created_at_block\x18\x0f \x01(\x04R\x0ecreatedAtBlock\x12(\n" +
-	"\x10updated_at_block\x18\x10 \x01(\x04R\x0eupdatedAtBlock\"v\n" +
+	"\x10updated_at_block\x18\x10 \x01(\x04R\x0eupdatedAtBlock\"\xa6\x02\n" +
+	"\fConsentEvent\x12\x1b\n" +
+	"\tsample_id\x18\x01 \x01(\tR\bsampleId\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x02 \x01(\tR\teventType\x12\x14\n" +
+	"\x05actor\x18\x03 \x01(\tR\x05actor\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x14\n" +
+	"\x05block\x18\x05 \x01(\x04R\x05block\x12J\n" +
+	"\x10old_consent_type\x18\x06 \x01(\x0e2 .zerone.knowledge.v1.ConsentTypeR\x0eoldConsentType\x12J\n" +
+	"\x10new_consent_type\x18\a \x01(\x0e2 .zerone.knowledge.v1.ConsentTypeR\x0enewConsentType\"v\n" +
 	"\x12CompletedRoundMeta\x12\x16\n" +
 	"\x06domain\x18\x01 \x01(\tR\x06domain\x12\x1f\n" +
 	"\vhas_dissent\x18\x02 \x01(\bR\n" +
@@ -2683,7 +2785,7 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(SampleType)(0),            // 0: zerone.knowledge.v1.SampleType
 	(SampleStatus)(0),          // 1: zerone.knowledge.v1.SampleStatus
@@ -2707,7 +2809,8 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(*DataBounty)(nil),         // 19: zerone.knowledge.v1.DataBounty
 	(*ScrapedSourceEntry)(nil), // 20: zerone.knowledge.v1.ScrapedSourceEntry
 	(*Dataset)(nil),            // 21: zerone.knowledge.v1.Dataset
-	(*CompletedRoundMeta)(nil), // 22: zerone.knowledge.v1.CompletedRoundMeta
+	(*ConsentEvent)(nil),       // 22: zerone.knowledge.v1.ConsentEvent
+	(*CompletedRoundMeta)(nil), // 23: zerone.knowledge.v1.CompletedRoundMeta
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.ConsentProof.type:type_name -> zerone.knowledge.v1.ConsentType
@@ -2725,11 +2828,13 @@ var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	6,  // 12: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
 	0,  // 13: zerone.knowledge.v1.TrainingDemand.preferred_type:type_name -> zerone.knowledge.v1.SampleType
 	0,  // 14: zerone.knowledge.v1.Dataset.filter_type:type_name -> zerone.knowledge.v1.SampleType
-	15, // [15:15] is the sub-list for method output_type
-	15, // [15:15] is the sub-list for method input_type
-	15, // [15:15] is the sub-list for extension type_name
-	15, // [15:15] is the sub-list for extension extendee
-	0,  // [0:15] is the sub-list for field type_name
+	5,  // 15: zerone.knowledge.v1.ConsentEvent.old_consent_type:type_name -> zerone.knowledge.v1.ConsentType
+	5,  // 16: zerone.knowledge.v1.ConsentEvent.new_consent_type:type_name -> zerone.knowledge.v1.ConsentType
+	17, // [17:17] is the sub-list for method output_type
+	17, // [17:17] is the sub-list for method input_type
+	17, // [17:17] is the sub-list for extension type_name
+	17, // [17:17] is the sub-list for extension extendee
+	0,  // [0:17] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_types_proto_init() }
@@ -2743,7 +2848,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   15,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -110,3 +110,14 @@ func (m msgServer) ExecuteResearchProposal(_ context.Context, _ *types.MsgExecut
 func (m msgServer) AddSample(_ context.Context, _ *types.MsgAddSample) (*types.MsgAddSampleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "AddSample not implemented (R37)")
 }
+
+func (m msgServer) RevokeConsent(ctx context.Context, msg *types.MsgRevokeConsent) (*types.MsgRevokeConsentResponse, error) {
+	if err := m.keeper.RevokeConsent(ctx, msg); err != nil {
+		return nil, err
+	}
+	return &types.MsgRevokeConsentResponse{}, nil
+}
+
+func (m msgServer) UpgradeConsent(ctx context.Context, msg *types.MsgUpgradeConsent) (*types.MsgUpgradeConsentResponse, error) {
+	return m.keeper.UpgradeConsent(ctx, msg)
+}

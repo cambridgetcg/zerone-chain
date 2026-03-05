@@ -104,6 +104,13 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/stats";
   }
 
+  // ─── Consent ──────────────────────────────────────────────────────────────
+
+  // ConsentHistory queries the consent audit trail for a sample.
+  rpc ConsentHistory(QueryConsentHistoryRequest) returns (QueryConsentHistoryResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/consent/{sample_id}";
+  }
+
   // ─── Params ────────────────────────────────────────────────────────────────
 
   // Params queries module parameters.
@@ -275,4 +282,14 @@ message QueryParamsRequest {}
 
 message QueryParamsResponse {
   Params params = 1;
+}
+
+// ─── Consent query messages ─────────────────────────────────────────────────
+
+message QueryConsentHistoryRequest {
+  string sample_id = 1;
+}
+
+message QueryConsentHistoryResponse {
+  repeated ConsentEvent events = 1;
 }

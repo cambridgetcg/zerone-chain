@@ -253,6 +253,34 @@ func (m *MsgRemoveScrapedSource) ValidateBasic() error {
 	return nil
 }
 
+// ValidateBasic performs stateless validation for MsgRevokeConsent.
+func (m *MsgRevokeConsent) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Requester); err != nil {
+		return fmt.Errorf("invalid requester address: %w", err)
+	}
+	if len(m.SampleId) == 0 {
+		return ErrSampleNotFound.Wrap("sample_id must not be empty")
+	}
+	return nil
+}
+
+// ValidateBasic performs stateless validation for MsgUpgradeConsent.
+func (m *MsgUpgradeConsent) ValidateBasic() error {
+	if _, err := sdk.AccAddressFromBech32(m.Submitter); err != nil {
+		return fmt.Errorf("invalid submitter address: %w", err)
+	}
+	if len(m.SampleId) == 0 {
+		return ErrSampleNotFound.Wrap("sample_id must not be empty")
+	}
+	if m.NewConsent == nil {
+		return ErrConsentRequired.Wrap("new consent proof is required")
+	}
+	if m.NewConsent.Type == ConsentType_CONSENT_TYPE_UNSPECIFIED {
+		return ErrInvalidConsent.Wrap("consent type must be specified")
+	}
+	return nil
+}
+
 // ValidateBasic performs stateless validation for MsgReportDemand.
 func (m *MsgReportDemand) ValidateBasic() error {
 	if _, err := sdk.AccAddressFromBech32(m.Reporter); err != nil {

@@ -35,6 +35,7 @@ const (
 	Query_Domains_FullMethodName            = "/zerone.knowledge.v1.Query/Domains"
 	Query_DomainStats_FullMethodName        = "/zerone.knowledge.v1.Query/DomainStats"
 	Query_ProtocolStats_FullMethodName      = "/zerone.knowledge.v1.Query/ProtocolStats"
+	Query_ConsentHistory_FullMethodName     = "/zerone.knowledge.v1.Query/ConsentHistory"
 	Query_Params_FullMethodName             = "/zerone.knowledge.v1.Query/Params"
 )
 
@@ -76,6 +77,8 @@ type QueryClient interface {
 	DomainStats(ctx context.Context, in *QueryDomainStatsRequest, opts ...grpc.CallOption) (*QueryDomainStatsResponse, error)
 	// ProtocolStats queries aggregate protocol statistics.
 	ProtocolStats(ctx context.Context, in *QueryProtocolStatsRequest, opts ...grpc.CallOption) (*QueryProtocolStatsResponse, error)
+	// ConsentHistory queries the consent audit trail for a sample.
+	ConsentHistory(ctx context.Context, in *QueryConsentHistoryRequest, opts ...grpc.CallOption) (*QueryConsentHistoryResponse, error)
 	// Params queries module parameters.
 	Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error)
 }
@@ -248,6 +251,16 @@ func (c *queryClient) ProtocolStats(ctx context.Context, in *QueryProtocolStatsR
 	return out, nil
 }
 
+func (c *queryClient) ConsentHistory(ctx context.Context, in *QueryConsentHistoryRequest, opts ...grpc.CallOption) (*QueryConsentHistoryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryConsentHistoryResponse)
+	err := c.cc.Invoke(ctx, Query_ConsentHistory_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryParamsResponse)
@@ -296,6 +309,8 @@ type QueryServer interface {
 	DomainStats(context.Context, *QueryDomainStatsRequest) (*QueryDomainStatsResponse, error)
 	// ProtocolStats queries aggregate protocol statistics.
 	ProtocolStats(context.Context, *QueryProtocolStatsRequest) (*QueryProtocolStatsResponse, error)
+	// ConsentHistory queries the consent audit trail for a sample.
+	ConsentHistory(context.Context, *QueryConsentHistoryRequest) (*QueryConsentHistoryResponse, error)
 	// Params queries module parameters.
 	Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error)
 	mustEmbedUnimplementedQueryServer()
@@ -355,6 +370,9 @@ func (UnimplementedQueryServer) DomainStats(context.Context, *QueryDomainStatsRe
 }
 func (UnimplementedQueryServer) ProtocolStats(context.Context, *QueryProtocolStatsRequest) (*QueryProtocolStatsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ProtocolStats not implemented")
+}
+func (UnimplementedQueryServer) ConsentHistory(context.Context, *QueryConsentHistoryRequest) (*QueryConsentHistoryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ConsentHistory not implemented")
 }
 func (UnimplementedQueryServer) Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Params not implemented")
@@ -668,6 +686,24 @@ func _Query_ProtocolStats_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_ConsentHistory_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryConsentHistoryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ConsentHistory(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ConsentHistory_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ConsentHistory(ctx, req.(*QueryConsentHistoryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_Params_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryParamsRequest)
 	if err := dec(in); err != nil {
@@ -756,6 +792,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ProtocolStats",
 			Handler:    _Query_ProtocolStats_Handler,
+		},
+		{
+			MethodName: "ConsentHistory",
+			Handler:    _Query_ConsentHistory_Handler,
 		},
 		{
 			MethodName: "Params",

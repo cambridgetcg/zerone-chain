@@ -2538,6 +2538,214 @@ func (x *MsgAddSampleResponse) GetSampleId() string {
 	return ""
 }
 
+type MsgRevokeConsent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Requester     string                 `protobuf:"bytes,1,opt,name=requester,proto3" json:"requester,omitempty"` // Must be original_author or submitter
+	SampleId      string                 `protobuf:"bytes,2,opt,name=sample_id,json=sampleId,proto3" json:"sample_id,omitempty"`
+	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgRevokeConsent) Reset() {
+	*x = MsgRevokeConsent{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgRevokeConsent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgRevokeConsent) ProtoMessage() {}
+
+func (x *MsgRevokeConsent) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgRevokeConsent.ProtoReflect.Descriptor instead.
+func (*MsgRevokeConsent) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *MsgRevokeConsent) GetRequester() string {
+	if x != nil {
+		return x.Requester
+	}
+	return ""
+}
+
+func (x *MsgRevokeConsent) GetSampleId() string {
+	if x != nil {
+		return x.SampleId
+	}
+	return ""
+}
+
+func (x *MsgRevokeConsent) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+type MsgRevokeConsentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgRevokeConsentResponse) Reset() {
+	*x = MsgRevokeConsentResponse{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgRevokeConsentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgRevokeConsentResponse) ProtoMessage() {}
+
+func (x *MsgRevokeConsentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgRevokeConsentResponse.ProtoReflect.Descriptor instead.
+func (*MsgRevokeConsentResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{44}
+}
+
+type MsgUpgradeConsent struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Submitter     string                 `protobuf:"bytes,1,opt,name=submitter,proto3" json:"submitter,omitempty"`
+	SampleId      string                 `protobuf:"bytes,2,opt,name=sample_id,json=sampleId,proto3" json:"sample_id,omitempty"`
+	NewConsent    *ConsentProof          `protobuf:"bytes,3,opt,name=new_consent,json=newConsent,proto3" json:"new_consent,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpgradeConsent) Reset() {
+	*x = MsgUpgradeConsent{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpgradeConsent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpgradeConsent) ProtoMessage() {}
+
+func (x *MsgUpgradeConsent) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpgradeConsent.ProtoReflect.Descriptor instead.
+func (*MsgUpgradeConsent) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *MsgUpgradeConsent) GetSubmitter() string {
+	if x != nil {
+		return x.Submitter
+	}
+	return ""
+}
+
+func (x *MsgUpgradeConsent) GetSampleId() string {
+	if x != nil {
+		return x.SampleId
+	}
+	return ""
+}
+
+func (x *MsgUpgradeConsent) GetNewConsent() *ConsentProof {
+	if x != nil {
+		return x.NewConsent
+	}
+	return nil
+}
+
+type MsgUpgradeConsentResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OldType       ConsentType            `protobuf:"varint,1,opt,name=old_type,json=oldType,proto3,enum=zerone.knowledge.v1.ConsentType" json:"old_type,omitempty"`
+	NewType       ConsentType            `protobuf:"varint,2,opt,name=new_type,json=newType,proto3,enum=zerone.knowledge.v1.ConsentType" json:"new_type,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpgradeConsentResponse) Reset() {
+	*x = MsgUpgradeConsentResponse{}
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpgradeConsentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpgradeConsentResponse) ProtoMessage() {}
+
+func (x *MsgUpgradeConsentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_tx_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpgradeConsentResponse.ProtoReflect.Descriptor instead.
+func (*MsgUpgradeConsentResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_tx_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *MsgUpgradeConsentResponse) GetOldType() ConsentType {
+	if x != nil {
+		return x.OldType
+	}
+	return ConsentType_CONSENT_TYPE_UNSPECIFIED
+}
+
+func (x *MsgUpgradeConsentResponse) GetNewType() ConsentType {
+	if x != nil {
+		return x.NewType
+	}
+	return ConsentType_CONSENT_TYPE_UNSPECIFIED
+}
+
 var File_zerone_knowledge_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_tx_proto_rawDesc = "" +
@@ -2732,7 +2940,20 @@ const file_zerone_knowledge_v1_tx_proto_rawDesc = "" +
 	"\alicense\x18\a \x01(\tR\alicense\x12#\n" +
 	"\rquality_score\x18\b \x01(\x04R\fqualityScore:\x0e\x82\xe7\xb0*\tauthority\"3\n" +
 	"\x14MsgAddSampleResponse\x12\x1b\n" +
-	"\tsample_id\x18\x01 \x01(\tR\bsampleId2\xcb\x11\n" +
+	"\tsample_id\x18\x01 \x01(\tR\bsampleId\"u\n" +
+	"\x10MsgRevokeConsent\x12\x1c\n" +
+	"\trequester\x18\x01 \x01(\tR\trequester\x12\x1b\n" +
+	"\tsample_id\x18\x02 \x01(\tR\bsampleId\x12\x16\n" +
+	"\x06reason\x18\x03 \x01(\tR\x06reason:\x0e\x82\xe7\xb0*\trequester\"\x1a\n" +
+	"\x18MsgRevokeConsentResponse\"\xa2\x01\n" +
+	"\x11MsgUpgradeConsent\x12\x1c\n" +
+	"\tsubmitter\x18\x01 \x01(\tR\tsubmitter\x12\x1b\n" +
+	"\tsample_id\x18\x02 \x01(\tR\bsampleId\x12B\n" +
+	"\vnew_consent\x18\x03 \x01(\v2!.zerone.knowledge.v1.ConsentProofR\n" +
+	"newConsent:\x0e\x82\xe7\xb0*\tsubmitter\"\x95\x01\n" +
+	"\x19MsgUpgradeConsentResponse\x12;\n" +
+	"\bold_type\x18\x01 \x01(\x0e2 .zerone.knowledge.v1.ConsentTypeR\aoldType\x12;\n" +
+	"\bnew_type\x18\x02 \x01(\x0e2 .zerone.knowledge.v1.ConsentTypeR\anewType2\x9c\x13\n" +
 	"\x03Msg\x12\\\n" +
 	"\n" +
 	"SubmitData\x12\".zerone.knowledge.v1.MsgSubmitData\x1a*.zerone.knowledge.v1.MsgSubmitDataResponse\x12b\n" +
@@ -2756,7 +2977,9 @@ const file_zerone_knowledge_v1_tx_proto_rawDesc = "" +
 	"\x13RemoveScrapedSource\x12+.zerone.knowledge.v1.MsgRemoveScrapedSource\x1a3.zerone.knowledge.v1.MsgRemoveScrapedSourceResponse\x12w\n" +
 	"\x13ProposeResearchFund\x12+.zerone.knowledge.v1.MsgProposeResearchFund\x1a3.zerone.knowledge.v1.MsgProposeResearchFundResponse\x12z\n" +
 	"\x14VoteResearchProposal\x12,.zerone.knowledge.v1.MsgVoteResearchProposal\x1a4.zerone.knowledge.v1.MsgVoteResearchProposalResponse\x12\x83\x01\n" +
-	"\x17ExecuteResearchProposal\x12/.zerone.knowledge.v1.MsgExecuteResearchProposal\x1a7.zerone.knowledge.v1.MsgExecuteResearchProposalResponse\x12Y\n" +
+	"\x17ExecuteResearchProposal\x12/.zerone.knowledge.v1.MsgExecuteResearchProposal\x1a7.zerone.knowledge.v1.MsgExecuteResearchProposalResponse\x12e\n" +
+	"\rRevokeConsent\x12%.zerone.knowledge.v1.MsgRevokeConsent\x1a-.zerone.knowledge.v1.MsgRevokeConsentResponse\x12h\n" +
+	"\x0eUpgradeConsent\x12&.zerone.knowledge.v1.MsgUpgradeConsent\x1a..zerone.knowledge.v1.MsgUpgradeConsentResponse\x12Y\n" +
 	"\tAddSample\x12!.zerone.knowledge.v1.MsgAddSample\x1a).zerone.knowledge.v1.MsgAddSampleResponse\x1a\x05\x80\xe7\xb0*\x01B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
@@ -2771,7 +2994,7 @@ func file_zerone_knowledge_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_knowledge_v1_tx_proto_rawDescData
 }
 
-var file_zerone_knowledge_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 43)
+var file_zerone_knowledge_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 47)
 var file_zerone_knowledge_v1_tx_proto_goTypes = []any{
 	(*MsgSubmitData)(nil),                      // 0: zerone.knowledge.v1.MsgSubmitData
 	(*MsgSubmitDataResponse)(nil),              // 1: zerone.knowledge.v1.MsgSubmitDataResponse
@@ -2816,70 +3039,82 @@ var file_zerone_knowledge_v1_tx_proto_goTypes = []any{
 	(*MsgExecuteResearchProposalResponse)(nil), // 40: zerone.knowledge.v1.MsgExecuteResearchProposalResponse
 	(*MsgAddSample)(nil),                       // 41: zerone.knowledge.v1.MsgAddSample
 	(*MsgAddSampleResponse)(nil),               // 42: zerone.knowledge.v1.MsgAddSampleResponse
-	(SampleType)(0),                            // 43: zerone.knowledge.v1.SampleType
-	(*ConsentProof)(nil),                       // 44: zerone.knowledge.v1.ConsentProof
-	(*QualityVote)(nil),                        // 45: zerone.knowledge.v1.QualityVote
-	(ContestType)(0),                           // 46: zerone.knowledge.v1.ContestType
-	(*Params)(nil),                             // 47: zerone.knowledge.v1.Params
+	(*MsgRevokeConsent)(nil),                   // 43: zerone.knowledge.v1.MsgRevokeConsent
+	(*MsgRevokeConsentResponse)(nil),           // 44: zerone.knowledge.v1.MsgRevokeConsentResponse
+	(*MsgUpgradeConsent)(nil),                  // 45: zerone.knowledge.v1.MsgUpgradeConsent
+	(*MsgUpgradeConsentResponse)(nil),          // 46: zerone.knowledge.v1.MsgUpgradeConsentResponse
+	(SampleType)(0),                            // 47: zerone.knowledge.v1.SampleType
+	(*ConsentProof)(nil),                       // 48: zerone.knowledge.v1.ConsentProof
+	(*QualityVote)(nil),                        // 49: zerone.knowledge.v1.QualityVote
+	(ContestType)(0),                           // 50: zerone.knowledge.v1.ContestType
+	(*Params)(nil),                             // 51: zerone.knowledge.v1.Params
+	(ConsentType)(0),                           // 52: zerone.knowledge.v1.ConsentType
 }
 var file_zerone_knowledge_v1_tx_proto_depIdxs = []int32{
-	43, // 0: zerone.knowledge.v1.MsgSubmitData.sample_type:type_name -> zerone.knowledge.v1.SampleType
-	44, // 1: zerone.knowledge.v1.MsgSubmitData.consent:type_name -> zerone.knowledge.v1.ConsentProof
+	47, // 0: zerone.knowledge.v1.MsgSubmitData.sample_type:type_name -> zerone.knowledge.v1.SampleType
+	48, // 1: zerone.knowledge.v1.MsgSubmitData.consent:type_name -> zerone.knowledge.v1.ConsentProof
 	0,  // 2: zerone.knowledge.v1.MsgSubmitThread.items:type_name -> zerone.knowledge.v1.MsgSubmitData
-	45, // 3: zerone.knowledge.v1.MsgSubmitReveal.scores:type_name -> zerone.knowledge.v1.QualityVote
-	46, // 4: zerone.knowledge.v1.MsgContestSample.contest_type:type_name -> zerone.knowledge.v1.ContestType
-	43, // 5: zerone.knowledge.v1.MsgCreateDataset.filter_type:type_name -> zerone.knowledge.v1.SampleType
+	49, // 3: zerone.knowledge.v1.MsgSubmitReveal.scores:type_name -> zerone.knowledge.v1.QualityVote
+	50, // 4: zerone.knowledge.v1.MsgContestSample.contest_type:type_name -> zerone.knowledge.v1.ContestType
+	47, // 5: zerone.knowledge.v1.MsgCreateDataset.filter_type:type_name -> zerone.knowledge.v1.SampleType
 	23, // 6: zerone.knowledge.v1.MsgReportDemand.reports:type_name -> zerone.knowledge.v1.DemandReport
-	43, // 7: zerone.knowledge.v1.MsgFundBounty.preferred_type:type_name -> zerone.knowledge.v1.SampleType
-	47, // 8: zerone.knowledge.v1.MsgUpdateParams.params:type_name -> zerone.knowledge.v1.Params
-	43, // 9: zerone.knowledge.v1.MsgAddSample.sample_type:type_name -> zerone.knowledge.v1.SampleType
-	0,  // 10: zerone.knowledge.v1.Msg.SubmitData:input_type -> zerone.knowledge.v1.MsgSubmitData
-	2,  // 11: zerone.knowledge.v1.Msg.SubmitThread:input_type -> zerone.knowledge.v1.MsgSubmitThread
-	4,  // 12: zerone.knowledge.v1.Msg.SubmitCommitment:input_type -> zerone.knowledge.v1.MsgSubmitCommitment
-	6,  // 13: zerone.knowledge.v1.Msg.SubmitReveal:input_type -> zerone.knowledge.v1.MsgSubmitReveal
-	8,  // 14: zerone.knowledge.v1.Msg.ContestSample:input_type -> zerone.knowledge.v1.MsgContestSample
-	10, // 15: zerone.knowledge.v1.Msg.SponsorSample:input_type -> zerone.knowledge.v1.MsgSponsorSample
-	12, // 16: zerone.knowledge.v1.Msg.ProposeDomain:input_type -> zerone.knowledge.v1.MsgProposeDomain
-	14, // 17: zerone.knowledge.v1.Msg.EndorseDomainProposal:input_type -> zerone.knowledge.v1.MsgEndorseDomainProposal
-	16, // 18: zerone.knowledge.v1.Msg.CreateDataset:input_type -> zerone.knowledge.v1.MsgCreateDataset
-	18, // 19: zerone.knowledge.v1.Msg.AccessDataset:input_type -> zerone.knowledge.v1.MsgAccessDataset
-	20, // 20: zerone.knowledge.v1.Msg.AccessSample:input_type -> zerone.knowledge.v1.MsgAccessSample
-	22, // 21: zerone.knowledge.v1.Msg.ReportDemand:input_type -> zerone.knowledge.v1.MsgReportDemand
-	25, // 22: zerone.knowledge.v1.Msg.FundBounty:input_type -> zerone.knowledge.v1.MsgFundBounty
-	27, // 23: zerone.knowledge.v1.Msg.RateSample:input_type -> zerone.knowledge.v1.MsgRateSample
-	29, // 24: zerone.knowledge.v1.Msg.UpdateParams:input_type -> zerone.knowledge.v1.MsgUpdateParams
-	31, // 25: zerone.knowledge.v1.Msg.AddScrapedSource:input_type -> zerone.knowledge.v1.MsgAddScrapedSource
-	33, // 26: zerone.knowledge.v1.Msg.RemoveScrapedSource:input_type -> zerone.knowledge.v1.MsgRemoveScrapedSource
-	35, // 27: zerone.knowledge.v1.Msg.ProposeResearchFund:input_type -> zerone.knowledge.v1.MsgProposeResearchFund
-	37, // 28: zerone.knowledge.v1.Msg.VoteResearchProposal:input_type -> zerone.knowledge.v1.MsgVoteResearchProposal
-	39, // 29: zerone.knowledge.v1.Msg.ExecuteResearchProposal:input_type -> zerone.knowledge.v1.MsgExecuteResearchProposal
-	41, // 30: zerone.knowledge.v1.Msg.AddSample:input_type -> zerone.knowledge.v1.MsgAddSample
-	1,  // 31: zerone.knowledge.v1.Msg.SubmitData:output_type -> zerone.knowledge.v1.MsgSubmitDataResponse
-	3,  // 32: zerone.knowledge.v1.Msg.SubmitThread:output_type -> zerone.knowledge.v1.MsgSubmitThreadResponse
-	5,  // 33: zerone.knowledge.v1.Msg.SubmitCommitment:output_type -> zerone.knowledge.v1.MsgSubmitCommitmentResponse
-	7,  // 34: zerone.knowledge.v1.Msg.SubmitReveal:output_type -> zerone.knowledge.v1.MsgSubmitRevealResponse
-	9,  // 35: zerone.knowledge.v1.Msg.ContestSample:output_type -> zerone.knowledge.v1.MsgContestSampleResponse
-	11, // 36: zerone.knowledge.v1.Msg.SponsorSample:output_type -> zerone.knowledge.v1.MsgSponsorSampleResponse
-	13, // 37: zerone.knowledge.v1.Msg.ProposeDomain:output_type -> zerone.knowledge.v1.MsgProposeDomainResponse
-	15, // 38: zerone.knowledge.v1.Msg.EndorseDomainProposal:output_type -> zerone.knowledge.v1.MsgEndorseDomainProposalResponse
-	17, // 39: zerone.knowledge.v1.Msg.CreateDataset:output_type -> zerone.knowledge.v1.MsgCreateDatasetResponse
-	19, // 40: zerone.knowledge.v1.Msg.AccessDataset:output_type -> zerone.knowledge.v1.MsgAccessDatasetResponse
-	21, // 41: zerone.knowledge.v1.Msg.AccessSample:output_type -> zerone.knowledge.v1.MsgAccessSampleResponse
-	24, // 42: zerone.knowledge.v1.Msg.ReportDemand:output_type -> zerone.knowledge.v1.MsgReportDemandResponse
-	26, // 43: zerone.knowledge.v1.Msg.FundBounty:output_type -> zerone.knowledge.v1.MsgFundBountyResponse
-	28, // 44: zerone.knowledge.v1.Msg.RateSample:output_type -> zerone.knowledge.v1.MsgRateSampleResponse
-	30, // 45: zerone.knowledge.v1.Msg.UpdateParams:output_type -> zerone.knowledge.v1.MsgUpdateParamsResponse
-	32, // 46: zerone.knowledge.v1.Msg.AddScrapedSource:output_type -> zerone.knowledge.v1.MsgAddScrapedSourceResponse
-	34, // 47: zerone.knowledge.v1.Msg.RemoveScrapedSource:output_type -> zerone.knowledge.v1.MsgRemoveScrapedSourceResponse
-	36, // 48: zerone.knowledge.v1.Msg.ProposeResearchFund:output_type -> zerone.knowledge.v1.MsgProposeResearchFundResponse
-	38, // 49: zerone.knowledge.v1.Msg.VoteResearchProposal:output_type -> zerone.knowledge.v1.MsgVoteResearchProposalResponse
-	40, // 50: zerone.knowledge.v1.Msg.ExecuteResearchProposal:output_type -> zerone.knowledge.v1.MsgExecuteResearchProposalResponse
-	42, // 51: zerone.knowledge.v1.Msg.AddSample:output_type -> zerone.knowledge.v1.MsgAddSampleResponse
-	31, // [31:52] is the sub-list for method output_type
-	10, // [10:31] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	47, // 7: zerone.knowledge.v1.MsgFundBounty.preferred_type:type_name -> zerone.knowledge.v1.SampleType
+	51, // 8: zerone.knowledge.v1.MsgUpdateParams.params:type_name -> zerone.knowledge.v1.Params
+	47, // 9: zerone.knowledge.v1.MsgAddSample.sample_type:type_name -> zerone.knowledge.v1.SampleType
+	48, // 10: zerone.knowledge.v1.MsgUpgradeConsent.new_consent:type_name -> zerone.knowledge.v1.ConsentProof
+	52, // 11: zerone.knowledge.v1.MsgUpgradeConsentResponse.old_type:type_name -> zerone.knowledge.v1.ConsentType
+	52, // 12: zerone.knowledge.v1.MsgUpgradeConsentResponse.new_type:type_name -> zerone.knowledge.v1.ConsentType
+	0,  // 13: zerone.knowledge.v1.Msg.SubmitData:input_type -> zerone.knowledge.v1.MsgSubmitData
+	2,  // 14: zerone.knowledge.v1.Msg.SubmitThread:input_type -> zerone.knowledge.v1.MsgSubmitThread
+	4,  // 15: zerone.knowledge.v1.Msg.SubmitCommitment:input_type -> zerone.knowledge.v1.MsgSubmitCommitment
+	6,  // 16: zerone.knowledge.v1.Msg.SubmitReveal:input_type -> zerone.knowledge.v1.MsgSubmitReveal
+	8,  // 17: zerone.knowledge.v1.Msg.ContestSample:input_type -> zerone.knowledge.v1.MsgContestSample
+	10, // 18: zerone.knowledge.v1.Msg.SponsorSample:input_type -> zerone.knowledge.v1.MsgSponsorSample
+	12, // 19: zerone.knowledge.v1.Msg.ProposeDomain:input_type -> zerone.knowledge.v1.MsgProposeDomain
+	14, // 20: zerone.knowledge.v1.Msg.EndorseDomainProposal:input_type -> zerone.knowledge.v1.MsgEndorseDomainProposal
+	16, // 21: zerone.knowledge.v1.Msg.CreateDataset:input_type -> zerone.knowledge.v1.MsgCreateDataset
+	18, // 22: zerone.knowledge.v1.Msg.AccessDataset:input_type -> zerone.knowledge.v1.MsgAccessDataset
+	20, // 23: zerone.knowledge.v1.Msg.AccessSample:input_type -> zerone.knowledge.v1.MsgAccessSample
+	22, // 24: zerone.knowledge.v1.Msg.ReportDemand:input_type -> zerone.knowledge.v1.MsgReportDemand
+	25, // 25: zerone.knowledge.v1.Msg.FundBounty:input_type -> zerone.knowledge.v1.MsgFundBounty
+	27, // 26: zerone.knowledge.v1.Msg.RateSample:input_type -> zerone.knowledge.v1.MsgRateSample
+	29, // 27: zerone.knowledge.v1.Msg.UpdateParams:input_type -> zerone.knowledge.v1.MsgUpdateParams
+	31, // 28: zerone.knowledge.v1.Msg.AddScrapedSource:input_type -> zerone.knowledge.v1.MsgAddScrapedSource
+	33, // 29: zerone.knowledge.v1.Msg.RemoveScrapedSource:input_type -> zerone.knowledge.v1.MsgRemoveScrapedSource
+	35, // 30: zerone.knowledge.v1.Msg.ProposeResearchFund:input_type -> zerone.knowledge.v1.MsgProposeResearchFund
+	37, // 31: zerone.knowledge.v1.Msg.VoteResearchProposal:input_type -> zerone.knowledge.v1.MsgVoteResearchProposal
+	39, // 32: zerone.knowledge.v1.Msg.ExecuteResearchProposal:input_type -> zerone.knowledge.v1.MsgExecuteResearchProposal
+	43, // 33: zerone.knowledge.v1.Msg.RevokeConsent:input_type -> zerone.knowledge.v1.MsgRevokeConsent
+	45, // 34: zerone.knowledge.v1.Msg.UpgradeConsent:input_type -> zerone.knowledge.v1.MsgUpgradeConsent
+	41, // 35: zerone.knowledge.v1.Msg.AddSample:input_type -> zerone.knowledge.v1.MsgAddSample
+	1,  // 36: zerone.knowledge.v1.Msg.SubmitData:output_type -> zerone.knowledge.v1.MsgSubmitDataResponse
+	3,  // 37: zerone.knowledge.v1.Msg.SubmitThread:output_type -> zerone.knowledge.v1.MsgSubmitThreadResponse
+	5,  // 38: zerone.knowledge.v1.Msg.SubmitCommitment:output_type -> zerone.knowledge.v1.MsgSubmitCommitmentResponse
+	7,  // 39: zerone.knowledge.v1.Msg.SubmitReveal:output_type -> zerone.knowledge.v1.MsgSubmitRevealResponse
+	9,  // 40: zerone.knowledge.v1.Msg.ContestSample:output_type -> zerone.knowledge.v1.MsgContestSampleResponse
+	11, // 41: zerone.knowledge.v1.Msg.SponsorSample:output_type -> zerone.knowledge.v1.MsgSponsorSampleResponse
+	13, // 42: zerone.knowledge.v1.Msg.ProposeDomain:output_type -> zerone.knowledge.v1.MsgProposeDomainResponse
+	15, // 43: zerone.knowledge.v1.Msg.EndorseDomainProposal:output_type -> zerone.knowledge.v1.MsgEndorseDomainProposalResponse
+	17, // 44: zerone.knowledge.v1.Msg.CreateDataset:output_type -> zerone.knowledge.v1.MsgCreateDatasetResponse
+	19, // 45: zerone.knowledge.v1.Msg.AccessDataset:output_type -> zerone.knowledge.v1.MsgAccessDatasetResponse
+	21, // 46: zerone.knowledge.v1.Msg.AccessSample:output_type -> zerone.knowledge.v1.MsgAccessSampleResponse
+	24, // 47: zerone.knowledge.v1.Msg.ReportDemand:output_type -> zerone.knowledge.v1.MsgReportDemandResponse
+	26, // 48: zerone.knowledge.v1.Msg.FundBounty:output_type -> zerone.knowledge.v1.MsgFundBountyResponse
+	28, // 49: zerone.knowledge.v1.Msg.RateSample:output_type -> zerone.knowledge.v1.MsgRateSampleResponse
+	30, // 50: zerone.knowledge.v1.Msg.UpdateParams:output_type -> zerone.knowledge.v1.MsgUpdateParamsResponse
+	32, // 51: zerone.knowledge.v1.Msg.AddScrapedSource:output_type -> zerone.knowledge.v1.MsgAddScrapedSourceResponse
+	34, // 52: zerone.knowledge.v1.Msg.RemoveScrapedSource:output_type -> zerone.knowledge.v1.MsgRemoveScrapedSourceResponse
+	36, // 53: zerone.knowledge.v1.Msg.ProposeResearchFund:output_type -> zerone.knowledge.v1.MsgProposeResearchFundResponse
+	38, // 54: zerone.knowledge.v1.Msg.VoteResearchProposal:output_type -> zerone.knowledge.v1.MsgVoteResearchProposalResponse
+	40, // 55: zerone.knowledge.v1.Msg.ExecuteResearchProposal:output_type -> zerone.knowledge.v1.MsgExecuteResearchProposalResponse
+	44, // 56: zerone.knowledge.v1.Msg.RevokeConsent:output_type -> zerone.knowledge.v1.MsgRevokeConsentResponse
+	46, // 57: zerone.knowledge.v1.Msg.UpgradeConsent:output_type -> zerone.knowledge.v1.MsgUpgradeConsentResponse
+	42, // 58: zerone.knowledge.v1.Msg.AddSample:output_type -> zerone.knowledge.v1.MsgAddSampleResponse
+	36, // [36:59] is the sub-list for method output_type
+	13, // [13:36] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_tx_proto_init() }
@@ -2895,7 +3130,7 @@ func file_zerone_knowledge_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_tx_proto_rawDesc), len(file_zerone_knowledge_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   43,
+			NumMessages:   47,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

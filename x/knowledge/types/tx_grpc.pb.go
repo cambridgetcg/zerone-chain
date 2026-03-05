@@ -39,6 +39,8 @@ const (
 	Msg_ProposeResearchFund_FullMethodName     = "/zerone.knowledge.v1.Msg/ProposeResearchFund"
 	Msg_VoteResearchProposal_FullMethodName    = "/zerone.knowledge.v1.Msg/VoteResearchProposal"
 	Msg_ExecuteResearchProposal_FullMethodName = "/zerone.knowledge.v1.Msg/ExecuteResearchProposal"
+	Msg_RevokeConsent_FullMethodName           = "/zerone.knowledge.v1.Msg/RevokeConsent"
+	Msg_UpgradeConsent_FullMethodName          = "/zerone.knowledge.v1.Msg/UpgradeConsent"
 	Msg_AddSample_FullMethodName               = "/zerone.knowledge.v1.Msg/AddSample"
 )
 
@@ -80,6 +82,10 @@ type MsgClient interface {
 	ProposeResearchFund(ctx context.Context, in *MsgProposeResearchFund, opts ...grpc.CallOption) (*MsgProposeResearchFundResponse, error)
 	VoteResearchProposal(ctx context.Context, in *MsgVoteResearchProposal, opts ...grpc.CallOption) (*MsgVoteResearchProposalResponse, error)
 	ExecuteResearchProposal(ctx context.Context, in *MsgExecuteResearchProposal, opts ...grpc.CallOption) (*MsgExecuteResearchProposalResponse, error)
+	// RevokeConsent allows an author or submitter to withdraw consent.
+	RevokeConsent(ctx context.Context, in *MsgRevokeConsent, opts ...grpc.CallOption) (*MsgRevokeConsentResponse, error)
+	// UpgradeConsent allows a submitter to upgrade the consent level.
+	UpgradeConsent(ctx context.Context, in *MsgUpgradeConsent, opts ...grpc.CallOption) (*MsgUpgradeConsentResponse, error)
 	// AddSample governance-creates a sample (authority-gated, for seed data).
 	AddSample(ctx context.Context, in *MsgAddSample, opts ...grpc.CallOption) (*MsgAddSampleResponse, error)
 }
@@ -292,6 +298,26 @@ func (c *msgClient) ExecuteResearchProposal(ctx context.Context, in *MsgExecuteR
 	return out, nil
 }
 
+func (c *msgClient) RevokeConsent(ctx context.Context, in *MsgRevokeConsent, opts ...grpc.CallOption) (*MsgRevokeConsentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgRevokeConsentResponse)
+	err := c.cc.Invoke(ctx, Msg_RevokeConsent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) UpgradeConsent(ctx context.Context, in *MsgUpgradeConsent, opts ...grpc.CallOption) (*MsgUpgradeConsentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgUpgradeConsentResponse)
+	err := c.cc.Invoke(ctx, Msg_UpgradeConsent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *msgClient) AddSample(ctx context.Context, in *MsgAddSample, opts ...grpc.CallOption) (*MsgAddSampleResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(MsgAddSampleResponse)
@@ -340,6 +366,10 @@ type MsgServer interface {
 	ProposeResearchFund(context.Context, *MsgProposeResearchFund) (*MsgProposeResearchFundResponse, error)
 	VoteResearchProposal(context.Context, *MsgVoteResearchProposal) (*MsgVoteResearchProposalResponse, error)
 	ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error)
+	// RevokeConsent allows an author or submitter to withdraw consent.
+	RevokeConsent(context.Context, *MsgRevokeConsent) (*MsgRevokeConsentResponse, error)
+	// UpgradeConsent allows a submitter to upgrade the consent level.
+	UpgradeConsent(context.Context, *MsgUpgradeConsent) (*MsgUpgradeConsentResponse, error)
 	// AddSample governance-creates a sample (authority-gated, for seed data).
 	AddSample(context.Context, *MsgAddSample) (*MsgAddSampleResponse, error)
 	mustEmbedUnimplementedMsgServer()
@@ -411,6 +441,12 @@ func (UnimplementedMsgServer) VoteResearchProposal(context.Context, *MsgVoteRese
 }
 func (UnimplementedMsgServer) ExecuteResearchProposal(context.Context, *MsgExecuteResearchProposal) (*MsgExecuteResearchProposalResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ExecuteResearchProposal not implemented")
+}
+func (UnimplementedMsgServer) RevokeConsent(context.Context, *MsgRevokeConsent) (*MsgRevokeConsentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RevokeConsent not implemented")
+}
+func (UnimplementedMsgServer) UpgradeConsent(context.Context, *MsgUpgradeConsent) (*MsgUpgradeConsentResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpgradeConsent not implemented")
 }
 func (UnimplementedMsgServer) AddSample(context.Context, *MsgAddSample) (*MsgAddSampleResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AddSample not implemented")
@@ -796,6 +832,42 @@ func _Msg_ExecuteResearchProposal_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_RevokeConsent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRevokeConsent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).RevokeConsent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_RevokeConsent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).RevokeConsent(ctx, req.(*MsgRevokeConsent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_UpgradeConsent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgUpgradeConsent)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).UpgradeConsent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_UpgradeConsent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).UpgradeConsent(ctx, req.(*MsgUpgradeConsent))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Msg_AddSample_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MsgAddSample)
 	if err := dec(in); err != nil {
@@ -900,6 +972,14 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ExecuteResearchProposal",
 			Handler:    _Msg_ExecuteResearchProposal_Handler,
+		},
+		{
+			MethodName: "RevokeConsent",
+			Handler:    _Msg_RevokeConsent_Handler,
+		},
+		{
+			MethodName: "UpgradeConsent",
+			Handler:    _Msg_UpgradeConsent_Handler,
 		},
 		{
 			MethodName: "AddSample",

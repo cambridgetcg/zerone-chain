@@ -81,6 +81,14 @@ service Msg {
   rpc VoteResearchProposal(MsgVoteResearchProposal) returns (MsgVoteResearchProposalResponse);
   rpc ExecuteResearchProposal(MsgExecuteResearchProposal) returns (MsgExecuteResearchProposalResponse);
 
+  // ─── Consent management ──────────────────────────────────────────────────
+
+  // RevokeConsent allows an author or submitter to withdraw consent.
+  rpc RevokeConsent(MsgRevokeConsent) returns (MsgRevokeConsentResponse);
+
+  // UpgradeConsent allows a submitter to upgrade the consent level.
+  rpc UpgradeConsent(MsgUpgradeConsent) returns (MsgUpgradeConsentResponse);
+
   // ─── Authority ─────────────────────────────────────────────────────────────
 
   // AddSample governance-creates a sample (authority-gated, for seed data).
@@ -391,4 +399,29 @@ message MsgAddSample {
 
 message MsgAddSampleResponse {
   string sample_id = 1;
+}
+
+// ─── Consent management messages ────────────────────────────────────────────
+
+message MsgRevokeConsent {
+  option (cosmos.msg.v1.signer) = "requester";
+
+  string requester  = 1;  // Must be original_author or submitter
+  string sample_id  = 2;
+  string reason     = 3;
+}
+
+message MsgRevokeConsentResponse {}
+
+message MsgUpgradeConsent {
+  option (cosmos.msg.v1.signer) = "submitter";
+
+  string       submitter    = 1;
+  string       sample_id    = 2;
+  ConsentProof new_consent  = 3;
+}
+
+message MsgUpgradeConsentResponse {
+  ConsentType old_type = 1;
+  ConsentType new_type = 2;
 }

@@ -845,6 +845,72 @@ func (k Keeper) IteratePendingRevenue(ctx context.Context, cb func(sampleID stri
 	}
 }
 
+// ─── Consent audit trail ────────────────────────────────────────────────────
+
+func (k Keeper) RecordConsentEvent(ctx context.Context, event *types.ConsentEvent) error {
+	store := k.storeService.OpenKVStore(ctx)
+
+	// Get next sequence for this sample
+	seqKey := types.ConsentAuditSeqKeyFn(event.SampleId)
+	var seq uint64
+	bz, err := store.Get(seqKey)
+	if err == nil && bz != nil {
+		seq = binary.BigEndian.Uint64(bz)
+	}
+
+	// Store the event
+	eventBz, err := marshalOpts.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("failed to marshal consent event: %w", err)
+	}
+	if err := store.Set(types.ConsentAuditKey(event.SampleId, seq), eventBz); err != nil {
+		return err
+	}
+
+	// Increment sequence
+	seqBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(seqBz, seq+1)
+	return store.Set(seqKey, seqBz)
+}
+
+func (k Keeper) GetConsentHistory(ctx context.Context, sampleID string) []*types.ConsentEvent {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.ConsentAuditBySamplePrefix(sampleID)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+
+	var events []*types.ConsentEvent
+	for ; iter.Valid(); iter.Next() {
+		var event types.ConsentEvent
+		if err := proto.Unmarshal(iter.Value(), &event); err != nil {
+			continue
+		}
+		events = append(events, &event)
+	}
+	return events
+}
+
+// DeleteSampleDomainIndex removes a sample from the domain index.
+func (k Keeper) DeleteSampleDomainIndex(ctx context.Context, domain, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.DomainSampleIndexKey(domain, sampleID))
+}
+
+// DeleteSampleSubmitterIndex removes a sample from the submitter index.
+func (k Keeper) DeleteSampleSubmitterIndex(ctx context.Context, submitter, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.SubmitterIndexKey(submitter, sampleID))
+}
+
+// DeleteSampleThreadIndex removes a sample from the thread index.
+func (k Keeper) DeleteSampleThreadIndex(ctx context.Context, threadID, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.ThreadIndexKey(threadID, sampleID))
+}
+
 // ─── Store helpers ───────────────────────────────────────────────────────────
 
 func prefixEndBytes(pfx []byte) []byte {

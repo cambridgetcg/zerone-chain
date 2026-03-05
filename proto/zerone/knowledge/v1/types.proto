@@ -355,6 +355,17 @@ message Dataset {
   uint64 updated_at_block = 16;
 }
 
+// ConsentEvent records a consent-related action for audit purposes.
+message ConsentEvent {
+  string sample_id   = 1;
+  string event_type  = 2;  // "granted", "revocation", "upgraded", "challenged", "verified"
+  string actor       = 3;
+  string reason      = 4;
+  uint64 block       = 5;
+  ConsentType old_consent_type = 6;
+  ConsentType new_consent_type = 7;
+}
+
 // CompletedRoundMeta stores metadata for completed quality rounds,
 // indexed by verdict block height for efficient window-based queries.
 message CompletedRoundMeta {

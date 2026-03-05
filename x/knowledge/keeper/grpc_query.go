@@ -337,6 +337,16 @@ func (q queryServer) ProtocolStats(ctx context.Context, _ *types.QueryProtocolSt
 	return resp, nil
 }
 
+// ─── Consent queries ────────────────────────────────────────────────────────
+
+func (q queryServer) ConsentHistory(ctx context.Context, req *types.QueryConsentHistoryRequest) (*types.QueryConsentHistoryResponse, error) {
+	if req == nil || req.SampleId == "" {
+		return nil, status.Error(codes.InvalidArgument, "sample_id is required")
+	}
+	events := q.keeper.GetConsentHistory(ctx, req.SampleId)
+	return &types.QueryConsentHistoryResponse{Events: events}, nil
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 // matchesSamplesFilter checks if a sample matches the filter criteria in QuerySamplesRequest.
