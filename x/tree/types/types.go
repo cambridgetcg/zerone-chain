@@ -123,6 +123,9 @@ const (
 // TaskResolved is the status for a task whose dispute has been resolved.
 const TaskResolved TaskStatus = "resolved"
 
+// ProjectTypeDataCollection identifies tree projects that are data collection campaigns.
+const ProjectTypeDataCollection = "data_collection"
+
 // --- JSON-serialized types (no proto) ---
 
 // PendingAbandon tracks a proposed project abandonment with timelock.

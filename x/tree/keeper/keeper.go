@@ -21,6 +21,7 @@ type Keeper struct {
 	bankKeeper            types.BankKeeper
 	channelsKeeper        types.ChannelsKeeper
 	researchFundDepositor types.ResearchFundDepositor
+	knowledgeKeeper       types.KnowledgeKeeper
 
 	authority string
 }
@@ -64,6 +65,11 @@ func prefixEndBytes(prefix []byte) []byte {
 // SetChannelsKeeper sets the channels keeper for channel-gated service calls.
 func (k *Keeper) SetChannelsKeeper(ck types.ChannelsKeeper) {
 	k.channelsKeeper = ck
+}
+
+// SetKnowledgeKeeper sets the knowledge keeper for data collection campaign integration.
+func (k *Keeper) SetKnowledgeKeeper(kk types.KnowledgeKeeper) {
+	k.knowledgeKeeper = kk
 }
 
 // Logger returns a module-specific logger.

@@ -1098,6 +1098,8 @@ func NewZeroneApp(
 	)
 	// TODO: Wire channels keeper when x/channels implements GetChannelInfo/SpendFromChannel:
 	// app.TreeKeeper.SetChannelsKeeper(channelsAdapter)
+	// Wire knowledge keeper to tree for data collection campaigns (R39-3).
+	app.TreeKeeper.SetKnowledgeKeeper(zeroneknowledgekeeper.NewTreeKnowledgeAdapter(app.KnowledgeKeeper))
 
 	// ---- Home keeper (R8-1) ----
 	app.HomeKeeper = zeronehomekeeper.NewKeeper(
@@ -1167,10 +1169,11 @@ func NewZeroneApp(
 	// Wire optional cross-module keepers via setters.
 	app.ToolboxKeeper.SetHomeKeeper(zeronehomekeeper.NewToolboxHomeAdapter(app.HomeKeeper))
 	app.ToolboxKeeper.SetBillingKeeper(zeronebillingkeeper.NewToolboxBillingAdapter(app.BillingKeeper))
+	// Wire knowledge keeper to toolbox for agent data queries (R39-3).
+	app.ToolboxKeeper.SetKnowledgeKeeper(zeroneknowledgekeeper.NewToolboxKnowledgeAdapter(app.KnowledgeKeeper))
 	// TODO: Wire remaining toolbox optional keepers when adapters are available:
 	// app.ToolboxKeeper.SetDiscoveryKeeper(discoveryAdapter)
 	// app.ToolboxKeeper.SetBvmKeeper(bvmAdapter)
-	// app.ToolboxKeeper.SetKnowledgeKeeper(knowledgeAdapter)
 	// app.ToolboxKeeper.SetStakingKeeper(stakingAdapter)
 
 	// ---- IBC Router ----
