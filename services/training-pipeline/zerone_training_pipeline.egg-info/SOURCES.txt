@@ -2,6 +2,12 @@ pyproject.toml
 tests/test_filters.py
 tests/test_formats.py
 tests/test_splits.py
+tests/test_trainer.py
+trainer/__init__.py
+trainer/cli.py
+trainer/config.py
+trainer/registry.py
+trainer/runner.py
 transforms/__init__.py
 transforms/cli.py
 transforms/filters.py

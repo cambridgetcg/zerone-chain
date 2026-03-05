@@ -1,0 +1,33 @@
+name: "zerone-technical-v1"
+base_model: "meta-llama/Llama-3.1-8B-Instruct"
+method: "qlora"  # lora, qlora, full
+dataset:
+  path: "/data/training/v1.0.0/"
+  format: "chat"  # chat, completion, dpo
+hyperparameters:
+  learning_rate: 2e-4
+  batch_size: 4
+  gradient_accumulation_steps: 8
+  epochs: 3
+  max_seq_length: 4096
+  warmup_ratio: 0.03
+lora:
+  r: 64
+  alpha: 128
+  dropout: 0.05
+  target_modules:
+    - q_proj
+    - k_proj
+    - v_proj
+    - o_proj
+    - gate_proj
+    - up_proj
+    - down_proj
+quantization:
+  bits: 4
+  quant_type: "nf4"
+  double_quant: true
+output_dir: "/models/zerone-technical-v1/"
+checkpoint_steps: 500
+eval_steps: 250
+logging_steps: 10

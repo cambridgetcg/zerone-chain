@@ -1,2 +1,3 @@
 [console_scripts]
+train = trainer.cli:main
 transform = transforms.cli:main
