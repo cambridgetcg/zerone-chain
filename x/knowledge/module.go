@@ -134,8 +134,12 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	}
 }
 
-// RegisterInvariants is a no-op for now; invariants are added in R2-2.
-func (am AppModule) RegisterInvariants(_ sdk.InvariantRegistry) {}
+// RegisterInvariants registers knowledge module invariants (R39-4).
+func (am AppModule) RegisterInvariants(ir sdk.InvariantRegistry) {
+	ir.RegisterRoute(types.ModuleName, "content-integrity", keeper.ContentIntegrityInvariant(am.keeper))
+	ir.RegisterRoute(types.ModuleName, "energy-conservation", keeper.EnergyConservationInvariant(am.keeper))
+	ir.RegisterRoute(types.ModuleName, "no-duplicate-hash", keeper.DuplicateHashInvariant(am.keeper))
+}
 
 // InitGenesis initialises the module from a genesis state.
 func (am AppModule) InitGenesis(ctx sdk.Context, cdc codec.JSONCodec, data json.RawMessage) {
