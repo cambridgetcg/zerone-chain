@@ -712,6 +712,96 @@ func (k Keeper) IterateScrapedSources(ctx context.Context, cb func(entry *types.
 	}
 }
 
+// ─── Dataset CRUD ───────────────────────────────────────────────────────────
+
+func (k Keeper) SetDataset(ctx context.Context, dataset *types.Dataset) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := marshalOpts.Marshal(dataset)
+	if err != nil {
+		return fmt.Errorf("failed to marshal dataset: %w", err)
+	}
+	return store.Set(types.DatasetKey(dataset.Id), bz)
+}
+
+func (k Keeper) GetDataset(ctx context.Context, id string) (*types.Dataset, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.DatasetKey(id))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var dataset types.Dataset
+	if err := proto.Unmarshal(bz, &dataset); err != nil {
+		return nil, false
+	}
+	return &dataset, true
+}
+
+func (k Keeper) DeleteDataset(ctx context.Context, id string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.DatasetKey(id))
+}
+
+func (k Keeper) IterateDatasets(ctx context.Context, cb func(dataset *types.Dataset) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.DatasetKeyPrefix, prefixEndBytes(types.DatasetKeyPrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var dataset types.Dataset
+		if err := proto.Unmarshal(iter.Value(), &dataset); err != nil {
+			continue
+		}
+		if cb(&dataset) {
+			break
+		}
+	}
+}
+
+func (k Keeper) NextDatasetID(ctx context.Context) string {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.DatasetSeqKey)
+	var seq uint64 = 1
+	if err == nil && len(bz) == 8 {
+		seq = binary.BigEndian.Uint64(bz)
+	}
+	id := fmt.Sprintf("%x", seq)
+	next := make([]byte, 8)
+	binary.BigEndian.PutUint64(next, seq+1)
+	_ = store.Set(types.DatasetSeqKey, next)
+	return id
+}
+
+// ─── Dataset indexes ────────────────────────────────────────────────────────
+
+func (k Keeper) SetDatasetDomainIndex(ctx context.Context, domain, datasetID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.DatasetDomainIndexKey(domain, datasetID), []byte{0x01})
+}
+
+func (k Keeper) DeleteDatasetDomainIndex(ctx context.Context, domain, datasetID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.DatasetDomainIndexKey(domain, datasetID))
+}
+
+func (k Keeper) GetDatasetsByDomain(ctx context.Context, domain string) []string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.DatasetDomainByDomainPrefix(domain)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	var ids []string
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		id := string(key[len(prefix):])
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 // ─── Store helpers ───────────────────────────────────────────────────────────
 
 func prefixEndBytes(pfx []byte) []byte {

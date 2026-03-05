@@ -53,12 +53,47 @@ func (q queryServer) QualityRound(_ context.Context, _ *types.QueryQualityRoundR
 	return nil, status.Error(codes.Unimplemented, "QualityRound not implemented (R37)")
 }
 
-func (q queryServer) Dataset(_ context.Context, _ *types.QueryDatasetRequest) (*types.QueryDatasetResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Dataset not implemented (R37)")
+func (q queryServer) Dataset(ctx context.Context, req *types.QueryDatasetRequest) (*types.QueryDatasetResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "dataset id is required")
+	}
+	dataset, found := q.keeper.GetDataset(ctx, req.Id)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "dataset %q not found", req.Id)
+	}
+	// Refresh stats on query
+	count, tokens := q.keeper.countMatchingSamples(ctx, dataset)
+	dataset.SampleCount = count
+	dataset.TotalTokens = tokens
+	return &types.QueryDatasetResponse{Dataset: dataset}, nil
 }
 
-func (q queryServer) Datasets(_ context.Context, _ *types.QueryDatasetsRequest) (*types.QueryDatasetsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "Datasets not implemented (R37)")
+func (q queryServer) Datasets(ctx context.Context, req *types.QueryDatasetsRequest) (*types.QueryDatasetsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "request is required")
+	}
+	var datasets []*types.Dataset
+	if req.Domain != "" {
+		ids := q.keeper.GetDatasetsByDomain(ctx, req.Domain)
+		for _, id := range ids {
+			ds, found := q.keeper.GetDataset(ctx, id)
+			if found {
+				count, tokens := q.keeper.countMatchingSamples(ctx, ds)
+				ds.SampleCount = count
+				ds.TotalTokens = tokens
+				datasets = append(datasets, ds)
+			}
+		}
+	} else {
+		q.keeper.IterateDatasets(ctx, func(ds *types.Dataset) bool {
+			count, tokens := q.keeper.countMatchingSamples(ctx, ds)
+			ds.SampleCount = count
+			ds.TotalTokens = tokens
+			datasets = append(datasets, ds)
+			return false
+		})
+	}
+	return &types.QueryDatasetsResponse{Datasets: datasets}, nil
 }
 
 func (q queryServer) TrainingDemand(_ context.Context, _ *types.QueryTrainingDemandRequest) (*types.QueryTrainingDemandResponse, error) {

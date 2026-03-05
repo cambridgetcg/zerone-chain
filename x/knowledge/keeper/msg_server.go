@@ -59,12 +59,12 @@ func (m msgServer) EndorseDomainProposal(ctx context.Context, msg *types.MsgEndo
 	return m.keeper.EndorseDomainProposal(ctx, msg)
 }
 
-func (m msgServer) CreateDataset(_ context.Context, _ *types.MsgCreateDataset) (*types.MsgCreateDatasetResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "CreateDataset not implemented (R37)")
+func (m msgServer) CreateDataset(ctx context.Context, msg *types.MsgCreateDataset) (*types.MsgCreateDatasetResponse, error) {
+	return m.keeper.CreateDataset(ctx, msg)
 }
 
-func (m msgServer) AccessDataset(_ context.Context, _ *types.MsgAccessDataset) (*types.MsgAccessDatasetResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "AccessDataset not implemented (R37)")
+func (m msgServer) AccessDataset(ctx context.Context, msg *types.MsgAccessDataset) (*types.MsgAccessDatasetResponse, error) {
+	return m.keeper.AccessDataset(ctx, msg)
 }
 
 func (m msgServer) AccessSample(_ context.Context, _ *types.MsgAccessSample) (*types.MsgAccessSampleResponse, error) {

@@ -147,6 +147,9 @@ var (
 
 	// ─── Contest ────────────────────────────────────────────────────────
 	ContestIndexPrefix = []byte{0xa8} // sampleID → contestRoundID (active contest)
+
+	// ─── Dataset indexes ────────────────────────────────────────────────
+	DatasetDomainIndexPrefix = []byte{0xa9} // domain/datasetID → exists
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -326,6 +329,19 @@ func AtRiskSampleKey(sampleID string) []byte {
 // ContestIndexKey returns the index key mapping a contested sample to its re-validation round.
 func ContestIndexKey(sampleID string) []byte {
 	return append(append([]byte{}, ContestIndexPrefix...), []byte(sampleID)...)
+}
+
+// DatasetDomainIndexKey returns the index key for a dataset within a domain.
+func DatasetDomainIndexKey(domain, datasetID string) []byte {
+	key := append(append([]byte{}, DatasetDomainIndexPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(datasetID)...)
+}
+
+// DatasetDomainByDomainPrefix returns the prefix for iterating datasets in a domain.
+func DatasetDomainByDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, DatasetDomainIndexPrefix...), []byte(domain)...)
+	return append(key, '/')
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────
