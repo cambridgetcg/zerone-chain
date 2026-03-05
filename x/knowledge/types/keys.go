@@ -157,6 +157,10 @@ var (
 	// ─── Consent audit ─────────────────────────────────────────────────
 	ConsentAuditPrefix = []byte{0xab} // sampleID/seq → ConsentEvent
 	ConsentAuditSeqKey = []byte{0xac} // sampleID → uint64 next event seq
+
+	// ─── Dedup indexes ─────────────────────────────────────────────────
+	NormalizedHashPrefix = []byte{0xad} // normalizedHash → submissionID
+	SimHashPrefix        = []byte{0xae} // simhash(uint64 BE) → submissionID
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -374,6 +378,19 @@ func ConsentAuditBySamplePrefix(sampleID string) []byte {
 // ConsentAuditSeqKeyFn returns the store key for a sample's consent event sequence.
 func ConsentAuditSeqKeyFn(sampleID string) []byte {
 	return append(append([]byte{}, ConsentAuditSeqKey...), []byte(sampleID)...)
+}
+
+// NormalizedHashKey returns the store key for a normalized content hash.
+func NormalizedHashKey(hash string) []byte {
+	return append(append([]byte{}, NormalizedHashPrefix...), []byte(hash)...)
+}
+
+// SimHashKey returns the store key for a SimHash value.
+func SimHashKey(hash uint64) []byte {
+	key := append([]byte{}, SimHashPrefix...)
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, hash)
+	return append(key, bz...)
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────
