@@ -100,6 +100,7 @@ func (k Keeper) EndBlocker(ctx context.Context) error {
 	if blockHeight > 0 && blockHeight%EcologyEpochBlocks == 0 {
 		epoch := blockHeight / EcologyEpochBlocks
 		k.RunEcologyEpoch(ctx, epoch)
+		k.distributeEpochRevenue(ctx, params)
 		k.expireBounties(ctx, blockHeight)
 	}
 
