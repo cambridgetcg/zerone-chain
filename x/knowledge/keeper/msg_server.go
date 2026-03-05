@@ -67,8 +67,8 @@ func (m msgServer) AccessDataset(ctx context.Context, msg *types.MsgAccessDatase
 	return m.keeper.AccessDataset(ctx, msg)
 }
 
-func (m msgServer) AccessSample(_ context.Context, _ *types.MsgAccessSample) (*types.MsgAccessSampleResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "AccessSample not implemented (R37)")
+func (m msgServer) AccessSample(ctx context.Context, msg *types.MsgAccessSample) (*types.MsgAccessSampleResponse, error) {
+	return m.keeper.AccessSample(ctx, msg)
 }
 
 func (m msgServer) ReportDemand(ctx context.Context, msg *types.MsgReportDemand) (*types.MsgReportDemandResponse, error) {

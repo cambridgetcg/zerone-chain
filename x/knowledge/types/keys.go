@@ -150,6 +150,9 @@ var (
 
 	// ─── Dataset indexes ────────────────────────────────────────────────
 	DatasetDomainIndexPrefix = []byte{0xa9} // domain/datasetID → exists
+
+	// ─── Revenue queue ──────────────────────────────────────────────────
+	PendingRevenuePrefix = []byte{0xaa} // sampleID → uint64 accumulated uzrn
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -342,6 +345,11 @@ func DatasetDomainIndexKey(domain, datasetID string) []byte {
 func DatasetDomainByDomainPrefix(domain string) []byte {
 	key := append(append([]byte{}, DatasetDomainIndexPrefix...), []byte(domain)...)
 	return append(key, '/')
+}
+
+// PendingRevenueKey returns the store key for a sample's pending revenue.
+func PendingRevenueKey(sampleID string) []byte {
+	return append(append([]byte{}, PendingRevenuePrefix...), []byte(sampleID)...)
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────

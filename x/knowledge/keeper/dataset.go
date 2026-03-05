@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -63,68 +62,9 @@ func (k Keeper) CreateDataset(ctx context.Context, msg *types.MsgCreateDataset) 
 	return &types.MsgCreateDatasetResponse{DatasetId: datasetID}, nil
 }
 
-// AccessDataset processes a dataset access request, transferring payment.
+// AccessDataset processes a dataset access request with bulk pricing and per-sample updates.
 func (k Keeper) AccessDataset(ctx context.Context, msg *types.MsgAccessDataset) (*types.MsgAccessDatasetResponse, error) {
-	sdkCtx := sdk.UnwrapSDKContext(ctx)
-
-	dataset, found := k.GetDataset(ctx, msg.DatasetId)
-	if !found {
-		return nil, types.ErrDatasetNotFound.Wrapf("dataset %q not found", msg.DatasetId)
-	}
-
-	// Determine payment amount (use bulk_price)
-	price := dataset.BulkPrice
-	if price == "" || price == "0" {
-		price = dataset.PricePerSample
-	}
-
-	paymentAmount, ok := sdkmath.NewIntFromString(price)
-	if !ok || !paymentAmount.IsPositive() {
-		return nil, types.ErrInsufficientPayment.Wrap("dataset has no valid price")
-	}
-
-	// Check max_payment if set
-	if msg.MaxPayment != "" {
-		maxPay, ok := sdkmath.NewIntFromString(msg.MaxPayment)
-		if ok && paymentAmount.GT(maxPay) {
-			return nil, types.ErrInsufficientPayment.Wrapf("price %s exceeds max_payment %s", price, msg.MaxPayment)
-		}
-	}
-
-	// Transfer payment: consumer → module
-	consumerAddr, err := sdk.AccAddressFromBech32(msg.Consumer)
-	if err != nil {
-		return nil, err
-	}
-	coins := sdk.NewCoins(sdk.NewCoin("uzrn", paymentAmount))
-	if err := k.bankKeeper.SendCoinsFromAccountToModule(ctx, consumerAddr, types.ModuleName, coins); err != nil {
-		return nil, types.ErrInsufficientPayment.Wrap(err.Error())
-	}
-
-	// Curator commission (95%)
-	curatorShare := paymentAmount.Mul(sdkmath.NewInt(CuratorCommissionBPS)).Quo(sdkmath.NewInt(MaxBPSDenom))
-	if curatorShare.IsPositive() {
-		curatorAddr, err := sdk.AccAddressFromBech32(dataset.Curator)
-		if err == nil {
-			curatorCoins := sdk.NewCoins(sdk.NewCoin("uzrn", curatorShare))
-			_ = k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, curatorAddr, curatorCoins)
-		}
-	}
-
-	// Refresh stats
-	count, _ := k.countMatchingSamples(ctx, dataset)
-
-	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
-		"dataset_accessed",
-		sdk.NewAttribute("dataset_id", msg.DatasetId),
-		sdk.NewAttribute("consumer", msg.Consumer),
-		sdk.NewAttribute("payment", paymentAmount.String()),
-	))
-
-	return &types.MsgAccessDatasetResponse{
-		Payment:     paymentAmount.String(),
-		SampleCount: count,
-	}, nil
+	return k.AccessDatasetWithPricing(ctx, msg)
 }
 
 // countMatchingSamples counts samples matching a dataset's filters and estimates total tokens.

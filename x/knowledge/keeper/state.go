@@ -802,6 +802,49 @@ func (k Keeper) GetDatasetsByDomain(ctx context.Context, domain string) []string
 	return ids
 }
 
+// ─── Pending Revenue CRUD ────────────────────────────────────────────────────
+
+func (k Keeper) GetPendingRevenue(ctx context.Context, sampleID string) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.PendingRevenueKey(sampleID))
+	if err != nil || len(bz) != 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+func (k Keeper) SetPendingRevenue(ctx context.Context, sampleID string, amount uint64) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, amount)
+	return store.Set(types.PendingRevenueKey(sampleID), bz)
+}
+
+func (k Keeper) DeletePendingRevenue(ctx context.Context, sampleID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Delete(types.PendingRevenueKey(sampleID))
+}
+
+func (k Keeper) IteratePendingRevenue(ctx context.Context, cb func(sampleID string, amount uint64) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.PendingRevenuePrefix, prefixEndBytes(types.PendingRevenuePrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		sampleID := string(key[len(types.PendingRevenuePrefix):])
+		var amount uint64
+		if len(iter.Value()) == 8 {
+			amount = binary.BigEndian.Uint64(iter.Value())
+		}
+		if cb(sampleID, amount) {
+			break
+		}
+	}
+}
+
 // ─── Store helpers ───────────────────────────────────────────────────────────
 
 func prefixEndBytes(pfx []byte) []byte {
