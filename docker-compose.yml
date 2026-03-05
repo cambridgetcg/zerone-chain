@@ -1,16 +1,344 @@
+# =============================================================================
+# ZERONE Inference Layer — Local Development Stack
+#
+# Quick start:
+#   cp .env.example .env
+#   docker compose --profile cpu up -d        # CPU-only dev mode
+#   docker compose --profile gpu up -d        # GPU mode (requires nvidia-container-toolkit)
+#
+# Optional profiles:
+#   --profile monitoring    Prometheus + Grafana
+#   --profile training      Training pipeline container
+# =============================================================================
+
 services:
-  zeroned:
-    build: .
-    container_name: zerone-node
+  # ---------------------------------------------------------------------------
+  # Infrastructure
+  # ---------------------------------------------------------------------------
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zerone}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zerone-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-zerone}
     ports:
-      - "26656:26656"  # P2P
-      - "26657:26657"  # RPC
-      - "1317:1317"    # REST
-      - "9090:9090"    # gRPC
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - zeroned-data:/root/.zeroned
-    command: start --home /root/.zeroned
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-zerone}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - zerone-internal
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - zerone-internal
+    restart: unless-stopped
+
+  nats:
+    image: nats:2.10-alpine
+    command: ["--jetstream", "--store_dir", "/data"]
+    ports:
+      - "127.0.0.1:4222:4222"
+      - "127.0.0.1:8222:8222"
+    volumes:
+      - natsdata:/data
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - zerone-internal
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - zerone-internal
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Chain Mock — lightweight stub for local dev
+  # For testnet: remove this service, set CHAIN_GRPC in .env to your node
+  # ---------------------------------------------------------------------------
+
+  chain-mock:
+    build:
+      context: ./services/chain-mock
+    ports:
+      - "127.0.0.1:9090:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - zerone-internal
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Inference — GPU mode (requires nvidia-container-toolkit)
+  # Activate with: docker compose --profile gpu up -d
+  # ---------------------------------------------------------------------------
+
+  inference-gpu:
+    image: ${VLLM_IMAGE:-vllm/vllm-openai:latest}
+    environment:
+      - MODEL_PATH=${MODEL_PATH:-/models/base/Llama-3.1-8B-Instruct}
+      - MAX_MODEL_LEN=${MAX_MODEL_LEN:-2048}
+      - GPU_MEMORY_UTILIZATION=${GPU_MEMORY_UTILIZATION:-0.90}
+      - TENSOR_PARALLEL_SIZE=${TENSOR_PARALLEL_SIZE:-1}
+    volumes:
+      - ./models:/models
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    command: >
+      --model ${MODEL_PATH:-/models/base/Llama-3.1-8B-Instruct}
+      --enable-lora
+      --max-loras 4
+      --max-lora-rank 64
+      --max-model-len ${MAX_MODEL_LEN:-2048}
+      --gpu-memory-utilization ${GPU_MEMORY_UTILIZATION:-0.90}
+      --host 0.0.0.0
+      --port 8000
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    profiles:
+      - gpu
+    networks:
+      zerone-internal:
+        aliases:
+          - inference
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Inference — CPU stub for dev without GPU
+  # Activate with: docker compose --profile cpu up -d
+  # ---------------------------------------------------------------------------
+
+  inference-stub:
+    build:
+      context: ./services/inference-stub
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    profiles:
+      - cpu
+    networks:
+      zerone-internal:
+        aliases:
+          - inference
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Application Services
+  # ---------------------------------------------------------------------------
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+    command:
+      - serve
+      - --addr=:8080
+      - --metrics-addr=:9201
+      - --inference-url=http://inference:8000
+      - --rate-limit=${GATEWAY_RATE_LIMIT:-10}
+      - --burst=${GATEWAY_BURST:-20}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - zerone-internal
+      - zerone-public
+    restart: unless-stopped
+
+  dataset-exporter:
+    build:
+      context: ./services/dataset-exporter
+    command:
+      - sync
+      - --dsn=postgres://${POSTGRES_USER:-zerone}:${POSTGRES_PASSWORD:-zerone-dev}@postgres:5432/${POSTGRES_DB:-zerone}?sslmode=disable
+      - --chain-grpc=${CHAIN_GRPC:-chain-mock:9090}
+      - --poll-interval=${EXPORTER_POLL_INTERVAL:-10s}
+      - --metrics-addr=:9200
+      - --migration=/migrations/001_init.sql
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9200/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chain-mock:
+        condition: service_healthy
+    networks:
+      - zerone-internal
+    restart: unless-stopped
+
+  payment-bridge:
+    build:
+      context: ./services/payment-bridge
+    command:
+      - serve
+      - --redis=redis:6379
+      - --chain-grpc=${CHAIN_GRPC:-chain-mock:9090}
+      - --grpc-addr=:9300
+      - --settle-interval=${PAYMENT_SETTLE_INTERVAL:-5m}
+    # No HTTP health endpoint — payment-bridge is a gRPC service.
+    # Health is inferred from container running status.
+    depends_on:
+      redis:
+        condition: service_healthy
+      chain-mock:
+        condition: service_healthy
+    networks:
+      - zerone-internal
+    restart: unless-stopped
+
+  blind-storage:
+    build:
+      context: ./services/blind-storage/node
+    command:
+      - serve
+      - --addr=:9400
+      - --data-dir=/data/chunks
+    volumes:
+      - storagedata:/data/chunks
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9400/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - zerone-internal
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------
+  # Training Pipeline (on-demand, not always running)
+  # Activate with: docker compose --profile training up training-pipeline
+  # ---------------------------------------------------------------------------
+
+  training-pipeline:
+    build:
+      context: ./services/training-pipeline
+    environment:
+      - DATABASE_URL=${TRAINING_DSN:-postgres://zerone:zerone-dev@postgres:5432/zerone?sslmode=disable}
+    volumes:
+      - ./models:/models
+      - ./datasets:/datasets
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - training
+    networks:
+      - zerone-internal
+
+  # ---------------------------------------------------------------------------
+  # Monitoring (optional)
+  # Activate with: docker compose --profile monitoring up -d
+  # ---------------------------------------------------------------------------
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    volumes:
+      - ./services/inference/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    ports:
+      - "127.0.0.1:9091:9090"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    profiles:
+      - monitoring
+    networks:
+      - zerone-internal
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+    networks:
+      - zerone-internal
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  # Internal network — services communicate here, not reachable from host
+  zerone-internal:
+    driver: bridge
+  # Public network — only api-gateway is attached, host can reach port 8080
+  zerone-public:
+    driver: bridge
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
 volumes:
-  zeroned-data:
+  pgdata:
+  redisdata:
+  natsdata:
+  miniodata:
+  storagedata:
+  promdata:
+  grafanadata:
