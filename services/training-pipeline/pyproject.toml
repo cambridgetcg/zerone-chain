@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zerone-training-pipeline"
+version = "0.1.0"
+description = "ZERONE training data transformation pipeline"
+requires-python = ">=3.10"
+dependencies = [
+    "psycopg2-binary>=2.9",
+    "click>=8.1",
+    "tiktoken>=0.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-cov"]
+
+[project.scripts]
+transform = "transforms.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["transforms*"]

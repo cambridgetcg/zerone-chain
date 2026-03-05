@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: zerone-training-pipeline
+Version: 0.1.0
+Summary: ZERONE training data transformation pipeline
+Requires-Python: >=3.10
+Requires-Dist: psycopg2-binary>=2.9
+Requires-Dist: click>=8.1
+Requires-Dist: tiktoken>=0.5
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-cov; extra == "dev"

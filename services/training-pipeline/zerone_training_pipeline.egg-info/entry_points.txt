@@ -1,0 +1,2 @@
+[console_scripts]
+transform = transforms.cli:main
