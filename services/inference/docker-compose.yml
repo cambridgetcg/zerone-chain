@@ -1,0 +1,50 @@
+version: "3.8"
+
+services:
+  inference:
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    environment:
+      - MODEL_PATH=/models/base/Llama-3.1-8B-Instruct
+      - MAX_MODEL_LEN=4096
+      - GPU_MEMORY_UTILIZATION=0.90
+      - TENSOR_PARALLEL_SIZE=1
+      - ENABLE_LORA=true
+      - MAX_LORAS=4
+      - MAX_LORA_RANK=64
+    volumes:
+      - ./models:/models
+    ports:
+      - "8000:8000"  # Internal only — gateway is the public face
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    restart: unless-stopped
+    command: >
+      --model /models/base/Llama-3.1-8B-Instruct
+      --enable-lora
+      --max-loras 4
+      --max-lora-rank 64
+      --max-model-len 4096
+      --gpu-memory-utilization 0.90
+      --host 0.0.0.0
+      --port 8000
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    profiles:
+      - monitoring
