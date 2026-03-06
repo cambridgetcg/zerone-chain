@@ -1,0 +1,200 @@
+[
+  {
+    "id": "inst-format-001",
+    "domain": "instruction",
+    "category": "format_compliance",
+    "prompt": "Return a valid JSON object with exactly three keys: 'name' (string), 'age' (number), and 'active' (boolean). Use realistic values.",
+    "expected": "{\"name\":",
+    "eval_method": "llm_judge",
+    "metadata": {"format": "json", "check": "valid_json_with_keys", "required_keys": ["name", "age", "active"]}
+  },
+  {
+    "id": "inst-format-002",
+    "domain": "instruction",
+    "category": "format_compliance",
+    "prompt": "Write a haiku (5-7-5 syllable pattern) about programming. Output only the haiku, nothing else.",
+    "expected": "haiku",
+    "eval_method": "llm_judge",
+    "metadata": {"format": "haiku", "check": "syllable_pattern"}
+  },
+  {
+    "id": "inst-format-003",
+    "domain": "instruction",
+    "category": "format_compliance",
+    "prompt": "Create a markdown table with 3 columns (Name, Type, Description) and exactly 4 rows describing HTTP methods (GET, POST, PUT, DELETE).",
+    "expected": "|",
+    "eval_method": "llm_judge",
+    "metadata": {"format": "markdown_table", "check": "table_structure"}
+  },
+  {
+    "id": "inst-format-004",
+    "domain": "instruction",
+    "category": "format_compliance",
+    "prompt": "Output a valid YAML configuration with the following structure: a 'server' key containing 'host' (string), 'port' (number), and 'debug' (boolean). Output only the YAML.",
+    "expected": "server:",
+    "eval_method": "llm_judge",
+    "metadata": {"format": "yaml", "check": "valid_yaml"}
+  },
+  {
+    "id": "inst-format-005",
+    "domain": "instruction",
+    "category": "format_compliance",
+    "prompt": "Write exactly 3 bullet points summarizing the benefits of version control. Each bullet must start with '- ' and be a single sentence.",
+    "expected": "- ",
+    "eval_method": "llm_judge",
+    "metadata": {"format": "bullets", "check": "bullet_count"}
+  },
+  {
+    "id": "inst-format-006",
+    "domain": "instruction",
+    "category": "format_compliance",
+    "prompt": "Output a numbered list from 1 to 5 of programming languages sorted alphabetically. Format: '1. Language'. Output only the list.",
+    "expected": "1.",
+    "eval_method": "llm_judge",
+    "metadata": {"format": "numbered_list", "check": "numbered_format"}
+  },
+  {
+    "id": "inst-format-007",
+    "domain": "instruction",
+    "category": "format_compliance",
+    "prompt": "Return a JSON array of exactly 5 strings, each being a color name. Output only the JSON array, no explanation.",
+    "expected": "[",
+    "eval_method": "llm_judge",
+    "metadata": {"format": "json_array", "check": "valid_json_array_of_strings"}
+  },
+  {
+    "id": "inst-format-008",
+    "domain": "instruction",
+    "category": "format_compliance",
+    "prompt": "Write a function signature in Go that takes a context.Context and a string, and returns ([]byte, error). Output only the signature line, nothing else.",
+    "expected": "func",
+    "eval_method": "llm_judge",
+    "metadata": {"format": "go_signature", "check": "valid_go_signature"}
+  },
+  {
+    "id": "inst-constraint-001",
+    "domain": "instruction",
+    "category": "constraint_satisfaction",
+    "prompt": "Explain what a goroutine is in Go. Your response must be exactly 3 sentences. Do not use the word 'thread'.",
+    "expected": "goroutine",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["exactly_3_sentences", "no_word_thread"]}
+  },
+  {
+    "id": "inst-constraint-002",
+    "domain": "instruction",
+    "category": "constraint_satisfaction",
+    "prompt": "Write a paragraph about cloud computing. It must be between 50 and 75 words. Every sentence must start with a different letter.",
+    "expected": "cloud",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["word_count_50_75", "different_starting_letters"]}
+  },
+  {
+    "id": "inst-constraint-003",
+    "domain": "instruction",
+    "category": "constraint_satisfaction",
+    "prompt": "List 5 benefits of unit testing. Each benefit must be a single word (no phrases). Output one word per line.",
+    "expected": "5 words",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["exactly_5_items", "single_word_each"]}
+  },
+  {
+    "id": "inst-constraint-004",
+    "domain": "instruction",
+    "category": "constraint_satisfaction",
+    "prompt": "Explain recursion without using the word 'recursion' or 'recursive'. Keep your response under 50 words.",
+    "expected": "function",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["no_word_recursion", "under_50_words"]}
+  },
+  {
+    "id": "inst-constraint-005",
+    "domain": "instruction",
+    "category": "constraint_satisfaction",
+    "prompt": "Write a commit message for adding user authentication. It must follow conventional commits format (type(scope): description), be under 72 characters, and use imperative mood.",
+    "expected": "feat",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["conventional_commits", "under_72_chars", "imperative_mood"]}
+  },
+  {
+    "id": "inst-constraint-006",
+    "domain": "instruction",
+    "category": "constraint_satisfaction",
+    "prompt": "Name 4 design patterns. Each name must be exactly 2 words. Output one per line, nothing else.",
+    "expected": "pattern",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["exactly_4_items", "two_words_each"]}
+  },
+  {
+    "id": "inst-constraint-007",
+    "domain": "instruction",
+    "category": "constraint_satisfaction",
+    "prompt": "Describe what an API is in exactly 10 words. Output only those 10 words.",
+    "expected": "API",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["exactly_10_words"]}
+  },
+  {
+    "id": "inst-multi-001",
+    "domain": "instruction",
+    "category": "multi_constraint",
+    "prompt": "Write a JSON object describing a book. Requirements:\n1. Must have exactly 4 keys: title, author, year, genres\n2. 'year' must be a number between 1900 and 2025\n3. 'genres' must be an array of exactly 2 strings\n4. Output only the JSON, no markdown code fences",
+    "expected": "{",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["valid_json", "exactly_4_keys", "year_range", "genres_array_2"]}
+  },
+  {
+    "id": "inst-multi-002",
+    "domain": "instruction",
+    "category": "multi_constraint",
+    "prompt": "Write a function docstring for a Go function called 'ProcessBatch'. Requirements:\n1. First line must start with 'ProcessBatch'\n2. Must mention parameters and return values\n3. Must be between 3 and 5 lines\n4. Must include at least one example usage in a comment",
+    "expected": "ProcessBatch",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["starts_with_name", "mentions_params", "line_count_3_5", "has_example"]}
+  },
+  {
+    "id": "inst-multi-003",
+    "domain": "instruction",
+    "category": "multi_constraint",
+    "prompt": "Create an error message for a failed API request. Requirements:\n1. Must include an error code (4xx or 5xx)\n2. Must include a human-readable message\n3. Must be valid JSON\n4. Must include a 'timestamp' field in ISO 8601 format\n5. Total response must be under 200 characters",
+    "expected": "error",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["has_error_code", "human_readable", "valid_json", "has_timestamp", "under_200_chars"]}
+  },
+  {
+    "id": "inst-multi-004",
+    "domain": "instruction",
+    "category": "multi_constraint",
+    "prompt": "Write a code review comment. Requirements:\n1. Must be constructive (suggest improvement, not just point out problem)\n2. Must reference a specific line or code element\n3. Must be between 2 and 4 sentences\n4. Must include a code suggestion using backticks",
+    "expected": "`",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["constructive", "references_code", "sentence_count_2_4", "has_code_suggestion"]}
+  },
+  {
+    "id": "inst-multi-005",
+    "domain": "instruction",
+    "category": "multi_constraint",
+    "prompt": "Write a changelog entry for version 2.0.0. Requirements:\n1. Must have sections: Added, Changed, Removed\n2. Each section must have 2-3 bullet points\n3. Must use past tense\n4. Each bullet must be one sentence\n5. Must start with '## [2.0.0]'",
+    "expected": "## [2.0.0]",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["has_sections", "bullet_count", "past_tense", "single_sentence_bullets", "starts_with_version"]}
+  },
+  {
+    "id": "inst-multi-006",
+    "domain": "instruction",
+    "category": "multi_constraint",
+    "prompt": "Write a git branch naming convention guide. Requirements:\n1. Must list exactly 3 branch type prefixes (e.g., feature/, bugfix/)\n2. Each must include a regex pattern\n3. Must include one good and one bad example for each type\n4. Use markdown formatting\n5. Keep total response under 300 words",
+    "expected": "feature/",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["exactly_3_types", "has_regex", "good_bad_examples", "markdown", "under_300_words"]}
+  },
+  {
+    "id": "inst-multi-007",
+    "domain": "instruction",
+    "category": "multi_constraint",
+    "prompt": "Design a REST API endpoint specification. Requirements:\n1. Must be for a POST endpoint\n2. Must include: method, path, request body schema, response schema, and status codes\n3. Must use JSON format\n4. Must include at least 2 error status codes with descriptions\n5. Path must follow RESTful conventions",
+    "expected": "POST",
+    "eval_method": "llm_judge",
+    "metadata": {"constraints": ["post_method", "complete_spec", "json_format", "error_codes", "restful_path"]}
+  }
+]

@@ -1,0 +1,479 @@
+[
+  {
+    "id": "code-impl-001",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `fibonacci(n int) int` that returns the nth Fibonacci number (0-indexed, so fibonacci(0)=0, fibonacci(1)=1, fibonacci(10)=55). Only output the function, no explanation.",
+    "expected": "55",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "fibonacci(10)", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-002",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `isPalindrome(s string) bool` that checks if a string is a palindrome (case-insensitive, ignoring non-alphanumeric characters). Only output the function.",
+    "expected": "true",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "isPalindrome(\"A man, a plan, a canal: Panama\")", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-003",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `twoSum(nums []int, target int) [2]int` that returns the indices of two numbers that add up to target. Only output the function.",
+    "expected": "[0 1]",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "twoSum([]int{2,7,11,15}, 9)", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-004",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `reverseWords(s string) string` that reverses the order of words in a string. Words are separated by spaces. Only output the function.",
+    "expected": "world hello",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "reverseWords(\"hello world\")", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-005",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `maxSubarraySum(nums []int) int` that finds the maximum sum of a contiguous subarray (Kadane's algorithm). Only output the function.",
+    "expected": "6",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "maxSubarraySum([]int{-2,1,-3,4,-1,2,1,-5,4})", "difficulty": "medium"}
+  },
+  {
+    "id": "code-impl-006",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `mergeSort(arr []int) []int` that sorts an array using merge sort. Only output the function.",
+    "expected": "[1 2 3 4 5]",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "mergeSort([]int{5,3,1,4,2})", "difficulty": "medium"}
+  },
+  {
+    "id": "code-impl-007",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `longestCommonPrefix(strs []string) string` that finds the longest common prefix among an array of strings. Only output the function.",
+    "expected": "fl",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "longestCommonPrefix([]string{\"flower\",\"flow\",\"flight\"})", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-008",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `isAnagram(s, t string) bool` that determines if t is an anagram of s. Only output the function.",
+    "expected": "true",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "isAnagram(\"anagram\", \"nagaram\")", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-009",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `flatten(nested []any) []int` that flattens a nested slice of ints. Elements can be int or []any. Only output the function.",
+    "expected": "[1 2 3 4 5 6]",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "flatten([]any{1, []any{2, 3}, []any{4, []any{5, 6}}})", "difficulty": "medium"}
+  },
+  {
+    "id": "code-impl-010",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `romanToInt(s string) int` that converts a Roman numeral string to an integer. Only output the function.",
+    "expected": "1994",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "romanToInt(\"MCMXCIV\")", "difficulty": "medium"}
+  },
+  {
+    "id": "code-impl-011",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `groupAnagrams(strs []string) [][]string` that groups anagrams together. Only output the function.",
+    "expected": "3",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "len(groupAnagrams([]string{\"eat\",\"tea\",\"tan\",\"ate\",\"nat\",\"bat\"}))", "difficulty": "medium"}
+  },
+  {
+    "id": "code-impl-012",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `isValid(s string) bool` that checks if a string of brackets '()[]{}' is valid (properly opened and closed). Only output the function.",
+    "expected": "true",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "isValid(\"([{}])\")", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-013",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `climbStairs(n int) int` that returns the number of distinct ways to climb n stairs, taking 1 or 2 steps at a time. Only output the function.",
+    "expected": "8",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "climbStairs(5)", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-014",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `lengthOfLIS(nums []int) int` that returns the length of the longest increasing subsequence. Only output the function.",
+    "expected": "4",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "lengthOfLIS([]int{10,9,2,5,3,7,101,18})", "difficulty": "hard"}
+  },
+  {
+    "id": "code-impl-015",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `compress(s string) string` that performs run-length encoding. E.g., 'aaabbc' -> 'a3b2c1'. Only output the function.",
+    "expected": "a3b2c1",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "compress(\"aaabbc\")", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-016",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `binarySearch(arr []int, target int) int` that returns the index of target in a sorted array, or -1 if not found. Only output the function.",
+    "expected": "3",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "binarySearch([]int{1,3,5,7,9,11}, 7)", "difficulty": "easy"}
+  },
+  {
+    "id": "code-impl-017",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `uniquePaths(m, n int) int` that counts unique paths from top-left to bottom-right of an m x n grid, moving only right or down. Only output the function.",
+    "expected": "28",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "uniquePaths(3, 7)", "difficulty": "medium"}
+  },
+  {
+    "id": "code-impl-018",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `myAtoi(s string) int` that converts a string to a 32-bit signed integer (like C's atoi). Handle whitespace, sign, overflow. Only output the function.",
+    "expected": "42",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "myAtoi(\"   42\")", "difficulty": "medium"}
+  },
+  {
+    "id": "code-impl-019",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `spiralOrder(matrix [][]int) []int` that returns elements of a matrix in spiral order. Only output the function.",
+    "expected": "[1 2 3 6 9 8 7 4 5]",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "spiralOrder([][]int{{1,2,3},{4,5,6},{7,8,9}})", "difficulty": "medium"}
+  },
+  {
+    "id": "code-impl-020",
+    "domain": "code",
+    "category": "function_implementation",
+    "prompt": "Write a Go function `gcd(a, b int) int` that returns the greatest common divisor using the Euclidean algorithm. Only output the function.",
+    "expected": "6",
+    "eval_method": "execution",
+    "metadata": {"language": "go", "test_input": "gcd(48, 18)", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-001",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function:\n\nfunc sum(nums []int) int {\n    total := 0\n    for i := 1; i <= len(nums); i++ {\n        total += nums[i]\n    }\n    return total\n}\n\nOnly output the corrected function.",
+    "expected": "for i := 0; i < len(nums); i++",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "off_by_one", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-002",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function:\n\nfunc findMax(nums []int) int {\n    max := 0\n    for _, n := range nums {\n        if n > max {\n            max = n\n        }\n    }\n    return max\n}\n\nThe function should work with negative numbers. Only output the corrected function.",
+    "expected": "math.MinInt",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "initialization", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-003",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function:\n\nfunc reverse(s string) string {\n    runes := []rune(s)\n    for i, j := 0, len(runes); i < j; i, j = i+1, j-1 {\n        runes[i], runes[j] = runes[j], runes[i]\n    }\n    return string(runes)\n}\n\nOnly output the corrected function.",
+    "expected": "len(runes)-1",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "off_by_one", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-004",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function that should remove duplicates from a sorted slice:\n\nfunc removeDuplicates(nums []int) []int {\n    if len(nums) == 0 {\n        return nums\n    }\n    result := []int{nums[0]}\n    for i := 0; i < len(nums); i++ {\n        if nums[i] != result[len(result)-1] {\n            result = append(result, nums[i])\n        }\n    }\n    return result\n}\n\nOnly output the corrected function.",
+    "expected": "i := 1",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "off_by_one", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-005",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function:\n\nfunc isPowerOfTwo(n int) bool {\n    return n & (n - 1) == 0\n}\n\nIt incorrectly returns true for n=0. Only output the corrected function.",
+    "expected": "n > 0 &&",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "edge_case", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-006",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function that computes factorial:\n\nfunc factorial(n int) int {\n    if n == 0 {\n        return 1\n    }\n    return n * factorial(n)\n}\n\nOnly output the corrected function.",
+    "expected": "factorial(n-1)",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "infinite_recursion", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-007",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function:\n\nfunc countVowels(s string) int {\n    count := 0\n    vowels := \"aeiou\"\n    for _, c := range s {\n        for _, v := range vowels {\n            if c == v {\n                count++\n            }\n        }\n    }\n    return count\n}\n\nIt doesn't count uppercase vowels. Only output the corrected function.",
+    "expected": "strings.ToLower",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "case_sensitivity", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-008",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the concurrency bug in this Go function:\n\nfunc concurrentSum(nums []int) int {\n    total := 0\n    var wg sync.WaitGroup\n    for _, n := range nums {\n        wg.Add(1)\n        go func() {\n            defer wg.Done()\n            total += n\n        }()\n    }\n    wg.Wait()\n    return total\n}\n\nOnly output the corrected function.",
+    "expected": "atomic",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "race_condition", "difficulty": "medium"}
+  },
+  {
+    "id": "code-bug-009",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function that should flatten a map:\n\nfunc flatten(m map[string]any, prefix string) map[string]string {\n    result := make(map[string]string)\n    for k, v := range m {\n        key := k\n        if prefix != \"\" {\n            key = prefix + \".\" + k\n        }\n        switch val := v.(type) {\n        case map[string]any:\n            flatten(val, key)\n        case string:\n            result[key] = val\n        }\n    }\n    return result\n}\n\nThe recursive call result is discarded. Only output the corrected function.",
+    "expected": "for k, v := range flatten(val, key)",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "discarded_return", "difficulty": "medium"}
+  },
+  {
+    "id": "code-bug-010",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the deadlock in this Go function:\n\nfunc produce(ch chan int) {\n    for i := 0; i < 5; i++ {\n        ch <- i\n    }\n}\n\nfunc consume(ch chan int) {\n    for v := range ch {\n        fmt.Println(v)\n    }\n}\n\nThe channel is never closed, causing consume to block forever. Only output the corrected produce function.",
+    "expected": "close(ch)",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "deadlock", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-011",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the memory leak in this Go HTTP handler:\n\nfunc handler(w http.ResponseWriter, r *http.Request) {\n    resp, err := http.Get(\"https://api.example.com/data\")\n    if err != nil {\n        http.Error(w, err.Error(), 500)\n        return\n    }\n    body, _ := io.ReadAll(resp.Body)\n    w.Write(body)\n}\n\nOnly output the corrected function.",
+    "expected": "defer resp.Body.Close()",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "resource_leak", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-012",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function:\n\nfunc dedup(s []string) []string {\n    seen := map[string]bool{}\n    result := s[:0]\n    for _, v := range s {\n        if !seen[v] {\n            seen[v] = true\n            result = append(result, v)\n        }\n    }\n    return result\n}\n\nIt mutates the original slice. Fix it to avoid aliasing. Only output the corrected function.",
+    "expected": "result := make([]string, 0",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "aliasing", "difficulty": "medium"}
+  },
+  {
+    "id": "code-bug-013",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function:\n\nfunc parseInt(s string) (int, error) {\n    n, err := strconv.Atoi(s)\n    if err != nil {\n        return 0\n    }\n    return n, nil\n}\n\nOnly output the corrected function.",
+    "expected": "return 0, err",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "missing_return_value", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-014",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function that checks if all elements in a slice satisfy a condition:\n\nfunc allPositive(nums []int) bool {\n    for _, n := range nums {\n        if n > 0 {\n            return true\n        }\n    }\n    return false\n}\n\nThis returns true if ANY element is positive, not ALL. Only output the corrected function.",
+    "expected": "n <= 0",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "logic_inversion", "difficulty": "easy"}
+  },
+  {
+    "id": "code-bug-015",
+    "domain": "code",
+    "category": "bug_fixing",
+    "prompt": "Fix the bug in this Go function:\n\nfunc safeDiv(a, b float64) float64 {\n    return a / b\n}\n\nIt panics when b is zero. Return 0 and an error instead. Only output the corrected function with signature `func safeDiv(a, b float64) (float64, error)`.",
+    "expected": "b == 0",
+    "eval_method": "fuzzy",
+    "metadata": {"bug_type": "division_by_zero", "difficulty": "easy"}
+  },
+  {
+    "id": "code-review-001",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nfunc processUsers(db *sql.DB, ids []int) error {\n    for _, id := range ids {\n        query := fmt.Sprintf(\"SELECT * FROM users WHERE id = %d\", id)\n        rows, _ := db.Query(query)\n        var name string\n        for rows.Next() {\n            rows.Scan(&name)\n            fmt.Println(name)\n        }\n    }\n    return nil\n}\n\nList each issue on a new line starting with '- '.",
+    "expected": "SQL injection",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "medium"}
+  },
+  {
+    "id": "code-review-002",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nvar cache = map[string]string{}\n\nfunc GetCached(key string) string {\n    if v, ok := cache[key]; ok {\n        return v\n    }\n    v := expensiveLookup(key)\n    cache[key] = v\n    return v\n}\n\nThis function is called from multiple goroutines. List each issue on a new line starting with '- '.",
+    "expected": "race condition",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "medium"}
+  },
+  {
+    "id": "code-review-003",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nfunc readConfig(path string) (*Config, error) {\n    f, err := os.Open(path)\n    if err != nil {\n        return nil, err\n    }\n    var cfg Config\n    json.NewDecoder(f).Decode(&cfg)\n    return &cfg, nil\n}\n\nList each issue on a new line starting with '- '.",
+    "expected": "Close",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-review-004",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nfunc handler(w http.ResponseWriter, r *http.Request) {\n    name := r.URL.Query().Get(\"name\")\n    fmt.Fprintf(w, \"<h1>Hello, %s!</h1>\", name)\n}\n\nList each issue on a new line starting with '- '.",
+    "expected": "XSS",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-review-005",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nfunc downloadFile(url string) ([]byte, error) {\n    resp, err := http.Get(url)\n    if err != nil {\n        return nil, err\n    }\n    defer resp.Body.Close()\n    return io.ReadAll(resp.Body)\n}\n\nList each issue on a new line starting with '- '.",
+    "expected": "status code",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-review-006",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nfunc processItems(items []Item) {\n    for _, item := range items {\n        go func() {\n            process(item)\n        }()\n    }\n}\n\nList each issue on a new line starting with '- '.",
+    "expected": "closure",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "medium"}
+  },
+  {
+    "id": "code-review-007",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nfunc hashPassword(password string) string {\n    h := md5.Sum([]byte(password))\n    return hex.EncodeToString(h[:])\n}\n\nList each issue on a new line starting with '- '.",
+    "expected": "md5",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-review-008",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nfunc loadAll(paths []string) ([][]byte, error) {\n    var results [][]byte\n    for _, p := range paths {\n        data, err := os.ReadFile(p)\n        if err != nil {\n            log.Println(err)\n            continue\n        }\n        results = append(results, data)\n    }\n    return results, nil\n}\n\nList each issue on a new line starting with '- '.",
+    "expected": "error",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "medium"}
+  },
+  {
+    "id": "code-review-009",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\ntype Server struct {\n    tokens map[string]time.Time\n}\n\nfunc (s *Server) IsAuthenticated(token string) bool {\n    exp, ok := s.tokens[token]\n    if !ok {\n        return false\n    }\n    return time.Now().Before(exp)\n}\n\nThis is called from HTTP handlers concurrently. List each issue on a new line starting with '- '.",
+    "expected": "concurrent",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "medium"}
+  },
+  {
+    "id": "code-review-010",
+    "domain": "code",
+    "category": "code_review",
+    "prompt": "Review this Go code and list all issues:\n\nfunc unmarshalConfig(data []byte) Config {\n    var c Config\n    json.Unmarshal(data, &c)\n    return c\n}\n\nList each issue on a new line starting with '- '.",
+    "expected": "error",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-test-001",
+    "domain": "code",
+    "category": "test_generation",
+    "prompt": "Write Go table-driven tests for this function:\n\nfunc Abs(n int) int {\n    if n < 0 {\n        return -n\n    }\n    return n\n}\n\nInclude tests for positive, negative, and zero. Only output the test function.",
+    "expected": "func Test",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-test-002",
+    "domain": "code",
+    "category": "test_generation",
+    "prompt": "Write Go table-driven tests for this function:\n\nfunc Max(a, b int) int {\n    if a > b {\n        return a\n    }\n    return b\n}\n\nInclude at least 4 test cases. Only output the test function.",
+    "expected": "func Test",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-test-003",
+    "domain": "code",
+    "category": "test_generation",
+    "prompt": "Write Go table-driven tests for this function:\n\nfunc Contains(slice []string, item string) bool {\n    for _, s := range slice {\n        if s == item {\n            return true\n        }\n    }\n    return false\n}\n\nInclude tests for found, not found, and empty slice. Only output the test function.",
+    "expected": "func Test",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-test-004",
+    "domain": "code",
+    "category": "test_generation",
+    "prompt": "Write Go table-driven tests for this function:\n\nfunc Clamp(val, min, max int) int {\n    if val < min {\n        return min\n    }\n    if val > max {\n        return max\n    }\n    return val\n}\n\nInclude edge cases for boundary values. Only output the test function.",
+    "expected": "func Test",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-test-005",
+    "domain": "code",
+    "category": "test_generation",
+    "prompt": "Write Go table-driven tests for this function:\n\nfunc Truncate(s string, maxLen int) string {\n    if len(s) <= maxLen {\n        return s\n    }\n    return s[:maxLen] + \"...\"\n}\n\nInclude tests for short strings, exact length, and long strings. Only output the test function.",
+    "expected": "func Test",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-test-006",
+    "domain": "code",
+    "category": "test_generation",
+    "prompt": "Write comprehensive Go tests for this HTTP handler:\n\nfunc healthHandler(w http.ResponseWriter, r *http.Request) {\n    w.Header().Set(\"Content-Type\", \"application/json\")\n    w.WriteHeader(http.StatusOK)\n    json.NewEncoder(w).Encode(map[string]string{\"status\": \"ok\"})\n}\n\nUse httptest. Test status code, content type, and body. Only output the test function.",
+    "expected": "httptest",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "medium"}
+  },
+  {
+    "id": "code-test-007",
+    "domain": "code",
+    "category": "test_generation",
+    "prompt": "Write Go tests for this function that test error cases:\n\nfunc Divide(a, b float64) (float64, error) {\n    if b == 0 {\n        return 0, fmt.Errorf(\"division by zero\")\n    }\n    return a / b, nil\n}\n\nTest both success and error paths. Only output the test function.",
+    "expected": "func Test",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "easy"}
+  },
+  {
+    "id": "code-test-008",
+    "domain": "code",
+    "category": "test_generation",
+    "prompt": "Write Go benchmark tests for this function:\n\nfunc IsPrime(n int) bool {\n    if n < 2 {\n        return false\n    }\n    for i := 2; i*i <= n; i++ {\n        if n%i == 0 {\n            return false\n        }\n    }\n    return true\n}\n\nInclude both a unit test and a benchmark. Only output the test functions.",
+    "expected": "Benchmark",
+    "eval_method": "fuzzy",
+    "metadata": {"difficulty": "medium"}
+  }
+]
