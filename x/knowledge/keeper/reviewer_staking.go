@@ -28,6 +28,46 @@ const (
 	sideReject
 )
 
+// EscrowReviewerStake locks a reviewer's stake for a quality round.
+// The stake amount is submitterStake × ReviewerStakeRatioBps / 10000.
+// Returns nil if no stake is required (zero ratio or zero submitter stake).
+func (k Keeper) EscrowReviewerStake(ctx context.Context, roundID, verifier string, submitterStake sdkmath.Int) error {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	rp := k.GetReviewerStakingParams(ctx)
+	if rp.ReviewerStakeRatioBps == 0 || !submitterStake.IsPositive() {
+		return nil
+	}
+	reviewerStake := submitterStake.Mul(sdkmath.NewInt(int64(rp.ReviewerStakeRatioBps))).Quo(sdkmath.NewInt(10_000))
+	if !reviewerStake.IsPositive() {
+		return nil
+	}
+	verifierAddr, err := sdk.AccAddressFromBech32(verifier)
+	if err != nil {
+		return nil // Skip escrow for non-bech32 verifier IDs (e.g. legacy rounds).
+	}
+	if err := k.bankKeeper.SendCoinsFromAccountToModule(
+		sdkCtx, verifierAddr, types.ModuleName,
+		sdk.NewCoins(sdk.NewCoin("uzrn", reviewerStake)),
+	); err != nil {
+		return types.ErrReviewerStakeInsufficient.Wrap(err.Error())
+	}
+	return k.SetReviewerStake(ctx, roundID, verifier, reviewerStake.String())
+}
+
+// RecordContestedStrike increments the contested-deep count for a content hash
+// and returns whether the content should be permanently rejected.
+func (k Keeper) RecordContestedStrike(ctx context.Context, contentHash string, rp types.ReviewerStakingParams) (count uint64, permanent bool, err error) {
+	if contentHash == "" {
+		return 0, false, nil
+	}
+	count, err = k.IncrementContestedDeepCount(ctx, contentHash)
+	if err != nil {
+		return 0, false, err
+	}
+	permanent = count >= rp.MaxContestedDeepCount
+	return count, permanent, nil
+}
+
 // distributeReviewerStakes handles all stake distribution after aggregation.
 // If reviewer stakes exist for this round, it distributes according to the
 // dual-staking mechanism. Otherwise it falls back to returning the submitter's
@@ -117,8 +157,10 @@ func determineOutcome(acceptCount, rejectCount, total int) stakingOutcome {
 	return outcomeDeepContested
 }
 
-// distributeAccept handles the ACCEPT outcome: submitter gets stake back minus
-// show-up pool plus accept bonus; majority reviewers get stake + rewards.
+// distributeAccept handles the ACCEPT outcome: submitter gets full stake back
+// plus accept bonus from minority pot; majority reviewers get stake + show-up
+// rewards from minority pot. Show-up rewards come from minority pot only — no
+// rewards on unanimous votes.
 func (k Keeper) distributeAccept(
 	sdkCtx sdk.Context,
 	round *types.QualityRound,
@@ -137,17 +179,19 @@ func (k Keeper) distributeAccept(
 		}
 	}
 
-	// Calculate pools.
-	showUpPool := submitterStake.Mul(sdkmath.NewInt(int64(rp.ShowUpRewardRatioBps))).Quo(sdkmath.NewInt(10_000))
+	// Show-up rewards come from minority pot only (no rewards on unanimous).
 	minorityPot := k.sumReviewerStakes(sdkCtx, round.Id, minority)
-	acceptReward := submitterStake.Mul(sdkmath.NewInt(int64(rp.AcceptRewardRatioBps))).Quo(sdkmath.NewInt(10_000))
-	if acceptReward.GT(minorityPot) {
-		acceptReward = minorityPot
-	}
-	remainingPot := minorityPot.Sub(acceptReward)
+	showUpPool := minorityPot.Mul(sdkmath.NewInt(int64(rp.ShowUpRewardRatioBps))).Quo(sdkmath.NewInt(10_000))
+	afterShowUp := minorityPot.Sub(showUpPool)
 
-	// Pay submitter: submitterStake - showUpPool + acceptReward.
-	submitterPayout := submitterStake.Sub(showUpPool).Add(acceptReward)
+	acceptReward := submitterStake.Mul(sdkmath.NewInt(int64(rp.AcceptRewardRatioBps))).Quo(sdkmath.NewInt(10_000))
+	if acceptReward.GT(afterShowUp) {
+		acceptReward = afterShowUp
+	}
+	remainingPot := afterShowUp.Sub(acceptReward)
+
+	// Pay submitter: full stake back + accept reward.
+	submitterPayout := submitterStake.Add(acceptReward)
 	if submitterPayout.IsPositive() {
 		submitterAddr, err := sdk.AccAddressFromBech32(sub.Submitter)
 		if err == nil {
@@ -158,11 +202,11 @@ func (k Keeper) distributeAccept(
 		}
 	}
 
-	// Pay majority reviewers: reviewerStake + showUpPool/numMaj + remainingPot/numMaj.
+	// Pay majority reviewers: own stake + share of (showUpPool + remainingPot).
 	numMaj := int64(len(majority))
 	if numMaj > 0 {
-		showUpPerMaj := showUpPool.Quo(sdkmath.NewInt(numMaj))
-		remainPerMaj := remainingPot.Quo(sdkmath.NewInt(numMaj))
+		distribPool := showUpPool.Add(remainingPot)
+		distribPerMaj := distribPool.Quo(sdkmath.NewInt(numMaj))
 
 		for _, verifier := range majority {
 			stakeStr, found := k.GetReviewerStake(sdkCtx, round.Id, verifier)
@@ -173,7 +217,7 @@ func (k Keeper) distributeAccept(
 			if !ok {
 				continue
 			}
-			payout := reviewerStake.Add(showUpPerMaj).Add(remainPerMaj)
+			payout := reviewerStake.Add(distribPerMaj)
 			if payout.IsPositive() {
 				addr, err := sdk.AccAddressFromBech32(verifier)
 				if err == nil {
@@ -194,7 +238,8 @@ func (k Keeper) distributeAccept(
 }
 
 // distributeReject handles the REJECT outcome: submitter loses everything;
-// majority rejectors get their stake + rewards from submitter and minority pot.
+// majority rejectors get their stake + challenge bonus + minority pot.
+// Show-up rewards come from minority pot only (no separate deduction from submitter).
 func (k Keeper) distributeReject(
 	sdkCtx sdk.Context,
 	round *types.QualityRound,
@@ -213,17 +258,16 @@ func (k Keeper) distributeReject(
 		}
 	}
 
-	// Calculate pools.
-	showUpPool := submitterStake.Mul(sdkmath.NewInt(int64(rp.ShowUpRewardRatioBps))).Quo(sdkmath.NewInt(10_000))
+	// Challenge bonus from submitter stake; minority pot goes entirely to majority.
 	challengeBonus := submitterStake.Mul(sdkmath.NewInt(int64(rp.RejectBonusRatioBps))).Quo(sdkmath.NewInt(10_000))
 	minorityPot := k.sumReviewerStakes(sdkCtx, round.Id, minority)
 
 	// Submitter: loses everything (no payout).
 
-	// Pay majority reviewers.
+	// Pay majority reviewers: own stake + (challengeBonus + minorityPot) / numMaj.
 	numMaj := int64(len(majority))
 	if numMaj > 0 {
-		rewardPool := showUpPool.Add(challengeBonus).Add(minorityPot)
+		rewardPool := challengeBonus.Add(minorityPot)
 		rewardPerMaj := rewardPool.Quo(sdkmath.NewInt(numMaj))
 
 		for _, verifier := range majority {
@@ -248,8 +292,8 @@ func (k Keeper) distributeReject(
 		}
 	}
 
-	// Protocol gets: submitterStake - showUpPool - challengeBonus (remainder).
-	protocolShare := submitterStake.Sub(showUpPool).Sub(challengeBonus)
+	// Protocol gets: submitter stake minus challenge bonus.
+	protocolShare := submitterStake.Sub(challengeBonus)
 	if protocolShare.IsPositive() {
 		k.depositProtocolRevenue(sdkCtx, protocolShare)
 	}
@@ -261,7 +305,7 @@ func (k Keeper) distributeReject(
 }
 
 // distributeDeepContested handles the DEEP CONTESTED outcome (no 2/3 supermajority):
-// all stakes returned (grace). Increments contested count; at max → permanent reject.
+// all stakes returned (grace). Records contested strike; at max → permanent reject.
 func (k Keeper) distributeDeepContested(
 	sdkCtx sdk.Context,
 	round *types.QualityRound,
@@ -280,27 +324,26 @@ func (k Keeper) distributeDeepContested(
 		return err
 	}
 
-	// Increment contested deep count if we have a content hash.
-	if sub.ContentHash != "" {
-		newCount, err := k.IncrementContestedDeepCount(sdkCtx, sub.ContentHash)
-		if err != nil {
-			return err
-		}
+	// Record contested strike.
+	count, permanent, err := k.RecordContestedStrike(sdkCtx, sub.ContentHash, rp)
+	if err != nil {
+		return err
+	}
 
+	if count > 0 {
 		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 			"deep_contested",
 			sdk.NewAttribute("round_id", round.Id),
 			sdk.NewAttribute("content_hash", sub.ContentHash),
-			sdk.NewAttribute("strike_count", strconv.FormatUint(newCount, 10)),
+			sdk.NewAttribute("strike_count", strconv.FormatUint(count, 10)),
 			sdk.NewAttribute("max_strikes", strconv.FormatUint(rp.MaxContestedDeepCount, 10)),
 		))
 
-		// At max strikes → permanent reject (sample status already handled elsewhere).
-		if newCount >= rp.MaxContestedDeepCount {
+		if permanent {
 			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 				"content_permanently_rejected",
 				sdk.NewAttribute("content_hash", sub.ContentHash),
-				sdk.NewAttribute("strike_count", strconv.FormatUint(newCount, 10)),
+				sdk.NewAttribute("strike_count", strconv.FormatUint(count, 10)),
 			))
 		}
 	}

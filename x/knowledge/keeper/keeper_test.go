@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"testing"
 
 	"cosmossdk.io/core/store"
+	storetypes "cosmossdk.io/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
@@ -179,6 +181,26 @@ func (m *mockBankKeeper) GetBalance(_ context.Context, _ sdk.AccAddress, denom s
 	return sdk.NewInt64Coin(denom, 0)
 }
 
+// ─── mockCacheMultiStore ─────────────────────────────────────────────────────
+// Minimal mock so sdk.Context.CacheContext() doesn't panic in tests.
+
+type mockCacheMultiStore struct{}
+
+func (m *mockCacheMultiStore) Write()                                                                 {}
+func (m *mockCacheMultiStore) CacheMultiStore() storetypes.CacheMultiStore                            { return &mockCacheMultiStore{} }
+func (m *mockCacheMultiStore) CacheMultiStoreWithVersion(_ int64) (storetypes.CacheMultiStore, error) { return &mockCacheMultiStore{}, nil }
+func (m *mockCacheMultiStore) GetStore(_ storetypes.StoreKey) storetypes.Store                        { return nil }
+func (m *mockCacheMultiStore) GetKVStore(_ storetypes.StoreKey) storetypes.KVStore                    { return nil }
+func (m *mockCacheMultiStore) TracingEnabled() bool                                                   { return false }
+func (m *mockCacheMultiStore) SetTracer(_ io.Writer) storetypes.MultiStore                            { return m }
+func (m *mockCacheMultiStore) SetTracingContext(_ storetypes.TraceContext) storetypes.MultiStore       { return m }
+func (m *mockCacheMultiStore) LatestVersion() int64                                                   { return 0 }
+func (m *mockCacheMultiStore) GetStoreType() storetypes.StoreType                                     { return 0 }
+func (m *mockCacheMultiStore) CacheWrap() storetypes.CacheWrap                                        { return nil }
+func (m *mockCacheMultiStore) CacheWrapWithTrace(_ io.Writer, _ storetypes.TraceContext) storetypes.CacheWrap {
+	return nil
+}
+
 // ─── setupKeeper ────────────────────────────────────────────────────────────
 
 func setupKeeper(t *testing.T) (keeper.Keeper, context.Context) {
@@ -186,7 +208,10 @@ func setupKeeper(t *testing.T) (keeper.Keeper, context.Context) {
 	ss := newMockStoreService()
 	bk := newMockBankKeeper()
 	k := keeper.NewKeeper(ss, nil, "authority", bk, nil)
-	ctx := sdk.Context{}.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
+	ctx := sdk.Context{}.
+		WithBlockHeight(100).
+		WithEventManager(sdk.NewEventManager()).
+		WithMultiStore(&mockCacheMultiStore{})
 	return k, ctx
 }
 
@@ -196,7 +221,10 @@ func setupKeeperWithBank(t *testing.T) (keeper.Keeper, context.Context, *mockBan
 	ss := newMockStoreService()
 	bk := newMockBankKeeper()
 	k := keeper.NewKeeper(ss, nil, "authority", bk, nil)
-	ctx := sdk.Context{}.WithBlockHeight(100).WithEventManager(sdk.NewEventManager())
+	ctx := sdk.Context{}.
+		WithBlockHeight(100).
+		WithEventManager(sdk.NewEventManager()).
+		WithMultiStore(&mockCacheMultiStore{})
 	return k, ctx, bk
 }
 

@@ -98,158 +98,146 @@ func totalPaid(calls []bankTransfer) sdkmath.Int {
 	return total
 }
 
-// ─── Table-Driven Tests ─────────────────────────────────────────────────────
+// ─── Table-Driven Outcome Tests ─────────────────────────────────────────────
 
-func TestReviewerStaking_AcceptUnanimous(t *testing.T) {
-	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
-
-	votes := []*types.QualityVote{
-		{OverallQuality: 800000, ConsentValid: true},
-		{OverallQuality: 850000, ConsentValid: true},
-		{OverallQuality: 900000, ConsentValid: true},
+func TestReviewerStaking_Outcomes(t *testing.T) {
+	tests := []struct {
+		name string
+		// votes for rv1, rv2, rv3 respectively
+		votes []*types.QualityVote
+		// expected payouts (-1 = no payout)
+		wantSubmitter int64
+		wantRV1       int64
+		wantRV2       int64
+		wantRV3       int64
+		wantOutcome   string
+	}{
+		{
+			name: "accept_unanimous_no_showup",
+			votes: []*types.QualityVote{
+				{OverallQuality: 800000, ConsentValid: true},
+				{OverallQuality: 850000, ConsentValid: true},
+				{OverallQuality: 900000, ConsentValid: true},
+			},
+			// minorityPot=0, showUp=0, acceptReward=0
+			// submitter=1M, each reviewer=300K (own stake only)
+			wantSubmitter: 1_000_000,
+			wantRV1:       300_000,
+			wantRV2:       300_000,
+			wantRV3:       300_000,
+			wantOutcome:   "accept",
+		},
+		{
+			name: "accept_with_minority_showup_from_minority_pot",
+			votes: []*types.QualityVote{
+				{OverallQuality: 800000, ConsentValid: true}, // accept
+				{OverallQuality: 700000, ConsentValid: true}, // accept
+				{OverallQuality: 200000, ConsentValid: true}, // reject (minority)
+			},
+			// minorityPot=300K, showUp=30K, afterShowUp=270K
+			// acceptReward=min(300K,270K)=270K, remaining=0
+			// submitter=1M+270K=1,270K
+			// each majority=300K+(30K+0)/2=315K
+			// rv3 loses stake (no payout)
+			wantSubmitter: 1_270_000,
+			wantRV1:       315_000,
+			wantRV2:       315_000,
+			wantRV3:       -1,
+			wantOutcome:   "accept",
+		},
+		{
+			name: "reject_unanimous_no_showup",
+			votes: []*types.QualityVote{
+				{OverallQuality: 100000, ConsentValid: true},
+				{OverallQuality: 200000, ConsentValid: true},
+				{OverallQuality: 300000, ConsentValid: true},
+			},
+			// minorityPot=0, challengeBonus=500K
+			// rewardPool=500K, perMaj=166,666
+			// each reviewer=300K+166,666=466,666
+			// submitter loses everything
+			wantSubmitter: -1,
+			wantRV1:       466_666,
+			wantRV2:       466_666,
+			wantRV3:       466_666,
+			wantOutcome:   "reject",
+		},
+		{
+			name: "reject_with_minority",
+			votes: []*types.QualityVote{
+				{OverallQuality: 100000, ConsentValid: true}, // reject
+				{OverallQuality: 200000, ConsentValid: true}, // reject
+				{OverallQuality: 800000, ConsentValid: true}, // accept (minority)
+			},
+			// minorityPot=300K, challengeBonus=500K
+			// rewardPool=800K, perMaj=400K
+			// rv1,rv2=300K+400K=700K. rv3 loses stake.
+			wantSubmitter: -1,
+			wantRV1:       700_000,
+			wantRV2:       700_000,
+			wantRV3:       -1,
+			wantOutcome:   "reject",
+		},
 	}
-	runFullRoundWithStaking(t, k, ctx, roundID, votes)
 
-	// Clear escrow calls to only track distribution.
-	bk.moduleToAccountCalls = nil
-	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
+			runFullRoundWithStaking(t, k, ctx, roundID, tc.votes)
 
-	// ShowUpPool = 100,000. MinorityPot = 0. AcceptReward = min(300,000, 0) = 0.
-	// Submitter = 1,000,000 - 100,000 + 0 = 900,000.
-	submitterPay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-		return bt.to == testAddr
-	})
-	require.NotNil(t, submitterPay, "submitter should be paid")
-	require.Equal(t, sdk.NewInt64Coin("uzrn", 900_000), submitterPay.amount[0])
+			bk.moduleToAccountCalls = nil
+			require.NoError(t, k.AggregateQualityRound(ctx, roundID))
 
-	// Each reviewer = 300,000 + 33,333 + 0 = 333,333.
-	for _, addr := range []string{rv1, rv2, rv3} {
-		pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-			return bt.to == addr
-		})
-		require.NotNil(t, pay, "reviewer %s should be paid", addr)
-		require.Equal(t, sdk.NewInt64Coin("uzrn", 333_333), pay.amount[0])
-	}
+			// Check submitter payout.
+			submitterPay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
+				return bt.to == testAddr
+			})
+			if tc.wantSubmitter < 0 {
+				require.Nil(t, submitterPay, "submitter should not be paid")
+			} else {
+				require.NotNil(t, submitterPay, "submitter should be paid")
+				require.Equal(t, sdk.NewInt64Coin("uzrn", tc.wantSubmitter), submitterPay.amount[0])
+			}
 
-	sub, found := k.GetSubmission(ctx, "s1")
-	require.True(t, found)
-	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED, sub.Status)
-
-	// Verify staking event.
-	events := ctx.EventManager().Events()
-	stakingEvent := false
-	for _, e := range events {
-		if e.Type == "reviewer_staking" {
-			for _, attr := range e.Attributes {
-				if attr.Key == "outcome" && attr.Value == "accept" {
-					stakingEvent = true
+			// Check reviewer payouts.
+			for _, check := range []struct {
+				addr string
+				want int64
+			}{
+				{rv1, tc.wantRV1},
+				{rv2, tc.wantRV2},
+				{rv3, tc.wantRV3},
+			} {
+				pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
+					return bt.to == check.addr
+				})
+				if check.want < 0 {
+					require.Nil(t, pay, "reviewer %s should not be paid", check.addr)
+				} else {
+					require.NotNil(t, pay, "reviewer %s should be paid", check.addr)
+					require.Equal(t, sdk.NewInt64Coin("uzrn", check.want), pay.amount[0],
+						"reviewer %s payout mismatch", check.addr)
 				}
 			}
-		}
-	}
-	require.True(t, stakingEvent)
-}
 
-func TestReviewerStaking_AcceptWithMinority(t *testing.T) {
-	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
-
-	votes := []*types.QualityVote{
-		{OverallQuality: 800000, ConsentValid: true}, // accept
-		{OverallQuality: 700000, ConsentValid: true}, // accept
-		{OverallQuality: 200000, ConsentValid: true}, // reject (< BronzeThreshold)
-	}
-	runFullRoundWithStaking(t, k, ctx, roundID, votes)
-
-	bk.moduleToAccountCalls = nil
-	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
-
-	// MinorityPot = 300,000 (rv3). AcceptReward = min(300,000, 300,000) = 300,000.
-	// Submitter = 1,000,000 - 100,000 + 300,000 = 1,200,000.
-	submitterPay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-		return bt.to == testAddr
-	})
-	require.NotNil(t, submitterPay)
-	require.Equal(t, sdk.NewInt64Coin("uzrn", 1_200_000), submitterPay.amount[0])
-
-	// Each majority = 300,000 + 50,000 + 0 = 350,000.
-	for _, addr := range []string{rv1, rv2} {
-		pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-			return bt.to == addr
+			// Check staking event outcome.
+			events := ctx.EventManager().Events()
+			found := false
+			for _, e := range events {
+				if e.Type == "reviewer_staking" {
+					for _, attr := range e.Attributes {
+						if attr.Key == "outcome" && attr.Value == tc.wantOutcome {
+							found = true
+						}
+					}
+				}
+			}
+			require.True(t, found, "expected staking event with outcome=%s", tc.wantOutcome)
 		})
-		require.NotNil(t, pay)
-		require.Equal(t, sdk.NewInt64Coin("uzrn", 350_000), pay.amount[0])
 	}
-
-	// Minority (rv3): no payout.
-	v3Pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-		return bt.to == rv3
-	})
-	require.Nil(t, v3Pay, "minority reviewer should not be paid")
 }
 
-func TestReviewerStaking_RejectUnanimous(t *testing.T) {
-	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
-
-	votes := []*types.QualityVote{
-		{OverallQuality: 100000, ConsentValid: true},
-		{OverallQuality: 200000, ConsentValid: true},
-		{OverallQuality: 300000, ConsentValid: true},
-	}
-	runFullRoundWithStaking(t, k, ctx, roundID, votes)
-
-	bk.moduleToAccountCalls = nil
-	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
-
-	// ShowUp=100,000. ChallengeBonus=500,000. MinorityPot=0.
-	// Each majority = 300,000 + (100,000+500,000+0)/3 = 300,000 + 200,000 = 500,000.
-	for _, addr := range []string{rv1, rv2, rv3} {
-		pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-			return bt.to == addr
-		})
-		require.NotNil(t, pay, "reviewer %s should be paid", addr)
-		require.Equal(t, sdk.NewInt64Coin("uzrn", 500_000), pay.amount[0])
-	}
-
-	// Submitter: no payout.
-	submitterPay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-		return bt.to == testAddr
-	})
-	require.Nil(t, submitterPay, "submitter loses everything on reject")
-
-	sub, found := k.GetSubmission(ctx, "s1")
-	require.True(t, found)
-	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
-}
-
-func TestReviewerStaking_RejectWithMinority(t *testing.T) {
-	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
-
-	votes := []*types.QualityVote{
-		{OverallQuality: 100000, ConsentValid: true}, // reject
-		{OverallQuality: 200000, ConsentValid: true}, // reject
-		{OverallQuality: 800000, ConsentValid: true}, // accept (minority)
-	}
-	runFullRoundWithStaking(t, k, ctx, roundID, votes)
-
-	bk.moduleToAccountCalls = nil
-	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
-
-	// MinorityPot = 300,000 (rv3).
-	// Each majority = 300,000 + (100,000 + 500,000 + 300,000)/2 = 300,000 + 450,000 = 750,000.
-	for _, addr := range []string{rv1, rv2} {
-		pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-			return bt.to == addr
-		})
-		require.NotNil(t, pay)
-		require.Equal(t, sdk.NewInt64Coin("uzrn", 750_000), pay.amount[0])
-	}
-
-	// rv3 (minority): no payout.
-	v3Pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
-		return bt.to == rv3
-	})
-	require.Nil(t, v3Pay, "minority reviewer should not be paid on reject")
-}
+// ─── Deep Contested & Strikes ───────────────────────────────────────────────
 
 func TestReviewerStaking_DeepContested(t *testing.T) {
 	k, ctx, bk := setupKeeperWithBank(t)
@@ -337,11 +325,23 @@ func TestReviewerStaking_PermanentRejectAfterMaxStrikes(t *testing.T) {
 
 	rp := types.DefaultReviewerStakingParams()
 
-	newCount, err := k.IncrementContestedDeepCount(ctx, "repeat_hash")
+	count, permanent, err := k.RecordContestedStrike(ctx, "repeat_hash", rp)
 	require.NoError(t, err)
-	require.Equal(t, uint64(3), newCount)
-	require.True(t, newCount >= rp.MaxContestedDeepCount, "should trigger permanent reject")
+	require.Equal(t, uint64(3), count)
+	require.True(t, permanent, "should trigger permanent reject at 3 strikes")
 }
+
+func TestReviewerStaking_RecordContestedStrike_EmptyHash(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	rp := types.DefaultReviewerStakingParams()
+
+	count, permanent, err := k.RecordContestedStrike(ctx, "", rp)
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), count)
+	require.False(t, permanent)
+}
+
+// ─── Escrow Tests ───────────────────────────────────────────────────────────
 
 func TestReviewerStaking_CommitEscrowsStake(t *testing.T) {
 	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
@@ -403,23 +403,28 @@ func TestReviewerStaking_NoStakeSubmission(t *testing.T) {
 	require.Empty(t, bk.accountToModuleCalls, "no escrow when submission has no stake")
 }
 
+// ─── Rounding Dust ──────────────────────────────────────────────────────────
+
 func TestReviewerStaking_RoundingDust(t *testing.T) {
 	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
 
+	// Reject unanimous: 500K challengeBonus / 3 = 166,666 per reviewer → dust.
 	votes := []*types.QualityVote{
-		{OverallQuality: 800000, ConsentValid: true},
-		{OverallQuality: 850000, ConsentValid: true},
-		{OverallQuality: 900000, ConsentValid: true},
+		{OverallQuality: 100000, ConsentValid: true},
+		{OverallQuality: 200000, ConsentValid: true},
+		{OverallQuality: 300000, ConsentValid: true},
 	}
 	runFullRoundWithStaking(t, k, ctx, roundID, votes)
 
 	bk.moduleToAccountCalls = nil
 	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
 
-	// Submitter: 900,000. Each reviewer: 333,333. Total = 900,000 + 999,999 = 1,899,999.
+	// 466,666 * 3 = 1,399,998. 2 uzrn dust stays in module.
 	total := totalPaid(bk.moduleToAccountCalls)
-	require.Equal(t, sdkmath.NewInt(1_899_999), total)
+	require.Equal(t, sdkmath.NewInt(1_399_998), total)
 }
+
+// ─── Params ─────────────────────────────────────────────────────────────────
 
 func TestReviewerStaking_ParamsStoredAndRetrieved(t *testing.T) {
 	k, ctx := setupKeeper(t)
@@ -479,6 +484,8 @@ func TestReviewerStakingParams_Validate(t *testing.T) {
 	}
 }
 
+// ─── State CRUD ─────────────────────────────────────────────────────────────
+
 func TestReviewerStaking_ContestedDeepCountCRUD(t *testing.T) {
 	k, ctx := setupKeeper(t)
 
@@ -512,4 +519,103 @@ func TestReviewerStaking_GetAllStakes(t *testing.T) {
 	require.Equal(t, "300000", stakes[rv3])
 
 	require.Empty(t, k.GetAllReviewerStakes(ctx, "round2"))
+}
+
+// ─── EscrowReviewerStake unit test ──────────────────────────────────────────
+
+func TestEscrowReviewerStake_Direct(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	require.NoError(t, k.SetReviewerStakingParams(sdkCtx, types.DefaultReviewerStakingParams()))
+
+	submitterStake := sdkmath.NewInt(1_000_000)
+	require.NoError(t, k.EscrowReviewerStake(sdkCtx, "r1", rv1, submitterStake))
+
+	require.Len(t, bk.accountToModuleCalls, 1)
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 300_000), bk.accountToModuleCalls[0].amount[0])
+
+	stakeStr, found := k.GetReviewerStake(sdkCtx, "r1", rv1)
+	require.True(t, found)
+	require.Equal(t, "300000", stakeStr)
+}
+
+func TestEscrowReviewerStake_ZeroSubmitterStake(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	require.NoError(t, k.SetReviewerStakingParams(sdkCtx, types.DefaultReviewerStakingParams()))
+
+	require.NoError(t, k.EscrowReviewerStake(sdkCtx, "r1", rv1, sdkmath.ZeroInt()))
+	require.Empty(t, bk.accountToModuleCalls, "no escrow for zero stake")
+}
+
+// ─── Show-up reward source verification ─────────────────────────────────────
+
+func TestReviewerStaking_ShowUpFromMinorityPotOnly(t *testing.T) {
+	// Accept unanimous: no minority pot → submitter gets full stake,
+	// reviewers get only their own stake back (no show-up deduction).
+	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 800000, ConsentValid: true},
+		{OverallQuality: 850000, ConsentValid: true},
+		{OverallQuality: 900000, ConsentValid: true},
+	}
+	runFullRoundWithStaking(t, k, ctx, roundID, votes)
+
+	bk.moduleToAccountCalls = nil
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	// Submitter: gets full 1M back (no show-up deduction).
+	submitterPay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
+		return bt.to == testAddr
+	})
+	require.NotNil(t, submitterPay)
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 1_000_000), submitterPay.amount[0],
+		"unanimous accept: submitter should get full stake back without show-up deduction")
+
+	// Each reviewer: gets exactly their own stake back (300K).
+	for _, addr := range []string{rv1, rv2, rv3} {
+		pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool {
+			return bt.to == addr
+		})
+		require.NotNil(t, pay)
+		require.Equal(t, sdk.NewInt64Coin("uzrn", 300_000), pay.amount[0],
+			"unanimous accept: reviewer should get only own stake back")
+	}
+}
+
+// ─── Submission status verification ─────────────────────────────────────────
+
+func TestReviewerStaking_AcceptSetsSubmissionStatus(t *testing.T) {
+	k, ctx, _, roundID := setupReviewerStakingRound(t, "1000000")
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 800000, ConsentValid: true},
+		{OverallQuality: 850000, ConsentValid: true},
+		{OverallQuality: 900000, ConsentValid: true},
+	}
+	runFullRoundWithStaking(t, k, ctx, roundID, votes)
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED, sub.Status)
+}
+
+func TestReviewerStaking_RejectSetsSubmissionStatus(t *testing.T) {
+	k, ctx, _, roundID := setupReviewerStakingRound(t, "1000000")
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 100000, ConsentValid: true},
+		{OverallQuality: 200000, ConsentValid: true},
+		{OverallQuality: 300000, ConsentValid: true},
+	}
+	runFullRoundWithStaking(t, k, ctx, roundID, votes)
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	sub, found := k.GetSubmission(ctx, "s1")
+	require.True(t, found)
+	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
 }
