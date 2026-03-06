@@ -205,6 +205,13 @@ var (
 	ModelActiveIndexPrefix  = []byte{0xd4} // modelID → exists (active models only)
 	ModelVersionPrefix      = []byte{0xd5} // domain → uint64 next version
 	ModelEndpointPrefix     = []byte{0xd6} // modelID/endpoint → exists
+
+	// ─── Agent promotion (R45-2) ────────────────────────────────────────
+	AgentIdentityPrefix      = []byte{0xe0} // agentID → AgentIdentity (JSON)
+	AgentModelIndexPrefix    = []byte{0xe1} // modelID → agentID
+	AgentDomainIdxPrefix     = []byte{0xe2} // domain/agentID → exists
+	AgentGenerationIdxPrefix = []byte{0xe3} // generation(8bytes)/agentID → exists
+	AgentActiveIdxPrefix     = []byte{0xe4} // agentID → exists (active only)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -872,4 +879,53 @@ func ModelEndpointKey(modelID, endpoint string) []byte {
 func ModelEndpointByModelPrefix(modelID string) []byte {
 	key := append(append([]byte{}, ModelEndpointPrefix...), []byte(modelID)...)
 	return append(key, '/')
+}
+
+// ─── Agent promotion key constructors (R45-2) ──────────────────────────────
+
+// AgentIdentityKey returns the store key for an agent identity.
+func AgentIdentityKey(agentID string) []byte {
+	return append(append([]byte{}, AgentIdentityPrefix...), []byte(agentID)...)
+}
+
+// AgentModelIndexKey returns the index key: modelID → agentID.
+func AgentModelIndexKey(modelID string) []byte {
+	return append(append([]byte{}, AgentModelIndexPrefix...), []byte(modelID)...)
+}
+
+// AgentDomainIndexKey returns the index key for an agent in a domain.
+func AgentDomainIndexKey(domain, agentID string) []byte {
+	key := append(append([]byte{}, AgentDomainIdxPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(agentID)...)
+}
+
+// AgentDomainByDomainPrefix returns the prefix for iterating agents in a domain.
+func AgentDomainByDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, AgentDomainIdxPrefix...), []byte(domain)...)
+	return append(key, '/')
+}
+
+// AgentGenerationIndexKey returns the index key for an agent by generation.
+func AgentGenerationIndexKey(gen uint64, agentID string) []byte {
+	key := append([]byte{}, AgentGenerationIdxPrefix...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, gen)
+	key = append(key, buf...)
+	key = append(key, '/')
+	return append(key, []byte(agentID)...)
+}
+
+// AgentGenerationPrefix returns the prefix for iterating agents by generation.
+func AgentGenerationPrefix(gen uint64) []byte {
+	key := append([]byte{}, AgentGenerationIdxPrefix...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, gen)
+	key = append(key, buf...)
+	return append(key, '/')
+}
+
+// AgentActiveIndexKey returns the index key for an active agent.
+func AgentActiveIndexKey(agentID string) []byte {
+	return append(append([]byte{}, AgentActiveIdxPrefix...), []byte(agentID)...)
 }

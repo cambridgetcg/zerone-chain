@@ -156,4 +156,12 @@ var (
 	ErrModelNotActive         = errors.Register(ModuleName, 173, "model is not active")
 	ErrModelAlreadyDeprecated = errors.Register(ModuleName, 174, "model is already deprecated")
 	ErrInvalidModelLineage    = errors.Register(ModuleName, 175, "invalid model lineage")
+
+	// ─── Agent promotion (180–189) ──────────────────────────────────────────
+	ErrAgentNotFound          = errors.Register(ModuleName, 180, "agent not found")
+	ErrAgentAlreadyExists     = errors.Register(ModuleName, 181, "agent already exists for this model")
+	ErrAgentNotActive         = errors.Register(ModuleName, 182, "agent is not active")
+	ErrAgentMaxGeneration     = errors.Register(ModuleName, 183, "max agent generation exceeded")
+	ErrAgentInsufficientStake = errors.Register(ModuleName, 184, "insufficient promotion stake")
+	ErrAgentSuspended         = errors.Register(ModuleName, 185, "agent is suspended")
 )
