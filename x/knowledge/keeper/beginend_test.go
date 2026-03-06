@@ -376,22 +376,14 @@ func TestFullLifecycle_SubmitToDecayToAccessToPrune(t *testing.T) {
 	_ = k.SetSample(ctx, sample)
 	require.Greater(t, sample.Energy, energyAfterOneDecay)
 
-	// Many epochs without access -> energy drops to 0 -> at-risk
+	// Many epochs without access -> energy decays AND fitness decays.
+	// Fitness pruning (fitness < 0.1 after ~29 cycles) fires before energy reaches 0,
+	// so the sample is pruned via the fitness lifecycle rather than the energy lifecycle.
 	for epoch := uint64(2); epoch <= 300; epoch++ {
 		block := int64(epoch * keeper.EcologyEpochBlocks)
 		ctx = sdkCtx.WithBlockHeight(block).WithEventManager(sdk.NewEventManager())
 		require.NoError(t, k.EndBlocker(ctx))
 	}
-
-	sample, _ = k.GetSample(ctx, sampleID)
-	require.Equal(t, uint64(0), sample.Energy)
-	require.Greater(t, sample.AtRiskSinceEpoch, uint64(0))
-
-	// Continue past grace period -> sample pruned
-	atRiskEpoch := sample.AtRiskSinceEpoch
-	pruneEpoch := atRiskEpoch + params.PruneGraceEpochs + 1
-	ctx = sdkCtx.WithBlockHeight(int64(pruneEpoch * keeper.EcologyEpochBlocks)).WithEventManager(sdk.NewEventManager())
-	require.NoError(t, k.EndBlocker(ctx))
 
 	sample, ok = k.GetSample(ctx, sampleID)
 	require.True(t, ok, "record should still exist")

@@ -219,6 +219,90 @@ func (k Keeper) ComputeLongevityReward(ctx context.Context, sampleID string) sdk
 	return reward
 }
 
+// ─── Lifecycle Transition Events ──────────────────────────────────────────
+
+// emitFitnessLifecycleEvent emits an event when a TDU's lifecycle status changes.
+func (k Keeper) emitFitnessLifecycleEvent(ctx context.Context, sampleID string, oldStatus, newStatus types.TDULifecycleStatus) {
+	if oldStatus == newStatus {
+		return
+	}
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"tdu_lifecycle_transition",
+		sdk.NewAttribute("sample_id", sampleID),
+		sdk.NewAttribute("old_status", oldStatus.String()),
+		sdk.NewAttribute("new_status", newStatus.String()),
+	))
+}
+
+// UpdateFitnessScoreWithEvent updates fitness and emits lifecycle event on transition.
+func (k Keeper) UpdateFitnessScoreWithEvent(ctx context.Context, sampleID string, signal types.FitnessSignal, currentCycle uint64) error {
+	// Capture old status
+	oldStatus := types.TDULifecyclePruned
+	if record, found := k.GetFitnessRecord(ctx, sampleID); found {
+		oldStatus = record.GetLifecycleStatus()
+	}
+
+	if err := k.UpdateFitnessScore(ctx, sampleID, signal, currentCycle); err != nil {
+		return err
+	}
+
+	// Check for transition
+	if record, found := k.GetFitnessRecord(ctx, sampleID); found {
+		newStatus := record.GetLifecycleStatus()
+		k.emitFitnessLifecycleEvent(ctx, sampleID, oldStatus, newStatus)
+	}
+	return nil
+}
+
+// ─── Consensus Strength ──────────────────────────────────────────────────
+
+// ConsensusStrength computes a training influence weight from the quality round.
+// unanimous (all selected revealed) = 1.0, supermajority (>=2/3) = 0.8, bare majority = 0.6.
+func ConsensusStrength(revealCount, selectedCount int) sdkmath.LegacyDec {
+	if selectedCount == 0 {
+		return sdkmath.LegacyNewDecWithPrec(6, 1) // 0.6
+	}
+	ratio := float64(revealCount) / float64(selectedCount)
+	switch {
+	case ratio >= 1.0:
+		return sdkmath.LegacyOneDec() // 1.0 unanimous
+	case ratio >= 2.0/3.0:
+		return sdkmath.LegacyNewDecWithPrec(8, 1) // 0.8 supermajority
+	default:
+		return sdkmath.LegacyNewDecWithPrec(6, 1) // 0.6 bare majority
+	}
+}
+
+// ─── Fitness Pruning ─────────────────────────────────────────────────────
+
+// PruneFitnessBelowThreshold marks TDUs with fitness < 0.1 as Pruned.
+// Called during fitness epoch processing.
+func (k Keeper) PruneFitnessBelowThreshold(ctx context.Context) {
+	k.IterateFitnessRecords(ctx, func(record types.TDUFitnessRecord) bool {
+		if record.GetLifecycleStatus() != types.TDULifecyclePruned {
+			return false
+		}
+
+		sample, ok := k.GetSample(ctx, record.SampleID)
+		if !ok || sample.Status == types.SampleStatus_SAMPLE_STATUS_PRUNED {
+			return false
+		}
+
+		sample.Status = types.SampleStatus_SAMPLE_STATUS_PRUNED
+		sample.Content = "" // remove from active shards
+		_ = k.SetSample(ctx, sample)
+
+		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"tdu_fitness_pruned",
+			sdk.NewAttribute("sample_id", record.SampleID),
+			sdk.NewAttribute("fitness_score", record.FitnessScore),
+		))
+		return false
+	})
+}
+
 // DistributeLongevityRewards iterates all fitness records and mints longevity
 // rewards for eligible TDUs. Called during ecology epoch processing.
 func (k Keeper) DistributeLongevityRewards(ctx context.Context) {

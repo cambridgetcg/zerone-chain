@@ -72,6 +72,18 @@ func (k Keeper) AccessSample(ctx context.Context, msg *types.MsgAccessSample) (*
 		return nil, err
 	}
 
+	// Reinforce TDU fitness via UsageCorrelation signal
+	if _, found := k.GetFitnessRecord(ctx, msg.SampleId); found {
+		fitnessParams := k.GetFitnessDecayParams(ctx)
+		currentCycle := uint64(sdkCtx.BlockHeight()) / fitnessParams.GetFitnessEpochBlocks()
+		usageSignal := types.FitnessSignal{
+			TrainingInfluence: sdkmath.LegacyNewDecWithPrec(5, 1), // 0.5 neutral
+			UsageCorrelation:  sdkmath.LegacyOneDec(),             // 1.0 max positive
+			Redundancy:        sdkmath.LegacyNewDecWithPrec(5, 1), // 0.5 neutral
+		}
+		_ = k.UpdateFitnessScoreWithEvent(ctx, msg.SampleId, usageSignal, currentCycle)
+	}
+
 	// Queue revenue for batched distribution
 	k.queueRevenueDistribution(ctx, sample.Id, price)
 

@@ -143,6 +143,8 @@ type FitnessDecayParams struct {
 	CoreRewardRate string `json:"core_reward_rate"`
 	// ActiveRewardRate: longevity reward multiplier for Active TDUs per cycle. Default 0.005.
 	ActiveRewardRate string `json:"active_reward_rate"`
+	// FitnessEpochBlocks: block interval for fitness epoch processing. Default 100.
+	FitnessEpochBlocks uint64 `json:"fitness_epoch_blocks"`
 }
 
 // DefaultFitnessDecayParams returns sensible defaults.
@@ -152,7 +154,16 @@ func DefaultFitnessDecayParams() FitnessDecayParams {
 		UnscoredCycleThreshold: 5,
 		CoreRewardRate:         "0.010000000000000000",
 		ActiveRewardRate:       "0.005000000000000000",
+		FitnessEpochBlocks:    100,
 	}
+}
+
+// GetFitnessEpochBlocks returns the fitness epoch interval, defaulting to 100 if unset.
+func (p FitnessDecayParams) GetFitnessEpochBlocks() uint64 {
+	if p.FitnessEpochBlocks == 0 {
+		return 100
+	}
+	return p.FitnessEpochBlocks
 }
 
 // GetDecayPerCycle parses the decay rate.

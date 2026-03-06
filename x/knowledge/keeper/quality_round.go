@@ -319,7 +319,8 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 		verdict == types.QualityVerdict_QUALITY_VERDICT_BRONZE
 
 	if accepted {
-		if err := k.createSampleFromSubmission(ctx, sub, verdict, aggregated); err != nil {
+		strength := ConsensusStrength(len(round.Reveals), len(round.SelectedVerifiers))
+		if err := k.createSampleFromSubmission(ctx, sub, verdict, aggregated, strength); err != nil {
 			return err
 		}
 		sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED
@@ -373,6 +374,7 @@ func (k Keeper) createSampleFromSubmission(
 	sub *types.Submission,
 	verdict types.QualityVerdict,
 	scores *types.QualityVote,
+	consensusStrength sdkmath.LegacyDec,
 ) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	tier := types.QualityVerdictToTier(verdict)
@@ -433,9 +435,28 @@ func (k Keeper) createSampleFromSubmission(
 		_ = k.IncrementTopicCount(ctx, sub.Domain, tag)
 	}
 
+	// Initialize TDU fitness record
+	stake := sdkmath.ZeroInt()
+	if sub.Stake != "" {
+		if s, ok := sdkmath.NewIntFromString(sub.Stake); ok {
+			stake = s
+		}
+	}
+	fitnessParams := k.GetFitnessDecayParams(ctx)
+	currentCycle := uint64(sdkCtx.BlockHeight()) / fitnessParams.GetFitnessEpochBlocks()
+	_ = k.InitializeFitnessRecord(ctx, sampleID, stake, currentCycle)
+
+	// Send training influence signal based on consensus strength
+	signal := types.FitnessSignal{
+		TrainingInfluence: consensusStrength,
+		UsageCorrelation:  sdkmath.LegacyZeroDec(),
+		Redundancy:        sdkmath.LegacyNewDecWithPrec(5, 1), // 0.5 neutral
+	}
+	_ = k.UpdateFitnessScoreWithEvent(ctx, sampleID, signal, currentCycle)
+
 	// If thread: create samples for all other thread submissions
 	if sub.ThreadId != "" {
-		return k.createThreadSamples(ctx, sub, verdict, scores, sampleID)
+		return k.createThreadSamples(ctx, sub, verdict, scores, sampleID, consensusStrength)
 	}
 
 	return nil
@@ -448,6 +469,7 @@ func (k Keeper) createThreadSamples(
 	verdict types.QualityVerdict,
 	scores *types.QualityVote,
 	primarySampleID string,
+	consensusStrength sdkmath.LegacyDec,
 ) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	tier := types.QualityVerdictToTier(verdict)
@@ -524,6 +546,24 @@ func (k Keeper) createThreadSamples(
 		for _, tag := range sub.Tags {
 			_ = k.IncrementTopicCount(ctx, sub.Domain, tag)
 		}
+
+		// Initialize TDU fitness record for thread sibling
+		siblingStake := sdkmath.ZeroInt()
+		if sub.Stake != "" {
+			if s, ok := sdkmath.NewIntFromString(sub.Stake); ok {
+				siblingStake = s
+			}
+		}
+		fitnessParams := k.GetFitnessDecayParams(ctx)
+		currentCycle := uint64(sdkCtx.BlockHeight()) / fitnessParams.GetFitnessEpochBlocks()
+		_ = k.InitializeFitnessRecord(ctx, sampleID, siblingStake, currentCycle)
+
+		signal := types.FitnessSignal{
+			TrainingInfluence: consensusStrength,
+			UsageCorrelation:  sdkmath.LegacyZeroDec(),
+			Redundancy:        sdkmath.LegacyNewDecWithPrec(5, 1),
+		}
+		_ = k.UpdateFitnessScoreWithEvent(ctx, sampleID, signal, currentCycle)
 
 		subToSample[sub.Id] = sampleID
 

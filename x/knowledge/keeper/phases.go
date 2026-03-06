@@ -104,7 +104,17 @@ func (k Keeper) EndBlocker(ctx context.Context) error {
 		k.expireBounties(ctx, blockHeight)
 	}
 
-	// 2. Expire patronage (every block)
+	// 2. Fitness epoch processing (independent of ecology epoch)
+	fitnessParams := k.GetFitnessDecayParams(ctx)
+	fitnessEpoch := fitnessParams.GetFitnessEpochBlocks()
+	if fitnessEpoch > 0 && blockHeight > 0 && blockHeight%fitnessEpoch == 0 {
+		currentCycle := blockHeight / fitnessEpoch
+		k.DecayUnscored(ctx, currentCycle)
+		k.DistributeLongevityRewards(ctx)
+		k.PruneFitnessBelowThreshold(ctx)
+	}
+
+	// 3. Expire patronage (every block)
 	k.expirePatronage(ctx, blockHeight)
 
 	return nil

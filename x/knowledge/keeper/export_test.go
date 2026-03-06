@@ -6,4 +6,5 @@ var (
 	ParseUzrn              = parseUzrn
 	InitializeSampleEnergy = initializeSampleEnergy
 	ComputeCompetitionTax  = computeCompetitionTax
+	ExportConsensusStrength = ConsensusStrength
 )
