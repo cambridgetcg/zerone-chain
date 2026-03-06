@@ -11,7 +11,7 @@ import (
 
 const (
 	testWallet  = "zrn1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqulc3kt"
-	testWallet2 = "zrn1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqyz5mxy"
+	testWallet2 = "zrn1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnv2f5q0"
 	testKeyHash = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2"
 	testKeyHash2 = "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3"
 )
