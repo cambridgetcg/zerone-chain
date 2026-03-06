@@ -117,6 +117,75 @@ service Query {
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/params";
   }
+
+  // ─── Submissions (filtered) ──────────────────────────────────────────────
+
+  // Submissions queries submissions with status, domain, and submitter filters.
+  rpc Submissions(QuerySubmissionsFilteredRequest) returns (QuerySubmissionsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/submissions";
+  }
+
+  // ─── Dashboard ───────────────────────────────────────────────────────────
+
+  // Dashboard returns an agent's aggregated activity summary.
+  rpc Dashboard(QueryDashboardRequest) returns (QueryDashboardResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/dashboard/{address}";
+  }
+
+  // ─── Reputation ──────────────────────────────────────────────────────────
+
+  // Reputation queries an agent's reputation, optionally filtered by domain.
+  rpc Reputation(QueryReputationRequest) returns (QueryReputationResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/reputation/{address}";
+  }
+
+  // Leaderboard queries top agents by reputation in a domain.
+  rpc Leaderboard(QueryLeaderboardRequest) returns (QueryLeaderboardResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/leaderboard";
+  }
+
+  // ─── Stakes ──────────────────────────────────────────────────────────────
+
+  // Stakes queries active stakes for an agent across quality rounds.
+  rpc Stakes(QueryStakesRequest) returns (QueryStakesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/stakes/{address}";
+  }
+
+  // ActiveRounds queries quality rounds where a reviewer is an active participant.
+  rpc ActiveRounds(QueryActiveRoundsRequest) returns (QueryActiveRoundsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/rounds/active";
+  }
+
+  // ─── Quality rounds (filtered) ──────────────────────────────────────────
+
+  // QualityRounds queries rounds with optional phase filter.
+  rpc QualityRounds(QueryQualityRoundsRequest) returns (QueryQualityRoundsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/rounds";
+  }
+
+  // ─── Fitness ─────────────────────────────────────────────────────────────
+
+  // Fitness queries the fitness record for a TDU (sample).
+  rpc Fitness(QueryFitnessRequest) returns (QueryFitnessResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fitness/{tdu_id}";
+  }
+
+  // FitnessSummary queries aggregate fitness stats by lifecycle status and domain.
+  rpc FitnessSummary(QueryFitnessSummaryRequest) returns (QueryFitnessSummaryResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fitness";
+  }
+
+  // ─── Sharding ────────────────────────────────────────────────────────────
+
+  // Shard queries a validator's shard assignment at a snapshot height.
+  rpc Shard(QueryShardRequest) returns (QueryShardResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/shard/{validator}";
+  }
+
+  // ShardStatus queries global sharding status.
+  rpc ShardStatus(QueryShardStatusRequest) returns (QueryShardStatusResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/shard-status";
+  }
 }
 
 // ─── Sample query messages ────────────────────────────────────────────────────
@@ -292,4 +361,164 @@ message QueryConsentHistoryRequest {
 
 message QueryConsentHistoryResponse {
   repeated ConsentEvent events = 1;
+}
+
+// ─── Submissions (filtered) query messages ──────────────────────────────────
+
+message QuerySubmissionsFilteredRequest {
+  string status    = 1;
+  string domain    = 2;
+  string submitter = 3;
+  uint64 limit     = 4;
+  cosmos.base.query.v1beta1.PageRequest pagination = 5;
+}
+
+// ─── Dashboard query messages ───────────────────────────────────────────────
+
+message QueryDashboardRequest {
+  string address = 1;
+}
+
+message QueryDashboardResponse {
+  string address              = 1;
+  uint64 total_submissions    = 2;
+  uint64 accepted_submissions = 3;
+  uint64 rejected_submissions = 4;
+  uint64 pending_submissions  = 5;
+  string acceptance_rate      = 6;  // e.g. "82.5"
+  repeated ReputationEntry reputations = 7;
+  repeated StakeEntry active_stakes    = 8;
+  repeated FitnessEntry tdu_fitness    = 9;
+  uint64 pending_reviews      = 10;
+}
+
+message ReputationEntry {
+  string domain     = 1;
+  string score      = 2;
+  string peak_score = 3;
+}
+
+message StakeEntry {
+  string submission_id = 1;
+  string round_id      = 2;
+  string stake_amount  = 3;
+  string phase         = 4;
+}
+
+message FitnessEntry {
+  string sample_id       = 1;
+  string fitness_score   = 2;
+  string lifecycle_status = 3;
+}
+
+// ─── Reputation query messages ──────────────────────────────────────────────
+
+message QueryReputationRequest {
+  string address = 1;
+  string domain  = 2;
+}
+
+message QueryReputationResponse {
+  repeated ReputationEntry reputations = 1;
+}
+
+message QueryLeaderboardRequest {
+  string domain = 1;
+  uint64 limit  = 2;
+}
+
+message LeaderboardEntry {
+  string address    = 1;
+  string domain     = 2;
+  string score      = 3;
+  string peak_score = 4;
+}
+
+message QueryLeaderboardResponse {
+  repeated LeaderboardEntry entries = 1;
+}
+
+// ─── Stakes query messages ──────────────────────────────────────────────────
+
+message QueryStakesRequest {
+  string address = 1;
+}
+
+message QueryStakesResponse {
+  repeated StakeEntry stakes = 1;
+}
+
+message QueryActiveRoundsRequest {
+  string reviewer = 1;
+  uint64 limit    = 2;
+  cosmos.base.query.v1beta1.PageRequest pagination = 3;
+}
+
+message QueryActiveRoundsResponse {
+  repeated QualityRound rounds = 1;
+}
+
+// ─── Quality rounds (filtered) query messages ──────────────────────────────
+
+message QueryQualityRoundsRequest {
+  string status = 1;  // phase filter: commit, reveal, aggregating
+  uint64 limit  = 2;
+  cosmos.base.query.v1beta1.PageRequest pagination = 3;
+}
+
+message QueryQualityRoundsResponse {
+  repeated QualityRound rounds = 1;
+}
+
+// ─── Fitness query messages ─────────────────────────────────────────────────
+
+message QueryFitnessRequest {
+  string tdu_id = 1;
+}
+
+message QueryFitnessResponse {
+  string sample_id        = 1;
+  string fitness_score    = 2;
+  string lifecycle_status = 3;
+  string original_stake   = 4;
+  uint64 last_signal_cycle = 5;
+  uint64 cycle_count      = 6;
+}
+
+message QueryFitnessSummaryRequest {
+  string status = 1;  // core, active, dormant, pruned
+  string domain = 2;
+}
+
+message QueryFitnessSummaryResponse {
+  uint64 core_count    = 1;
+  uint64 active_count  = 2;
+  uint64 dormant_count = 3;
+  uint64 pruned_count  = 4;
+  uint64 total_count   = 5;
+}
+
+// ─── Sharding query messages ────────────────────────────────────────────────
+
+message QueryShardRequest {
+  string validator       = 1;
+  int64  snapshot_height = 2;
+}
+
+message QueryShardResponse {
+  string   validator       = 1;
+  int64    snapshot_height = 2;
+  repeated string tdu_ids  = 3;
+  bool     attested        = 4;
+}
+
+message QueryShardStatusRequest {}
+
+message QueryShardStatusResponse {
+  uint64 snapshot_interval    = 1;
+  int64  last_snapshot_height = 2;
+  uint64 total_assignments    = 3;
+  uint64 total_attestations   = 4;
+  uint32 replication_factor   = 5;
+  uint32 min_validators       = 6;
 }
