@@ -184,6 +184,10 @@ var (
 	EnclaveKeyPrefix   = []byte{0xba} // operator → RegisteredEnclave (JSON)
 	EnclaveStatusIndex = []byte{0xbb} // status/operator → exists
 	EnclaveSeqKey      = []byte{0xbc} // uint64 next enclave ID
+
+	// ─── Training enclave (T6-3) ─────────────────────────────────────
+	TrainingRecordPrefix        = []byte{0xbd} // attestationHash → TrainingRecord (JSON)
+	TrainingRecordByModelPrefix = []byte{0xbe} // modelHash/attestationHash → exists
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -724,5 +728,23 @@ func EnclaveStatusIndexKey(status, operator string) []byte {
 // EnclaveStatusByStatusPrefix returns the prefix for iterating enclaves by status.
 func EnclaveStatusByStatusPrefix(status string) []byte {
 	key := append(append([]byte{}, EnclaveStatusIndex...), []byte(status)...)
+	return append(key, '/')
+}
+
+// TrainingRecordKey returns the store key for a training record by attestation hash.
+func TrainingRecordKey(attestationHash string) []byte {
+	return append(append([]byte{}, TrainingRecordPrefix...), []byte(attestationHash)...)
+}
+
+// TrainingRecordByModelKey returns the index key for a training record by model hash.
+func TrainingRecordByModelKey(modelHash, attestationHash string) []byte {
+	key := append(append([]byte{}, TrainingRecordByModelPrefix...), []byte(modelHash)...)
+	key = append(key, '/')
+	return append(key, []byte(attestationHash)...)
+}
+
+// TrainingRecordByModelPrefix returns the prefix for iterating training records by model hash.
+func TrainingRecordByModelHashPrefix(modelHash string) []byte {
+	key := append(append([]byte{}, TrainingRecordByModelPrefix...), []byte(modelHash)...)
 	return append(key, '/')
 }

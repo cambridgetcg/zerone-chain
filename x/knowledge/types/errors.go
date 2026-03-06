@@ -95,6 +95,12 @@ var (
 	ErrTEEMeasurementMismatch   = errors.Register(ModuleName, 144, "TEE measurement mismatch")
 	ErrEnclaveNotActive         = errors.Register(ModuleName, 145, "enclave is not in active status")
 
+	// ─── Training enclave (150–153) ────────────────────────────────────
+	ErrInvalidTrainingAttestation = errors.Register(ModuleName, 150, "invalid training attestation")
+	ErrTrainingRecordNotFound     = errors.Register(ModuleName, 151, "training record not found")
+	ErrTrainingRecordExists       = errors.Register(ModuleName, 152, "training record already exists")
+	ErrEnclaveNotRegistered       = errors.Register(ModuleName, 153, "enclave operator not registered")
+
 	// ─── IBC (80) ──────────────────────────────────────────────────────────
 	ErrInvalidIBCVersion = errors.Register(ModuleName, 80, "invalid IBC version")
 
