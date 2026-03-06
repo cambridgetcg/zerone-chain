@@ -83,6 +83,10 @@ var (
 	ErrInvalidReplicationFactor       = errors.Register(ModuleName, 123, "invalid replication factor")
 	ErrInvalidAttestation             = errors.Register(ModuleName, 124, "invalid attestation data")
 
+	// ─── Agent reputation decay (130–131) ─────────────────────────────────
+	ErrReputationRecordNotFound = errors.Register(ModuleName, 130, "agent domain reputation record not found")
+	ErrInvalidReputationScore   = errors.Register(ModuleName, 131, "invalid reputation score")
+
 	// ─── IBC (80) ──────────────────────────────────────────────────────────
 	ErrInvalidIBCVersion = errors.Register(ModuleName, 80, "invalid IBC version")
 

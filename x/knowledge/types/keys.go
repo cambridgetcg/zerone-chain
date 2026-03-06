@@ -175,6 +175,10 @@ var (
 	ShardAssignmentPrefix   = []byte{0xb5} // validatorAddr/snapshotHeight → ShardAssignment (JSON)
 	ShardAttestationPrefix  = []byte{0xb6} // validatorAddr/snapshotHeight → StorageAttestation (JSON)
 	ShardingParamsKey       = []byte{0xb7} // singleton ShardingParams (JSON)
+
+	// ─── Agent reputation decay ──────────────────────────────────────
+	AgentDomainReputationPrefix = []byte{0xb8} // agentAddr/domainID → AgentDomainReputation (JSON)
+	ReputationDecayParamsKey    = []byte{0xb9} // singleton ReputationDecayParams (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -457,6 +461,19 @@ func ShardAttestationKey(validatorAddr string, snapshotHeight int64) []byte {
 // ShardAttestationByValidatorPrefix returns the prefix for iterating all attestations for a validator.
 func ShardAttestationByValidatorPrefix(validatorAddr string) []byte {
 	key := append(append([]byte{}, ShardAttestationPrefix...), []byte(validatorAddr)...)
+	return append(key, '/')
+}
+
+// AgentDomainReputationKey returns the store key for an agent's domain reputation.
+func AgentDomainReputationKey(agentAddr, domainID string) []byte {
+	key := append(append([]byte{}, AgentDomainReputationPrefix...), []byte(agentAddr)...)
+	key = append(key, '/')
+	return append(key, []byte(domainID)...)
+}
+
+// AgentDomainReputationByAgentPrefix returns the prefix for iterating all domains for an agent.
+func AgentDomainReputationByAgentPrefix(agentAddr string) []byte {
+	key := append(append([]byte{}, AgentDomainReputationPrefix...), []byte(agentAddr)...)
 	return append(key, '/')
 }
 
