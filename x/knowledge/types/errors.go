@@ -148,4 +148,12 @@ var (
 	ErrCannotChallengeFalsified     = errors.Register(ModuleName, 105, "cannot challenge a falsified fact")
 	ErrNotProvisional               = errors.Register(ModuleName, 106, "fact is not in provisional state")
 	ErrAdversarialDisabled          = errors.Register(ModuleName, 107, "adversarial verification is disabled")
+
+	// ─── Model registry (170–179) ───────────────────────────────────────────
+	ErrModelNotFound          = errors.Register(ModuleName, 170, "model not found")
+	ErrModelAlreadyExists     = errors.Register(ModuleName, 171, "model already exists")
+	ErrModelQualityTooLow     = errors.Register(ModuleName, 172, "model quality below threshold")
+	ErrModelNotActive         = errors.Register(ModuleName, 173, "model is not active")
+	ErrModelAlreadyDeprecated = errors.Register(ModuleName, 174, "model is already deprecated")
+	ErrInvalidModelLineage    = errors.Register(ModuleName, 175, "invalid model lineage")
 )

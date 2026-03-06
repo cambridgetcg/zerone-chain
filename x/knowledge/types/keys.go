@@ -196,6 +196,15 @@ var (
 	APIKeyWalletIndexPrefix  = []byte{0xc3} // wallet/keyHash → exists
 	PendingAPIRevenuePrefix  = []byte{0xc4} // epoch → uint64 accumulated uzrn
 	APIRevenueParamsKey      = []byte{0xc5} // singleton APIRevenueParams (JSON)
+
+	// ─── Model registry (R45-1) ─────────────────────────────────────────
+	ModelRecordPrefix       = []byte{0xd0} // modelID → ModelRecord (JSON)
+	ModelDomainIndexPrefix  = []byte{0xd1} // domain/modelID → exists
+	ModelTDUIndexPrefix     = []byte{0xd2} // tduID/modelID → exists (reverse index)
+	ModelLineagePrefix      = []byte{0xd3} // modelID → ModelLineage (JSON)
+	ModelActiveIndexPrefix  = []byte{0xd4} // modelID → exists (active models only)
+	ModelVersionPrefix      = []byte{0xd5} // domain → uint64 next version
+	ModelEndpointPrefix     = []byte{0xd6} // modelID/endpoint → exists
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -802,4 +811,65 @@ func PendingAPIRevenueKey(epoch uint64) []byte {
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, epoch)
 	return append(append([]byte{}, PendingAPIRevenuePrefix...), buf...)
+}
+
+// ─── Model registry key constructors (R45-1) ────────────────────────────────
+
+// ModelRecordKey returns the store key for a model record.
+func ModelRecordKey(modelID string) []byte {
+	return append(append([]byte{}, ModelRecordPrefix...), []byte(modelID)...)
+}
+
+// ModelDomainIndexKey returns the index key for a model within a domain.
+func ModelDomainIndexKey(domain, modelID string) []byte {
+	key := append(append([]byte{}, ModelDomainIndexPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(modelID)...)
+}
+
+// ModelDomainByDomainPrefix returns the prefix for iterating models in a domain.
+func ModelDomainByDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, ModelDomainIndexPrefix...), []byte(domain)...)
+	return append(key, '/')
+}
+
+// ModelTDUIndexKey returns the reverse index key: TDU → model.
+func ModelTDUIndexKey(tduID, modelID string) []byte {
+	key := append(append([]byte{}, ModelTDUIndexPrefix...), []byte(tduID)...)
+	key = append(key, '/')
+	return append(key, []byte(modelID)...)
+}
+
+// ModelTDUByTDUPrefix returns the prefix for iterating models that used a TDU.
+func ModelTDUByTDUPrefix(tduID string) []byte {
+	key := append(append([]byte{}, ModelTDUIndexPrefix...), []byte(tduID)...)
+	return append(key, '/')
+}
+
+// ModelLineageKey returns the store key for a model's lineage record.
+func ModelLineageKey(modelID string) []byte {
+	return append(append([]byte{}, ModelLineagePrefix...), []byte(modelID)...)
+}
+
+// ModelActiveIndexKey returns the index key for an active model.
+func ModelActiveIndexKey(modelID string) []byte {
+	return append(append([]byte{}, ModelActiveIndexPrefix...), []byte(modelID)...)
+}
+
+// ModelVersionKey returns the store key for a domain's next version counter.
+func ModelVersionKey(domain string) []byte {
+	return append(append([]byte{}, ModelVersionPrefix...), []byte(domain)...)
+}
+
+// ModelEndpointKey returns the store key for a model's inference endpoint.
+func ModelEndpointKey(modelID, endpoint string) []byte {
+	key := append(append([]byte{}, ModelEndpointPrefix...), []byte(modelID)...)
+	key = append(key, '/')
+	return append(key, []byte(endpoint)...)
+}
+
+// ModelEndpointByModelPrefix returns the prefix for iterating endpoints of a model.
+func ModelEndpointByModelPrefix(modelID string) []byte {
+	key := append(append([]byte{}, ModelEndpointPrefix...), []byte(modelID)...)
+	return append(key, '/')
 }
