@@ -179,6 +179,11 @@ var (
 	// ─── Agent reputation decay ──────────────────────────────────────
 	AgentDomainReputationPrefix = []byte{0xb8} // agentAddr/domainID → AgentDomainReputation (JSON)
 	ReputationDecayParamsKey    = []byte{0xb9} // singleton ReputationDecayParams (JSON)
+
+	// ─── TEE attestation (T6-1) ──────────────────────────────────────
+	EnclaveKeyPrefix   = []byte{0xba} // operator → RegisteredEnclave (JSON)
+	EnclaveStatusIndex = []byte{0xbb} // status/operator → exists
+	EnclaveSeqKey      = []byte{0xbc} // uint64 next enclave ID
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -702,4 +707,22 @@ func CompletedRoundBlockPrefix(block uint64) []byte {
 	binary.BigEndian.PutUint64(buf, block)
 	key = append(key, buf...)
 	return key
+}
+
+// EnclaveKey returns the store key for a registered enclave by operator address.
+func EnclaveKey(operator string) []byte {
+	return append(append([]byte{}, EnclaveKeyPrefix...), []byte(operator)...)
+}
+
+// EnclaveStatusIndexKey returns the index key for an enclave by status.
+func EnclaveStatusIndexKey(status, operator string) []byte {
+	key := append(append([]byte{}, EnclaveStatusIndex...), []byte(status)...)
+	key = append(key, '/')
+	return append(key, []byte(operator)...)
+}
+
+// EnclaveStatusByStatusPrefix returns the prefix for iterating enclaves by status.
+func EnclaveStatusByStatusPrefix(status string) []byte {
+	key := append(append([]byte{}, EnclaveStatusIndex...), []byte(status)...)
+	return append(key, '/')
 }

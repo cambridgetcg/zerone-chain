@@ -186,6 +186,18 @@ service Query {
   rpc ShardStatus(QueryShardStatusRequest) returns (QueryShardStatusResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/shard-status";
   }
+
+  // ─── TEE Enclaves (T6-1) ──────────────────────────────────────────────────
+
+  // Enclave queries a registered enclave by operator address.
+  rpc Enclave(QueryEnclaveRequest) returns (QueryEnclaveResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/enclaves/{operator}";
+  }
+
+  // Enclaves queries all registered enclaves with optional status filter.
+  rpc Enclaves(QueryEnclavesRequest) returns (QueryEnclavesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/enclaves";
+  }
 }
 
 // ─── Sample query messages ────────────────────────────────────────────────────
@@ -521,4 +533,24 @@ message QueryShardStatusResponse {
   uint64 total_attestations   = 4;
   uint32 replication_factor   = 5;
   uint32 min_validators       = 6;
+}
+
+// ─── TEE Enclave query messages (T6-1) ──────────────────────────────────────
+
+message QueryEnclaveRequest {
+  string operator = 1;
+}
+
+message QueryEnclaveResponse {
+  RegisteredEnclave enclave = 1;
+}
+
+message QueryEnclavesRequest {
+  string status = 1;  // Optional: "active", "suspended", "revoked"
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryEnclavesResponse {
+  repeated RegisteredEnclave enclaves = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }

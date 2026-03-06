@@ -32,6 +32,10 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgRevokeConsent{}, "zerone_knowledge/RevokeConsent", nil)
 	cdc.RegisterConcrete(&MsgUpgradeConsent{}, "zerone_knowledge/UpgradeConsent", nil)
 	cdc.RegisterConcrete(&MsgAttestStorage{}, "zerone_knowledge/AttestStorage", nil)
+	cdc.RegisterConcrete(&MsgRegisterEnclave{}, "zerone_knowledge/RegisterEnclave", nil)
+	cdc.RegisterConcrete(&MsgVerifyAttestation{}, "zerone_knowledge/VerifyAttestation", nil)
+	cdc.RegisterConcrete(&MsgSuspendEnclave{}, "zerone_knowledge/SuspendEnclave", nil)
+	cdc.RegisterConcrete(&MsgRevokeEnclave{}, "zerone_knowledge/RevokeEnclave", nil)
 }
 
 // RegisterInterfaces registers the knowledge module's interface implementations.
@@ -62,6 +66,12 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgUpgradeConsent{},
 		// MsgAttestStorage: proto-gen required for full registration.
 		// Proto definition in tx.proto; run `make proto-gen` when BSR is available.
+		// TEE attestation messages (T6-1).
+		// Proto-gen will supersede tee_msgs.go definitions.
+		&MsgRegisterEnclave{},
+		&MsgVerifyAttestation{},
+		&MsgSuspendEnclave{},
+		&MsgRevokeEnclave{},
 	)
 }
 

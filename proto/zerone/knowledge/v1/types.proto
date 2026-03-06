@@ -373,3 +373,26 @@ message CompletedRoundMeta {
   bool   has_dissent     = 2;  // true if any verifier dissented from majority
   uint64 duration_blocks = 3;  // verdict_block - started_at_block
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEE Attestation (T6-1)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// EnclaveStatus represents the lifecycle state of a registered TEE enclave.
+enum EnclaveStatus {
+  ENCLAVE_STATUS_UNSPECIFIED = 0;
+  ENCLAVE_STATUS_ACTIVE      = 1;  // Enclave is active and verified
+  ENCLAVE_STATUS_SUSPENDED   = 2;  // Temporarily suspended (attestation expired)
+  ENCLAVE_STATUS_REVOKED     = 3;  // Permanently revoked
+}
+
+// RegisteredEnclave represents a TEE enclave registered on-chain.
+message RegisteredEnclave {
+  string operator          = 1;  // Bech32 address of the enclave operator
+  string provider          = 2;  // "nitro" | "sgx" | "sev"
+  bytes  measurements      = 3;  // Expected code hash (enclave identity)
+  bytes  attestation_hash  = 4;  // SHA-256 of the attestation document
+  int64  registered_at     = 5;  // Block height when registered
+  int64  last_verified     = 6;  // Block height of last successful verification
+  EnclaveStatus status     = 7;  // Current lifecycle status
+}

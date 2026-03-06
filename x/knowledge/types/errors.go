@@ -87,6 +87,14 @@ var (
 	ErrReputationRecordNotFound = errors.Register(ModuleName, 130, "agent domain reputation record not found")
 	ErrInvalidReputationScore   = errors.Register(ModuleName, 131, "invalid reputation score")
 
+	// ─── TEE attestation (140–145) ──────────────────────────────────────
+	ErrEnclaveNotFound          = errors.Register(ModuleName, 140, "registered enclave not found")
+	ErrEnclaveAlreadyRegistered = errors.Register(ModuleName, 141, "enclave already registered for operator")
+	ErrInvalidTEEProvider       = errors.Register(ModuleName, 142, "invalid TEE provider type")
+	ErrTEEAttestationExpired    = errors.Register(ModuleName, 143, "TEE attestation has expired")
+	ErrTEEMeasurementMismatch   = errors.Register(ModuleName, 144, "TEE measurement mismatch")
+	ErrEnclaveNotActive         = errors.Register(ModuleName, 145, "enclave is not in active status")
+
 	// ─── IBC (80) ──────────────────────────────────────────────────────────
 	ErrInvalidIBCVersion = errors.Register(ModuleName, 80, "invalid IBC version")
 

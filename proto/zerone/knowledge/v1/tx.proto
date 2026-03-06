@@ -94,6 +94,20 @@ service Msg {
   // UpgradeConsent allows a submitter to upgrade the consent level.
   rpc UpgradeConsent(MsgUpgradeConsent) returns (MsgUpgradeConsentResponse);
 
+  // ─── TEE attestation (T6-1) ───────────────────────────────────────────────
+
+  // RegisterEnclave registers a TEE enclave with an attestation document.
+  rpc RegisterEnclave(MsgRegisterEnclave) returns (MsgRegisterEnclaveResponse);
+
+  // VerifyAttestation re-verifies a registered enclave's attestation.
+  rpc VerifyAttestation(MsgVerifyAttestation) returns (MsgVerifyAttestationResponse);
+
+  // SuspendEnclave suspends a registered enclave (authority only).
+  rpc SuspendEnclave(MsgSuspendEnclave) returns (MsgSuspendEnclaveResponse);
+
+  // RevokeEnclave permanently revokes a registered enclave (authority only).
+  rpc RevokeEnclave(MsgRevokeEnclave) returns (MsgRevokeEnclaveResponse);
+
   // ─── Authority ─────────────────────────────────────────────────────────────
 
   // AddSample governance-creates a sample (authority-gated, for seed data).
@@ -442,3 +456,50 @@ message MsgUpgradeConsentResponse {
   ConsentType old_type = 1;
   ConsentType new_type = 2;
 }
+
+// ─── TEE attestation messages (T6-1) ──────────────────────────────────────────
+
+message MsgRegisterEnclave {
+  option (cosmos.msg.v1.signer) = "operator";
+
+  string operator      = 1;  // Bech32 address of the enclave operator
+  bytes  attestation   = 2;  // Serialized attestation document
+  string provider      = 3;  // "nitro" | "sgx" | "sev"
+  bytes  measurements  = 4;  // Expected code hash
+}
+
+message MsgRegisterEnclaveResponse {
+  string enclave_id = 1;  // Unique ID for the registered enclave
+}
+
+message MsgVerifyAttestation {
+  option (cosmos.msg.v1.signer) = "verifier";
+
+  string verifier      = 1;  // Who is submitting the verification
+  string operator      = 2;  // Enclave operator to verify
+  bytes  attestation   = 3;  // Fresh attestation document
+}
+
+message MsgVerifyAttestationResponse {
+  bool valid = 1;
+}
+
+message MsgSuspendEnclave {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1;
+  string operator  = 2;  // Enclave operator to suspend
+  string reason    = 3;
+}
+
+message MsgSuspendEnclaveResponse {}
+
+message MsgRevokeEnclave {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1;
+  string operator  = 2;  // Enclave operator to revoke
+  string reason    = 3;
+}
+
+message MsgRevokeEnclaveResponse {}
