@@ -7,8 +7,8 @@ import (
 	sdkmath "cosmossdk.io/math"
 )
 
-// ReputationDecayParams holds governance-tunable parameters for agent reputation decay.
-// Stored as JSON singleton in the KVStore.
+// ReputationDecayParams holds governance-tunable parameters for agent reputation decay
+// and reputation reward/penalty configuration. Stored as JSON singleton in the KVStore.
 type ReputationDecayParams struct {
 	// DecayRateBps: basis points of score to decay per interval of inactivity. Default 500 = 5%.
 	DecayRateBps uint32 `json:"decay_rate_bps"`
@@ -16,14 +16,29 @@ type ReputationDecayParams struct {
 	DecayIntervalBlocks uint64 `json:"decay_interval_blocks"`
 	// FloorRatioBps: minimum score as basis points of peak score. Default 2500 = 25%.
 	FloorRatioBps uint32 `json:"floor_ratio_bps"`
+	// SubmitterReputationGain: base reputation gain for accepted submissions (LegacyDec). Default "10".
+	SubmitterReputationGain string `json:"submitter_reputation_gain"`
+	// ReviewerReputationGain: reputation gain for majority-side reviewers (LegacyDec). Default "3".
+	ReviewerReputationGain string `json:"reviewer_reputation_gain"`
+	// ReviewerReputationPenalty: reputation loss for minority-side reviewers (LegacyDec). Default "5".
+	ReviewerReputationPenalty string `json:"reviewer_reputation_penalty"`
+	// ReputationMultiplierBps: max additional vote weight from reputation (BPS). Default 20000 = 2.0x.
+	ReputationMultiplierBps uint32 `json:"reputation_multiplier_bps"`
+	// BaseVoteWeight: base vote weight for all reviewers (LegacyDec). Default "1".
+	BaseVoteWeight string `json:"base_vote_weight"`
 }
 
 // DefaultReputationDecayParams returns sensible defaults.
 func DefaultReputationDecayParams() ReputationDecayParams {
 	return ReputationDecayParams{
-		DecayRateBps:        500,    // 5%
-		DecayIntervalBlocks: 432000, // ~30 days at 6s blocks
-		FloorRatioBps:       2500,   // 25% floor
+		DecayRateBps:              500,    // 5%
+		DecayIntervalBlocks:       432000, // ~30 days at 6s blocks
+		FloorRatioBps:             2500,   // 25% floor
+		SubmitterReputationGain:   "10.000000000000000000",
+		ReviewerReputationGain:    "3.000000000000000000",
+		ReviewerReputationPenalty: "5.000000000000000000",
+		ReputationMultiplierBps:   20000, // 2.0x max additional weight
+		BaseVoteWeight:            "1.000000000000000000",
 	}
 }
 
@@ -35,6 +50,46 @@ func (p ReputationDecayParams) GetDecayRate() sdkmath.LegacyDec {
 // GetFloorRatio returns the floor ratio as a LegacyDec (e.g. 2500 bps = 0.25).
 func (p ReputationDecayParams) GetFloorRatio() sdkmath.LegacyDec {
 	return sdkmath.LegacyNewDec(int64(p.FloorRatioBps)).Quo(sdkmath.LegacyNewDec(10000))
+}
+
+// GetSubmitterGain returns the submitter reputation gain as a LegacyDec.
+func (p ReputationDecayParams) GetSubmitterGain() sdkmath.LegacyDec {
+	return p.getDecField(p.SubmitterReputationGain, sdkmath.LegacyNewDec(10))
+}
+
+// GetReviewerGain returns the reviewer reputation gain as a LegacyDec.
+func (p ReputationDecayParams) GetReviewerGain() sdkmath.LegacyDec {
+	return p.getDecField(p.ReviewerReputationGain, sdkmath.LegacyNewDec(3))
+}
+
+// GetReviewerPenalty returns the reviewer reputation penalty as a LegacyDec.
+func (p ReputationDecayParams) GetReviewerPenalty() sdkmath.LegacyDec {
+	return p.getDecField(p.ReviewerReputationPenalty, sdkmath.LegacyNewDec(5))
+}
+
+// GetReputationMultiplier returns the reputation multiplier as a LegacyDec (e.g. 20000 bps = 2.0).
+func (p ReputationDecayParams) GetReputationMultiplier() sdkmath.LegacyDec {
+	if p.ReputationMultiplierBps == 0 {
+		return sdkmath.LegacyNewDec(2)
+	}
+	return sdkmath.LegacyNewDec(int64(p.ReputationMultiplierBps)).Quo(sdkmath.LegacyNewDec(10000))
+}
+
+// GetBaseVoteWeight returns the base vote weight as a LegacyDec.
+func (p ReputationDecayParams) GetBaseVoteWeight() sdkmath.LegacyDec {
+	return p.getDecField(p.BaseVoteWeight, sdkmath.LegacyOneDec())
+}
+
+// getDecField parses a Dec string field, returning defaultVal on empty or error.
+func (p ReputationDecayParams) getDecField(val string, defaultVal sdkmath.LegacyDec) sdkmath.LegacyDec {
+	if val == "" {
+		return defaultVal
+	}
+	d, err := sdkmath.LegacyNewDecFromStr(val)
+	if err != nil {
+		return defaultVal
+	}
+	return d
 }
 
 // Validate checks all fields are within valid ranges.

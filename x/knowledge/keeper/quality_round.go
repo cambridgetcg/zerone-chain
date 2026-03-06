@@ -223,6 +223,8 @@ func (k Keeper) SubmitReveal(ctx context.Context, msg *types.MsgSubmitReveal) er
 }
 
 // AggregateQualityRound computes the verdict from revealed QualityVotes.
+// Votes are weighted by each reviewer's domain reputation. Reputation is
+// updated for submitters and reviewers based on the aggregation outcome.
 func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	params, err := k.GetParams(ctx)
@@ -239,35 +241,47 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 		return nil
 	}
 
-	// Deserialize revealed votes
+	// Get submission early for domain resolution and reputation wiring.
+	sub, found := k.GetSubmission(ctx, round.SubmissionId)
+	if !found {
+		return types.ErrSubmissionNotFound
+	}
+	domainID := resolveDomain(sub.Domain)
+
+	// Deserialize revealed votes with verifier tracking.
 	votes := make([]*types.QualityVote, 0, len(round.Reveals))
+	verifiers := make([]string, 0, len(round.Reveals))
 	for _, reveal := range round.Reveals {
 		var vote types.QualityVote
 		if err := json.Unmarshal([]byte(reveal.Vote), &vote); err != nil {
 			continue
 		}
 		votes = append(votes, &vote)
+		verifiers = append(verifiers, reveal.Verifier)
 	}
 
 	if len(votes) == 0 {
 		return nil
 	}
 
-	// Compute aggregated scores (median per dimension)
+	// Compute reputation-weighted vote weights.
+	weights := k.computeReviewerWeights(ctx, verifiers, domainID)
+
+	// Compute aggregated scores (reputation-weighted median per dimension).
 	aggregated := &types.QualityVote{
-		OverallQuality:  medianUint64(votes, func(v *types.QualityVote) uint64 { return v.OverallQuality }),
-		ReasoningDepth:  medianUint64(votes, func(v *types.QualityVote) uint64 { return v.ReasoningDepth }),
-		Novelty:         medianUint64(votes, func(v *types.QualityVote) uint64 { return v.Novelty }),
-		Toxicity:        medianUint64(votes, func(v *types.QualityVote) uint64 { return v.Toxicity }),
-		FactualAccuracy: medianUint64(votes, func(v *types.QualityVote) uint64 { return v.FactualAccuracy }),
+		OverallQuality:  weightedMedianUint64(votes, weights, func(v *types.QualityVote) uint64 { return v.OverallQuality }),
+		ReasoningDepth:  weightedMedianUint64(votes, weights, func(v *types.QualityVote) uint64 { return v.ReasoningDepth }),
+		Novelty:         weightedMedianUint64(votes, weights, func(v *types.QualityVote) uint64 { return v.Novelty }),
+		Toxicity:        weightedMedianUint64(votes, weights, func(v *types.QualityVote) uint64 { return v.Toxicity }),
+		FactualAccuracy: weightedMedianUint64(votes, weights, func(v *types.QualityVote) uint64 { return v.FactualAccuracy }),
 	}
 
-	// Consent consensus: majority vote
-	consentValid := majorityBool(votes, func(v *types.QualityVote) bool { return v.ConsentValid })
+	// Consent consensus: reputation-weighted majority vote.
+	consentValid := weightedMajorityBool(votes, weights, func(v *types.QualityVote) bool { return v.ConsentValid })
 	aggregated.ConsentValid = consentValid
 
-	// Duplicate consensus: majority vote
-	isDuplicate := majorityBool(votes, func(v *types.QualityVote) bool { return v.Duplicate })
+	// Duplicate consensus: reputation-weighted majority vote.
+	isDuplicate := weightedMajorityBool(votes, weights, func(v *types.QualityVote) bool { return v.Duplicate })
 	aggregated.Duplicate = isDuplicate
 
 	// Determine verdict (priority order)
@@ -307,12 +321,6 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 		return err
 	}
 
-	// Get submission
-	sub, found := k.GetSubmission(ctx, round.SubmissionId)
-	if !found {
-		return types.ErrSubmissionNotFound
-	}
-
 	// Handle verdict outcomes
 	accepted := verdict == types.QualityVerdict_QUALITY_VERDICT_GOLD ||
 		verdict == types.QualityVerdict_QUALITY_VERDICT_SILVER ||
@@ -340,6 +348,44 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 
 	if err := k.SetSubmission(ctx, sub); err != nil {
 		return err
+	}
+
+	// ─── Reputation wiring ──────────────────────────────────────────────────
+	currentHeight := sdkCtx.BlockHeight()
+	repParams := k.GetReputationDecayParams(ctx)
+
+	// Submitter gains reputation on accepted submissions, scaled by tier.
+	if accepted {
+		submitterGain := repParams.GetSubmitterGain()
+		switch verdict {
+		case types.QualityVerdict_QUALITY_VERDICT_GOLD:
+			submitterGain = submitterGain.MulInt64(3)
+		case types.QualityVerdict_QUALITY_VERDICT_SILVER:
+			submitterGain = submitterGain.MulInt64(2)
+		default:
+			// Bronze: keep base gain
+		}
+		_ = k.UpdateReputation(ctx, sub.Submitter, domainID, submitterGain, currentHeight)
+		k.ResetInactivityTimer(ctx, sub.Submitter, domainID, currentHeight)
+	}
+
+	// Classify reviewers and update reputation: majority gains, minority loses.
+	sides := classifyVoters(round, params)
+	for verifier, side := range sides {
+		isMajority := (accepted && side == sideAccept) || (!accepted && side == sideReject)
+		if isMajority {
+			gain := repParams.GetReviewerGain()
+			_ = k.UpdateReputation(ctx, verifier, domainID, gain, currentHeight)
+			k.ResetInactivityTimer(ctx, verifier, domainID, currentHeight)
+		} else {
+			// Preserve old timer — bad reviews don't count as activity.
+			oldHeight := int64(0)
+			if oldRep, found := k.GetAgentDomainReputation(ctx, verifier, domainID); found {
+				oldHeight = oldRep.LastActiveHeight
+			}
+			penalty := repParams.GetReviewerPenalty()
+			_ = k.UpdateReputation(ctx, verifier, domainID, penalty.Neg(), oldHeight)
+		}
 	}
 
 	// Emit event
@@ -597,6 +643,106 @@ func majorityBool(votes []*types.QualityVote, fn func(*types.QualityVote) bool) 
 		}
 	}
 	return count > len(votes)/2
+}
+
+// ─── Reputation-Weighted Voting ──────────────────────────────────────────────
+
+// reputationNormCap is the reputation score at which the weight bonus reaches maximum.
+const reputationNormCap = 100
+
+// resolveDomain returns the domain ID from submission metadata, defaulting to "general".
+func resolveDomain(domain string) string {
+	if domain == "" {
+		return "general"
+	}
+	return domain
+}
+
+// computeVoteWeight returns the vote weight for a reviewer based on their domain reputation.
+// weight = baseWeight + min(repScore/100, 1.0) * repMultiplier
+// This caps the max weight at baseWeight + repMultiplier (e.g. 1.0 + 2.0 = 3.0x).
+func computeVoteWeight(repScore, baseWeight, repMultiplier sdkmath.LegacyDec) sdkmath.LegacyDec {
+	normCap := sdkmath.LegacyNewDec(reputationNormCap)
+	normalized := repScore.Quo(normCap)
+	if normalized.GT(sdkmath.LegacyOneDec()) {
+		normalized = sdkmath.LegacyOneDec()
+	}
+	if normalized.IsNegative() {
+		normalized = sdkmath.LegacyZeroDec()
+	}
+	return baseWeight.Add(normalized.Mul(repMultiplier))
+}
+
+// computeReviewerWeights returns vote weights for the given verifiers based on their
+// domain reputation scores. Verifiers with no reputation get base_weight only.
+func (k Keeper) computeReviewerWeights(ctx context.Context, verifiers []string, domainID string) []sdkmath.LegacyDec {
+	repParams := k.GetReputationDecayParams(ctx)
+	baseWeight := repParams.GetBaseVoteWeight()
+	repMultiplier := repParams.GetReputationMultiplier()
+
+	weights := make([]sdkmath.LegacyDec, len(verifiers))
+	for i, v := range verifiers {
+		rep, found := k.GetAgentDomainReputation(ctx, v, domainID)
+		if !found {
+			weights[i] = baseWeight
+			continue
+		}
+		weights[i] = computeVoteWeight(rep.GetScore(), baseWeight, repMultiplier)
+	}
+	return weights
+}
+
+type weightedValue struct {
+	value  uint64
+	weight sdkmath.LegacyDec
+}
+
+// weightedMedianUint64 computes the weighted median of a uint64 field across votes.
+func weightedMedianUint64(votes []*types.QualityVote, weights []sdkmath.LegacyDec, fn func(*types.QualityVote) uint64) uint64 {
+	if len(votes) == 0 {
+		return 0
+	}
+
+	pairs := make([]weightedValue, len(votes))
+	totalWeight := sdkmath.LegacyZeroDec()
+	for i, v := range votes {
+		w := sdkmath.LegacyOneDec()
+		if i < len(weights) {
+			w = weights[i]
+		}
+		pairs[i] = weightedValue{value: fn(v), weight: w}
+		totalWeight = totalWeight.Add(w)
+	}
+
+	sort.Slice(pairs, func(i, j int) bool { return pairs[i].value < pairs[j].value })
+
+	halfWeight := totalWeight.Quo(sdkmath.LegacyNewDec(2))
+	cumulative := sdkmath.LegacyZeroDec()
+	for _, p := range pairs {
+		cumulative = cumulative.Add(p.weight)
+		if cumulative.GT(halfWeight) {
+			return p.value
+		}
+	}
+
+	return pairs[len(pairs)-1].value
+}
+
+// weightedMajorityBool returns true if the weighted sum of true votes exceeds half.
+func weightedMajorityBool(votes []*types.QualityVote, weights []sdkmath.LegacyDec, fn func(*types.QualityVote) bool) bool {
+	trueWeight := sdkmath.LegacyZeroDec()
+	totalWeight := sdkmath.LegacyZeroDec()
+	for i, v := range votes {
+		w := sdkmath.LegacyOneDec()
+		if i < len(weights) {
+			w = weights[i]
+		}
+		totalWeight = totalWeight.Add(w)
+		if fn(v) {
+			trueWeight = trueWeight.Add(w)
+		}
+	}
+	return trueWeight.GT(totalWeight.Quo(sdkmath.LegacyNewDec(2)))
 }
 
 // outlierThresholdBPS defines max deviation before a validator is outlier (200,000 = 20%).

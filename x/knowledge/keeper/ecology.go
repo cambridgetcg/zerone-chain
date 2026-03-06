@@ -320,6 +320,10 @@ func (k Keeper) RunEcologyEpoch(ctx context.Context, currentEpoch uint64) {
 	// Phase 3: Prune samples past grace period
 	k.PruneSamples(ctx, currentEpoch, params)
 
-	// Phase 4: Apply agent reputation decay
-	k.ApplyReputationDecay(ctx, int64(currentBlock))
+	// Phase 4: Apply agent reputation decay (every DecayIntervalBlocks ≈ monthly).
+	// Only iterate all records when crossing a decay interval boundary.
+	repParams := k.GetReputationDecayParams(ctx)
+	if repParams.DecayIntervalBlocks > 0 && currentBlock%repParams.DecayIntervalBlocks < EcologyEpochBlocks {
+		k.ApplyReputationDecay(ctx, int64(currentBlock))
+	}
 }

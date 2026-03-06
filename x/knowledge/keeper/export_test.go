@@ -7,4 +7,6 @@ var (
 	InitializeSampleEnergy = initializeSampleEnergy
 	ComputeCompetitionTax  = computeCompetitionTax
 	ExportConsensusStrength = ConsensusStrength
+	ComputeVoteWeight      = computeVoteWeight
+	ResolveDomain          = resolveDomain
 )
