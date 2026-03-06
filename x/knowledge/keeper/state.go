@@ -911,6 +911,92 @@ func (k Keeper) DeleteSampleThreadIndex(ctx context.Context, threadID, sampleID 
 	return store.Delete(types.ThreadIndexKey(threadID, sampleID))
 }
 
+// ─── Reviewer staking (R38-3) ───────────────────────────────────────────────
+
+// SetReviewerStake records a reviewer's escrowed stake for a round.
+func (k Keeper) SetReviewerStake(ctx context.Context, roundID, verifier string, amount string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.ReviewerStakeKey(roundID, verifier), []byte(amount))
+}
+
+// GetReviewerStake returns the escrowed stake for a reviewer in a round.
+func (k Keeper) GetReviewerStake(ctx context.Context, roundID, verifier string) (string, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.ReviewerStakeKey(roundID, verifier))
+	if err != nil || bz == nil {
+		return "", false
+	}
+	return string(bz), true
+}
+
+// GetAllReviewerStakes returns all reviewer stakes for a round.
+func (k Keeper) GetAllReviewerStakes(ctx context.Context, roundID string) map[string]string {
+	store := k.storeService.OpenKVStore(ctx)
+	prefix := types.ReviewerStakeByRoundPrefix(roundID)
+	iter, err := store.Iterator(prefix, prefixEndBytes(prefix))
+	if err != nil {
+		return nil
+	}
+	defer iter.Close()
+	stakes := make(map[string]string)
+	for ; iter.Valid(); iter.Next() {
+		verifier := string(iter.Key()[len(prefix):])
+		stakes[verifier] = string(iter.Value())
+	}
+	return stakes
+}
+
+// SetContestedDeepCount sets the contested-deep count for a content hash.
+func (k Keeper) SetContestedDeepCount(ctx context.Context, contentHash string, count uint64) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz := make([]byte, 8)
+	binary.BigEndian.PutUint64(bz, count)
+	return store.Set(types.ContestedDeepCountKey(contentHash), bz)
+}
+
+// GetContestedDeepCount returns the contested-deep count for a content hash.
+func (k Keeper) GetContestedDeepCount(ctx context.Context, contentHash string) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.ContestedDeepCountKey(contentHash))
+	if err != nil || len(bz) != 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+// IncrementContestedDeepCount atomically increments and returns the new count.
+func (k Keeper) IncrementContestedDeepCount(ctx context.Context, contentHash string) (uint64, error) {
+	count := k.GetContestedDeepCount(ctx, contentHash) + 1
+	if err := k.SetContestedDeepCount(ctx, contentHash, count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+// SetReviewerStakingParams stores the reviewer staking parameters as JSON.
+func (k Keeper) SetReviewerStakingParams(ctx context.Context, params types.ReviewerStakingParams) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := params.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("failed to marshal reviewer staking params: %w", err)
+	}
+	return store.Set(types.ReviewerStakingParamsKey, bz)
+}
+
+// GetReviewerStakingParams returns the reviewer staking parameters, or defaults if unset.
+func (k Keeper) GetReviewerStakingParams(ctx context.Context) types.ReviewerStakingParams {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.ReviewerStakingParamsKey)
+	if err != nil || bz == nil {
+		return types.DefaultReviewerStakingParams()
+	}
+	var params types.ReviewerStakingParams
+	if err := params.UnmarshalJSON(bz); err != nil {
+		return types.DefaultReviewerStakingParams()
+	}
+	return params
+}
+
 // ─── Store helpers ───────────────────────────────────────────────────────────
 
 func prefixEndBytes(pfx []byte) []byte {

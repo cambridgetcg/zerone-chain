@@ -88,7 +88,8 @@ func (k Keeper) InitiateQualityRound(
 	return roundID, nil
 }
 
-// SubmitCommitment handles MsgSubmitCommitment — stores a blinded quality vote commitment.
+// SubmitCommitment handles MsgSubmitCommitment — stores a blinded quality vote
+// commitment and escrows the reviewer's stake.
 func (k Keeper) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCommitment) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 
@@ -119,6 +120,30 @@ func (k Keeper) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCommit
 	for _, c := range round.Commits {
 		if c.Verifier == msg.Verifier {
 			return types.ErrAlreadyCommitted.Wrapf("verifier %s already committed", msg.Verifier)
+		}
+	}
+
+	// Escrow reviewer stake: submitterStake × ReviewerStakeRatioBps / 10000.
+	sub, subFound := k.GetSubmission(ctx, round.SubmissionId)
+	if subFound && sub.Stake != "" {
+		rp := k.GetReviewerStakingParams(ctx)
+		submitterStake, ok := sdkmath.NewIntFromString(sub.Stake)
+		if ok && submitterStake.IsPositive() && rp.ReviewerStakeRatioBps > 0 {
+			reviewerStake := submitterStake.Mul(sdkmath.NewInt(int64(rp.ReviewerStakeRatioBps))).Quo(sdkmath.NewInt(10_000))
+			if reviewerStake.IsPositive() {
+				verifierAddr, err := sdk.AccAddressFromBech32(msg.Verifier)
+				if err == nil {
+					if err := k.bankKeeper.SendCoinsFromAccountToModule(
+						sdkCtx, verifierAddr, types.ModuleName,
+						sdk.NewCoins(sdk.NewCoin("uzrn", reviewerStake)),
+					); err != nil {
+						return types.ErrReviewerStakeInsufficient.Wrap(err.Error())
+					}
+					if err := k.SetReviewerStake(ctx, msg.RoundId, msg.Verifier, reviewerStake.String()); err != nil {
+						return err
+					}
+				}
+			}
 		}
 	}
 
@@ -318,14 +343,9 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 		}
 	}
 
-	// Return stake to submitter
-	if sub.Submitter != "" && sub.Stake != "" {
-		submitterAddr, _ := sdk.AccAddressFromBech32(sub.Submitter)
-		stakeAmt, ok := sdkmath.NewIntFromString(sub.Stake)
-		if ok && stakeAmt.IsPositive() {
-			stakeCoin := sdk.NewCoin("uzrn", stakeAmt)
-			_ = k.bankKeeper.SendCoinsFromModuleToAccount(sdkCtx, types.ModuleName, submitterAddr, sdk.NewCoins(stakeCoin))
-		}
+	// Distribute stakes via reviewer staking mechanism.
+	if err := k.distributeReviewerStakes(ctx, round, sub, params); err != nil {
+		return err
 	}
 
 	if err := k.SetSubmission(ctx, sub); err != nil {

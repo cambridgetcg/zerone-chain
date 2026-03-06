@@ -66,6 +66,11 @@ var (
 	ErrInvalidPartnership = errors.Register(ModuleName, 70, "invalid partnership")
 	ErrPartnershipFrozen  = errors.Register(ModuleName, 71, "partnership is frozen")
 
+	// ─── Reviewer staking (75–77) ────────────────────────────────────────
+	ErrReviewerStakeInsufficient   = errors.Register(ModuleName, 75, "reviewer has insufficient funds for staking")
+	ErrContentPermanentlyRejected  = errors.Register(ModuleName, 76, "content hash permanently rejected (max strikes)")
+	ErrReviewerStakeNotFound       = errors.Register(ModuleName, 77, "reviewer stake not found for round")
+
 	// ─── IBC (80) ──────────────────────────────────────────────────────────
 	ErrInvalidIBCVersion = errors.Register(ModuleName, 80, "invalid IBC version")
 

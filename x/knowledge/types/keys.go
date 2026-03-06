@@ -161,6 +161,11 @@ var (
 	// ─── Dedup indexes ─────────────────────────────────────────────────
 	NormalizedHashPrefix = []byte{0xad} // normalizedHash → submissionID
 	SimHashPrefix        = []byte{0xae} // simhash(uint64 BE) → submissionID
+
+	// ─── Reviewer staking (R38-3) ─────────────────────────────────────
+	ReviewerStakePrefix        = []byte{0xb0} // roundID + "/" + verifier → stake amount (string)
+	ContestedDeepCountPrefix   = []byte{0xb1} // contentHash → uint64 count
+	ReviewerStakingParamsKey   = []byte{0xb2} // singleton ReviewerStakingParams (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -391,6 +396,24 @@ func SimHashKey(hash uint64) []byte {
 	bz := make([]byte, 8)
 	binary.BigEndian.PutUint64(bz, hash)
 	return append(key, bz...)
+}
+
+// ReviewerStakeKey returns the store key for a reviewer's escrowed stake in a round.
+func ReviewerStakeKey(roundID, verifier string) []byte {
+	key := append(append([]byte{}, ReviewerStakePrefix...), []byte(roundID)...)
+	key = append(key, '/')
+	return append(key, []byte(verifier)...)
+}
+
+// ReviewerStakeByRoundPrefix returns the prefix for iterating all reviewer stakes in a round.
+func ReviewerStakeByRoundPrefix(roundID string) []byte {
+	key := append(append([]byte{}, ReviewerStakePrefix...), []byte(roundID)...)
+	return append(key, '/')
+}
+
+// ContestedDeepCountKey returns the store key for a content hash's contested-deep count.
+func ContestedDeepCountKey(contentHash string) []byte {
+	return append(append([]byte{}, ContestedDeepCountPrefix...), []byte(contentHash)...)
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────
