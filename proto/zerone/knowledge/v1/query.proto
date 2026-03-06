@@ -198,6 +198,13 @@ service Query {
   rpc Enclaves(QueryEnclavesRequest) returns (QueryEnclavesResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/enclaves";
   }
+
+  // ─── Training (R43-1) ───────────────────────────────────────────────────
+
+  // TrainingHistory queries training records for an operator.
+  rpc TrainingHistory(QueryTrainingHistoryRequest) returns (QueryTrainingHistoryResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/{operator}";
+  }
 }
 
 // ─── Sample query messages ────────────────────────────────────────────────────
@@ -552,5 +559,17 @@ message QueryEnclavesRequest {
 
 message QueryEnclavesResponse {
   repeated RegisteredEnclave enclaves = 1;
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// ─── Training query messages (R43-1) ────────────────────────────────────────
+
+message QueryTrainingHistoryRequest {
+  string operator = 1;
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryTrainingHistoryResponse {
+  repeated TrainingRecord records = 1;
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }

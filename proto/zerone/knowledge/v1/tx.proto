@@ -108,6 +108,14 @@ service Msg {
   // RevokeEnclave permanently revokes a registered enclave (authority only).
   rpc RevokeEnclave(MsgRevokeEnclave) returns (MsgRevokeEnclaveResponse);
 
+  // ─── Training (T6-3 / R43-1) ──────────────────────────────────────────────
+
+  // RecordTraining records a completed TEE training run on-chain.
+  rpc RecordTraining(MsgRecordTraining) returns (MsgRecordTrainingResponse);
+
+  // UpdateFitnessBatch submits a batch of fitness signals for TDUs.
+  rpc UpdateFitnessBatch(MsgUpdateFitnessBatch) returns (MsgUpdateFitnessBatchResponse);
+
   // ─── Authority ─────────────────────────────────────────────────────────────
 
   // AddSample governance-creates a sample (authority-gated, for seed data).
@@ -503,3 +511,34 @@ message MsgRevokeEnclave {
 }
 
 message MsgRevokeEnclaveResponse {}
+
+// ─── Training messages (R43-1) ──────────────────────────────────────────────
+
+message MsgRecordTraining {
+  option (cosmos.msg.v1.signer) = "operator";
+
+  string operator           = 1;
+  string attestation_hash   = 2;
+  string dataset_fingerprint = 3;
+  int64  dataset_size       = 4;
+  string base_model         = 5;
+  string model_hash         = 6;
+  string benchmark_score    = 7;
+}
+
+message MsgRecordTrainingResponse {
+  string attestation_hash = 1;
+}
+
+// ─── Fitness batch messages (R43-1) ─────────────────────────────────────────
+
+message MsgUpdateFitnessBatch {
+  option (cosmos.msg.v1.signer) = "oracle";
+
+  string                oracle = 1;
+  repeated FitnessSignal signals = 2;
+}
+
+message MsgUpdateFitnessBatchResponse {
+  uint64 processed = 1;
+}

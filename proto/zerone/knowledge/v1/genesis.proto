@@ -80,4 +80,18 @@ message GenesisState {
   uint64                         next_submission_seq   = 12;
   uint64                         next_round_seq        = 13;
   uint64                         next_dataset_seq      = 14;
+
+  // ─── New ToK state (R43-1) ──────────────────────────────────────────────
+  repeated FitnessRecord         fitness_records       = 15;
+  repeated ReputationRecord      reputation_records    = 16;
+  repeated ShardAssignment       shard_assignments     = 17;
+  repeated AttestationRecord     attestation_records   = 18;
+  repeated RegisteredEnclave     enclaves              = 19;
+  repeated TrainingRecord        training_records      = 20;
+
+  // ─── New params (R43-1) ─────────────────────────────────────────────────
+  FitnessParams                  fitness_params        = 21;
+  ReputationDecayParams          reputation_params     = 22;
+  ShardingParams                 sharding_params       = 23;
+  ReviewerStakingParams          reviewer_staking_params = 24;
 }
