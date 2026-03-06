@@ -29,6 +29,9 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgVoteResearchProposal{}, "zerone_knowledge/VoteResearchProposal", nil)
 	cdc.RegisterConcrete(&MsgExecuteResearchProposal{}, "zerone_knowledge/ExecuteResearchProposal", nil)
 	cdc.RegisterConcrete(&MsgAddSample{}, "zerone_knowledge/AddSample", nil)
+	cdc.RegisterConcrete(&MsgRevokeConsent{}, "zerone_knowledge/RevokeConsent", nil)
+	cdc.RegisterConcrete(&MsgUpgradeConsent{}, "zerone_knowledge/UpgradeConsent", nil)
+	cdc.RegisterConcrete(&MsgAttestStorage{}, "zerone_knowledge/AttestStorage", nil)
 }
 
 // RegisterInterfaces registers the knowledge module's interface implementations.
@@ -55,6 +58,10 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgVoteResearchProposal{},
 		&MsgExecuteResearchProposal{},
 		&MsgAddSample{},
+		&MsgRevokeConsent{},
+		&MsgUpgradeConsent{},
+		// MsgAttestStorage: proto-gen required for full registration.
+		// Proto definition in tx.proto; run `make proto-gen` when BSR is available.
 	)
 }
 

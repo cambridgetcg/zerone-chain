@@ -76,13 +76,7 @@ type StorageAttestation struct {
 	BlockHeight    int64  `json:"block_height"`    // block at which attestation was recorded
 }
 
-// MsgAttestStorage is a Go-only message type for validators to submit proof-of-storage attestations.
-// Not proto-generated — handled through the keeper directly.
-type MsgAttestStorage struct {
-	ValidatorAddr  string `json:"validator_addr"`
-	SnapshotHeight int64  `json:"snapshot_height"`
-	AttestationHex string `json:"attestation_hex"` // signed hash of assigned TDU data
-}
+// MsgAttestStorage is now defined in msg_attest_storage.go as a proto-compatible type.
 
 // ShardingGenesisState holds sharding-specific genesis state.
 // Exported/imported as JSON alongside the main GenesisState.

@@ -124,10 +124,10 @@ func (m msgServer) UpgradeConsent(ctx context.Context, msg *types.MsgUpgradeCons
 	return m.keeper.UpgradeConsent(ctx, msg)
 }
 
-// HandleMsgAttestStorage processes a Go-only MsgAttestStorage (not proto-registered).
+// HandleMsgAttestStorage processes a MsgAttestStorage.
 // Validators call this to submit proof-of-storage attestations for their assigned TDUs.
 func (k Keeper) HandleMsgAttestStorage(ctx context.Context, msg *types.MsgAttestStorage) error {
-	if msg.ValidatorAddr == "" {
+	if msg.Validator == "" {
 		return types.ErrInvalidAttestation
 	}
 	if msg.AttestationHex == "" {
@@ -140,13 +140,13 @@ func (k Keeper) HandleMsgAttestStorage(ctx context.Context, msg *types.MsgAttest
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	blockHeight := sdkCtx.BlockHeight()
 
-	if err := k.AttestProofOfStorage(ctx, msg.ValidatorAddr, msg.SnapshotHeight, msg.AttestationHex, blockHeight); err != nil {
+	if err := k.AttestProofOfStorage(ctx, msg.Validator, msg.SnapshotHeight, msg.AttestationHex, blockHeight); err != nil {
 		return err
 	}
 
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		types.EventStorageAttested,
-		sdk.NewAttribute(types.AttributeValidatorAddr, msg.ValidatorAddr),
+		sdk.NewAttribute(types.AttributeValidatorAddr, msg.Validator),
 		sdk.NewAttribute(types.AttributeSnapshotHeight, strconv.FormatInt(msg.SnapshotHeight, 10)),
 	))
 

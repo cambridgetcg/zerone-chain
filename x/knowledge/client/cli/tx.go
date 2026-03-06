@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -172,6 +174,9 @@ func GetTxCmd() *cobra.Command {
 		NewVoteResearchProposalCmd(),
 		NewExecuteResearchProposalCmd(),
 		NewAddSampleCmd(),
+		NewCommitReviewCmd(),
+		NewRevealReviewCmd(),
+		NewAttestStorageCmd(),
 	)
 
 	return txCmd
@@ -775,15 +780,55 @@ Additional score dimensions can be set via flags.`,
 }
 
 // NewContestSampleCmd creates a CLI command for MsgContestSample.
+// Supports both flag-based and legacy positional args.
 func NewContestSampleCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "contest-sample [sample-id] [stake] [reason]",
 		Short: "Contest a sample's quality score or consent validity",
-		Args:  cobra.ExactArgs(3),
+		Long: `Contest an accepted sample, triggering a re-review.
+
+Flag-based (preferred):
+  zeroned tx knowledge contest-sample \
+    --sample-id <sample-id> \
+    --reason "Contains factual errors in code example" \
+    --stake 2000000uzrn \
+    --from challenger1
+
+Legacy positional:
+  zeroned tx knowledge contest-sample <sample-id> <stake> <reason> --from challenger1`,
+		Args: cobra.MaximumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
+			}
+
+			var sampleID, stake, reason string
+
+			// Flag-based mode
+			sampleID, _ = cmd.Flags().GetString("sample-id")
+			stake, _ = cmd.Flags().GetString("stake")
+			reason, _ = cmd.Flags().GetString("reason")
+
+			// Fall back to positional args if flags not set
+			if sampleID == "" && len(args) >= 1 {
+				sampleID = args[0]
+			}
+			if stake == "" && len(args) >= 2 {
+				stake = args[1]
+			}
+			if reason == "" && len(args) >= 3 {
+				reason = args[2]
+			}
+
+			if sampleID == "" {
+				return fmt.Errorf("--sample-id is required")
+			}
+			if stake == "" {
+				return fmt.Errorf("--stake is required")
+			}
+			if reason == "" {
+				return fmt.Errorf("--reason is required")
 			}
 
 			contestTypeStr, _ := cmd.Flags().GetString("contest-type")
@@ -794,9 +839,9 @@ func NewContestSampleCmd() *cobra.Command {
 
 			msg := &types.MsgContestSample{
 				Challenger:  clientCtx.GetFromAddress().String(),
-				SampleId:    args[0],
-				Stake:       args[1],
-				Reason:      args[2],
+				SampleId:    sampleID,
+				Stake:       stake,
+				Reason:      reason,
 				ContestType: contestType,
 			}
 
@@ -804,6 +849,9 @@ func NewContestSampleCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().String("sample-id", "", "Sample ID to contest")
+	cmd.Flags().String("stake", "", "Contest stake amount (uzrn)")
+	cmd.Flags().String("reason", "", "Reason for contesting")
 	cmd.Flags().String("contest-type", "", "Contest type: consent, quality, duplicate, toxic, copyright")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
@@ -1324,6 +1372,383 @@ func NewAddSampleCmd() *cobra.Command {
 	cmd.Flags().String("source-uri", "", "URI of the original source")
 	cmd.Flags().String("original-author", "", "Original author identifier")
 	cmd.Flags().String("license", "", "Content license")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// ─── Review CLI commands (R41-2) ────────────────────────────────────────────
+
+// reviewSaltEntry is the JSON schema for saved salt files.
+type reviewSaltEntry struct {
+	RoundID  string `json:"round_id"`
+	Score    uint64 `json:"score"`
+	SaltHex  string `json:"salt_hex"`
+	Reviewer string `json:"reviewer"`
+}
+
+// saltDir returns ~/.zeroned/review-salts/ (creating it if needed).
+func saltDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("cannot determine home directory: %w", err)
+	}
+	dir := filepath.Join(home, ".zeroned", "review-salts")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return "", fmt.Errorf("cannot create salt directory: %w", err)
+	}
+	return dir, nil
+}
+
+// saveSalt writes the salt entry to ~/.zeroned/review-salts/<round-id>.json.
+func saveSalt(entry reviewSaltEntry) error {
+	dir, err := saltDir()
+	if err != nil {
+		return err
+	}
+	bz, err := json.MarshalIndent(entry, "", "  ")
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(dir, entry.RoundID+".json")
+	return os.WriteFile(path, bz, 0o600)
+}
+
+// loadSalt reads the salt entry from ~/.zeroned/review-salts/<round-id>.json.
+func loadSalt(roundID string) (*reviewSaltEntry, error) {
+	dir, err := saltDir()
+	if err != nil {
+		return nil, err
+	}
+	path := filepath.Join(dir, roundID+".json")
+	bz, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("no saved salt for round %s: %w", roundID, err)
+	}
+	var entry reviewSaltEntry
+	if err := json.Unmarshal(bz, &entry); err != nil {
+		return nil, fmt.Errorf("corrupt salt file for round %s: %w", roundID, err)
+	}
+	return &entry, nil
+}
+
+// listPendingSalts returns all saved salt entries.
+func listPendingSalts() ([]reviewSaltEntry, error) {
+	dir, err := saltDir()
+	if err != nil {
+		return nil, err
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var salts []reviewSaltEntry
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		bz, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		var s reviewSaltEntry
+		if err := json.Unmarshal(bz, &s); err != nil {
+			continue
+		}
+		salts = append(salts, s)
+	}
+	return salts, nil
+}
+
+// NewCommitReviewCmd creates a CLI command to commit a sealed quality score.
+func NewCommitReviewCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "commit-review",
+		Short: "Commit a sealed quality score for a submission review",
+		Long: `Commit a blinded quality score during the commit phase of a quality round.
+
+The score and salt are sealed via SHA-256(score || salt || reviewer_address).
+The salt is saved locally to ~/.zeroned/review-salts/<round-id>.json for auto-reveal.
+
+Example:
+  zeroned tx knowledge commit-review \
+    --round-id <round-id> \
+    --score 85 \
+    --salt "my-secret-salt" \
+    --from reviewer1`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			roundID, _ := cmd.Flags().GetString("round-id")
+			if roundID == "" {
+				return fmt.Errorf("--round-id is required")
+			}
+
+			scoreVal, _ := cmd.Flags().GetUint64("score")
+			if scoreVal > types.MaxBPS {
+				return fmt.Errorf("score %d exceeds maximum %d", scoreVal, types.MaxBPS)
+			}
+
+			saltStr, _ := cmd.Flags().GetString("salt")
+			if saltStr == "" {
+				// Generate a random 32-byte salt if not provided
+				saltBytes := make([]byte, 32)
+				if _, err := rand.Read(saltBytes); err != nil {
+					return fmt.Errorf("failed to generate random salt: %w", err)
+				}
+				saltStr = hex.EncodeToString(saltBytes)
+				cmd.Printf("Generated random salt: %s\n", saltStr)
+			}
+
+			reviewer := clientCtx.GetFromAddress().String()
+
+			// Compute seal: SHA-256(score || salt || reviewer_address)
+			scoreStr := strconv.FormatUint(scoreVal, 10)
+			preimage := scoreStr + saltStr + reviewer
+			seal := sha256.Sum256([]byte(preimage))
+
+			// Query round details for display
+			queryClient := types.NewQueryClient(clientCtx)
+			roundRes, err := queryClient.QualityRound(cmd.Context(), &types.QueryQualityRoundRequest{Id: roundID})
+			if err != nil {
+				cmd.PrintErrf("Warning: could not query round details: %v\n", err)
+			} else if roundRes.Round != nil {
+				cmd.Printf("Round: %s (submission: %s)\n", roundID, roundRes.Round.SubmissionId)
+				cmd.Printf("Reveal deadline: block %d\n", roundRes.Round.RevealDeadline)
+			}
+
+			msg := &types.MsgSubmitCommitment{
+				Verifier:   reviewer,
+				RoundId:    roundID,
+				CommitHash: seal[:],
+			}
+
+			// Save salt locally for reveal
+			if err := saveSalt(reviewSaltEntry{
+				RoundID:  roundID,
+				Score:    scoreVal,
+				SaltHex:  saltStr,
+				Reviewer: reviewer,
+			}); err != nil {
+				return fmt.Errorf("failed to save salt (CRITICAL — you will lose your stake): %w", err)
+			}
+			cmd.Printf("Salt saved to ~/.zeroned/review-salts/%s.json\n", roundID)
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().String("round-id", "", "Quality round ID")
+	cmd.Flags().Uint64("score", 0, "Overall quality score (0-1000000)")
+	cmd.Flags().String("salt", "", "Secret salt (auto-generated if empty)")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewRevealReviewCmd creates a CLI command to reveal a previously committed score.
+func NewRevealReviewCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "reveal-review",
+		Short: "Reveal a previously committed quality score",
+		Long: `Reveal quality scores for a committed review round.
+
+Loads the saved salt from ~/.zeroned/review-salts/<round-id>.json.
+
+Example:
+  zeroned tx knowledge reveal-review --round-id <round-id> --from reviewer1
+
+Auto-reveal all pending reviews:
+  zeroned tx knowledge reveal-review --auto --from reviewer1`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			autoMode, _ := cmd.Flags().GetBool("auto")
+
+			if autoMode {
+				return revealAllPending(cmd, clientCtx)
+			}
+
+			roundID, _ := cmd.Flags().GetString("round-id")
+			if roundID == "" {
+				return fmt.Errorf("--round-id is required (or use --auto)")
+			}
+
+			return revealSingle(cmd, clientCtx, roundID)
+		},
+	}
+
+	cmd.Flags().String("round-id", "", "Quality round ID to reveal")
+	cmd.Flags().Bool("auto", false, "Auto-reveal all pending committed reviews in reveal phase")
+	cmd.Flags().Uint64("reasoning-depth", 0, "Reasoning depth score (0-1000000)")
+	cmd.Flags().Uint64("novelty", 0, "Novelty score (0-1000000)")
+	cmd.Flags().Uint64("toxicity", 0, "Toxicity score (0-1000000, higher = more toxic)")
+	cmd.Flags().Uint64("factual-accuracy", 0, "Factual accuracy score (0-1000000)")
+	cmd.Flags().Bool("consent-valid", true, "Whether consent proof is valid")
+	cmd.Flags().Bool("duplicate", false, "Whether sample is a duplicate")
+	cmd.Flags().String("notes", "", "Reviewer notes")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// revealSingle reveals a single round from saved salt.
+func revealSingle(cmd *cobra.Command, clientCtx client.Context, roundID string) error {
+	entry, err := loadSalt(roundID)
+	if err != nil {
+		return err
+	}
+
+	salt, err := hex.DecodeString(entry.SaltHex)
+	if err != nil {
+		return fmt.Errorf("invalid saved salt hex: %w", err)
+	}
+
+	reasoningDepth, _ := cmd.Flags().GetUint64("reasoning-depth")
+	novelty, _ := cmd.Flags().GetUint64("novelty")
+	toxicity, _ := cmd.Flags().GetUint64("toxicity")
+	factualAccuracy, _ := cmd.Flags().GetUint64("factual-accuracy")
+	consentValid, _ := cmd.Flags().GetBool("consent-valid")
+	duplicate, _ := cmd.Flags().GetBool("duplicate")
+	notes, _ := cmd.Flags().GetString("notes")
+
+	scores := &types.QualityVote{
+		OverallQuality:  entry.Score,
+		ReasoningDepth:  reasoningDepth,
+		Novelty:         novelty,
+		Toxicity:        toxicity,
+		FactualAccuracy: factualAccuracy,
+		ConsentValid:    consentValid,
+		Duplicate:       duplicate,
+		Notes:           notes,
+	}
+
+	msg := &types.MsgSubmitReveal{
+		Verifier: clientCtx.GetFromAddress().String(),
+		RoundId:  roundID,
+		Scores:   scores,
+		Salt:     salt,
+	}
+
+	cmd.Printf("Revealing score %d for round %s\n", entry.Score, roundID)
+
+	return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+}
+
+// revealAllPending reveals all pending committed reviews in the reveal phase.
+func revealAllPending(cmd *cobra.Command, clientCtx client.Context) error {
+	salts, err := listPendingSalts()
+	if err != nil {
+		return fmt.Errorf("failed to list pending salts: %w", err)
+	}
+
+	if len(salts) == 0 {
+		cmd.Println("No pending review salts found.")
+		return nil
+	}
+
+	reviewer := clientCtx.GetFromAddress().String()
+	queryClient := types.NewQueryClient(clientCtx)
+	revealed := 0
+
+	for _, entry := range salts {
+		// Only reveal rounds belonging to this reviewer
+		if entry.Reviewer != "" && entry.Reviewer != reviewer {
+			continue
+		}
+
+		// Query round to check if it's in reveal phase
+		roundRes, err := queryClient.QualityRound(cmd.Context(), &types.QueryQualityRoundRequest{Id: entry.RoundID})
+		if err != nil {
+			cmd.PrintErrf("Warning: could not query round %s: %v\n", entry.RoundID, err)
+			continue
+		}
+		if roundRes.Round == nil {
+			continue
+		}
+
+		// Check if round is in reveal phase
+		if roundRes.Round.Phase != types.VerificationPhase_VERIFICATION_PHASE_REVEAL {
+			if roundRes.Round.Phase == types.VerificationPhase_VERIFICATION_PHASE_COMMIT {
+				cmd.Printf("Round %s still in commit phase (reveal deadline: block %d)\n",
+					entry.RoundID, roundRes.Round.RevealDeadline)
+			}
+			continue
+		}
+
+		salt, err := hex.DecodeString(entry.SaltHex)
+		if err != nil {
+			cmd.PrintErrf("Warning: invalid salt for round %s: %v\n", entry.RoundID, err)
+			continue
+		}
+
+		scores := &types.QualityVote{
+			OverallQuality: entry.Score,
+			ConsentValid:   true,
+		}
+
+		msg := &types.MsgSubmitReveal{
+			Verifier: reviewer,
+			RoundId:  entry.RoundID,
+			Scores:   scores,
+			Salt:     salt,
+		}
+
+		cmd.Printf("Auto-revealing score %d for round %s\n", entry.Score, entry.RoundID)
+		if err := tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg); err != nil {
+			cmd.PrintErrf("Failed to reveal round %s: %v\n", entry.RoundID, err)
+			continue
+		}
+		revealed++
+	}
+
+	cmd.Printf("Revealed %d/%d pending reviews.\n", revealed, len(salts))
+	return nil
+}
+
+// NewAttestStorageCmd creates a CLI command for MsgAttestStorage.
+func NewAttestStorageCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "attest-storage",
+		Short: "Submit proof-of-storage attestation for assigned shard",
+		Long: `Validator attests proof-of-storage for assigned TDU data at a snapshot height.
+
+Example:
+  zeroned tx knowledge attest-storage \
+    --snapshot-height 1000 \
+    --data-hash <sha256-of-assigned-tdu-data> \
+    --from validator1`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			snapshotHeight, _ := cmd.Flags().GetInt64("snapshot-height")
+			if snapshotHeight <= 0 {
+				return fmt.Errorf("--snapshot-height must be > 0")
+			}
+
+			dataHash, _ := cmd.Flags().GetString("data-hash")
+			if dataHash == "" {
+				return fmt.Errorf("--data-hash is required")
+			}
+
+			msg := &types.MsgAttestStorage{
+				Validator:      clientCtx.GetFromAddress().String(),
+				SnapshotHeight: snapshotHeight,
+				AttestationHex: dataHash,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().Int64("snapshot-height", 0, "Snapshot height to attest for")
+	cmd.Flags().String("data-hash", "", "SHA-256 hash of assigned TDU data (hex)")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }

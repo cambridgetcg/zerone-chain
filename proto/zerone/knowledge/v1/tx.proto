@@ -81,6 +81,11 @@ service Msg {
   rpc VoteResearchProposal(MsgVoteResearchProposal) returns (MsgVoteResearchProposalResponse);
   rpc ExecuteResearchProposal(MsgExecuteResearchProposal) returns (MsgExecuteResearchProposalResponse);
 
+  // ─── Storage attestation ────────────────────────────────────────────────
+
+  // AttestStorage submits a proof-of-storage attestation for an assigned shard.
+  rpc AttestStorage(MsgAttestStorage) returns (MsgAttestStorageResponse);
+
   // ─── Consent management ──────────────────────────────────────────────────
 
   // RevokeConsent allows an author or submitter to withdraw consent.
@@ -400,6 +405,18 @@ message MsgAddSample {
 message MsgAddSampleResponse {
   string sample_id = 1;
 }
+
+// ─── Storage attestation messages ────────────────────────────────────────────
+
+message MsgAttestStorage {
+  option (cosmos.msg.v1.signer) = "validator";
+
+  string validator        = 1;
+  int64  snapshot_height  = 2;
+  string attestation_hex  = 3; // hex-encoded hash of assigned TDU data
+}
+
+message MsgAttestStorageResponse {}
 
 // ─── Consent management messages ────────────────────────────────────────────
 

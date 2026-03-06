@@ -10,6 +10,7 @@ import (
 )
 
 func init() {
+	RegisterMsgAttestStorageProto()
 	proto.RegisterType((*ConsentProof)(nil), "zerone.knowledge.v1.ConsentProof")
 	proto.RegisterType((*Submission)(nil), "zerone.knowledge.v1.Submission")
 	proto.RegisterType((*Sample)(nil), "zerone.knowledge.v1.Sample")

@@ -250,7 +250,7 @@ func TestHandleMsgAttestStorage(t *testing.T) {
 	ctx = sdkCtx.WithBlockHeight(1050).WithEventManager(sdk.NewEventManager())
 
 	msg := &types.MsgAttestStorage{
-		ValidatorAddr:  "val1",
+		Validator:      "val1",
 		SnapshotHeight: 1000,
 		AttestationHex: "abcdef1234",
 	}
@@ -275,10 +275,10 @@ func TestHandleMsgAttestStorage_InvalidInputs(t *testing.T) {
 		name string
 		msg  *types.MsgAttestStorage
 	}{
-		{"empty validator", &types.MsgAttestStorage{ValidatorAddr: "", SnapshotHeight: 1000, AttestationHex: "abc"}},
-		{"empty attestation", &types.MsgAttestStorage{ValidatorAddr: "val1", SnapshotHeight: 1000, AttestationHex: ""}},
-		{"zero snapshot", &types.MsgAttestStorage{ValidatorAddr: "val1", SnapshotHeight: 0, AttestationHex: "abc"}},
-		{"no assignment", &types.MsgAttestStorage{ValidatorAddr: "val1", SnapshotHeight: 999, AttestationHex: "abc"}},
+		{"empty validator", &types.MsgAttestStorage{Validator: "", SnapshotHeight: 1000, AttestationHex: "abc"}},
+		{"empty attestation", &types.MsgAttestStorage{Validator: "val1", SnapshotHeight: 1000, AttestationHex: ""}},
+		{"zero snapshot", &types.MsgAttestStorage{Validator: "val1", SnapshotHeight: 0, AttestationHex: "abc"}},
+		{"no assignment", &types.MsgAttestStorage{Validator: "val1", SnapshotHeight: 999, AttestationHex: "abc"}},
 	}
 
 	for _, tc := range tests {
