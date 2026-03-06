@@ -238,7 +238,6 @@ func TestTEEMsgServer_VerifyAttestation(t *testing.T) {
 
 	// Verify.
 	resp, err := srv.VerifyAttestation(ctx, &types.MsgVerifyAttestation{
-		Verifier:    testAddr,
 		Operator:    testAddr,
 		Attestation: []byte("fresh-doc"),
 	})
@@ -258,7 +257,6 @@ func TestTEEMsgServer_SuspendEnclave_Unauthorized(t *testing.T) {
 	_, err = srv.SuspendEnclave(ctx, &types.MsgSuspendEnclave{
 		Authority: testAddr, // Not the governance authority
 		Operator:  testAddr,
-		Reason:    "test",
 	})
 	require.Error(t, err)
 	require.ErrorIs(t, err, types.ErrUnauthorized)
@@ -276,7 +274,6 @@ func TestTEEMsgServer_SuspendEnclave_Authorized(t *testing.T) {
 	_, err = srv.SuspendEnclave(ctx, &types.MsgSuspendEnclave{
 		Authority: "authority",
 		Operator:  testAddr,
-		Reason:    "attestation expired",
 	})
 	require.NoError(t, err)
 }
@@ -291,7 +288,6 @@ func TestTEEMsgServer_RevokeEnclave_Unauthorized(t *testing.T) {
 	_, err = srv.RevokeEnclave(ctx, &types.MsgRevokeEnclave{
 		Authority: testAddr,
 		Operator:  testAddr,
-		Reason:    "compromised",
 	})
 	require.Error(t, err)
 	require.ErrorIs(t, err, types.ErrUnauthorized)
@@ -307,7 +303,6 @@ func TestTEEMsgServer_RevokeEnclave_Authorized(t *testing.T) {
 	_, err = srv.RevokeEnclave(ctx, &types.MsgRevokeEnclave{
 		Authority: "authority",
 		Operator:  testAddr,
-		Reason:    "compromised",
 	})
 	require.NoError(t, err)
 
@@ -395,7 +390,6 @@ func TestMsgVerifyAttestation_ValidateBasic(t *testing.T) {
 		{
 			name: "valid",
 			msg: types.MsgVerifyAttestation{
-				Verifier:    testAddr,
 				Operator:    testAddr,
 				Attestation: []byte("doc"),
 			},
@@ -404,8 +398,7 @@ func TestMsgVerifyAttestation_ValidateBasic(t *testing.T) {
 		{
 			name: "invalid verifier",
 			msg: types.MsgVerifyAttestation{
-				Verifier:    "bad",
-				Operator:    testAddr,
+				Operator:    "bad",
 				Attestation: []byte("doc"),
 			},
 			wantErr: true,
@@ -413,7 +406,6 @@ func TestMsgVerifyAttestation_ValidateBasic(t *testing.T) {
 		{
 			name: "empty attestation",
 			msg: types.MsgVerifyAttestation{
-				Verifier:    testAddr,
 				Operator:    testAddr,
 				Attestation: nil,
 			},

@@ -75,22 +75,27 @@ func (u *APIUsageRecord) UnmarshalJSON(bz []byte) error {
 
 // ─── API Revenue Params ─────────────────────────────────────────────────────
 
-// APIRevenueParams holds the 5-way revenue split for API revenue.
+// APIRevenueParams holds the 5-way revenue split and token pricing for API revenue.
 type APIRevenueParams struct {
 	TrainingShareBPS  uint64 `json:"training_share_bps"`  // 4000 = 40%
 	InfraShareBPS     uint64 `json:"infra_share_bps"`     // 2500 = 25%
 	SubmitterShareBPS uint64 `json:"submitter_share_bps"` // 2000 = 20%
 	ProtocolShareBPS  uint64 `json:"protocol_share_bps"`  // 1000 = 10%
 	ResearchShareBPS  uint64 `json:"research_share_bps"`  // 500 = 5%
+	// Token pricing (per 1000 tokens, uzrn)
+	PricePerInputToken  string `json:"price_per_input_token,omitempty"`  // default: "1"
+	PricePerOutputToken string `json:"price_per_output_token,omitempty"` // default: "3"
 }
 
 func DefaultAPIRevenueParams() APIRevenueParams {
 	return APIRevenueParams{
-		TrainingShareBPS:  4_000, // 40%
-		InfraShareBPS:     2_500, // 25%
-		SubmitterShareBPS: 2_000, // 20%
-		ProtocolShareBPS:  1_000, // 10%
-		ResearchShareBPS:  500,   // 5%
+		TrainingShareBPS:    4_000, // 40%
+		InfraShareBPS:       2_500, // 25%
+		SubmitterShareBPS:   2_000, // 20%
+		ProtocolShareBPS:    1_000, // 10%
+		ResearchShareBPS:    500,   // 5%
+		PricePerInputToken:  "1",   // 1 uzrn per 1000 input tokens
+		PricePerOutputToken: "3",   // 3 uzrn per 1000 output tokens
 	}
 }
 

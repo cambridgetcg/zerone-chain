@@ -126,6 +126,66 @@ type FitnessSignal struct {
 	Redundancy        sdkmath.LegacyDec // weight: 20% — inverted: 1.0 = unique, 0.0 = fully redundant
 }
 
+// Marshal serializes FitnessSignal to a proto-compatible binary format.
+func (s *FitnessSignal) Marshal() ([]byte, error) {
+	var buf []byte
+	buf = protoAppendStringField(buf, 1, s.TrainingInfluence.String())
+	buf = protoAppendStringField(buf, 2, s.UsageCorrelation.String())
+	buf = protoAppendStringField(buf, 3, s.Redundancy.String())
+	return buf, nil
+}
+
+// Unmarshal deserializes FitnessSignal from proto-compatible binary format.
+func (s *FitnessSignal) Unmarshal(dAtA []byte) error {
+	offset := 0
+	for offset < len(dAtA) {
+		fieldNum, wireType, newOffset, err := protoConsumeTag(dAtA, offset)
+		if err != nil {
+			return err
+		}
+		offset = newOffset
+		switch fieldNum {
+		case 1:
+			raw, newOff, err := protoConsumeBytes(dAtA, offset)
+			if err != nil {
+				return err
+			}
+			s.TrainingInfluence, err = sdkmath.LegacyNewDecFromStr(string(raw))
+			if err != nil {
+				return err
+			}
+			offset = newOff
+		case 2:
+			raw, newOff, err := protoConsumeBytes(dAtA, offset)
+			if err != nil {
+				return err
+			}
+			s.UsageCorrelation, err = sdkmath.LegacyNewDecFromStr(string(raw))
+			if err != nil {
+				return err
+			}
+			offset = newOff
+		case 3:
+			raw, newOff, err := protoConsumeBytes(dAtA, offset)
+			if err != nil {
+				return err
+			}
+			s.Redundancy, err = sdkmath.LegacyNewDecFromStr(string(raw))
+			if err != nil {
+				return err
+			}
+			offset = newOff
+		default:
+			newOff, err := protoSkipField(dAtA, offset, wireType)
+			if err != nil {
+				return err
+			}
+			offset = newOff
+		}
+	}
+	return nil
+}
+
 // Signal weights as LegacyDec.
 var (
 	SignalWeightTraining   = sdkmath.LegacyNewDecWithPrec(5, 1) // 0.5

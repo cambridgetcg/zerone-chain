@@ -77,6 +77,29 @@ func (k Keeper) RecordTraining(ctx context.Context, msg *types.MsgRecordTraining
 	}, nil
 }
 
+// SetTrainingRecord stores a training record directly (for testing and seed data).
+func (k Keeper) SetTrainingRecord(ctx context.Context, record *types.TrainingRecord) error {
+	kvStore := k.storeService.OpenKVStore(ctx)
+	key := types.TrainingRecordKey(record.AttestationHash)
+
+	bz, err := json.Marshal(record)
+	if err != nil {
+		return fmt.Errorf("failed to marshal training record: %w", err)
+	}
+	if err := kvStore.Set(key, bz); err != nil {
+		return fmt.Errorf("failed to store training record: %w", err)
+	}
+
+	// Index by model hash
+	if record.ModelHash != "" {
+		modelKey := types.TrainingRecordByModelKey(record.ModelHash, record.AttestationHash)
+		if err := kvStore.Set(modelKey, []byte{0x01}); err != nil {
+			return fmt.Errorf("failed to set model index: %w", err)
+		}
+	}
+	return nil
+}
+
 // GetTrainingRecord retrieves a training record by attestation hash.
 func (k Keeper) GetTrainingRecord(ctx context.Context, attestationHash string) (*types.TrainingRecord, error) {
 	kvStore := k.storeService.OpenKVStore(ctx)

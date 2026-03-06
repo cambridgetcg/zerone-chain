@@ -72,7 +72,10 @@ type Params struct {
 	FounderAddress       string `protobuf:"bytes,37,opt,name=founder_address,json=founderAddress,proto3" json:"founder_address,omitempty"`
 	AiOperationsShareBps uint64 `protobuf:"varint,38,opt,name=ai_operations_share_bps,json=aiOperationsShareBps,proto3" json:"ai_operations_share_bps,omitempty"` // default: 30000 (3%)
 	AiOperationsAddress  string `protobuf:"bytes,39,opt,name=ai_operations_address,json=aiOperationsAddress,proto3" json:"ai_operations_address,omitempty"`
-	unknownFields        protoimpl.UnknownFields
+	// ─── API token pricing (R44-1) ──────────────────────────────────────────────
+	PricePerInputToken  string `protobuf:"bytes,40,opt,name=price_per_input_token,json=pricePerInputToken,proto3" json:"price_per_input_token,omitempty"`   // uzrn per 1000 input tokens — default: "1"
+	PricePerOutputToken string `protobuf:"bytes,41,opt,name=price_per_output_token,json=pricePerOutputToken,proto3" json:"price_per_output_token,omitempty"` // uzrn per 1000 output tokens — default: "3"
+	unknownFields       protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
 
@@ -375,6 +378,20 @@ func (x *Params) GetAiOperationsShareBps() uint64 {
 func (x *Params) GetAiOperationsAddress() string {
 	if x != nil {
 		return x.AiOperationsAddress
+	}
+	return ""
+}
+
+func (x *Params) GetPricePerInputToken() string {
+	if x != nil {
+		return x.PricePerInputToken
+	}
+	return ""
+}
+
+func (x *Params) GetPricePerOutputToken() string {
+	if x != nil {
+		return x.PricePerOutputToken
 	}
 	return ""
 }

@@ -198,13 +198,9 @@ func (k Keeper) WithdrawAPICredits(ctx context.Context, msg *types.MsgWithdrawAP
 func (k Keeper) RecordAPIUsage(ctx context.Context, msg *types.MsgRecordAPIUsage) (*types.MsgRecordAPIUsageResponse, error) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 
-	params, err := k.GetParams(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	priceInput := parseUzrn(params.PricePerInputToken)
-	priceOutput := parseUzrn(params.PricePerOutputToken)
+	revParams := k.GetAPIRevenueParams(ctx)
+	priceInput := parseUzrn(revParams.PricePerInputToken)
+	priceOutput := parseUzrn(revParams.PricePerOutputToken)
 
 	var totalDeducted uint64
 	var processed uint64
@@ -458,8 +454,8 @@ func (k Keeper) GetModelAttribution(ctx context.Context, modelHash string) []str
 	for ; iter.Valid(); iter.Next() {
 		// Value is attestation hash — look up training record
 		attestationHash := string(iter.Key()[len(prefix):])
-		record, found := k.GetTrainingRecord(ctx, attestationHash)
-		if !found {
+		record, err := k.GetTrainingRecord(ctx, attestationHash)
+		if err != nil {
 			continue
 		}
 
@@ -469,6 +465,12 @@ func (k Keeper) GetModelAttribution(ctx context.Context, modelHash string) []str
 		sampleIDs = append(sampleIDs, attestationHash) // placeholder for full TDU resolution
 	}
 	return sampleIDs
+}
+
+// SetValidatorInfo stores a validator info entry (for testing and seed data).
+func (k Keeper) SetValidatorInfo(ctx context.Context, addr string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	return store.Set(types.ValidatorInfoKeyFn(addr), []byte{0x01})
 }
 
 // ─── State CRUD ─────────────────────────────────────────────────────────────

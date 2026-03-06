@@ -138,10 +138,10 @@ func TestRecordAPIUsage(t *testing.T) {
 	require.NoError(t, err)
 
 	// Set pricing params: 1 uzrn per 1000 input, 3 uzrn per 1000 output
-	params, _ := k.GetParams(ctx)
-	params.PricePerInputToken = "1"
-	params.PricePerOutputToken = "3"
-	_ = k.SetParams(ctx, params)
+	revParams := types.DefaultAPIRevenueParams()
+	revParams.PricePerInputToken = "1"
+	revParams.PricePerOutputToken = "3"
+	_ = k.SetAPIRevenueParams(ctx, revParams)
 
 	// Record usage: 5000 input tokens + 2000 output tokens
 	// Cost = (5000 * 1 / 1000) + (2000 * 3 / 1000) = 5 + 6 = 11 uzrn
@@ -177,10 +177,10 @@ func TestRecordAPIUsage_MultipleBatches(t *testing.T) {
 	_, _ = k.CreateAPIKey(ctx, &types.MsgCreateAPIKey{Owner: testWallet, KeyHash: testKeyHash2})
 	_, _ = k.DepositAPICredits(ctx, &types.MsgDepositAPICredits{Depositor: testWallet, Amount: "100000"})
 
-	params, _ := k.GetParams(ctx)
-	params.PricePerInputToken = "1"
-	params.PricePerOutputToken = "3"
-	_ = k.SetParams(ctx, params)
+	revParams := types.DefaultAPIRevenueParams()
+	revParams.PricePerInputToken = "1"
+	revParams.PricePerOutputToken = "3"
+	_ = k.SetAPIRevenueParams(ctx, revParams)
 
 	msg := &types.MsgRecordAPIUsage{
 		Bridge: testWallet2,
@@ -209,10 +209,10 @@ func TestRecordAPIUsage_InsufficientBalance(t *testing.T) {
 	_, _ = k.CreateAPIKey(ctx, &types.MsgCreateAPIKey{Owner: testWallet, KeyHash: testKeyHash})
 	_, _ = k.DepositAPICredits(ctx, &types.MsgDepositAPICredits{Depositor: testWallet, Amount: "5"})
 
-	params, _ := k.GetParams(ctx)
-	params.PricePerInputToken = "1"
-	params.PricePerOutputToken = "3"
-	_ = k.SetParams(ctx, params)
+	revParams := types.DefaultAPIRevenueParams()
+	revParams.PricePerInputToken = "1"
+	revParams.PricePerOutputToken = "3"
+	_ = k.SetAPIRevenueParams(ctx, revParams)
 
 	// First request that costs more than balance — partial deduction
 	msg := &types.MsgRecordAPIUsage{
@@ -299,7 +299,7 @@ func TestModelAttribution(t *testing.T) {
 		DatasetSize:        1000,
 		BaseModel:          "zerone-8b",
 		ModelHash:          "model_abc",
-		BenchmarkScore:     "0.92",
+		BenchmarkScore:     0.92,
 		BlockHeight:        50,
 	}
 	require.NoError(t, k.SetTrainingRecord(ctx, record))
@@ -411,10 +411,10 @@ func TestRevokedKeySkippedInUsage(t *testing.T) {
 	_, _ = k.DepositAPICredits(ctx, &types.MsgDepositAPICredits{Depositor: testWallet, Amount: "100000"})
 	_, _ = k.RevokeAPIKey(ctx, &types.MsgRevokeAPIKey{Owner: testWallet, KeyHash: testKeyHash})
 
-	params, _ := k.GetParams(ctx)
-	params.PricePerInputToken = "1"
-	params.PricePerOutputToken = "3"
-	_ = k.SetParams(ctx, params)
+	revParams := types.DefaultAPIRevenueParams()
+	revParams.PricePerInputToken = "1"
+	revParams.PricePerOutputToken = "3"
+	_ = k.SetAPIRevenueParams(ctx, revParams)
 
 	// Usage with revoked key should be skipped
 	resp, err := k.RecordAPIUsage(ctx, &types.MsgRecordAPIUsage{
@@ -436,10 +436,10 @@ func TestAPIUsageRecordTracking(t *testing.T) {
 	_, _ = k.CreateAPIKey(ctx, &types.MsgCreateAPIKey{Owner: testWallet, KeyHash: testKeyHash})
 	_, _ = k.DepositAPICredits(ctx, &types.MsgDepositAPICredits{Depositor: testWallet, Amount: "100000"})
 
-	params, _ := k.GetParams(ctx)
-	params.PricePerInputToken = "1"
-	params.PricePerOutputToken = "3"
-	_ = k.SetParams(ctx, params)
+	revParams := types.DefaultAPIRevenueParams()
+	revParams.PricePerInputToken = "1"
+	revParams.PricePerOutputToken = "3"
+	_ = k.SetAPIRevenueParams(ctx, revParams)
 
 	_, _ = k.RecordAPIUsage(ctx, &types.MsgRecordAPIUsage{
 		Bridge: testWallet2,

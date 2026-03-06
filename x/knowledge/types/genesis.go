@@ -62,7 +62,11 @@ func DefaultParams() Params {
 		FounderShareBps:      80_000, // 8%
 		FounderAddress:       "",
 		AiOperationsShareBps: 30_000, // 3%
-		AiOperationsAddress: "",
+		AiOperationsAddress:  "",
+
+		// ─── API token pricing (R44-1) ──────────────────────────────────────
+		PricePerInputToken:  "1", // 1 uzrn per 1000 input tokens
+		PricePerOutputToken: "3", // 3 uzrn per 1000 output tokens
 	}
 }
 
