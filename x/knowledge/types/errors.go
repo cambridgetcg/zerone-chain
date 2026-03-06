@@ -101,6 +101,15 @@ var (
 	ErrTrainingRecordExists       = errors.Register(ModuleName, 152, "training record already exists")
 	ErrEnclaveNotRegistered       = errors.Register(ModuleName, 153, "enclave operator not registered")
 
+	// ─── API revenue (160–166) ─────────────────────────────────────────
+	ErrAPIKeyNotFound           = errors.Register(ModuleName, 160, "API key not found")
+	ErrAPIKeyRevoked            = errors.Register(ModuleName, 161, "API key has been revoked")
+	ErrInsufficientAPICredits   = errors.Register(ModuleName, 162, "insufficient API credits")
+	ErrAPIKeyAlreadyExists      = errors.Register(ModuleName, 163, "API key already registered")
+	ErrInvalidAPIKeyHash        = errors.Register(ModuleName, 164, "invalid API key hash")
+	ErrAPIKeyOwnerMismatch      = errors.Register(ModuleName, 165, "API key owner mismatch")
+	ErrInvalidWithdrawalAmount  = errors.Register(ModuleName, 166, "withdrawal exceeds balance")
+
 	// ─── IBC (80) ──────────────────────────────────────────────────────────
 	ErrInvalidIBCVersion = errors.Register(ModuleName, 80, "invalid IBC version")
 

@@ -147,3 +147,32 @@ func (l *Ledger) HasSufficientBalance(ctx context.Context, userAddr string, esti
 	}
 	return bal >= estimatedCost, bal, nil
 }
+
+// EstimateTokenCost calculates cost based on per-token pricing.
+// pricePerInputK and pricePerOutputK are prices per 1000 tokens in uzrn.
+func EstimateTokenCost(inputTokens, outputTokens int64, pricePerInputK, pricePerOutputK int64) int64 {
+	inputCost := (inputTokens * pricePerInputK) / 1000
+	outputCost := (outputTokens * pricePerOutputK) / 1000
+	total := inputCost + outputCost
+	if total < 1 && (inputTokens > 0 || outputTokens > 0) {
+		total = 1 // minimum 1 uzrn
+	}
+	return total
+}
+
+// RecordUsageWithTokens records a usage event with input/output token counts.
+func (l *Ledger) RecordUsageWithTokens(ctx context.Context, userAddr, requestID string, inputTokens, outputTokens, costUZRN int64, model string) error {
+	return l.RecordUsage(ctx, &UsageRecord{
+		UserAddr:       userAddr,
+		RequestID:      requestID,
+		TokensConsumed: inputTokens + outputTokens,
+		CostUZRN:       costUZRN,
+		Model:          model,
+		Timestamp:      time.Now(),
+	})
+}
+
+// GetLowBalanceThreshold returns 10% of the given total deposits.
+func GetLowBalanceThreshold(totalDeposited int64) int64 {
+	return totalDeposited / 10
+}

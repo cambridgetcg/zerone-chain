@@ -510,3 +510,46 @@ message TrainingRecord {
   string benchmark_score = 8;      // stored as string for precision
   int64  block_height = 9;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// API Revenue Types (R44-1)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// APIKeyRecord maps an API key hash to a wallet address on-chain.
+message APIKeyRecord {
+  string key_hash         = 1;  // SHA-256 of API key
+  string wallet           = 2;  // Bech32 wallet address
+  int64  created_at_block = 3;  // Block height when created
+  bool   revoked          = 4;  // Whether key is deactivated
+  string rate_limit_tier  = 5;  // "free", "standard", "premium"
+}
+
+// APIBalance tracks a wallet's prepaid API credit balance.
+message APIBalance {
+  string wallet           = 1;  // Bech32 wallet address
+  string balance          = 2;  // uzrn balance (string for precision)
+  string total_deposited  = 3;  // Lifetime deposits
+  string total_consumed   = 4;  // Lifetime consumption
+  int64  last_deposit_block = 5;
+  int64  last_usage_block   = 6;
+}
+
+// APIUsageRecord aggregates per-epoch usage for a wallet.
+message APIUsageRecord {
+  string wallet           = 1;  // Bech32 wallet address
+  uint64 epoch            = 2;  // Epoch number
+  uint64 input_tokens     = 3;  // Total input tokens this epoch
+  uint64 output_tokens    = 4;  // Total output tokens this epoch
+  uint64 request_count    = 5;  // Total requests this epoch
+  string total_cost       = 6;  // Total cost in uzrn
+  string model_used       = 7;  // Primary model used
+}
+
+// APIRevenueParams holds the 5-way revenue split for API revenue.
+message APIRevenueParams {
+  uint64 training_share_bps   = 1;  // Model training contributors (default 4000 = 40%)
+  uint64 infra_share_bps      = 2;  // Infrastructure/validators (default 2500 = 25%)
+  uint64 submitter_share_bps  = 3;  // Data providers (default 2000 = 20%)
+  uint64 protocol_share_bps   = 4;  // Protocol treasury (default 1000 = 10%)
+  uint64 research_share_bps   = 5;  // Research fund (default 500 = 5%)
+}

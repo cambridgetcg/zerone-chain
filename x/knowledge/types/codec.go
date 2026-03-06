@@ -36,6 +36,12 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgVerifyAttestation{}, "zerone_knowledge/VerifyAttestation", nil)
 	cdc.RegisterConcrete(&MsgSuspendEnclave{}, "zerone_knowledge/SuspendEnclave", nil)
 	cdc.RegisterConcrete(&MsgRevokeEnclave{}, "zerone_knowledge/RevokeEnclave", nil)
+	// API revenue (R44-1)
+	cdc.RegisterConcrete(&MsgCreateAPIKey{}, "zerone_knowledge/CreateAPIKey", nil)
+	cdc.RegisterConcrete(&MsgRevokeAPIKey{}, "zerone_knowledge/RevokeAPIKey", nil)
+	cdc.RegisterConcrete(&MsgDepositAPICredits{}, "zerone_knowledge/DepositAPICredits", nil)
+	cdc.RegisterConcrete(&MsgWithdrawAPICredits{}, "zerone_knowledge/WithdrawAPICredits", nil)
+	cdc.RegisterConcrete(&MsgRecordAPIUsage{}, "zerone_knowledge/RecordAPIUsage", nil)
 }
 
 // RegisterInterfaces registers the knowledge module's interface implementations.
@@ -72,6 +78,12 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgVerifyAttestation{},
 		&MsgSuspendEnclave{},
 		&MsgRevokeEnclave{},
+		// API revenue (R44-1)
+		&MsgCreateAPIKey{},
+		&MsgRevokeAPIKey{},
+		&MsgDepositAPICredits{},
+		&MsgWithdrawAPICredits{},
+		&MsgRecordAPIUsage{},
 	)
 }
 

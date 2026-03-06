@@ -113,6 +113,28 @@ func (m msgServer) AddSample(_ context.Context, _ *types.MsgAddSample) (*types.M
 	return nil, status.Error(codes.Unimplemented, "AddSample not implemented (R37)")
 }
 
+// ─── API Revenue handlers (R44-1) ──────────────────────────────────────────
+
+func (m msgServer) CreateAPIKey(ctx context.Context, msg *types.MsgCreateAPIKey) (*types.MsgCreateAPIKeyResponse, error) {
+	return m.keeper.CreateAPIKey(ctx, msg)
+}
+
+func (m msgServer) RevokeAPIKey(ctx context.Context, msg *types.MsgRevokeAPIKey) (*types.MsgRevokeAPIKeyResponse, error) {
+	return m.keeper.RevokeAPIKey(ctx, msg)
+}
+
+func (m msgServer) DepositAPICredits(ctx context.Context, msg *types.MsgDepositAPICredits) (*types.MsgDepositAPICreditsResponse, error) {
+	return m.keeper.DepositAPICredits(ctx, msg)
+}
+
+func (m msgServer) WithdrawAPICredits(ctx context.Context, msg *types.MsgWithdrawAPICredits) (*types.MsgWithdrawAPICreditsResponse, error) {
+	return m.keeper.WithdrawAPICredits(ctx, msg)
+}
+
+func (m msgServer) RecordAPIUsage(ctx context.Context, msg *types.MsgRecordAPIUsage) (*types.MsgRecordAPIUsageResponse, error) {
+	return m.keeper.RecordAPIUsage(ctx, msg)
+}
+
 func (m msgServer) RevokeConsent(ctx context.Context, msg *types.MsgRevokeConsent) (*types.MsgRevokeConsentResponse, error) {
 	if err := m.keeper.RevokeConsent(ctx, msg); err != nil {
 		return nil, err

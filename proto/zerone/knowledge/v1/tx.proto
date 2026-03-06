@@ -116,6 +116,23 @@ service Msg {
   // UpdateFitnessBatch submits a batch of fitness signals for TDUs.
   rpc UpdateFitnessBatch(MsgUpdateFitnessBatch) returns (MsgUpdateFitnessBatchResponse);
 
+  // ─── API revenue (R44-1) ───────────────────────────────────────────────────
+
+  // CreateAPIKey registers an API key hash on-chain, binding it to a wallet.
+  rpc CreateAPIKey(MsgCreateAPIKey) returns (MsgCreateAPIKeyResponse);
+
+  // RevokeAPIKey deactivates an API key.
+  rpc RevokeAPIKey(MsgRevokeAPIKey) returns (MsgRevokeAPIKeyResponse);
+
+  // DepositAPICredits deposits ZRN into a prepaid API balance.
+  rpc DepositAPICredits(MsgDepositAPICredits) returns (MsgDepositAPICreditsResponse);
+
+  // WithdrawAPICredits withdraws unused API credits.
+  rpc WithdrawAPICredits(MsgWithdrawAPICredits) returns (MsgWithdrawAPICreditsResponse);
+
+  // RecordAPIUsage records batched API usage from the payment bridge.
+  rpc RecordAPIUsage(MsgRecordAPIUsage) returns (MsgRecordAPIUsageResponse);
+
   // ─── Authority ─────────────────────────────────────────────────────────────
 
   // AddSample governance-creates a sample (authority-gated, for seed data).
@@ -541,4 +558,69 @@ message MsgUpdateFitnessBatch {
 
 message MsgUpdateFitnessBatchResponse {
   uint64 processed = 1;
+}
+
+// ─── API revenue messages (R44-1) ──────────────────────────────────────────
+
+message MsgCreateAPIKey {
+  option (cosmos.msg.v1.signer) = "owner";
+
+  string owner          = 1;  // Wallet address that owns this key
+  string key_hash       = 2;  // SHA-256 hash of the API key
+  string rate_limit_tier = 3; // "free", "standard", "premium"
+}
+
+message MsgCreateAPIKeyResponse {
+  string key_hash = 1;
+}
+
+message MsgRevokeAPIKey {
+  option (cosmos.msg.v1.signer) = "owner";
+
+  string owner    = 1;  // Must match the key's wallet
+  string key_hash = 2;  // Key to revoke
+}
+
+message MsgRevokeAPIKeyResponse {}
+
+message MsgDepositAPICredits {
+  option (cosmos.msg.v1.signer) = "depositor";
+
+  string depositor = 1;  // Who is depositing
+  string amount    = 2;  // uzrn amount to deposit
+}
+
+message MsgDepositAPICreditsResponse {
+  string new_balance = 1;  // Balance after deposit
+}
+
+message MsgWithdrawAPICredits {
+  option (cosmos.msg.v1.signer) = "wallet";
+
+  string wallet = 1;  // Wallet to withdraw from
+  string amount = 2;  // uzrn amount to withdraw
+}
+
+message MsgWithdrawAPICreditsResponse {
+  string remaining_balance = 1;
+}
+
+message MsgRecordAPIUsage {
+  option (cosmos.msg.v1.signer) = "bridge";
+
+  string              bridge  = 1;  // Payment bridge address (authorized)
+  repeated APIUsageBatch batches = 2;
+}
+
+message APIUsageBatch {
+  string api_key_hash   = 1;
+  uint64 input_tokens   = 2;
+  uint64 output_tokens  = 3;
+  uint64 request_count  = 4;
+  string model_used     = 5;
+}
+
+message MsgRecordAPIUsageResponse {
+  string total_deducted = 1;  // Total uzrn deducted across all batches
+  uint64 batches_processed = 2;
 }

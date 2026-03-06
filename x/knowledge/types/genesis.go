@@ -62,7 +62,7 @@ func DefaultParams() Params {
 		FounderShareBps:      80_000, // 8%
 		FounderAddress:       "",
 		AiOperationsShareBps: 30_000, // 3%
-		AiOperationsAddress:  "",
+		AiOperationsAddress: "",
 	}
 }
 

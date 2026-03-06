@@ -188,6 +188,14 @@ var (
 	// ─── Training enclave (T6-3) ─────────────────────────────────────
 	TrainingRecordPrefix        = []byte{0xbd} // attestationHash → TrainingRecord (JSON)
 	TrainingRecordByModelPrefix = []byte{0xbe} // modelHash/attestationHash → exists
+
+	// ─── API revenue (R44-1) ────────────────────────────────────────────
+	APIKeyRecordPrefix       = []byte{0xc0} // keyHash → APIKeyRecord (JSON)
+	APIBalancePrefix         = []byte{0xc1} // wallet → APIBalance (JSON)
+	APIUsageRecordPrefix     = []byte{0xc2} // wallet/epoch → APIUsageRecord (JSON)
+	APIKeyWalletIndexPrefix  = []byte{0xc3} // wallet/keyHash → exists
+	PendingAPIRevenuePrefix  = []byte{0xc4} // epoch → uint64 accumulated uzrn
+	APIRevenueParamsKey      = []byte{0xc5} // singleton APIRevenueParams (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -747,4 +755,51 @@ func TrainingRecordByModelKey(modelHash, attestationHash string) []byte {
 func TrainingRecordByModelHashPrefix(modelHash string) []byte {
 	key := append(append([]byte{}, TrainingRecordByModelPrefix...), []byte(modelHash)...)
 	return append(key, '/')
+}
+
+// ─── API Revenue key constructors (R44-1) ───────────────────────────────────
+
+// APIKeyRecordKey returns the store key for an API key record.
+func APIKeyRecordKey(keyHash string) []byte {
+	return append(append([]byte{}, APIKeyRecordPrefix...), []byte(keyHash)...)
+}
+
+// APIBalanceKey returns the store key for a wallet's API balance.
+func APIBalanceKey(wallet string) []byte {
+	return append(append([]byte{}, APIBalancePrefix...), []byte(wallet)...)
+}
+
+// APIUsageRecordKey returns the store key for a wallet's epoch usage.
+func APIUsageRecordKey(wallet string, epoch uint64) []byte {
+	key := append(append([]byte{}, APIUsageRecordPrefix...), []byte(wallet)...)
+	key = append(key, '/')
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, epoch)
+	return append(key, buf...)
+}
+
+// APIUsageByWalletPrefix returns the prefix for iterating usage records for a wallet.
+func APIUsageByWalletPrefix(wallet string) []byte {
+	key := append(append([]byte{}, APIUsageRecordPrefix...), []byte(wallet)...)
+	return append(key, '/')
+}
+
+// APIKeyWalletIndexKey returns the index key for an API key by wallet.
+func APIKeyWalletIndexKey(wallet, keyHash string) []byte {
+	key := append(append([]byte{}, APIKeyWalletIndexPrefix...), []byte(wallet)...)
+	key = append(key, '/')
+	return append(key, []byte(keyHash)...)
+}
+
+// APIKeysByWalletPrefix returns the prefix for iterating API keys by wallet.
+func APIKeysByWalletPrefix(wallet string) []byte {
+	key := append(append([]byte{}, APIKeyWalletIndexPrefix...), []byte(wallet)...)
+	return append(key, '/')
+}
+
+// PendingAPIRevenueKey returns the store key for pending API revenue in an epoch.
+func PendingAPIRevenueKey(epoch uint64) []byte {
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, epoch)
+	return append(append([]byte{}, PendingAPIRevenuePrefix...), buf...)
 }

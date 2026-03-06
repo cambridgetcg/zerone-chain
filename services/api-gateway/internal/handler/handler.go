@@ -13,24 +13,43 @@ import (
 	"github.com/zerone-chain/zerone/services/api-gateway/internal/ratelimit"
 )
 
+// BridgeClient is the interface for communicating with the payment bridge.
+type BridgeClient interface {
+	GetBalance(ctx context.Context, walletAddr string) (int64, error)
+	Deduct(ctx context.Context, walletAddr string, costUZRN int64) (int64, error)
+	RecordUsage(ctx context.Context, walletAddr, requestID string, inputTokens, outputTokens int64, model string) error
+}
+
 // Gateway is the API gateway HTTP handler.
 type Gateway struct {
 	authStore   *auth.Store
 	pool        *inference.Pool
 	rateLimiter *ratelimit.TokenBucket
+	bridge      BridgeClient
 	mux         *http.ServeMux
+
+	// API pricing (uzrn per 1000 tokens)
+	pricePerInputToken  int64
+	pricePerOutputToken int64
 }
 
 // New creates a new API gateway handler.
 func New(authStore *auth.Store, pool *inference.Pool, rl *ratelimit.TokenBucket) *Gateway {
 	g := &Gateway{
-		authStore:   authStore,
-		pool:        pool,
-		rateLimiter: rl,
-		mux:         http.NewServeMux(),
+		authStore:           authStore,
+		pool:                pool,
+		rateLimiter:         rl,
+		pricePerInputToken:  1, // 1 uzrn per 1000 input tokens
+		pricePerOutputToken: 3, // 3 uzrn per 1000 output tokens
+		mux:                 http.NewServeMux(),
 	}
 	g.routes()
 	return g
+}
+
+// SetBridgeClient sets the payment bridge client for balance/usage operations.
+func (g *Gateway) SetBridgeClient(bridge BridgeClient) {
+	g.bridge = bridge
 }
 
 func (g *Gateway) routes() {
@@ -98,9 +117,27 @@ func (g *Gateway) handleChatCompletions(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// TODO: Deduct from payment bridge based on chatResp.Usage
-	_ = walletAddr
-	_ = chatResp.Usage
+	// Compute token cost and deduct from prepaid balance
+	inputTokens := int64(chatResp.Usage.PromptTokens)
+	outputTokens := int64(chatResp.Usage.CompletionTokens)
+	cost := computeTokenCost(inputTokens, outputTokens, g.pricePerInputToken, g.pricePerOutputToken)
+
+	if g.bridge != nil && cost > 0 {
+		newBal, err := g.bridge.Deduct(r.Context(), walletAddr, cost)
+		if err != nil {
+			writeError(w, http.StatusPaymentRequired, fmt.Sprintf("insufficient API credits: %v", err))
+			return
+		}
+
+		// Record usage for batch settlement
+		reqID := NewRequestID()
+		_ = g.bridge.RecordUsage(r.Context(), walletAddr, reqID, inputTokens, outputTokens, chatResp.Model)
+
+		// Low balance warning (10% of total deposited)
+		if newBal > 0 && newBal < cost*10 {
+			w.Header().Set("X-ZRN-Balance-Warning", fmt.Sprintf("low balance: %d uzrn remaining", newBal))
+		}
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(respData)
@@ -123,10 +160,21 @@ func (g *Gateway) handleBalance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Query payment bridge for actual balance
+	var balanceStr string
+	if g.bridge != nil {
+		bal, err := g.bridge.GetBalance(r.Context(), walletAddr)
+		if err != nil {
+			balanceStr = "0"
+		} else {
+			balanceStr = fmt.Sprintf("%d", bal)
+		}
+	} else {
+		balanceStr = "0"
+	}
+
 	resp := map[string]interface{}{
 		"wallet":  walletAddr,
-		"balance": "0",
+		"balance": balanceStr,
 		"unit":    "uzrn",
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -198,4 +246,16 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 // NewRequestID generates a unique request ID.
 func NewRequestID() string {
 	return "chatcmpl-" + uuid.New().String()[:8]
+}
+
+// computeTokenCost calculates the uzrn cost for a request based on token counts.
+// Prices are per 1000 tokens.
+func computeTokenCost(inputTokens, outputTokens, pricePerInput, pricePerOutput int64) int64 {
+	inputCost := (inputTokens * pricePerInput) / 1000
+	outputCost := (outputTokens * pricePerOutput) / 1000
+	total := inputCost + outputCost
+	if total < 1 && (inputTokens > 0 || outputTokens > 0) {
+		total = 1 // minimum 1 uzrn per request
+	}
+	return total
 }

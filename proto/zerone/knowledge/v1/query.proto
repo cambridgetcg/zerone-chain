@@ -205,6 +205,23 @@ service Query {
   rpc TrainingHistory(QueryTrainingHistoryRequest) returns (QueryTrainingHistoryResponse) {
     option (google.api.http).get = "/zerone/knowledge/v1/training/{operator}";
   }
+
+  // ─── API Revenue (R44-1) ──────────────────────────────────────────────
+
+  // APIKey queries an API key record by hash.
+  rpc APIKey(QueryAPIKeyRequest) returns (QueryAPIKeyResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/api/keys/{key_hash}";
+  }
+
+  // APIBalance queries a wallet's prepaid API balance.
+  rpc APIBalance(QueryAPIBalanceRequest) returns (QueryAPIBalanceResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/api/balance/{wallet}";
+  }
+
+  // APIUsage queries API usage records for a wallet.
+  rpc APIUsage(QueryAPIUsageRequest) returns (QueryAPIUsageResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/api/usage/{wallet}";
+  }
 }
 
 // ─── Sample query messages ────────────────────────────────────────────────────
@@ -572,4 +589,31 @@ message QueryTrainingHistoryRequest {
 message QueryTrainingHistoryResponse {
   repeated TrainingRecord records = 1;
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
+}
+
+// ─── API Revenue query messages (R44-1) ──────────────────────────────────
+
+message QueryAPIKeyRequest {
+  string key_hash = 1;
+}
+
+message QueryAPIKeyResponse {
+  APIKeyRecord api_key = 1;
+}
+
+message QueryAPIBalanceRequest {
+  string wallet = 1;
+}
+
+message QueryAPIBalanceResponse {
+  APIBalance balance = 1;
+}
+
+message QueryAPIUsageRequest {
+  string wallet = 1;
+  uint64 epoch  = 2;  // 0 = current epoch
+}
+
+message QueryAPIUsageResponse {
+  repeated APIUsageRecord records = 1;
 }

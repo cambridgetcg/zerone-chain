@@ -62,6 +62,10 @@ message Params {
   string founder_address              = 37;
   uint64 ai_operations_share_bps      = 38;  // default: 30000 (3%)
   string ai_operations_address        = 39;
+
+  // ─── API pricing (R44-1) ──────────────────────────────────────────────────
+  string price_per_input_token        = 40;  // uzrn per 1000 input tokens — default: "1"
+  string price_per_output_token       = 41;  // uzrn per 1000 output tokens — default: "3"
 }
 
 // GenesisState is the genesis state of the knowledge module.
@@ -94,4 +98,9 @@ message GenesisState {
   ReputationDecayParams          reputation_params     = 22;
   ShardingParams                 sharding_params       = 23;
   ReviewerStakingParams          reviewer_staking_params = 24;
+
+  // ─── API revenue state (R44-1) ────────────────────────────────────────
+  repeated APIKeyRecord          api_keys              = 25;
+  repeated APIBalance            api_balances          = 26;
+  APIRevenueParams               api_revenue_params    = 27;
 }
