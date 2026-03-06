@@ -215,6 +215,80 @@ func (k Keeper) AttestProofOfStorage(ctx context.Context, validatorAddr string, 
 	return k.SetStorageAttestation(ctx, record)
 }
 
+// ─── Iteration Helpers ───────────────────────────────────────────────────────
+
+// IterateShardAssignments iterates all shard assignments. Return true from cb to stop.
+func (k Keeper) IterateShardAssignments(ctx context.Context, cb func(assignment types.ShardAssignment) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.ShardAssignmentPrefix, prefixEndBytes(types.ShardAssignmentPrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var assignment types.ShardAssignment
+		if err := json.Unmarshal(iter.Value(), &assignment); err != nil {
+			continue
+		}
+		if cb(assignment) {
+			break
+		}
+	}
+}
+
+// IterateStorageAttestations iterates all storage attestations. Return true from cb to stop.
+func (k Keeper) IterateStorageAttestations(ctx context.Context, cb func(attestation types.StorageAttestation) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.ShardAttestationPrefix, prefixEndBytes(types.ShardAttestationPrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var attestation types.StorageAttestation
+		if err := json.Unmarshal(iter.Value(), &attestation); err != nil {
+			continue
+		}
+		if cb(attestation) {
+			break
+		}
+	}
+}
+
+// GetActiveTDUHashes returns sample IDs (hashes) for all TDUs with fitness >= 0.1 and not Pruned.
+func (k Keeper) GetActiveTDUHashes(ctx context.Context) []string {
+	var hashes []string
+	k.IterateFitnessRecords(ctx, func(record types.TDUFitnessRecord) bool {
+		if record.GetLifecycleStatus() != types.TDULifecyclePruned {
+			score := record.GetFitnessScore()
+			// Include if fitness >= 0.1
+			if score.GTE(types.FitnessThresholdDormant) {
+				hashes = append(hashes, record.SampleID)
+			}
+		}
+		return false
+	})
+	sort.Strings(hashes) // deterministic ordering
+	return hashes
+}
+
+// GetActiveValidatorAddresses returns sorted addresses of all active validators from staking keeper.
+func (k Keeper) GetActiveValidatorAddresses(ctx context.Context) []string {
+	if k.stakingKeeper == nil {
+		return nil
+	}
+	infos, err := k.stakingKeeper.GetActiveValidatorInfos(ctx)
+	if err != nil {
+		return nil
+	}
+	addrs := make([]string, 0, len(infos))
+	for _, info := range infos {
+		addrs = append(addrs, info.Address)
+	}
+	sort.Strings(addrs)
+	return addrs
+}
+
 // ApplyShardAssignments computes and persists shard assignments for a snapshot cycle.
 // This is the main entry point called at each snapshot interval.
 func (k Keeper) ApplyShardAssignments(ctx context.Context, snapshotBlockHash []byte, snapshotHeight int64, tduHashes []string, validators []string) error {

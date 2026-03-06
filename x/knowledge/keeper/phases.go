@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"strconv"
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -10,11 +11,13 @@ import (
 )
 
 // BeginBlocker processes active quality rounds, transitioning phases based on block deadlines.
+// Also triggers shard reshuffling and attestation checks at SnapshotInterval boundaries.
 func (k Keeper) BeginBlocker(ctx context.Context) error {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	block := uint64(sdkCtx.BlockHeight())
 	params, _ := k.GetParams(ctx)
 
+	// ── Quality round phase transitions ──────────────────────────────────
 	activeRoundIDs := k.GetActiveRounds(ctx)
 	for _, roundID := range activeRoundIDs {
 		round, found := k.GetQualityRound(ctx, roundID)
@@ -49,7 +52,99 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		}
 	}
 
+	// ── Shard lifecycle ──────────────────────────────────────────────────
+	k.processShardingLifecycle(ctx, block)
+
 	return nil
+}
+
+// processShardingLifecycle handles shard reshuffling and attestation checks at SnapshotInterval.
+func (k Keeper) processShardingLifecycle(ctx context.Context, block uint64) {
+	shardParams := k.GetShardingParams(ctx)
+	if shardParams.SnapshotInterval == 0 || block == 0 {
+		return
+	}
+
+	if block%shardParams.SnapshotInterval != 0 {
+		return
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	snapshotHeight := int64(block)
+
+	// Check attestations from the PREVIOUS snapshot cycle before reshuffling.
+	// Grace period = 2× SnapshotInterval. We check the snapshot from 2 intervals ago.
+	prevSnapshotHeight := snapshotHeight - int64(shardParams.SnapshotInterval)
+	graceCutoffHeight := snapshotHeight - 2*int64(shardParams.SnapshotInterval)
+	if graceCutoffHeight > 0 && prevSnapshotHeight > 0 {
+		k.checkMissingAttestations(ctx, prevSnapshotHeight, graceCutoffHeight)
+	}
+
+	// Get active validators
+	validators := k.GetActiveValidatorAddresses(ctx)
+	if uint32(len(validators)) < shardParams.MinValidators {
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			types.EventShardReshuffleSkipped,
+			sdk.NewAttribute(types.AttributeSnapshotHeight, strconv.FormatInt(snapshotHeight, 10)),
+			sdk.NewAttribute(types.AttributeValidatorCount, strconv.Itoa(len(validators))),
+			sdk.NewAttribute(types.AttributeReason, "insufficient validators"),
+		))
+		return
+	}
+
+	// Get all active TDU hashes (fitness >= 0.1, not Pruned)
+	tduHashes := k.GetActiveTDUHashes(ctx)
+
+	// Get block hash for deterministic seeding
+	blockHash := sdkCtx.BlockHeader().LastBlockId.Hash
+	if len(blockHash) == 0 {
+		// Fallback: use block height as seed (shouldn't happen in production)
+		blockHash = make([]byte, 8)
+		for i := 0; i < 8; i++ {
+			blockHash[i] = byte(block >> (56 - uint(i)*8))
+		}
+	}
+
+	// Apply new shard assignments
+	if err := k.ApplyShardAssignments(ctx, blockHash, snapshotHeight, tduHashes, validators); err != nil {
+		sdkCtx.Logger().Error("failed to apply shard assignments",
+			"snapshot_height", snapshotHeight, "error", err)
+		return
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventShardReshuffle,
+		sdk.NewAttribute(types.AttributeSnapshotHeight, strconv.FormatInt(snapshotHeight, 10)),
+		sdk.NewAttribute(types.AttributeValidatorCount, strconv.Itoa(len(validators))),
+		sdk.NewAttribute(types.AttributeTDUCount, strconv.Itoa(len(tduHashes))),
+	))
+}
+
+// checkMissingAttestations emits slash events for validators who have shard assignments
+// at prevSnapshotHeight but no attestation submitted by graceCutoffHeight.
+func (k Keeper) checkMissingAttestations(ctx context.Context, prevSnapshotHeight, graceCutoffHeight int64) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+
+	// Collect validators with assignments at prevSnapshotHeight
+	k.IterateShardAssignments(ctx, func(assignment types.ShardAssignment) bool {
+		if assignment.SnapshotHeight != prevSnapshotHeight {
+			return false
+		}
+
+		// Check if attestation exists
+		_, hasAttestation := k.GetStorageAttestation(ctx, assignment.ValidatorAddr, prevSnapshotHeight)
+		if hasAttestation {
+			return false
+		}
+
+		// Missing attestation — emit event (governance/slashing integration)
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			types.EventMissingStorageAttestation,
+			sdk.NewAttribute(types.AttributeValidatorAddr, assignment.ValidatorAddr),
+			sdk.NewAttribute(types.AttributeSnapshotHeight, strconv.FormatInt(prevSnapshotHeight, 10)),
+		))
+		return false
+	})
 }
 
 // expireRound marks a round as expired, removes from active index, and returns stake to submitter.

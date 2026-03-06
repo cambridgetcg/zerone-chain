@@ -2,7 +2,9 @@ package keeper
 
 import (
 	"context"
+	"strconv"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -120,4 +122,33 @@ func (m msgServer) RevokeConsent(ctx context.Context, msg *types.MsgRevokeConsen
 
 func (m msgServer) UpgradeConsent(ctx context.Context, msg *types.MsgUpgradeConsent) (*types.MsgUpgradeConsentResponse, error) {
 	return m.keeper.UpgradeConsent(ctx, msg)
+}
+
+// HandleMsgAttestStorage processes a Go-only MsgAttestStorage (not proto-registered).
+// Validators call this to submit proof-of-storage attestations for their assigned TDUs.
+func (k Keeper) HandleMsgAttestStorage(ctx context.Context, msg *types.MsgAttestStorage) error {
+	if msg.ValidatorAddr == "" {
+		return types.ErrInvalidAttestation
+	}
+	if msg.AttestationHex == "" {
+		return types.ErrInvalidAttestation
+	}
+	if msg.SnapshotHeight <= 0 {
+		return types.ErrInvalidAttestation
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	blockHeight := sdkCtx.BlockHeight()
+
+	if err := k.AttestProofOfStorage(ctx, msg.ValidatorAddr, msg.SnapshotHeight, msg.AttestationHex, blockHeight); err != nil {
+		return err
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		types.EventStorageAttested,
+		sdk.NewAttribute(types.AttributeValidatorAddr, msg.ValidatorAddr),
+		sdk.NewAttribute(types.AttributeSnapshotHeight, strconv.FormatInt(msg.SnapshotHeight, 10)),
+	))
+
+	return nil
 }

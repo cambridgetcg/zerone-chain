@@ -75,3 +75,40 @@ type StorageAttestation struct {
 	AttestationHex string `json:"attestation_hex"` // hex-encoded attestation data
 	BlockHeight    int64  `json:"block_height"`    // block at which attestation was recorded
 }
+
+// MsgAttestStorage is a Go-only message type for validators to submit proof-of-storage attestations.
+// Not proto-generated — handled through the keeper directly.
+type MsgAttestStorage struct {
+	ValidatorAddr  string `json:"validator_addr"`
+	SnapshotHeight int64  `json:"snapshot_height"`
+	AttestationHex string `json:"attestation_hex"` // signed hash of assigned TDU data
+}
+
+// ShardingGenesisState holds sharding-specific genesis state.
+// Exported/imported as JSON alongside the main GenesisState.
+type ShardingGenesisState struct {
+	Params       ShardingParams       `json:"params"`
+	Assignments  []ShardAssignment    `json:"assignments"`
+	Attestations []StorageAttestation `json:"attestations"`
+}
+
+// DefaultShardingGenesisState returns an empty sharding genesis state with defaults.
+func DefaultShardingGenesisState() ShardingGenesisState {
+	return ShardingGenesisState{
+		Params: DefaultShardingParams(),
+	}
+}
+
+// Sharding event types.
+const (
+	EventShardReshuffle          = "shard_reshuffle"
+	EventShardReshuffleSkipped   = "shard_reshuffle_skipped"
+	EventStorageAttested         = "storage_attested"
+	EventMissingStorageAttestation = "missing_storage_attestation"
+
+	AttributeSnapshotHeight = "snapshot_height"
+	AttributeValidatorCount = "validator_count"
+	AttributeTDUCount       = "tdu_count"
+	AttributeValidatorAddr  = "validator_addr"
+	AttributeReason         = "reason"
+)
