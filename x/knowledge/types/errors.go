@@ -164,4 +164,11 @@ var (
 	ErrAgentMaxGeneration     = errors.Register(ModuleName, 183, "max agent generation exceeded")
 	ErrAgentInsufficientStake = errors.Register(ModuleName, 184, "insufficient promotion stake")
 	ErrAgentSuspended         = errors.Register(ModuleName, 185, "agent is suspended")
+
+	// ─── Knowledge graph (190–199) ──────────────────────────────────────────
+	ErrEdgeNotFound       = errors.Register(ModuleName, 190, "knowledge edge not found")
+	ErrEdgeAlreadyExists  = errors.Register(ModuleName, 191, "knowledge edge already exists")
+	ErrEdgeSelfRef        = errors.Register(ModuleName, 192, "self-referential edge not allowed")
+	ErrClusterNotFound    = errors.Register(ModuleName, 193, "knowledge cluster not found")
+	ErrInvalidEdgeType    = errors.Register(ModuleName, 194, "invalid edge type")
 )

@@ -212,6 +212,14 @@ var (
 	AgentDomainIdxPrefix     = []byte{0xe2} // domain/agentID → exists
 	AgentGenerationIdxPrefix = []byte{0xe3} // generation(8bytes)/agentID → exists
 	AgentActiveIdxPrefix     = []byte{0xe4} // agentID → exists (active only)
+
+	// ─── Knowledge graph (R46) ──────────────────────────────────────────
+	KnowledgeEdgePrefix      = []byte{0xf0} // edgeID → KnowledgeEdge (JSON)
+	EdgeSourceIndexPrefix    = []byte{0xf1} // sourceID/edgeID → exists
+	EdgeTargetIndexPrefix    = []byte{0xf2} // targetID/edgeID → exists
+	EdgeTypeIndexPrefix      = []byte{0xf3} // edgeType/edgeID → exists
+	KnowledgeClusterPrefix   = []byte{0xf4} // clusterID → KnowledgeCluster (JSON)
+	ClusterMemberIndexPrefix = []byte{0xf5} // tduID → clusterID
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -928,4 +936,60 @@ func AgentGenerationPrefix(gen uint64) []byte {
 // AgentActiveIndexKey returns the index key for an active agent.
 func AgentActiveIndexKey(agentID string) []byte {
 	return append(append([]byte{}, AgentActiveIdxPrefix...), []byte(agentID)...)
+}
+
+// ─── Knowledge graph key constructors (R46) ─────────────────────────────────
+
+// KnowledgeEdgeKey returns the store key for a knowledge edge.
+func KnowledgeEdgeKey(edgeID string) []byte {
+	return append(append([]byte{}, KnowledgeEdgePrefix...), []byte(edgeID)...)
+}
+
+// EdgeSourceIndexKey returns the index key for edges from a source TDU.
+func EdgeSourceIndexKey(sourceID, edgeID string) []byte {
+	key := append(append([]byte{}, EdgeSourceIndexPrefix...), []byte(sourceID)...)
+	key = append(key, '/')
+	return append(key, []byte(edgeID)...)
+}
+
+// EdgeSourceBySourcePrefix returns prefix for iterating edges from a source.
+func EdgeSourceBySourcePrefix(sourceID string) []byte {
+	key := append(append([]byte{}, EdgeSourceIndexPrefix...), []byte(sourceID)...)
+	return append(key, '/')
+}
+
+// EdgeTargetIndexKey returns the index key for edges to a target TDU.
+func EdgeTargetIndexKey(targetID, edgeID string) []byte {
+	key := append(append([]byte{}, EdgeTargetIndexPrefix...), []byte(targetID)...)
+	key = append(key, '/')
+	return append(key, []byte(edgeID)...)
+}
+
+// EdgeTargetByTargetPrefix returns prefix for iterating edges to a target.
+func EdgeTargetByTargetPrefix(targetID string) []byte {
+	key := append(append([]byte{}, EdgeTargetIndexPrefix...), []byte(targetID)...)
+	return append(key, '/')
+}
+
+// EdgeTypeIndexKey returns the index key for edges of a given type.
+func EdgeTypeIndexKey(edgeType, edgeID string) []byte {
+	key := append(append([]byte{}, EdgeTypeIndexPrefix...), []byte(edgeType)...)
+	key = append(key, '/')
+	return append(key, []byte(edgeID)...)
+}
+
+// EdgeTypeByTypePrefix returns prefix for iterating edges of a type.
+func EdgeTypeByTypePrefix(edgeType string) []byte {
+	key := append(append([]byte{}, EdgeTypeIndexPrefix...), []byte(edgeType)...)
+	return append(key, '/')
+}
+
+// KnowledgeClusterKey returns the store key for a cluster.
+func KnowledgeClusterKey(clusterID string) []byte {
+	return append(append([]byte{}, KnowledgeClusterPrefix...), []byte(clusterID)...)
+}
+
+// ClusterMemberIndexKey returns the index key: tduID → clusterID.
+func ClusterMemberIndexKey(tduID string) []byte {
+	return append(append([]byte{}, ClusterMemberIndexPrefix...), []byte(tduID)...)
 }
