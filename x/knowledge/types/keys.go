@@ -170,6 +170,11 @@ var (
 	// ─── TDU fitness decay (R37-1) ────────────────────────────────────
 	FitnessRecordPrefix    = []byte{0xb3} // sampleID → TDUFitnessRecord (JSON)
 	FitnessDecayParamsKey  = []byte{0xb4} // singleton FitnessDecayParams (JSON)
+
+	// ─── Dataset sharding ─────────────────────────────────────────────
+	ShardAssignmentPrefix   = []byte{0xb5} // validatorAddr/snapshotHeight → ShardAssignment (JSON)
+	ShardAttestationPrefix  = []byte{0xb6} // validatorAddr/snapshotHeight → StorageAttestation (JSON)
+	ShardingParamsKey       = []byte{0xb7} // singleton ShardingParams (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -423,6 +428,36 @@ func ContestedDeepCountKey(contentHash string) []byte {
 // FitnessRecordKey returns the store key for a sample's TDU fitness record.
 func FitnessRecordKey(sampleID string) []byte {
 	return append(append([]byte{}, FitnessRecordPrefix...), []byte(sampleID)...)
+}
+
+// ShardAssignmentKey returns the store key for a validator's shard assignment at a snapshot height.
+func ShardAssignmentKey(validatorAddr string, snapshotHeight int64) []byte {
+	key := append(append([]byte{}, ShardAssignmentPrefix...), []byte(validatorAddr)...)
+	key = append(key, '/')
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, uint64(snapshotHeight))
+	return append(key, buf...)
+}
+
+// ShardAssignmentByValidatorPrefix returns the prefix for iterating all assignments for a validator.
+func ShardAssignmentByValidatorPrefix(validatorAddr string) []byte {
+	key := append(append([]byte{}, ShardAssignmentPrefix...), []byte(validatorAddr)...)
+	return append(key, '/')
+}
+
+// ShardAttestationKey returns the store key for a validator's storage attestation at a snapshot.
+func ShardAttestationKey(validatorAddr string, snapshotHeight int64) []byte {
+	key := append(append([]byte{}, ShardAttestationPrefix...), []byte(validatorAddr)...)
+	key = append(key, '/')
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, uint64(snapshotHeight))
+	return append(key, buf...)
+}
+
+// ShardAttestationByValidatorPrefix returns the prefix for iterating all attestations for a validator.
+func ShardAttestationByValidatorPrefix(validatorAddr string) []byte {
+	key := append(append([]byte{}, ShardAttestationPrefix...), []byte(validatorAddr)...)
+	return append(key, '/')
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────

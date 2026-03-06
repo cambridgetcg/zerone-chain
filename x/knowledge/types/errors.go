@@ -76,6 +76,13 @@ var (
 	ErrInvalidFitnessScore   = errors.Register(ModuleName, 111, "fitness score out of valid range")
 	ErrInvalidFitnessSignal  = errors.Register(ModuleName, 112, "fitness signal values must be in [0, 1]")
 
+	// ─── Dataset sharding (120–124) ──────────────────────────────────────
+	ErrShardingInsufficientValidators = errors.Register(ModuleName, 120, "insufficient validators for sharding")
+	ErrShardAssignmentNotFound        = errors.Register(ModuleName, 121, "shard assignment not found")
+	ErrAttestationNotFound            = errors.Register(ModuleName, 122, "storage attestation not found")
+	ErrInvalidReplicationFactor       = errors.Register(ModuleName, 123, "invalid replication factor")
+	ErrInvalidAttestation             = errors.Register(ModuleName, 124, "invalid attestation data")
+
 	// ─── IBC (80) ──────────────────────────────────────────────────────────
 	ErrInvalidIBCVersion = errors.Register(ModuleName, 80, "invalid IBC version")
 
