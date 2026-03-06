@@ -166,6 +166,10 @@ var (
 	ReviewerStakePrefix        = []byte{0xb0} // roundID + "/" + verifier → stake amount (string)
 	ContestedDeepCountPrefix   = []byte{0xb1} // contentHash → uint64 count
 	ReviewerStakingParamsKey   = []byte{0xb2} // singleton ReviewerStakingParams (JSON)
+
+	// ─── TDU fitness decay (R37-1) ────────────────────────────────────
+	FitnessRecordPrefix    = []byte{0xb3} // sampleID → TDUFitnessRecord (JSON)
+	FitnessDecayParamsKey  = []byte{0xb4} // singleton FitnessDecayParams (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -414,6 +418,11 @@ func ReviewerStakeByRoundPrefix(roundID string) []byte {
 // ContestedDeepCountKey returns the store key for a content hash's contested-deep count.
 func ContestedDeepCountKey(contentHash string) []byte {
 	return append(append([]byte{}, ContestedDeepCountPrefix...), []byte(contentHash)...)
+}
+
+// FitnessRecordKey returns the store key for a sample's TDU fitness record.
+func FitnessRecordKey(sampleID string) []byte {
+	return append(append([]byte{}, FitnessRecordPrefix...), []byte(sampleID)...)
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────

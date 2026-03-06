@@ -71,6 +71,11 @@ var (
 	ErrContentPermanentlyRejected  = errors.Register(ModuleName, 76, "content hash permanently rejected (max strikes)")
 	ErrReviewerStakeNotFound       = errors.Register(ModuleName, 77, "reviewer stake not found for round")
 
+	// ─── Fitness decay (110–112) ──────────────────────────────────────────
+	ErrFitnessRecordNotFound = errors.Register(ModuleName, 110, "fitness record not found for sample")
+	ErrInvalidFitnessScore   = errors.Register(ModuleName, 111, "fitness score out of valid range")
+	ErrInvalidFitnessSignal  = errors.Register(ModuleName, 112, "fitness signal values must be in [0, 1]")
+
 	// ─── IBC (80) ──────────────────────────────────────────────────────────
 	ErrInvalidIBCVersion = errors.Register(ModuleName, 80, "invalid IBC version")
 
