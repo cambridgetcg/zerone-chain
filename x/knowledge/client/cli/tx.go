@@ -1,8 +1,12 @@
 package cli
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"math/big"
+	"os"
 	"strconv"
 	"strings"
 
@@ -55,6 +59,87 @@ func parseContestType(s string) (types.ContestType, error) {
 	}
 }
 
+// parseTDUType maps a TDU type string from the R41 CLI to a SampleType enum.
+func parseTDUType(s string) (types.SampleType, error) {
+	switch strings.ToLower(strings.ReplaceAll(s, "-", "_")) {
+	case "instruction_response", "instruction-response":
+		return types.SampleType_SAMPLE_TYPE_Q_AND_A, nil
+	case "conversation":
+		return types.SampleType_SAMPLE_TYPE_DISCUSSION, nil
+	case "correction":
+		return types.SampleType_SAMPLE_TYPE_CORRECTION, nil
+	case "grounding_fact", "grounding-fact":
+		return types.SampleType_SAMPLE_TYPE_ANNOTATION, nil
+	case "reasoning_chain", "reasoning-chain":
+		return types.SampleType_SAMPLE_TYPE_EXPLANATION, nil
+	default:
+		return 0, fmt.Errorf("unknown TDU type %q: must be instruction-response, conversation, correction, grounding-fact, or reasoning-chain", s)
+	}
+}
+
+// difficultyMultiplier returns a ×10 integer multiplier for the given difficulty level.
+// basic=10 (1×), standard=15 (1.5×), advanced=20 (2×), expert=30 (3×), frontier=50 (5×).
+func difficultyMultiplier(s string) (int64, error) {
+	switch strings.ToLower(s) {
+	case "", "basic":
+		return 10, nil
+	case "standard":
+		return 15, nil
+	case "advanced":
+		return 20, nil
+	case "expert":
+		return 30, nil
+	case "frontier":
+		return 50, nil
+	default:
+		return 0, fmt.Errorf("unknown difficulty %q: must be basic, standard, advanced, expert, or frontier", s)
+	}
+}
+
+// calculateStake computes stake = (baseStake × multiplierX10) / 10.
+func calculateStake(baseStake string, multiplierX10 int64) (string, error) {
+	base := new(big.Int)
+	if _, ok := base.SetString(baseStake, 10); !ok {
+		return "", fmt.Errorf("invalid base stake: %s", baseStake)
+	}
+	result := new(big.Int).Mul(base, big.NewInt(multiplierX10))
+	result.Div(result, big.NewInt(10))
+	return result.String(), nil
+}
+
+// parseR41ConsentType maps spec consent-type names to ConsentType.
+func parseR41ConsentType(s string) (types.ConsentType, error) {
+	switch strings.ToLower(strings.ReplaceAll(s, "-", "_")) {
+	case "original", "self":
+		return types.ConsentType_CONSENT_TYPE_SELF_AUTHORED, nil
+	case "public_domain", "public-domain":
+		return types.ConsentType_CONSENT_TYPE_PUBLIC_LICENSE, nil
+	case "licensed":
+		return types.ConsentType_CONSENT_TYPE_OPT_IN, nil
+	default:
+		// Fall through to the existing parser for backwards compat
+		return parseConsentType(s)
+	}
+}
+
+// contentHashHex computes the SHA-256 hash of data and returns the hex string.
+func contentHashHex(data []byte) string {
+	h := sha256.Sum256(data)
+	return hex.EncodeToString(h[:])
+}
+
+// maxContentFileSize is the maximum content file size (1MB).
+const maxContentFileSize = 1_048_576
+
+// defaultBaseStake is the fallback base stake when chain params can't be queried.
+const defaultBaseStake = "1000000"
+
+// threadTurn represents a single turn in a conversation thread file.
+type threadTurn struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
 // GetTxCmd returns the root transaction command for the knowledge module.
 func GetTxCmd() *cobra.Command {
 	txCmd := &cobra.Command{
@@ -68,6 +153,7 @@ func GetTxCmd() *cobra.Command {
 	txCmd.AddCommand(
 		NewSubmitDataCmd(),
 		NewSubmitThreadCmd(),
+		NewSubmitCorrectionCmd(),
 		NewSubmitCommitmentCmd(),
 		NewSubmitRevealCmd(),
 		NewContestSampleCmd(),
@@ -92,23 +178,122 @@ func GetTxCmd() *cobra.Command {
 }
 
 // NewSubmitDataCmd creates a CLI command for MsgSubmitData.
+// Supports both legacy positional args and R41 flag-based interface.
 func NewSubmitDataCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "submit-data [content] [domain] [stake]",
+		Use:   "submit-data",
 		Short: "Submit training data for quality review",
-		Args:  cobra.ExactArgs(3),
+		Long: `Submit a single TDU (training data unit) for quality review.
+
+Example (R41 file-based):
+  zeroned tx knowledge submit-data \
+    --type instruction-response \
+    --domain code \
+    --difficulty standard \
+    --content-file ./my-training-pair.json \
+    --consent-type original \
+    --from agent1
+
+Example (legacy inline):
+  zeroned tx knowledge submit-data [content] [domain] [stake] --consent-type self --from agent1
+
+When --content-file is provided, the content hash is computed client-side (SHA-256)
+and the stake is auto-calculated from base_stake × difficulty_multiplier.`,
+		Args: cobra.MaximumNArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
-			sampleTypeStr, _ := cmd.Flags().GetString("sample-type")
-			sampleType, err := parseSampleType(sampleTypeStr)
-			if err != nil {
-				return err
+			var content string
+			var domain string
+			var stake string
+			var sampleType types.SampleType
+			var hashHex string
+
+			contentFile, _ := cmd.Flags().GetString("content-file")
+
+			if contentFile != "" {
+				// ─── R41 file-based mode ───────────────────────────────
+				contentBytes, err := os.ReadFile(contentFile)
+				if err != nil {
+					return fmt.Errorf("failed to read content file: %w", err)
+				}
+				if len(contentBytes) > maxContentFileSize {
+					return fmt.Errorf("content file exceeds maximum size of 1MB (%d bytes)", len(contentBytes))
+				}
+				content = string(contentBytes)
+				hashHex = contentHashHex(contentBytes)
+
+				// Parse TDU type
+				tduTypeStr, _ := cmd.Flags().GetString("type")
+				if tduTypeStr == "" {
+					return fmt.Errorf("--type is required when using --content-file")
+				}
+				sampleType, err = parseTDUType(tduTypeStr)
+				if err != nil {
+					return err
+				}
+
+				// Domain from flag
+				domain, _ = cmd.Flags().GetString("domain")
+				if domain == "" {
+					return fmt.Errorf("--domain is required when using --content-file")
+				}
+
+				// Auto-calculate stake from difficulty
+				stakeOverride, _ := cmd.Flags().GetString("stake")
+				if stakeOverride != "" {
+					stake = stakeOverride
+				} else {
+					diffStr, _ := cmd.Flags().GetString("difficulty")
+					mult, err := difficultyMultiplier(diffStr)
+					if err != nil {
+						return err
+					}
+
+					// Try to query chain params for base_stake
+					baseStake := defaultBaseStake
+					queryClient := types.NewQueryClient(clientCtx)
+					paramsRes, err := queryClient.Params(cmd.Context(), &types.QueryParamsRequest{})
+					if err == nil && paramsRes.Params.MinSubmissionStake != "" {
+						baseStake = paramsRes.Params.MinSubmissionStake
+					}
+
+					stake, err = calculateStake(baseStake, mult)
+					if err != nil {
+						return err
+					}
+				}
+			} else {
+				// ─── Legacy positional args mode ──────────────────────
+				if len(args) < 3 {
+					return fmt.Errorf("requires either --content-file or 3 positional args: [content] [domain] [stake]")
+				}
+				content = args[0]
+				domain = args[1]
+				stake = args[2]
+				hashHex = contentHashHex([]byte(content))
+
+				sampleTypeStr, _ := cmd.Flags().GetString("sample-type")
+				if sampleTypeStr == "" {
+					sampleTypeStr, _ = cmd.Flags().GetString("type")
+				}
+				if sampleTypeStr != "" {
+					// Try R41 type names first, fall back to legacy
+					st, err := parseTDUType(sampleTypeStr)
+					if err != nil {
+						st, err = parseSampleType(sampleTypeStr)
+						if err != nil {
+							return err
+						}
+					}
+					sampleType = st
+				}
 			}
 
+			// Common optional flags
 			sourceUri, _ := cmd.Flags().GetString("source-uri")
 			sourcePlatform, _ := cmd.Flags().GetString("source-platform")
 			sourceTimestamp, _ := cmd.Flags().GetUint64("source-timestamp")
@@ -118,6 +303,7 @@ func NewSubmitDataCmd() *cobra.Command {
 			parentSubmissionId, _ := cmd.Flags().GetString("parent-submission-id")
 			threadId, _ := cmd.Flags().GetString("thread-id")
 			sponsored, _ := cmd.Flags().GetBool("sponsored")
+			metadata, _ := cmd.Flags().GetString("metadata")
 
 			tagsStr, _ := cmd.Flags().GetString("tags")
 			var tags []string
@@ -131,15 +317,18 @@ func NewSubmitDataCmd() *cobra.Command {
 				contextIds = strings.Split(contextIdsStr, ",")
 			}
 
-			// Build consent proof from flags
+			// Build consent proof
 			var consent *types.ConsentProof
 			consentTypeStr, _ := cmd.Flags().GetString("consent-type")
 			if consentTypeStr != "" {
-				consentType, err := parseConsentType(consentTypeStr)
+				consentType, err := parseR41ConsentType(consentTypeStr)
 				if err != nil {
 					return err
 				}
-				proofUri, _ := cmd.Flags().GetString("consent-proof-uri")
+				proofUri, _ := cmd.Flags().GetString("consent-proof")
+				if proofUri == "" {
+					proofUri, _ = cmd.Flags().GetString("consent-proof-uri")
+				}
 				authorSig, _ := cmd.Flags().GetString("consent-author-signature")
 				consentTimestamp, _ := cmd.Flags().GetUint64("consent-timestamp")
 				consentTerms, _ := cmd.Flags().GetString("consent-terms")
@@ -152,11 +341,21 @@ func NewSubmitDataCmd() *cobra.Command {
 				}
 			}
 
+			// Append metadata to tags if provided
+			if metadata != "" {
+				tags = append(tags, "metadata:"+metadata)
+			}
+
+			// Display computed info
+			fmt.Fprintf(cmd.ErrOrStderr(), "Content hash:  %s\n", hashHex)
+			fmt.Fprintf(cmd.ErrOrStderr(), "Stake amount:  %s uzrn\n", stake)
+			fmt.Fprintf(cmd.ErrOrStderr(), "Domain:        %s\n", domain)
+
 			msg := &types.MsgSubmitData{
 				Submitter:          clientCtx.GetFromAddress().String(),
-				Content:            args[0],
+				Content:            content,
 				SampleType:         sampleType,
-				Domain:             args[1],
+				Domain:             domain,
 				SourceUri:          sourceUri,
 				SourcePlatform:     sourcePlatform,
 				SourceTimestamp:    sourceTimestamp,
@@ -165,7 +364,7 @@ func NewSubmitDataCmd() *cobra.Command {
 				License:            license,
 				Tags:               tags,
 				Language:           language,
-				Stake:              args[2],
+				Stake:              stake,
 				ParentSubmissionId: parentSubmissionId,
 				ThreadId:           threadId,
 				ContextIds:         contextIds,
@@ -176,7 +375,16 @@ func NewSubmitDataCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().String("sample-type", "", "Sample type: discussion, debate, explanation, troubleshoot, review, tutorial, opinion, narrative, qanda, creative, annotation, correction")
+	// R41 flags
+	cmd.Flags().String("type", "", "TDU type: instruction-response, conversation, correction, grounding-fact, reasoning-chain")
+	cmd.Flags().String("domain", "", "Target domain (e.g. code, math, general)")
+	cmd.Flags().String("difficulty", "basic", "Difficulty: basic (1×), standard (1.5×), advanced (2×), expert (3×), frontier (5×)")
+	cmd.Flags().String("content-file", "", "Path to JSON content file")
+	cmd.Flags().String("consent-proof", "", "Path to consent proof file")
+	cmd.Flags().String("metadata", "", "Optional JSON metadata string")
+	cmd.Flags().String("stake", "", "Override auto-calculated stake (uzrn)")
+	// Legacy / common flags
+	cmd.Flags().String("sample-type", "", "Legacy sample type (use --type for R41)")
 	cmd.Flags().String("source-uri", "", "URI of the original source")
 	cmd.Flags().String("source-platform", "", "Platform name (e.g. reddit, stackoverflow)")
 	cmd.Flags().Uint64("source-timestamp", 0, "Unix timestamp of original content")
@@ -188,7 +396,7 @@ func NewSubmitDataCmd() *cobra.Command {
 	cmd.Flags().String("thread-id", "", "Thread ID to append to")
 	cmd.Flags().String("context-ids", "", "Comma-separated context submission IDs")
 	cmd.Flags().Bool("sponsored", false, "Request bootstrap fund sponsorship")
-	cmd.Flags().String("consent-type", "", "Consent type: self, optin, public, tos, fairuse")
+	cmd.Flags().String("consent-type", "", "Consent type: original, public-domain, licensed (or legacy: self, optin, public, tos, fairuse)")
 	cmd.Flags().String("consent-proof-uri", "", "URI to consent evidence")
 	cmd.Flags().String("consent-author-signature", "", "Cryptographic author consent signature")
 	cmd.Flags().Uint64("consent-timestamp", 0, "Unix timestamp of consent")
@@ -198,35 +406,273 @@ func NewSubmitDataCmd() *cobra.Command {
 }
 
 // NewSubmitThreadCmd creates a CLI command for MsgSubmitThread.
+// Supports both R41 --thread-file and legacy positional args.
 func NewSubmitThreadCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "submit-thread [domain] [stake]",
-		Short: "Submit a conversation thread (items provided via --items JSON file or stdin)",
-		Long: `Submit a multi-turn conversation thread. The thread items are embedded MsgSubmitData messages.
-Due to the complexity of nested messages, this command accepts domain and stake as arguments.
-Individual thread items should be submitted via submit-data with --thread-id after creating the thread.`,
-		Args: cobra.ExactArgs(2),
+		Use:   "submit-thread",
+		Short: "Submit a multi-turn conversation as a TDU",
+		Long: `Submit a multi-turn conversation thread for quality review.
+
+Example (R41 file-based):
+  zeroned tx knowledge submit-thread \
+    --domain code \
+    --thread-file ./conversation.json \
+    --from agent1
+
+Thread file format: JSON array of {"role": "user"|"assistant", "content": "..."} turns.
+
+Example (legacy):
+  zeroned tx knowledge submit-thread [domain] [stake] --from agent1`,
+		Args: cobra.MaximumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clientCtx, err := client.GetClientTxContext(cmd)
 			if err != nil {
 				return err
 			}
 
+			var domain string
+			var stake string
+			var items []*types.MsgSubmitData
+
+			threadFile, _ := cmd.Flags().GetString("thread-file")
 			threadId, _ := cmd.Flags().GetString("thread-id")
+			consentTypeStr, _ := cmd.Flags().GetString("consent-type")
+
+			if threadFile != "" {
+				// ─── R41 file-based mode ───────────────────────────────
+				fileBytes, err := os.ReadFile(threadFile)
+				if err != nil {
+					return fmt.Errorf("failed to read thread file: %w", err)
+				}
+				if len(fileBytes) > maxContentFileSize {
+					return fmt.Errorf("thread file exceeds maximum size of 1MB (%d bytes)", len(fileBytes))
+				}
+
+				var turns []threadTurn
+				if err := json.Unmarshal(fileBytes, &turns); err != nil {
+					return fmt.Errorf("invalid thread file JSON: %w", err)
+				}
+				if len(turns) < 2 {
+					return fmt.Errorf("thread must have at least 2 turns, got %d", len(turns))
+				}
+
+				domain, _ = cmd.Flags().GetString("domain")
+				if domain == "" {
+					return fmt.Errorf("--domain is required when using --thread-file")
+				}
+
+				// Build consent proof for all items
+				var consent *types.ConsentProof
+				if consentTypeStr != "" {
+					consentType, err := parseR41ConsentType(consentTypeStr)
+					if err != nil {
+						return err
+					}
+					consent = &types.ConsentProof{Type: consentType}
+				}
+
+				// Auto-calculate stake
+				stakeOverride, _ := cmd.Flags().GetString("stake")
+				if stakeOverride != "" {
+					stake = stakeOverride
+				} else {
+					diffStr, _ := cmd.Flags().GetString("difficulty")
+					mult, err := difficultyMultiplier(diffStr)
+					if err != nil {
+						return err
+					}
+					baseStake := defaultBaseStake
+					queryClient := types.NewQueryClient(clientCtx)
+					paramsRes, err := queryClient.Params(cmd.Context(), &types.QueryParamsRequest{})
+					if err == nil && paramsRes.Params.MinSubmissionStake != "" {
+						baseStake = paramsRes.Params.MinSubmissionStake
+					}
+					stake, err = calculateStake(baseStake, mult)
+					if err != nil {
+						return err
+					}
+				}
+
+				// Build MsgSubmitData items from turns
+				submitter := clientCtx.GetFromAddress().String()
+				for _, turn := range turns {
+					sType := types.SampleType_SAMPLE_TYPE_DISCUSSION
+					item := &types.MsgSubmitData{
+						Submitter:  submitter,
+						Content:    fmt.Sprintf("[%s]: %s", turn.Role, turn.Content),
+						SampleType: sType,
+						Domain:     domain,
+						Consent:    consent,
+						ThreadId:   threadId,
+					}
+					items = append(items, item)
+				}
+
+				// Display info
+				hashHex := contentHashHex(fileBytes)
+				fmt.Fprintf(cmd.ErrOrStderr(), "Thread turns:  %d\n", len(turns))
+				fmt.Fprintf(cmd.ErrOrStderr(), "Content hash:  %s\n", hashHex)
+				fmt.Fprintf(cmd.ErrOrStderr(), "Stake amount:  %s uzrn\n", stake)
+				fmt.Fprintf(cmd.ErrOrStderr(), "Domain:        %s\n", domain)
+			} else {
+				// ─── Legacy positional args mode ──────────────────────
+				if len(args) < 2 {
+					return fmt.Errorf("requires either --thread-file or 2 positional args: [domain] [stake]")
+				}
+				domain = args[0]
+				stake = args[1]
+			}
 
 			msg := &types.MsgSubmitThread{
 				Submitter: clientCtx.GetFromAddress().String(),
-				Domain:    args[0],
-				Stake:     args[1],
+				Domain:    domain,
+				Stake:     stake,
 				ThreadId:  threadId,
-				Items:     nil, // Items are added via individual submit-data calls with --thread-id
+				Items:     items,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
 		},
 	}
 
+	// R41 flags
+	cmd.Flags().String("thread-file", "", "Path to JSON thread file (array of {role, content} turns)")
+	cmd.Flags().String("domain", "", "Target domain (e.g. code, math, general)")
+	cmd.Flags().String("difficulty", "basic", "Difficulty: basic (1×), standard (1.5×), advanced (2×), expert (3×), frontier (5×)")
+	cmd.Flags().String("stake", "", "Override auto-calculated stake (uzrn)")
+	cmd.Flags().String("consent-type", "", "Consent type: original, public-domain, licensed")
+	// Common flags
 	cmd.Flags().String("thread-id", "", "Explicit thread ID (auto-generated if omitted)")
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewSubmitCorrectionCmd creates a CLI command for submitting a correction TDU.
+func NewSubmitCorrectionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "submit-correction",
+		Short: "Submit a correction that supersedes an existing TDU",
+		Long: `Submit a correction to an existing training data unit.
+
+Example:
+  zeroned tx knowledge submit-correction \
+    --target-id <tdu-id> \
+    --correction-file ./fix.json \
+    --reason "Incorrect API usage in example" \
+    --from agent1
+
+Correction file format:
+  {
+    "original_id": "<tdu-id>",
+    "field": "response",
+    "corrected": "The correct approach is...",
+    "explanation": "The original was wrong because..."
+  }`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			targetId, _ := cmd.Flags().GetString("target-id")
+			if targetId == "" {
+				return fmt.Errorf("--target-id is required")
+			}
+
+			correctionFile, _ := cmd.Flags().GetString("correction-file")
+			if correctionFile == "" {
+				return fmt.Errorf("--correction-file is required")
+			}
+
+			reason, _ := cmd.Flags().GetString("reason")
+			if reason == "" {
+				return fmt.Errorf("--reason is required")
+			}
+
+			contentBytes, err := os.ReadFile(correctionFile)
+			if err != nil {
+				return fmt.Errorf("failed to read correction file: %w", err)
+			}
+			if len(contentBytes) > maxContentFileSize {
+				return fmt.Errorf("correction file exceeds maximum size of 1MB (%d bytes)", len(contentBytes))
+			}
+
+			// Validate JSON
+			if !json.Valid(contentBytes) {
+				return fmt.Errorf("correction file is not valid JSON")
+			}
+
+			content := string(contentBytes)
+			hashHex := contentHashHex(contentBytes)
+
+			// Domain from flag or default
+			domain, _ := cmd.Flags().GetString("domain")
+
+			// Auto-calculate stake
+			var stake string
+			stakeOverride, _ := cmd.Flags().GetString("stake")
+			if stakeOverride != "" {
+				stake = stakeOverride
+			} else {
+				diffStr, _ := cmd.Flags().GetString("difficulty")
+				mult, err := difficultyMultiplier(diffStr)
+				if err != nil {
+					return err
+				}
+				baseStake := defaultBaseStake
+				queryClient := types.NewQueryClient(clientCtx)
+				paramsRes, err := queryClient.Params(cmd.Context(), &types.QueryParamsRequest{})
+				if err == nil && paramsRes.Params.MinSubmissionStake != "" {
+					baseStake = paramsRes.Params.MinSubmissionStake
+				}
+				stake, err = calculateStake(baseStake, mult)
+				if err != nil {
+					return err
+				}
+			}
+
+			// Build consent proof (corrections are self-authored by default)
+			consent := &types.ConsentProof{
+				Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED,
+			}
+			consentTypeStr, _ := cmd.Flags().GetString("consent-type")
+			if consentTypeStr != "" {
+				ct, err := parseR41ConsentType(consentTypeStr)
+				if err != nil {
+					return err
+				}
+				consent.Type = ct
+			}
+
+			// Display info
+			fmt.Fprintf(cmd.ErrOrStderr(), "Target TDU:    %s\n", targetId)
+			fmt.Fprintf(cmd.ErrOrStderr(), "Content hash:  %s\n", hashHex)
+			fmt.Fprintf(cmd.ErrOrStderr(), "Stake amount:  %s uzrn\n", stake)
+			fmt.Fprintf(cmd.ErrOrStderr(), "Reason:        %s\n", reason)
+
+			msg := &types.MsgSubmitData{
+				Submitter:          clientCtx.GetFromAddress().String(),
+				Content:            content,
+				SampleType:         types.SampleType_SAMPLE_TYPE_CORRECTION,
+				Domain:             domain,
+				Consent:            consent,
+				Stake:              stake,
+				ParentSubmissionId: targetId,
+				Tags:               []string{"correction", "reason:" + reason},
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	cmd.Flags().String("target-id", "", "ID of the TDU to correct (required)")
+	cmd.Flags().String("correction-file", "", "Path to correction JSON file (required)")
+	cmd.Flags().String("reason", "", "Reason for the correction (required)")
+	cmd.Flags().String("domain", "", "Target domain (inherited from target if omitted)")
+	cmd.Flags().String("difficulty", "standard", "Difficulty: basic (1×), standard (1.5×), advanced (2×), expert (3×), frontier (5×)")
+	cmd.Flags().String("stake", "", "Override auto-calculated stake (uzrn)")
+	cmd.Flags().String("consent-type", "", "Consent type (defaults to original/self-authored)")
 	flags.AddTxFlagsToCmd(cmd)
 	return cmd
 }
