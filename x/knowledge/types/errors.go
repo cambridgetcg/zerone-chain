@@ -191,4 +191,14 @@ var (
 	ErrAgentReputationTooLow   = errors.Register(ModuleName, 215, "agent reputation below task minimum")
 	ErrTaskExpired             = errors.Register(ModuleName, 216, "task has expired")
 	ErrTaskResultExists        = errors.Register(ModuleName, 217, "task result already recorded")
+
+	// ─── Curriculum training (220–229) ──────────────────────────────────────
+	ErrCurriculumNotFound      = errors.Register(ModuleName, 220, "curriculum not found")
+	ErrCurriculumNotActive     = errors.Register(ModuleName, 221, "curriculum not in active state")
+	ErrCurriculumCycle         = errors.Register(ModuleName, 222, "curriculum contains prerequisite cycle")
+	ErrCurriculumEmpty         = errors.Register(ModuleName, 223, "curriculum has no stages")
+	ErrAlreadyEnrolled         = errors.Register(ModuleName, 224, "agent already enrolled in this curriculum")
+	ErrEnrollmentNotFound      = errors.Register(ModuleName, 225, "enrollment not found")
+	ErrStagePrereqNotMet       = errors.Register(ModuleName, 226, "stage prerequisites not completed")
+	ErrEnrollmentCompleted     = errors.Register(ModuleName, 227, "enrollment already completed")
 )

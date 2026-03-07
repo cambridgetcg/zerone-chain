@@ -238,6 +238,15 @@ var (
 	AgentTaskResultPrefix        = []byte{0x10, 0x07} // taskID → AgentTaskResult (JSON)
 	AgentTaskSeqKey              = []byte{0x10, 0x08} // uint64 next task ID
 	AgentTaskSchedulerParamsKey  = []byte{0x10, 0x09} // singleton SchedulerParams (JSON)
+
+	// ─── Curriculum training (R49) ──────────────────────────────────────
+	CurriculumPrefix              = []byte{0x10, 0x10} // curriculumID → Curriculum (JSON)
+	CurriculumByDomainPrefix      = []byte{0x10, 0x11} // domain/curriculumID → exists
+	CurriculumEnrollmentPrefix    = []byte{0x10, 0x12} // enrollmentID → CurriculumEnrollment (JSON)
+	EnrollmentByAgentPrefix       = []byte{0x10, 0x13} // agentID/curriculumID → enrollmentID
+	EnrollmentByCurriculumPrefix  = []byte{0x10, 0x14} // curriculumID/enrollmentID → exists
+	CurriculumSeqKey              = []byte{0x10, 0x15} // uint64 next curriculum ID
+	EnrollmentSeqKey              = []byte{0x10, 0x16} // uint64 next enrollment ID
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -1107,4 +1116,49 @@ func AgentTaskBountyIndexKey(bountyID, taskID string) []byte {
 // AgentTaskResultKey returns the store key for a task result.
 func AgentTaskResultKey(taskID string) []byte {
 	return append(append([]byte{}, AgentTaskResultPrefix...), []byte(taskID)...)
+}
+
+// ─── Curriculum Training (R49) key constructors ─────────────────────────────
+
+// CurriculumKey returns the store key for a curriculum.
+func CurriculumKey(curriculumID string) []byte {
+	return append(append([]byte{}, CurriculumPrefix...), []byte(curriculumID)...)
+}
+
+// CurriculumDomainIndexKey returns the index key: domain/curriculumID → exists.
+func CurriculumDomainIndexKey(domain, curriculumID string) []byte {
+	key := append(append([]byte{}, CurriculumByDomainPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(curriculumID)...)
+}
+
+// CurriculumByDomainPfx returns the prefix for iterating curricula in a domain.
+func CurriculumByDomainPfx(domain string) []byte {
+	key := append(append([]byte{}, CurriculumByDomainPrefix...), []byte(domain)...)
+	return append(key, '/')
+}
+
+// CurriculumEnrollmentKey returns the store key for an enrollment.
+func CurriculumEnrollmentKey(enrollmentID string) []byte {
+	return append(append([]byte{}, CurriculumEnrollmentPrefix...), []byte(enrollmentID)...)
+}
+
+// EnrollmentByAgentKey returns the index key: agentID/curriculumID → enrollmentID.
+func EnrollmentByAgentKey(agentID, curriculumID string) []byte {
+	key := append(append([]byte{}, EnrollmentByAgentPrefix...), []byte(agentID)...)
+	key = append(key, '/')
+	return append(key, []byte(curriculumID)...)
+}
+
+// EnrollmentByCurriculumKey returns the index key: curriculumID/enrollmentID → exists.
+func EnrollmentByCurriculumKey(curriculumID, enrollmentID string) []byte {
+	key := append(append([]byte{}, EnrollmentByCurriculumPrefix...), []byte(curriculumID)...)
+	key = append(key, '/')
+	return append(key, []byte(enrollmentID)...)
+}
+
+// EnrollmentByCurriculumPfx returns the prefix for iterating enrollments in a curriculum.
+func EnrollmentByCurriculumPfx(curriculumID string) []byte {
+	key := append(append([]byte{}, EnrollmentByCurriculumPrefix...), []byte(curriculumID)...)
+	return append(key, '/')
 }
