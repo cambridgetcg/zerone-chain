@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -72,6 +73,33 @@ func (k Keeper) RecordTraining(ctx context.Context, msg *types.MsgRecordTraining
 		sdk.NewAttribute(types.AttributeDatasetSize, strconv.FormatInt(msg.DatasetSize, 10)),
 	))
 
+	// ── Memory system integration (R50/R51) ──────────────────────────────
+	// If training TDU IDs are available (from the dataset fingerprint),
+	// process the training outcome through the memory consolidation system.
+	// The benchmark score is used as the model delta: scores > 0.5 are
+	// positive outcomes, < 0.5 are negative.
+	fitnessParams := k.GetFitnessDecayParams(ctx)
+	currentCycle := uint64(sdkCtx.BlockHeight()) / fitnessParams.GetFitnessEpochBlocks()
+
+	// Benchmark score → delta (centered at 0.5 baseline).
+	benchmarkDelta, _ := sdkmath.LegacyNewDecFromStr(fmt.Sprintf("%.18f", msg.BenchmarkScore-0.5))
+
+	// Get TDU IDs from dataset (if shard assignments exist for this fingerprint).
+	tduIDs := k.getTDUIDsFromDataset(ctx, msg.DatasetFingerprint)
+	if len(tduIDs) > 0 {
+		outcome := TrainingOutcome{
+			TDUIDs:          tduIDs,
+			OverallDelta:    benchmarkDelta,
+			CurrentCycle:    currentCycle,
+			AttestationHash: msg.AttestationHash,
+		}
+		// Process asynchronously — errors are non-fatal for the training record.
+		if err := k.ProcessTrainingOutcome(ctx, outcome); err != nil {
+			sdkCtx.Logger().Error("failed to process training outcome for memory system",
+				"attestation_hash", msg.AttestationHash, "error", err)
+		}
+	}
+
 	return &types.MsgRecordTrainingResponse{
 		AttestationHash: msg.AttestationHash,
 	}, nil
@@ -98,6 +126,49 @@ func (k Keeper) SetTrainingRecord(ctx context.Context, record *types.TrainingRec
 		}
 	}
 	return nil
+}
+
+// getTDUIDsFromDataset retrieves TDU sample IDs associated with a dataset fingerprint.
+// Looks up the dataset record by fingerprint, which stores its constituent TDU IDs.
+// GetTDUIDsFromDataset retrieves TDU sample IDs associated with a dataset fingerprint.
+func (k Keeper) GetTDUIDsFromDataset(ctx context.Context, datasetFingerprint string) []string {
+	return k.getTDUIDsFromDataset(ctx, datasetFingerprint)
+}
+
+func (k Keeper) getTDUIDsFromDataset(ctx context.Context, datasetFingerprint string) []string {
+	if datasetFingerprint == "" {
+		return nil
+	}
+
+	// Look up the dataset record which maps fingerprint → TDU IDs.
+	kvStore := k.storeService.OpenKVStore(ctx)
+	key := types.DatasetFingerprintKey(datasetFingerprint)
+	bz, err := kvStore.Get(key)
+	if err != nil || bz == nil {
+		return nil
+	}
+
+	var tduIDs []string
+	if err := json.Unmarshal(bz, &tduIDs); err != nil {
+		return nil
+	}
+
+	// Cap at 100 TDUs to bound processing.
+	if len(tduIDs) > 100 {
+		tduIDs = tduIDs[:100]
+	}
+	return tduIDs
+}
+
+// RegisterDatasetFingerprint stores the mapping from dataset fingerprint → TDU IDs.
+// Called when a training dataset is assembled (shard collection phase).
+func (k Keeper) RegisterDatasetFingerprint(ctx context.Context, fingerprint string, tduIDs []string) error {
+	kvStore := k.storeService.OpenKVStore(ctx)
+	bz, err := json.Marshal(tduIDs)
+	if err != nil {
+		return fmt.Errorf("failed to marshal TDU IDs: %w", err)
+	}
+	return kvStore.Set(types.DatasetFingerprintKey(fingerprint), bz)
 }
 
 // GetTrainingRecord retrieves a training record by attestation hash.

@@ -259,6 +259,9 @@ var (
 	OpenWindowPrefix              = []byte{0x10, 0x33} // windowID → sampleID (active windows)
 	ReconsolidationParamsKey      = []byte{0x10, 0x34} // singleton ReconsolidationParams (JSON)
 	ReconsolidationSeqKey         = []byte{0x10, 0x35} // uint64 next window ID
+
+	// ─── Dataset fingerprint mapping (R51 bridge) ───────────────────────
+	DatasetFingerprintPrefix      = []byte{0x10, 0x36} // fingerprint → []sampleID (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -1204,4 +1207,9 @@ func ReconsolidationBySampleKey(sampleID, windowID string) []byte {
 // OpenWindowKey returns the key for an active reconsolidation window.
 func OpenWindowKey(windowID string) []byte {
 	return append(append([]byte{}, OpenWindowPrefix...), []byte(windowID)...)
+}
+
+// DatasetFingerprintKey returns the key for a dataset fingerprint → TDU IDs mapping.
+func DatasetFingerprintKey(fingerprint string) []byte {
+	return append(append([]byte{}, DatasetFingerprintPrefix...), []byte(fingerprint)...)
 }

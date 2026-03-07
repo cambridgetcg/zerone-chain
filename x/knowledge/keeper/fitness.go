@@ -156,6 +156,7 @@ func validateSignal(signal types.FitnessSignal) error {
 
 // DecayUnscored applies fitness decay to TDUs that have received no signal
 // for more than UnscoredCycleThreshold cycles. Called during ecology epoch.
+// NOTE: Prefer DecayUnscoredWithMemory which integrates R50/R51 modifiers.
 func (k Keeper) DecayUnscored(ctx context.Context, currentCycle uint64) {
 	params := k.GetFitnessDecayParams(ctx)
 	threshold := params.UnscoredCycleThreshold
@@ -174,6 +175,49 @@ func (k Keeper) DecayUnscored(ctx context.Context, currentCycle uint64) {
 
 		// Apply decay: score = score - decayRate
 		newScore := score.Sub(decayRate)
+		if newScore.IsNegative() {
+			newScore = sdkmath.LegacyZeroDec()
+		}
+
+		record.SetFitnessScore(newScore)
+		record.CycleCount++
+		_ = k.SetFitnessRecord(ctx, record)
+		return false
+	})
+}
+
+// DecayUnscoredWithMemory applies fitness decay with memory system modifiers.
+// Uses GetEffectiveDecayRate (R50 tier modifier × R51 reconsolidation penalty)
+// instead of raw base decay. This is the memory-aware version of DecayUnscored.
+//
+// Canonical data (R50) decays at 0× (immune).
+// Consolidated data decays at 0.2× base rate.
+// Data with uncorrected reconsolidation events (R51) decays faster.
+func (k Keeper) DecayUnscoredWithMemory(ctx context.Context, currentCycle uint64) {
+	params := k.GetFitnessDecayParams(ctx)
+	threshold := params.UnscoredCycleThreshold
+	baseDecay := params.GetDecayPerCycle()
+
+	k.IterateFitnessRecords(ctx, func(record types.TDUFitnessRecord) bool {
+		cyclesSinceSignal := currentCycle - record.LastSignalCycle
+		if cyclesSinceSignal <= threshold {
+			return false
+		}
+
+		score := record.GetFitnessScore()
+		if score.IsZero() {
+			return false
+		}
+
+		// Get effective decay: base × tier_modifier × reconsolidation_penalty
+		effectiveDecay := k.GetEffectiveDecayRate(ctx, record.SampleID, baseDecay)
+
+		// Zero decay means immune (Canonical tier).
+		if effectiveDecay.IsZero() {
+			return false
+		}
+
+		newScore := score.Sub(effectiveDecay)
 		if newScore.IsNegative() {
 			newScore = sdkmath.LegacyZeroDec()
 		}

@@ -55,6 +55,9 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 	// ── Shard lifecycle ──────────────────────────────────────────────────
 	k.processShardingLifecycle(ctx, block)
 
+	// ── Reconsolidation: expire labile windows (R51) ─────────────────────
+	k.ExpireWindows(ctx)
+
 	return nil
 }
 
@@ -204,12 +207,20 @@ func (k Keeper) EndBlocker(ctx context.Context) error {
 	fitnessEpoch := fitnessParams.GetFitnessEpochBlocks()
 	if fitnessEpoch > 0 && blockHeight > 0 && blockHeight%fitnessEpoch == 0 {
 		currentCycle := blockHeight / fitnessEpoch
-		k.DecayUnscored(ctx, currentCycle)
+		k.DecayUnscoredWithMemory(ctx, currentCycle)
 		k.DistributeLongevityRewards(ctx)
 		k.PruneFitnessBelowThreshold(ctx)
 	}
 
-	// 3. Expire patronage (every block)
+	// 3. Memory consolidation ("sleep cycle") — R50
+	consolidationParams := k.GetConsolidationParams(ctx)
+	if consolidationParams.ConsolidationInterval > 0 && blockHeight > 0 &&
+		blockHeight%consolidationParams.ConsolidationInterval == 0 {
+		currentCycle := blockHeight / consolidationParams.ConsolidationInterval
+		k.RunConsolidation(ctx, currentCycle)
+	}
+
+	// 4. Expire patronage (every block)
 	k.expirePatronage(ctx, blockHeight)
 
 	return nil
