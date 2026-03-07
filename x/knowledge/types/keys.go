@@ -265,6 +265,19 @@ var (
 
 	// ─── Encoding depth / memory class (R52) ────────────────────────────
 	MemoryClassPrefix             = []byte{0x10, 0x37} // sampleID → MemoryClass (1 byte)
+
+	// ─── Recursive self-improvement engine (R53) ────────────────────────
+	VerificationCapturePrefix     = []byte{0x10, 0x40} // captureID → VerificationCapture
+	VerificationByRoundPrefix     = []byte{0x10, 0x41} // roundID/verifier → captureID
+	VerificationByModelPrefix     = []byte{0x10, 0x42} // modelID/captureID → []byte{}
+	ConsensusSlotPrefix           = []byte{0x10, 0x43} // domain/agentID → ConsensusSlot
+	ConsensusSlotByGenPrefix      = []byte{0x10, 0x44} // generation/agentID → []byte{}
+	ModelGenerationPrefix         = []byte{0x10, 0x45} // generation → ModelGeneration
+	CurrentGenerationKey          = []byte{0x10, 0x46} // → uint64 (current generation)
+	GenerationalChallengePrefix   = []byte{0x10, 0x47} // challengeID → GenerationalChallenge
+	ActiveChallengePrefix         = []byte{0x10, 0x48} // domain/challengeID → []byte{}
+	RecursiveEngineParamsKey      = []byte{0x10, 0x49} // → RecursiveEngineParams
+	CaptureCounterKey             = []byte{0x10, 0x4a} // → uint64 (global capture counter)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -1220,4 +1233,49 @@ func DatasetFingerprintKey(fingerprint string) []byte {
 // MemoryClassKey returns the store key for a TDU's memory class.
 func MemoryClassKey(sampleID string) []byte {
 	return append(append([]byte{}, MemoryClassPrefix...), []byte(sampleID)...)
+}
+
+// ─── R53 Key Constructors ───────────────────────────────────────────────────
+
+// VerificationCaptureKey returns key for a specific capture.
+func VerificationCaptureKey(captureID string) []byte {
+	return append(append([]byte{}, VerificationCapturePrefix...), []byte(captureID)...)
+}
+
+// VerificationByRoundKey returns index key for capture by round+verifier.
+func VerificationByRoundKey(roundID, verifier string) []byte {
+	return append(append([]byte{}, VerificationByRoundPrefix...), []byte(roundID+"/"+verifier)...)
+}
+
+// VerificationByModelKey returns index key for captures by model.
+func VerificationByModelKey(modelID, captureID string) []byte {
+	return append(append([]byte{}, VerificationByModelPrefix...), []byte(modelID+"/"+captureID)...)
+}
+
+// ConsensusSlotKey returns key for a model's consensus slot in a domain.
+func ConsensusSlotKey(domain, agentID string) []byte {
+	return append(append([]byte{}, ConsensusSlotPrefix...), []byte(domain+"/"+agentID)...)
+}
+
+// ConsensusSlotByGenKey returns index key for slots by generation.
+func ConsensusSlotByGenKey(generation uint64, agentID string) []byte {
+	key := append([]byte{}, ConsensusSlotByGenPrefix...)
+	key = append(key, byte(generation>>8), byte(generation))
+	return append(key, []byte("/"+agentID)...)
+}
+
+// ModelGenerationKey returns key for a generation record.
+func ModelGenerationKey(generation uint64) []byte {
+	key := append([]byte{}, ModelGenerationPrefix...)
+	return append(key, byte(generation>>8), byte(generation))
+}
+
+// GenerationalChallengeKey returns key for a challenge.
+func GenerationalChallengeKey(challengeID string) []byte {
+	return append(append([]byte{}, GenerationalChallengePrefix...), []byte(challengeID)...)
+}
+
+// ActiveChallengeKey returns index key for active challenges by domain.
+func ActiveChallengeKey(domain, challengeID string) []byte {
+	return append(append([]byte{}, ActiveChallengePrefix...), []byte(domain+"/"+challengeID)...)
 }

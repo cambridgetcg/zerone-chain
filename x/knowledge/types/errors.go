@@ -209,4 +209,15 @@ var (
 	ErrReconsolidationDisabled       = errors.Register(ModuleName, 233, "reconsolidation is disabled")
 	ErrCorrectionRepTooLow           = errors.Register(ModuleName, 234, "correcting agent reputation too low")
 	ErrCanonicalNotEnoughNegatives   = errors.Register(ModuleName, 235, "canonical TDU needs more negative outcomes to reconsolidate")
+
+	// ─── Recursive self-improvement engine (240–249) ────────────────────
+	ErrConsensusSlotFull      = errors.Register(ModuleName, 240, "consensus pool full for this domain")
+	ErrConsensusAlreadyJoined = errors.Register(ModuleName, 241, "model already in consensus pool")
+	ErrConsensusNotInPool     = errors.Register(ModuleName, 242, "model not in consensus pool")
+	ErrChallengeExists        = errors.Register(ModuleName, 243, "active challenge already exists for this pair")
+	ErrGenChallengeNotFound   = errors.Register(ModuleName, 244, "generational challenge not found")
+	ErrChallengeSameGen       = errors.Register(ModuleName, 245, "challenger must be newer generation than defender")
+	ErrChallengeNotReady      = errors.Register(ModuleName, 246, "not enough shared rounds for resolution")
+	ErrCaptureNotFound        = errors.Register(ModuleName, 247, "verification capture not found")
+	ErrNotModelAgent          = errors.Register(ModuleName, 248, "agent is not backed by a model")
 )
