@@ -247,6 +247,10 @@ var (
 	EnrollmentByCurriculumPrefix  = []byte{0x10, 0x14} // curriculumID/enrollmentID → exists
 	CurriculumSeqKey              = []byte{0x10, 0x15} // uint64 next curriculum ID
 	EnrollmentSeqKey              = []byte{0x10, 0x16} // uint64 next enrollment ID
+
+	// ─── Memory consolidation (R50) ─────────────────────────────────────
+	ActivationRecordPrefix    = []byte{0x10, 0x20} // sampleID → ActivationRecord (JSON)
+	ConsolidationParamsKey    = []byte{0x10, 0x21} // singleton ConsolidationParams (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -1161,4 +1165,11 @@ func EnrollmentByCurriculumKey(curriculumID, enrollmentID string) []byte {
 func EnrollmentByCurriculumPfx(curriculumID string) []byte {
 	key := append(append([]byte{}, EnrollmentByCurriculumPrefix...), []byte(curriculumID)...)
 	return append(key, '/')
+}
+
+// ─── Memory Consolidation (R50) key constructors ────────────────────────────
+
+// ActivationRecordKey returns the store key for a TDU's activation record.
+func ActivationRecordKey(sampleID string) []byte {
+	return append(append([]byte{}, ActivationRecordPrefix...), []byte(sampleID)...)
 }
