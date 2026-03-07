@@ -227,6 +227,17 @@ var (
 	BountySubmissionByBountyIdxPfx   = []byte{0xf8} // bountyID/submissionID → exists
 	BountySubmissionBySubmitterPfx   = []byte{0xf9} // submitter/bountyID → submissionID
 	BountyBoardParamsKey             = []byte{0xfa} // singleton BountyBoardParams (JSON)
+
+	// ─── Agent execution (R48) ──────────────────────────────────────────
+	AgentTaskPrefix              = []byte{0x10, 0x01} // taskID → AgentTask (JSON)
+	AgentTaskByDomainPrefix      = []byte{0x10, 0x02} // domain/taskID → exists
+	AgentTaskByAgentPrefix       = []byte{0x10, 0x03} // agentID/taskID → exists
+	AgentTaskByStatusPrefix      = []byte{0x10, 0x04} // status/taskID → exists
+	AgentTaskByTypePrefix        = []byte{0x10, 0x05} // taskType/taskID → exists
+	AgentTaskByBountyPrefix      = []byte{0x10, 0x06} // bountyID/taskID → exists
+	AgentTaskResultPrefix        = []byte{0x10, 0x07} // taskID → AgentTaskResult (JSON)
+	AgentTaskSeqKey              = []byte{0x10, 0x08} // uint64 next task ID
+	AgentTaskSchedulerParamsKey  = []byte{0x10, 0x09} // singleton SchedulerParams (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -1031,4 +1042,69 @@ func BountySubmissionBySubmitterKey(submitter, bountyID string) []byte {
 	key := append(append([]byte{}, BountySubmissionBySubmitterPfx...), []byte(submitter)...)
 	key = append(key, '/')
 	return append(key, []byte(bountyID)...)
+}
+
+// ─── Agent Execution (R48) key constructors ─────────────────────────────────
+
+// AgentTaskKey returns the store key for an agent task.
+func AgentTaskKey(taskID string) []byte {
+	return append(append([]byte{}, AgentTaskPrefix...), []byte(taskID)...)
+}
+
+// AgentTaskDomainIndexKey returns the index key: domain/taskID → exists.
+func AgentTaskDomainIndexKey(domain, taskID string) []byte {
+	key := append(append([]byte{}, AgentTaskByDomainPrefix...), []byte(domain)...)
+	key = append(key, '/')
+	return append(key, []byte(taskID)...)
+}
+
+// AgentTaskDomainPrefix returns the prefix for iterating tasks in a domain.
+func AgentTaskDomainPrefix(domain string) []byte {
+	key := append(append([]byte{}, AgentTaskByDomainPrefix...), []byte(domain)...)
+	return append(key, '/')
+}
+
+// AgentTaskAgentIndexKey returns the index key: agentID/taskID → exists.
+func AgentTaskAgentIndexKey(agentID, taskID string) []byte {
+	key := append(append([]byte{}, AgentTaskByAgentPrefix...), []byte(agentID)...)
+	key = append(key, '/')
+	return append(key, []byte(taskID)...)
+}
+
+// AgentTaskAgentPrefix returns the prefix for iterating tasks assigned to an agent.
+func AgentTaskAgentPrefix(agentID string) []byte {
+	key := append(append([]byte{}, AgentTaskByAgentPrefix...), []byte(agentID)...)
+	return append(key, '/')
+}
+
+// AgentTaskStatusIndexKey returns the index key: status/taskID → exists.
+func AgentTaskStatusIndexKey(status string, taskID string) []byte {
+	key := append(append([]byte{}, AgentTaskByStatusPrefix...), []byte(status)...)
+	key = append(key, '/')
+	return append(key, []byte(taskID)...)
+}
+
+// AgentTaskStatusPrefix returns the prefix for iterating tasks by status.
+func AgentTaskStatusPrefix(status string) []byte {
+	key := append(append([]byte{}, AgentTaskByStatusPrefix...), []byte(status)...)
+	return append(key, '/')
+}
+
+// AgentTaskTypeIndexKey returns the index key: taskType/taskID → exists.
+func AgentTaskTypeIndexKey(taskType, taskID string) []byte {
+	key := append(append([]byte{}, AgentTaskByTypePrefix...), []byte(taskType)...)
+	key = append(key, '/')
+	return append(key, []byte(taskID)...)
+}
+
+// AgentTaskBountyIndexKey returns the index key: bountyID/taskID → exists.
+func AgentTaskBountyIndexKey(bountyID, taskID string) []byte {
+	key := append(append([]byte{}, AgentTaskByBountyPrefix...), []byte(bountyID)...)
+	key = append(key, '/')
+	return append(key, []byte(taskID)...)
+}
+
+// AgentTaskResultKey returns the store key for a task result.
+func AgentTaskResultKey(taskID string) []byte {
+	return append(append([]byte{}, AgentTaskResultPrefix...), []byte(taskID)...)
 }

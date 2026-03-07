@@ -366,6 +366,11 @@ func (k Keeper) GetGenerationStats(ctx context.Context) map[uint64]uint64 {
 
 // ─── Internal ───────────────────────────────────────────────────────────────
 
+// SetAgentIdentity stores an agent identity (exported for testing and execution framework).
+func (k Keeper) SetAgentIdentity(ctx context.Context, agent *types.AgentIdentity) error {
+	return k.setAgentIdentity(ctx, agent)
+}
+
 func (k Keeper) setAgentIdentity(ctx context.Context, agent *types.AgentIdentity) error {
 	kvStore := k.storeService.OpenKVStore(ctx)
 	key := types.AgentIdentityKey(agent.AgentID)

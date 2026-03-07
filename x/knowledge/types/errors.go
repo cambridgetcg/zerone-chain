@@ -181,4 +181,14 @@ var (
 	ErrBountyDuplicateSubmission = errors.Register(ModuleName, 205, "duplicate bounty submission")
 	ErrBountyNotResolvable       = errors.Register(ModuleName, 206, "bounty not in resolvable state")
 	ErrBountyCancelFailed        = errors.Register(ModuleName, 207, "bounty cancellation failed")
+
+	// ─── Agent execution (210–219) ──────────────────────────────────────────
+	ErrTaskNotFound            = errors.Register(ModuleName, 210, "agent task not found")
+	ErrTaskAlreadyAssigned     = errors.Register(ModuleName, 211, "task already assigned")
+	ErrTaskNotAssignable       = errors.Register(ModuleName, 212, "task not in assignable state")
+	ErrTaskNotCompletable      = errors.Register(ModuleName, 213, "task not in completable state")
+	ErrAgentCannotPerformTask  = errors.Register(ModuleName, 214, "agent lacks capability for this task")
+	ErrAgentReputationTooLow   = errors.Register(ModuleName, 215, "agent reputation below task minimum")
+	ErrTaskExpired             = errors.Register(ModuleName, 216, "task has expired")
+	ErrTaskResultExists        = errors.Register(ModuleName, 217, "task result already recorded")
 )
