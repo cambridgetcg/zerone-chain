@@ -220,6 +220,13 @@ var (
 	EdgeTypeIndexPrefix      = []byte{0xf3} // edgeType/edgeID → exists
 	KnowledgeClusterPrefix   = []byte{0xf4} // clusterID → KnowledgeCluster (JSON)
 	ClusterMemberIndexPrefix = []byte{0xf5} // tduID → clusterID
+
+	// ─── Bounty board (R47) ─────────────────────────────────────────────
+	CompetitiveBountyPrefix          = []byte{0xf6} // bountyID → CompetitiveBounty (JSON)
+	BountySubmissionPrefix           = []byte{0xf7} // submissionID → BountySubmission (JSON)
+	BountySubmissionByBountyIdxPfx   = []byte{0xf8} // bountyID/submissionID → exists
+	BountySubmissionBySubmitterPfx   = []byte{0xf9} // submitter/bountyID → submissionID
+	BountyBoardParamsKey             = []byte{0xfa} // singleton BountyBoardParams (JSON)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -992,4 +999,36 @@ func KnowledgeClusterKey(clusterID string) []byte {
 // ClusterMemberIndexKey returns the index key: tduID → clusterID.
 func ClusterMemberIndexKey(tduID string) []byte {
 	return append(append([]byte{}, ClusterMemberIndexPrefix...), []byte(tduID)...)
+}
+
+// ─── Bounty Board (R47) key constructors ────────────────────────────────────
+
+// CompetitiveBountyKey returns the store key for a competitive bounty extension.
+func CompetitiveBountyKey(bountyID string) []byte {
+	return append(append([]byte{}, CompetitiveBountyPrefix...), []byte(bountyID)...)
+}
+
+// BountySubmissionKey returns the store key for a bounty submission.
+func BountySubmissionKey(submissionID string) []byte {
+	return append(append([]byte{}, BountySubmissionPrefix...), []byte(submissionID)...)
+}
+
+// BountySubmissionByBountyKey returns the index key: bountyID/submissionID → exists.
+func BountySubmissionByBountyKey(bountyID, submissionID string) []byte {
+	key := append(append([]byte{}, BountySubmissionByBountyIdxPfx...), []byte(bountyID)...)
+	key = append(key, '/')
+	return append(key, []byte(submissionID)...)
+}
+
+// BountySubmissionByBountyPrefix returns the prefix for iterating submissions in a bounty.
+func BountySubmissionByBountyPrefix(bountyID string) []byte {
+	key := append(append([]byte{}, BountySubmissionByBountyIdxPfx...), []byte(bountyID)...)
+	return append(key, '/')
+}
+
+// BountySubmissionBySubmitterKey returns the index key: submitter/bountyID → submissionID.
+func BountySubmissionBySubmitterKey(submitter, bountyID string) []byte {
+	key := append(append([]byte{}, BountySubmissionBySubmitterPfx...), []byte(submitter)...)
+	key = append(key, '/')
+	return append(key, []byte(bountyID)...)
 }

@@ -171,4 +171,14 @@ var (
 	ErrEdgeSelfRef        = errors.Register(ModuleName, 192, "self-referential edge not allowed")
 	ErrClusterNotFound    = errors.Register(ModuleName, 193, "knowledge cluster not found")
 	ErrInvalidEdgeType    = errors.Register(ModuleName, 194, "invalid edge type")
+
+	// ─── Bounty board (200–209) ─────────────────────────────────────────────
+	ErrBountyNotFound            = errors.Register(ModuleName, 200, "bounty not found")
+	ErrBountyAlreadyClaimed      = errors.Register(ModuleName, 201, "bounty already claimed")
+	ErrBountyExpired             = errors.Register(ModuleName, 202, "bounty has expired")
+	ErrBountyNotAccepting        = errors.Register(ModuleName, 203, "bounty not accepting submissions")
+	ErrBountySubmissionClosed    = errors.Register(ModuleName, 204, "bounty submission window closed")
+	ErrBountyDuplicateSubmission = errors.Register(ModuleName, 205, "duplicate bounty submission")
+	ErrBountyNotResolvable       = errors.Register(ModuleName, 206, "bounty not in resolvable state")
+	ErrBountyCancelFailed        = errors.Register(ModuleName, 207, "bounty cancellation failed")
 )
