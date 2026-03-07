@@ -201,4 +201,12 @@ var (
 	ErrEnrollmentNotFound      = errors.Register(ModuleName, 225, "enrollment not found")
 	ErrStagePrereqNotMet       = errors.Register(ModuleName, 226, "stage prerequisites not completed")
 	ErrEnrollmentCompleted     = errors.Register(ModuleName, 227, "enrollment already completed")
+
+	// ─── Reconsolidation (230–237) ──────────────────────────────────────
+	ErrReconsolidationWindowNotFound = errors.Register(ModuleName, 230, "reconsolidation window not found")
+	ErrReconsolidationWindowClosed   = errors.Register(ModuleName, 231, "reconsolidation window is closed")
+	ErrReconsolidationAlreadyOpen    = errors.Register(ModuleName, 232, "TDU already has an open reconsolidation window")
+	ErrReconsolidationDisabled       = errors.Register(ModuleName, 233, "reconsolidation is disabled")
+	ErrCorrectionRepTooLow           = errors.Register(ModuleName, 234, "correcting agent reputation too low")
+	ErrCanonicalNotEnoughNegatives   = errors.Register(ModuleName, 235, "canonical TDU needs more negative outcomes to reconsolidate")
 )

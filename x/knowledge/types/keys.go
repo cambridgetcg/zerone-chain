@@ -251,6 +251,14 @@ var (
 	// ─── Memory consolidation (R50) ─────────────────────────────────────
 	ActivationRecordPrefix    = []byte{0x10, 0x20} // sampleID → ActivationRecord (JSON)
 	ConsolidationParamsKey    = []byte{0x10, 0x21} // singleton ConsolidationParams (JSON)
+
+	// ─── Reconsolidation (R51) ──────────────────────────────────────────
+	ReconsolidationWindowPrefix   = []byte{0x10, 0x30} // windowID → ReconsolidationWindow (JSON)
+	ReconsolidationHistoryPrefix  = []byte{0x10, 0x31} // sampleID → ReconsolidationHistory (JSON)
+	ReconsolidationBySamplePrefix = []byte{0x10, 0x32} // sampleID/windowID → exists (index)
+	OpenWindowPrefix              = []byte{0x10, 0x33} // windowID → sampleID (active windows)
+	ReconsolidationParamsKey      = []byte{0x10, 0x34} // singleton ReconsolidationParams (JSON)
+	ReconsolidationSeqKey         = []byte{0x10, 0x35} // uint64 next window ID
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -1172,4 +1180,28 @@ func EnrollmentByCurriculumPfx(curriculumID string) []byte {
 // ActivationRecordKey returns the store key for a TDU's activation record.
 func ActivationRecordKey(sampleID string) []byte {
 	return append(append([]byte{}, ActivationRecordPrefix...), []byte(sampleID)...)
+}
+
+// ─── Reconsolidation (R51) key constructors ─────────────────────────────────
+
+// ReconsolidationWindowKey returns the store key for a window.
+func ReconsolidationWindowKey(windowID string) []byte {
+	return append(append([]byte{}, ReconsolidationWindowPrefix...), []byte(windowID)...)
+}
+
+// ReconsolidationHistoryKey returns the store key for a TDU's history.
+func ReconsolidationHistoryKey(sampleID string) []byte {
+	return append(append([]byte{}, ReconsolidationHistoryPrefix...), []byte(sampleID)...)
+}
+
+// ReconsolidationBySampleKey returns the index key: sampleID/windowID → exists.
+func ReconsolidationBySampleKey(sampleID, windowID string) []byte {
+	key := append(append([]byte{}, ReconsolidationBySamplePrefix...), []byte(sampleID)...)
+	key = append(key, '/')
+	return append(key, []byte(windowID)...)
+}
+
+// OpenWindowKey returns the key for an active reconsolidation window.
+func OpenWindowKey(windowID string) []byte {
+	return append(append([]byte{}, OpenWindowPrefix...), []byte(windowID)...)
 }
