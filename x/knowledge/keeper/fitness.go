@@ -186,13 +186,19 @@ func (k Keeper) DecayUnscored(ctx context.Context, currentCycle uint64) {
 	})
 }
 
-// DecayUnscoredWithMemory applies fitness decay with memory system modifiers.
-// Uses GetEffectiveDecayRate (R50 tier modifier × R51 reconsolidation penalty)
-// instead of raw base decay. This is the memory-aware version of DecayUnscored.
+// DecayUnscoredWithMemory applies fitness decay with the full memory system stack.
+// Uses GetFullEffectiveDecayRate which combines ALL modifiers:
+//   - R50: Memory tier (Canonical=0×, Consolidated=0.2×, Active=0.7×, Working=1×)
+//   - R51: Reconsolidation penalty (1.0 + 0.1 × uncorrected_count)
+//   - R52: Memory class (Semantic=0.8×, Episodic=1.2×, Procedural=0.6×)
 //
-// Canonical data (R50) decays at 0× (immune).
-// Consolidated data decays at 0.2× base rate.
-// Data with uncorrected reconsolidation events (R51) decays faster.
+// effective_decay = base × tier × reconsolidation × type
+//
+// Example: Consolidated procedural TDU with no reconsolidation issues:
+//   0.02 × 0.2 × 1.0 × 0.6 = 0.0024 per cycle (barely decays)
+//
+// Example: Working episodic TDU with 2 uncorrected errors:
+//   0.02 × 1.0 × 1.2 × 1.2 = 0.0288 per cycle (fades fast)
 func (k Keeper) DecayUnscoredWithMemory(ctx context.Context, currentCycle uint64) {
 	params := k.GetFitnessDecayParams(ctx)
 	threshold := params.UnscoredCycleThreshold
@@ -209,8 +215,8 @@ func (k Keeper) DecayUnscoredWithMemory(ctx context.Context, currentCycle uint64
 			return false
 		}
 
-		// Get effective decay: base × tier_modifier × reconsolidation_penalty
-		effectiveDecay := k.GetEffectiveDecayRate(ctx, record.SampleID, baseDecay)
+		// Full effective decay: base × tier × reconsolidation × type
+		effectiveDecay := k.GetFullEffectiveDecayRate(ctx, record.SampleID, baseDecay)
 
 		// Zero decay means immune (Canonical tier).
 		if effectiveDecay.IsZero() {

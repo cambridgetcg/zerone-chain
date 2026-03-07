@@ -262,6 +262,9 @@ var (
 
 	// ─── Dataset fingerprint mapping (R51 bridge) ───────────────────────
 	DatasetFingerprintPrefix      = []byte{0x10, 0x36} // fingerprint → []sampleID (JSON)
+
+	// ─── Encoding depth / memory class (R52) ────────────────────────────
+	MemoryClassPrefix             = []byte{0x10, 0x37} // sampleID → MemoryClass (1 byte)
 )
 
 // ─── New key constructors ───────────────────────────────────────────────────
@@ -1212,4 +1215,9 @@ func OpenWindowKey(windowID string) []byte {
 // DatasetFingerprintKey returns the key for a dataset fingerprint → TDU IDs mapping.
 func DatasetFingerprintKey(fingerprint string) []byte {
 	return append(append([]byte{}, DatasetFingerprintPrefix...), []byte(fingerprint)...)
+}
+
+// MemoryClassKey returns the store key for a TDU's memory class.
+func MemoryClassKey(sampleID string) []byte {
+	return append(append([]byte{}, MemoryClassPrefix...), []byte(sampleID)...)
 }
