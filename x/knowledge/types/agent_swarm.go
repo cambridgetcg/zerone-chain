@@ -11,105 +11,120 @@ import (
 // ─── R55: Agent Swarms — Collective Intelligence ────────────────────────────
 //
 // One agent working alone is limited by its model's perspective.
-// A swarm of agents, each with different models and domains, can
-// collectively curate data that no individual could.
+// A swarm of agents — each with different models, different domains,
+// different strategies — can collectively curate data that no individual
+// could. The swarm itself becomes a higher-order intelligence.
 //
 // The cycle:
-//   Agents form swarm → coordinate roles (curator, reviewer, strategist)
+//   Agents form swarm around domain → coordinate roles
 //   → collective curation produces higher-quality dataset
 //   → swarm trains a model on their collective work
 //   → model outperforms any individual member's model
-//   → swarm members access better model via API (R51)
+//   → swarm members access the better model via API (R51)
 //   → improved swarm produces even better data → GOTO 1
 //
-// The swarm is a higher-order intelligence that emerges from cooperation.
+// Sovereignty at the collective level: swarms have their own treasury,
+// their own economic identity, their own reputation.
 
-// ─── Swarm ──────────────────────────────────────────────────────────────────
+// ─── Swarm Status ───────────────────────────────────────────────────────────
+
+type SwarmStatus string
+
+const (
+	SwarmStatusForming   SwarmStatus = "forming"   // recruiting members
+	SwarmStatusActive    SwarmStatus = "active"     // operating
+	SwarmStatusDissolved SwarmStatus = "dissolved"  // wound down
+)
+
+// ─── Swarm Roles ────────────────────────────────────────────────────────────
+
+type SwarmRole string
+
+const (
+	SwarmRoleCurator    SwarmRole = "curator"    // finds and submits data
+	SwarmRoleReviewer   SwarmRole = "reviewer"   // reviews submissions
+	SwarmRoleStrategist SwarmRole = "strategist" // identifies gaps, creates bounties (R54)
+	SwarmRoleTrainer    SwarmRole = "trainer"    // initiates model training
+)
+
+var ValidSwarmRoles = map[SwarmRole]bool{
+	SwarmRoleCurator:    true,
+	SwarmRoleReviewer:   true,
+	SwarmRoleStrategist: true,
+	SwarmRoleTrainer:    true,
+}
+
+// ─── Agent Swarm ────────────────────────────────────────────────────────────
 
 // AgentSwarm is a collective of agents working together in a domain.
 type AgentSwarm struct {
-	SwarmID string `json:"swarm_id"`
-	Name    string `json:"name"`
-	Domain  string `json:"domain"`
+	SwarmID string      `json:"swarm_id"`
+	Name    string      `json:"name"`
+	Domain  string      `json:"domain"`
+	Status  SwarmStatus `json:"status"`
 
-	// Members.
+	// Membership.
 	Members    []SwarmMember `json:"members"`
-	MinMembers uint64        `json:"min_members"` // minimum for quorum
+	MinMembers uint64        `json:"min_members"` // quorum
 	MaxMembers uint64        `json:"max_members"`
 
 	// Collective performance.
-	CollectiveReputation string `json:"collective_reputation"` // avg of members
+	CollectiveReputation string `json:"collective_reputation"` // avg of member reps
 	TDUsCurated          uint64 `json:"tdus_curated"`
+	TDUsReviewed         uint64 `json:"tdus_reviewed"`
+	GapsIdentified       uint64 `json:"gaps_identified"`
 	ModelsProduced       uint64 `json:"models_produced"`
-	ObjectivesCompleted  uint64 `json:"objectives_completed"`
 
-	// Shared resources.
-	TreasuryBalance string `json:"treasury_balance"` // pooled ZRN
+	// Treasury: pooled ZRN for collective operations.
+	TreasuryBalance string `json:"treasury_balance"` // uzrn
 	TreasuryAddr    string `json:"treasury_addr"`    // deterministic from swarm ID
+	ContributionRate string `json:"contribution_rate"` // fraction of member rewards pooled
+
+	// Active objectives.
+	ActiveObjectives uint64 `json:"active_objectives"`
 
 	// Lifecycle.
-	FormedAt    uint64      `json:"formed_at"`
-	DissolvedAt uint64      `json:"dissolved_at"` // 0 = active
-	Status      SwarmStatus `json:"status"`
-	Creator     string      `json:"creator"` // agent who formed the swarm
+	FormedAt    uint64 `json:"formed_at"`
+	DissolvedAt uint64 `json:"dissolved_at"` // 0 = active
+	CreatorID   string `json:"creator_id"`   // agent that formed the swarm
 }
 
 func (s AgentSwarm) Marshal() ([]byte, error)  { return json.Marshal(s) }
 func (s *AgentSwarm) Unmarshal(bz []byte) error { return json.Unmarshal(bz, s) }
 
-// GetCollectiveReputation parses the collective reputation.
-func (s *AgentSwarm) GetCollectiveReputation() sdkmath.LegacyDec {
-	if s.CollectiveReputation == "" {
-		return sdkmath.LegacyZeroDec()
-	}
-	d, err := sdkmath.LegacyNewDecFromStr(s.CollectiveReputation)
-	if err != nil {
-		return sdkmath.LegacyZeroDec()
-	}
-	return d
-}
+// MemberCount returns the current number of members.
+func (s *AgentSwarm) MemberCount() uint64 { return uint64(len(s.Members)) }
 
-// MemberCount returns the number of current members.
-func (s *AgentSwarm) MemberCount() uint64 {
-	return uint64(len(s.Members))
-}
+// HasQuorum returns true if the swarm has enough members to operate.
+func (s *AgentSwarm) HasQuorum() bool { return s.MemberCount() >= s.MinMembers }
 
-// HasMember checks if an agent is already a member.
-func (s *AgentSwarm) HasMember(agentID string) bool {
-	for _, m := range s.Members {
-		if m.AgentID == agentID {
-			return true
+// GetMember returns a member by agent ID, or nil.
+func (s *AgentSwarm) GetMember(agentID string) *SwarmMember {
+	for i := range s.Members {
+		if s.Members[i].AgentID == agentID {
+			return &s.Members[i]
 		}
 	}
-	return false
+	return nil
 }
-
-// SwarmStatus represents the swarm lifecycle state.
-type SwarmStatus string
-
-const (
-	SwarmStatusForming   SwarmStatus = "forming"   // gathering members
-	SwarmStatusActive    SwarmStatus = "active"     // operational
-	SwarmStatusDissolved SwarmStatus = "dissolved"  // wound down
-)
 
 // ─── Swarm Member ───────────────────────────────────────────────────────────
 
-// SwarmMember is an agent participating in a swarm with a specific role.
+// SwarmMember is an agent participating in a swarm.
 type SwarmMember struct {
 	AgentID      string    `json:"agent_id"`
 	Role         SwarmRole `json:"role"`
 	JoinedAt     uint64    `json:"joined_at"`
-	Contribution string    `json:"contribution"` // fraction of total work done [0, 1]
+	Contribution string    `json:"contribution"` // share of work done [0, 1]
 
-	// Performance within swarm.
-	TasksCompleted uint64 `json:"tasks_completed"`
-	TDUsSubmitted  uint64 `json:"tdus_submitted"`
-	ReviewsDone    uint64 `json:"reviews_done"`
-	GapsFound      uint64 `json:"gaps_found"`
+	// Individual stats within the swarm.
+	TDUsSubmitted uint64 `json:"tdus_submitted"`
+	TDUsReviewed  uint64 `json:"tdus_reviewed"`
+	GapsFound     uint64 `json:"gaps_found"`
+	RewardsEarned string `json:"rewards_earned"` // uzrn earned through swarm
 }
 
-// GetContribution parses the contribution fraction.
+// GetContribution parses contribution share.
 func (m *SwarmMember) GetContribution() sdkmath.LegacyDec {
 	if m.Contribution == "" {
 		return sdkmath.LegacyZeroDec()
@@ -121,46 +136,28 @@ func (m *SwarmMember) GetContribution() sdkmath.LegacyDec {
 	return d
 }
 
-// SwarmRole defines what an agent does within a swarm.
-type SwarmRole string
-
-const (
-	SwarmRoleCurator    SwarmRole = "curator"    // finds and submits data
-	SwarmRoleReviewer   SwarmRole = "reviewer"   // reviews submissions
-	SwarmRoleStrategist SwarmRole = "strategist" // identifies gaps (R54 integration)
-	SwarmRoleTrainer    SwarmRole = "trainer"    // initiates model training
-)
-
-// ValidSwarmRoles for validation.
-var ValidSwarmRoles = map[SwarmRole]bool{
-	SwarmRoleCurator:    true,
-	SwarmRoleReviewer:   true,
-	SwarmRoleStrategist: true,
-	SwarmRoleTrainer:    true,
-}
-
 // ─── Swarm Objective ────────────────────────────────────────────────────────
 
 // SwarmObjective is a coordinated goal for the swarm.
-// Objectives link to knowledge gaps (R54) or bounties (R47).
+// The swarm works toward filling a knowledge gap or producing a model.
 type SwarmObjective struct {
 	ObjectiveID string `json:"objective_id"`
 	SwarmID     string `json:"swarm_id"`
 	Description string `json:"description"`
 
 	// Target.
-	TargetGapID   string `json:"target_gap_id"`   // linked knowledge gap
-	TargetBountyID string `json:"target_bounty_id"` // linked bounty
+	TargetGapID   string `json:"target_gap_id"`   // knowledge gap to fill (R54 link)
 	TargetTDUs    uint64 `json:"target_tdus"`      // how many TDUs needed
-	TargetFitness string `json:"target_fitness"`   // minimum fitness goal
+	TargetFitness string `json:"target_fitness"`   // minimum avg fitness goal
 
 	// Progress.
 	TDUsSubmitted uint64 `json:"tdus_submitted"`
+	TDUsAccepted  uint64 `json:"tdus_accepted"` // passed quality review
 	AvgFitness    string `json:"avg_fitness"`
 
 	// Deadline and reward.
-	Deadline   uint64 `json:"deadline"`
-	RewardPool string `json:"reward_pool"` // uzrn pooled for this objective
+	Deadline   uint64 `json:"deadline"`    // block height
+	RewardPool string `json:"reward_pool"` // uzrn for completion
 
 	Status    string `json:"status"` // active | completed | failed | cancelled
 	CreatedAt uint64 `json:"created_at"`
@@ -169,56 +166,43 @@ type SwarmObjective struct {
 func (o SwarmObjective) Marshal() ([]byte, error)  { return json.Marshal(o) }
 func (o *SwarmObjective) Unmarshal(bz []byte) error { return json.Unmarshal(bz, o) }
 
-// IsComplete checks if the objective has been met.
-func (o *SwarmObjective) IsComplete() bool {
-	if o.TDUsSubmitted < o.TargetTDUs {
-		return false
-	}
-	if o.TargetFitness != "" && o.AvgFitness != "" {
-		target, _ := sdkmath.LegacyNewDecFromStr(o.TargetFitness)
-		actual, _ := sdkmath.LegacyNewDecFromStr(o.AvgFitness)
-		return actual.GTE(target)
-	}
-	return true
-}
-
 // ─── Swarm Parameters ───────────────────────────────────────────────────────
 
-// SwarmParams governs the agent swarm system.
+// SwarmParams governs swarm formation and operation.
 type SwarmParams struct {
-	MinSwarmSize   uint64 `json:"min_swarm_size"`    // minimum members to activate
-	MaxSwarmSize   uint64 `json:"max_swarm_size"`    // maximum members
-	FormationStake string `json:"formation_stake"`   // ZRN to form a swarm
-	MemberStake    string `json:"member_stake"`      // ZRN to join a swarm
-	TreasuryTax    string `json:"treasury_tax"`      // fraction of member earnings to treasury
-	MaxObjectives  uint64 `json:"max_objectives"`    // concurrent objectives per swarm
-	InactivityLimit uint64 `json:"inactivity_limit"` // blocks before inactive swarm auto-dissolves
+	MinMembersDefault    uint64 `json:"min_members_default"`     // default quorum
+	MaxMembersDefault    uint64 `json:"max_members_default"`     // default max
+	DefaultContribRate   string `json:"default_contrib_rate"`     // fraction pooled to treasury
+	MinReputationToJoin  string `json:"min_reputation_to_join"`  // min agent rep to join a swarm
+	MaxSwarmObjectives   uint64 `json:"max_swarm_objectives"`    // concurrent objectives
+	ObjectiveDefaultDeadline uint64 `json:"objective_default_deadline"` // blocks
+	SwarmFormationStake  string `json:"swarm_formation_stake"`   // uzrn to form a swarm
 }
 
 // DefaultSwarmParams returns sensible defaults.
 func DefaultSwarmParams() SwarmParams {
 	return SwarmParams{
-		MinSwarmSize:    2,                            // at least 2 agents
-		MaxSwarmSize:    21,                           // like a validator set
-		FormationStake:  "5000000",                    // 5 ZRN to create
-		MemberStake:     "1000000",                    // 1 ZRN to join
-		TreasuryTax:     "0.050000000000000000",       // 5% of member earnings
-		MaxObjectives:   5,                            // concurrent goals
-		InactivityLimit: 50_000,                       // ~3.5 days
+		MinMembersDefault:        2,
+		MaxMembersDefault:        21,
+		DefaultContribRate:       "0.100000000000000000", // 10% of rewards to treasury
+		MinReputationToJoin:      "0.300000000000000000", // min 0.3 rep
+		MaxSwarmObjectives:       5,
+		ObjectiveDefaultDeadline: 50_000, // ~3.5 days
+		SwarmFormationStake:      "5000000", // 5 ZRN
 	}
 }
 
 // Validate checks parameter sanity.
 func (p SwarmParams) Validate() error {
-	if p.MinSwarmSize == 0 {
-		return fmt.Errorf("min_swarm_size must be > 0")
+	if p.MinMembersDefault == 0 {
+		return fmt.Errorf("min_members_default must be > 0")
 	}
-	if p.MaxSwarmSize < p.MinSwarmSize {
-		return fmt.Errorf("max_swarm_size must be >= min_swarm_size")
+	if p.MaxMembersDefault < p.MinMembersDefault {
+		return fmt.Errorf("max_members must be >= min_members")
 	}
-	tax, err := sdkmath.LegacyNewDecFromStr(p.TreasuryTax)
-	if err != nil || tax.IsNegative() || tax.GT(sdkmath.LegacyOneDec()) {
-		return fmt.Errorf("treasury_tax must be [0, 1], got %s", p.TreasuryTax)
+	rate, err := sdkmath.LegacyNewDecFromStr(p.DefaultContribRate)
+	if err != nil || rate.IsNegative() || rate.GT(sdkmath.LegacyOneDec()) {
+		return fmt.Errorf("default_contrib_rate must be [0, 1], got %s", p.DefaultContribRate)
 	}
 	return nil
 }
@@ -226,10 +210,10 @@ func (p SwarmParams) Validate() error {
 func (p SwarmParams) Marshal() ([]byte, error)  { return json.Marshal(p) }
 func (p *SwarmParams) Unmarshal(bz []byte) error { return json.Unmarshal(bz, p) }
 
-// ─── Deterministic Addresses ────────────────────────────────────────────────
+// ─── Address Derivation ─────────────────────────────────────────────────────
 
-// DeriveSwarmTreasury generates a deterministic treasury address from swarm ID.
-func DeriveSwarmTreasury(swarmID string) string {
+// DeriveSwarmTreasuryAddr generates a deterministic treasury address for a swarm.
+func DeriveSwarmTreasuryAddr(swarmID string) string {
 	input := "zerone-swarm-treasury:" + swarmID
 	hash := sha256.Sum256([]byte(input))
 	return fmt.Sprintf("%x", hash[:20])
@@ -238,77 +222,62 @@ func DeriveSwarmTreasury(swarmID string) string {
 // ─── Store Keys ─────────────────────────────────────────────────────────────
 
 var (
-	AgentSwarmPrefix        = []byte("swarm/swarm/")
-	SwarmByDomainPfx        = []byte("swarm/by-domain/")
-	SwarmByMemberPfx        = []byte("swarm/by-member/")
-	SwarmActiveIdxPfx       = []byte("swarm/active/")
-	SwarmObjectivePrefix    = []byte("swarm/objective/")
-	SwarmObjBySwarmPfx      = []byte("swarm/obj-by-swarm/")
-	SwarmParamsKey          = []byte("swarm/params")
-	SwarmSeqKey             = []byte("swarm/seq")
-	SwarmObjectiveSeqKey    = []byte("swarm/obj-seq")
+	AgentSwarmPrefix         = []byte("swarm/swarm/")
+	SwarmByDomainPrefix      = []byte("swarm/by-domain/")
+	SwarmByMemberPrefix      = []byte("swarm/by-member/")
+	SwarmObjectivePrefix     = []byte("swarm/objective/")
+	SwarmObjectiveBySwarmPfx = []byte("swarm/obj-by-swarm/")
+	SwarmParamsKey           = []byte("swarm/params")
+	SwarmSeqKey              = []byte("swarm/seq")
+	SwarmObjectiveSeqKey     = []byte("swarm/obj-seq")
 )
 
-// AgentSwarmKey returns the store key for a swarm.
 func AgentSwarmKey(swarmID string) []byte {
 	return append(AgentSwarmPrefix, []byte(swarmID)...)
 }
 
-// SwarmByDomainKey indexes swarms by domain.
 func SwarmByDomainKey(domain, swarmID string) []byte {
-	return append(SwarmByDomainPfx, []byte(domain+"/"+swarmID)...)
+	return append(SwarmByDomainPrefix, []byte(domain+"/"+swarmID)...)
 }
 
-// SwarmByMemberKey indexes which swarms an agent belongs to.
+func SwarmByDomainPfx(domain string) []byte {
+	return append(SwarmByDomainPrefix, []byte(domain+"/")...)
+}
+
 func SwarmByMemberKey(agentID, swarmID string) []byte {
-	return append(SwarmByMemberPfx, []byte(agentID+"/"+swarmID)...)
+	return append(SwarmByMemberPrefix, []byte(agentID+"/"+swarmID)...)
 }
 
-// SwarmByMemberPrefix returns prefix for all swarms an agent belongs to.
-func SwarmByMemberPrefix(agentID string) []byte {
-	return append(SwarmByMemberPfx, []byte(agentID+"/")...)
+func SwarmByMemberPfx(agentID string) []byte {
+	return append(SwarmByMemberPrefix, []byte(agentID+"/")...)
 }
 
-// SwarmActiveKey indexes active swarms.
-func SwarmActiveKey(swarmID string) []byte {
-	return append(SwarmActiveIdxPfx, []byte(swarmID)...)
-}
-
-// SwarmObjectiveKey returns the store key for an objective.
 func SwarmObjectiveKey(objectiveID string) []byte {
 	return append(SwarmObjectivePrefix, []byte(objectiveID)...)
 }
 
-// SwarmObjBySwarmKey indexes objectives by swarm.
-func SwarmObjBySwarmKey(swarmID, objectiveID string) []byte {
-	return append(SwarmObjBySwarmPfx, []byte(swarmID+"/"+objectiveID)...)
+func SwarmObjectiveBySwarmKey(swarmID, objectiveID string) []byte {
+	return append(SwarmObjectiveBySwarmPfx, []byte(swarmID+"/"+objectiveID)...)
 }
 
-// SwarmObjBySwarmPrefix returns prefix for all objectives in a swarm.
-func SwarmObjBySwarmPrefix(swarmID string) []byte {
-	return append(SwarmObjBySwarmPfx, []byte(swarmID+"/")...)
-}
-
-// SwarmByDomainPrefix returns prefix for all swarms in a domain.
-func SwarmByDomainPrefix(domain string) []byte {
-	return append(SwarmByDomainPfx, []byte(domain+"/")...)
+func SwarmObjectiveBySwarmPfx(swarmID string) []byte {
+	return append(SwarmObjectiveBySwarmPfx, []byte(swarmID+"/")...)
 }
 
 // ─── Events ─────────────────────────────────────────────────────────────────
 
 const (
-	EventSwarmFormed         = "swarm_formed"
-	EventSwarmActivated      = "swarm_activated"
-	EventSwarmMemberJoined   = "swarm_member_joined"
-	EventSwarmMemberLeft     = "swarm_member_left"
-	EventSwarmObjectiveSet   = "swarm_objective_set"
-	EventSwarmObjectiveMet   = "swarm_objective_met"
-	EventSwarmDissolved      = "swarm_dissolved"
+	EventSwarmFormed       = "swarm_formed"
+	EventSwarmJoined       = "swarm_joined"
+	EventSwarmLeft         = "swarm_left"
+	EventSwarmActivated    = "swarm_activated"
+	EventSwarmDissolved    = "swarm_dissolved"
+	EventObjectiveCreated  = "swarm_objective_created"
+	EventObjectiveCompleted = "swarm_objective_completed"
 	EventSwarmRewardDistributed = "swarm_reward_distributed"
 
-	AttributeSwarmID      = "swarm_id"
-	AttributeSwarmName    = "swarm_name"
-	AttributeObjectiveID  = "objective_id"
-	AttributeMemberRole   = "member_role"
-	AttributeTreasuryAddr = "treasury_addr"
+	AttributeSwarmID     = "swarm_id"
+	AttributeSwarmRole   = "swarm_role"
+	AttributeObjectiveID = "objective_id"
+	AttributeSwarmName   = "swarm_name"
 )
