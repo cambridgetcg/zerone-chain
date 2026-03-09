@@ -260,7 +260,7 @@ func SwarmObjectiveBySwarmKey(swarmID, objectiveID string) []byte {
 	return append(SwarmObjectiveBySwarmPfx, []byte(swarmID+"/"+objectiveID)...)
 }
 
-func SwarmObjectiveBySwarmPfx(swarmID string) []byte {
+func SwarmObjectiveBySwarmIDPfx(swarmID string) []byte {
 	return append(SwarmObjectiveBySwarmPfx, []byte(swarmID+"/")...)
 }
 

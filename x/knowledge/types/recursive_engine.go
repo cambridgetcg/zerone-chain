@@ -214,5 +214,5 @@ const (
 	AttributeChallengeID   = "challenge_id"
 	AttributeChallengerID  = "challenger_id"
 	AttributeDefenderID    = "defender_id"
-	AttributeWinnerID      = "winner_id"
+	AttributeRecWinnerID   = "winner_id"
 )

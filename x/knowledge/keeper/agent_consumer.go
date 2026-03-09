@@ -181,22 +181,21 @@ func (k Keeper) SelectModelForTask(ctx context.Context, agentID, domain string) 
 	}
 	var candidates []candidate
 
-	k.IterateModelsByDomain(ctx, domain, func(model *types.ModelRecord) bool {
+	for _, model := range k.GetModelsByDomain(ctx, domain) {
 		if model.Status != types.ModelStatusActive {
-			return false
+			continue
 		}
 
 		// Self-reinforcement check: don't use a model trained on your own data.
 		if !params.AllowSelfReinforcement && agentFound {
 			if k.isModelTrainedByAgent(ctx, model.ModelID, agent.AgentID) {
-				return false // skip — would create circular validation
+				continue // skip — would create circular validation
 			}
 		}
 
 		score := model.GetBenchmarkScore()
-		candidates = append(candidates, candidate{model: *model, score: score})
-		return false
-	})
+		candidates = append(candidates, candidate{model: model, score: score})
+	}
 
 	if len(candidates) == 0 {
 		return types.ModelSelection{}, fmt.Errorf("no suitable models found for domain %s", domain)
@@ -534,8 +533,8 @@ func (k Keeper) isModelTrainedByAgent(ctx context.Context, modelID, agentID stri
 
 	for _, tduID := range model.TDUIDs {
 		// Look up the sample's submitter.
-		sample := k.GetSample(ctx, tduID)
-		if sample != nil && sample.Submitter == agent.Address {
+		sample, found := k.GetSample(ctx, tduID)
+		if found && sample != nil && sample.Submitter == agent.Address {
 			return true // agent's own data trained this model
 		}
 	}

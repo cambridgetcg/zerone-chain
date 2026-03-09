@@ -94,8 +94,8 @@ func (k Keeper) ComputeTrainingImpact(
 		}
 
 		// Get submitter (curator).
-		sample := k.GetSample(ctx, tduID)
-		if sample == nil {
+		sample, found := k.GetSample(ctx, tduID)
+		if !found || sample == nil {
 			continue
 		}
 
@@ -103,8 +103,8 @@ func (k Keeper) ComputeTrainingImpact(
 		// Weight = fitness × recency_factor
 		// recency_factor = 0.5^(blocks_since_creation / halflife)
 		blocksSince := uint64(0)
-		if currentBlock > fitnessRec.CreatedBlock {
-			blocksSince = currentBlock - fitnessRec.CreatedBlock
+		if currentBlock > sample.VerifiedAtBlock {
+			blocksSince = currentBlock - sample.VerifiedAtBlock
 		}
 		recencyFactor := computeRecencyFactor(blocksSince, params.RecencyDecayHalflife)
 

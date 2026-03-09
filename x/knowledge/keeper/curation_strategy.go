@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -64,7 +63,7 @@ func (k Keeper) ComputeDomainHealth(ctx context.Context, domain string) (*types.
 		}
 
 		// Age tracking.
-		sampleBlock := uint64(sample.CreatedAt)
+		sampleBlock := sample.VerifiedAtBlock
 		if newestBlock == 0 || sampleBlock > newestBlock {
 			newestBlock = sampleBlock
 		}
@@ -456,14 +455,19 @@ func (k Keeper) CreateBountiesFromGaps(ctx context.Context) (created uint64) {
 
 		// Create a bounty for this gap.
 		bountySubject := fmt.Sprintf("Fill %s gap in %s", gap.GapType, gap.Domain)
-		bounty, err := k.FundBounty(ctx, gap.Domain, bountySubject, gap.Description, params.AutoBountyReward, "protocol")
+		bounty, err := k.FundBounty(ctx, &types.MsgFundBounty{
+			Funder: k.GetAuthority(),
+			Domain: gap.Domain,
+			Topic:  bountySubject,
+			Amount: params.AutoBountyReward,
+		})
 		if err != nil || bounty == nil {
 			continue
 		}
 
 		// Link gap to bounty.
 		gap.AutoBountyCreated = true
-		gap.BountyID = bounty.BountyID
+		gap.BountyID = bounty.BountyId
 		gap.SuggestedBountyReward = params.AutoBountyReward
 		_ = k.setKnowledgeGap(ctx, gap)
 
@@ -473,7 +477,7 @@ func (k Keeper) CreateBountiesFromGaps(ctx context.Context) (created uint64) {
 		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 			types.EventStrategicBounty,
 			sdk.NewAttribute(types.AttributeGapID, gap.GapID),
-			sdk.NewAttribute("bounty_id", bounty.BountyID),
+			sdk.NewAttribute("bounty_id", bounty.BountyId),
 			sdk.NewAttribute(types.AttributeSeverity, severity.String()),
 		))
 	}

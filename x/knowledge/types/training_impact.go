@@ -244,7 +244,7 @@ const (
 	EventAttributionQueued      = "attribution_queued"
 
 	AttributeImpactID      = "impact_id"
-	AttributeModelID       = "model_id"
+	AttributeImpactModelID = "model_id"
 	AttributeTriggerType   = "trigger_type"
 	AttributePoolSize      = "pool_size"
 	AttributeDistributed   = "distributed"

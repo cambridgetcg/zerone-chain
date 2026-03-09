@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -490,7 +489,7 @@ func (k Keeper) GetSwarmObjective(ctx context.Context, objectiveID string) (*typ
 // GetSwarmObjectives returns all objectives for a swarm.
 func (k Keeper) GetSwarmObjectives(ctx context.Context, swarmID string) []*types.SwarmObjective {
 	kvStore := k.storeService.OpenKVStore(ctx)
-	prefix := types.SwarmObjectiveBySwarmPfx(swarmID)
+	prefix := types.SwarmObjectiveBySwarmIDPfx(swarmID)
 
 	var objectives []*types.SwarmObjective
 	iter, err := kvStore.Iterator(prefix, prefixEndBytes(prefix))
