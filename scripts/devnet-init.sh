@@ -163,6 +163,10 @@ if [ -d "${BASE_DIR}" ]; then
 fi
 mkdir -p "${BASE_DIR}"
 
+# Also purge any leftover keys from the coordinator keyring location
+# (test backend stores keys inside --home, but belt-and-suspenders)
+rm -rf "${COORDINATOR_HOME}/keyring-test" 2>/dev/null || true
+
 # ── Step 3: Init coordinator node ───────────────────────────────────────
 
 info "Initializing coordinator node..."
@@ -276,7 +280,11 @@ ok "Genesis params patched"
 info "Creating ${#AGENT_NAMES[@]} agent wallets..."
 
 for agent_name in "${AGENT_NAMES[@]}"; do
-  agent_key=$(echo "${agent_name}" | tr '[:upper:]' '[:lower:]')
+  agent_key="agent-$(echo "${agent_name}" | tr '[:upper:]' '[:lower:]')"
+  # Delete any leftover key with same name (idempotent re-runs)
+  ${BINARY} keys delete "${agent_key}" \
+    --keyring-backend ${KEYRING} \
+    --home "${COORDINATOR_HOME}" -y 2>/dev/null || true
   ${BINARY} keys add "${agent_key}" \
     --keyring-backend ${KEYRING} \
     --home "${COORDINATOR_HOME}" 2>/dev/null
@@ -318,7 +326,10 @@ for i in $(seq 0 $((NUM_VALIDATORS - 1))); do
   # Copy coordinator genesis (has params + agent accounts)
   cp "${COORDINATOR_HOME}/config/genesis.json" "${val_home}/config/genesis.json"
 
-  # Create validator account key in coordinator keyring
+  # Create validator account key in coordinator keyring (delete first for idempotency)
+  ${BINARY} keys delete "${val_name}" \
+    --keyring-backend ${KEYRING} \
+    --home "${COORDINATOR_HOME}" -y 2>/dev/null || true
   ${BINARY} keys add "${val_name}" \
     --keyring-backend ${KEYRING} \
     --home "${COORDINATOR_HOME}" 2>/dev/null
@@ -498,7 +509,7 @@ done
 echo ""
 echo "  Agent Wallets:"
 for agent_name in "${AGENT_NAMES[@]}"; do
-  agent_key=$(echo "${agent_name}" | tr '[:upper:]' '[:lower:]')
+  agent_key="agent-$(echo "${agent_name}" | tr '[:upper:]' '[:lower:]')"
   agent_addr=$(${BINARY} keys show "${agent_key}" -a \
     --keyring-backend ${KEYRING} \
     --home "${COORDINATOR_HOME}" 2>/dev/null || echo "?")
