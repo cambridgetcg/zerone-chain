@@ -177,6 +177,11 @@ func GetTxCmd() *cobra.Command {
 		NewCommitReviewCmd(),
 		NewRevealReviewCmd(),
 		NewAttestStorageCmd(),
+		// Agent onboarding commands
+		CmdAgentCreate(),
+		CmdAgentFund(),
+		CmdAgentSuspend(),
+		CmdAgentRetire(),
 	)
 
 	return txCmd

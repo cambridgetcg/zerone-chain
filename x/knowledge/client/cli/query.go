@@ -90,6 +90,9 @@ func GetQueryCmd() *cobra.Command {
 		NewQueryFitnessSummaryCmd(),
 		NewQueryShardCmd(),
 		NewQueryShardStatusCmd(),
+		// Agent onboarding queries
+		CmdAgentList(),
+		CmdAgentStatus(),
 	)
 
 	return queryCmd
