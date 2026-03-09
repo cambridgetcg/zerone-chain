@@ -100,6 +100,11 @@ func (k *Keeper) SetPacingKeeper(pk types.PacingKeeper) {
 	k.pacingKeeper = pk
 }
 
+// StoreService returns the keeper's store service (exported for test access).
+func (k Keeper) StoreService() store.KVStoreService {
+	return k.storeService
+}
+
 // TestingSetStoreService allows tests to inject a mock store service. Test-only.
 func (k *Keeper) TestingSetStoreService(ss store.KVStoreService) {
 	k.storeService = ss

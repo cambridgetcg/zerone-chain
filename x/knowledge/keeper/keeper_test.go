@@ -215,6 +215,9 @@ func setupKeeper(t *testing.T) (keeper.Keeper, context.Context) {
 	return k, ctx
 }
 
+// setupKeeperForTest is an alias for setupKeeper (used by some test files).
+var setupKeeperForTest = setupKeeper
+
 // setupKeeperWithBank returns the keeper and the mock bank for tests that need to inspect calls.
 func setupKeeperWithBank(t *testing.T) (keeper.Keeper, context.Context, *mockBankKeeper) {
 	t.Helper()
