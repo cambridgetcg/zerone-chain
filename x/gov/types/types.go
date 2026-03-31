@@ -83,6 +83,47 @@ func IsTerminalSeatStage(stage string) bool {
 // BPSScale is the basis point scale used for quorum and support thresholds.
 const BPSScale = uint64(1_000_000)
 
+// Constitutional lock tier constants. Three tiers of support threshold
+// protect the chain's governance against different classes of proposal.
+const (
+	// TierStandard: 60% support — routine governance (text, research_spend).
+	TierStandard = "standard"
+	// TierElevated: 75% support — structural decisions (parameter, seat_election).
+	TierElevated = "elevated"
+	// TierConstitutional: 90% support — foundational changes (upgrade, phase_transition, phase_rollback).
+	TierConstitutional = "constitutional"
+)
+
+// Default support thresholds per tier (on 1,000,000 BPS scale).
+const (
+	DefaultStandardSupportBps      = uint64(600_000) // 60%
+	DefaultElevatedSupportBps      = uint64(750_000) // 75%
+	DefaultConstitutionalSupportBps = uint64(900_000) // 90%
+)
+
+// DefaultCategoryTierMap returns the canonical mapping from LIP category to tier name.
+func DefaultCategoryTierMap() map[string]string {
+	return map[string]string{
+		CategoryText:            TierStandard,
+		CategoryResearchSpend:   TierStandard,
+		CategoryParameter:       TierElevated,
+		CategorySeatElection:    TierElevated,
+		CategoryUpgrade:         TierConstitutional,
+		CategoryPhaseTransition: TierConstitutional,
+		CategoryPhaseRollback:   TierConstitutional,
+	}
+}
+
+// GetTierForCategory returns the tier name for a given LIP category.
+// Unknown categories default to TierConstitutional (fail-safe — highest bar).
+func GetTierForCategory(category string) string {
+	m := DefaultCategoryTierMap()
+	if tier, ok := m[category]; ok {
+		return tier
+	}
+	return TierConstitutional // fail-safe: unknown categories require 90%
+}
+
 // IsTerminal returns true if the status is a terminal state.
 func IsTerminal(status string) bool {
 	switch status {

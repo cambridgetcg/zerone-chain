@@ -99,7 +99,7 @@ func (qs *queryServer) TallyResult(goCtx context.Context, req *types.QueryTallyR
 	}
 
 	params := qs.GetParams(ctx)
-	quorumMet, passed := qs.checkQuorumAndSupport(ctx, lip, params)
+	quorumMet, passed, _, _ := qs.checkQuorumAndTieredSupport(ctx, lip, params)
 
 	return &types.QueryTallyResultResponse{
 		YesStake:     lip.YesStake,

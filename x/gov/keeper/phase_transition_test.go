@@ -432,9 +432,9 @@ func TestPhaseTransition_SupermajorityPass(t *testing.T) {
 	lip.VotingEndBlock = 200
 	k.SetLIP(ctx, lip)
 
-	// Vote: 70% yes, 30% no (passes 66.7% supermajority).
-	mock.delegations[testAddr("yes1")] = "700000000000"
-	mock.delegations[testAddr("no1")] = "300000000000"
+	// Vote: 91% yes, 9% no (passes 90% constitutional tier).
+	mock.delegations[testAddr("yes1")] = "910000000000"
+	mock.delegations[testAddr("no1")] = "90000000000"
 	ms.CastVote(ctx, &types.MsgCastVote{
 		Voter: testAddr("yes1"), LipId: "LIP-1", Option: types.VoteYes,
 	})

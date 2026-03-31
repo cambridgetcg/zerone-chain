@@ -536,7 +536,8 @@ func (k Keeper) resolveRunoff(ctx sdk.Context, seatIndex uint32, candidates []*t
 	}
 }
 
-// checkSeatElectionQuorum checks quorum (33.4%) and support (50%) for a seat election.
+// checkSeatElectionQuorum checks quorum (33.4%) and support for a seat election.
+// Uses the constitutional tier system: seat elections are "elevated" tier (75%).
 func (k Keeper) checkSeatElectionQuorum(ctx sdk.Context, prop *types.SeatElectionProposal, params *types.Params) (quorumMet bool, passed bool) {
 	yesBig, _ := new(big.Int).SetString(prop.YesStake, 10)
 	if yesBig == nil {
@@ -572,12 +573,13 @@ func (k Keeper) checkSeatElectionQuorum(ctx sdk.Context, prop *types.SeatElectio
 		quorumMet = actualBps.Uint64() >= params.QuorumThresholdBps
 	}
 
-	// Support check: (yesStake * BPSScale) / (yesStake + noStake) >= supportThresholdBps
+	// Constitutional tier support check: seat elections are elevated (75%).
+	_, seatThresholdBps := k.GetSupportThresholdForCategory(ctx, types.CategorySeatElection)
 	yesNoTotal := new(big.Int).Add(yesBig, noBig)
 	if yesNoTotal.Sign() > 0 {
 		supportBps := new(big.Int).Mul(yesBig, big.NewInt(int64(types.BPSScale)))
 		supportBps.Div(supportBps, yesNoTotal)
-		passed = quorumMet && supportBps.Uint64() >= params.SupportThresholdBps
+		passed = quorumMet && supportBps.Uint64() >= seatThresholdBps
 	}
 
 	return quorumMet, passed

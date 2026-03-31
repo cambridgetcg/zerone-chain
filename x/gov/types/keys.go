@@ -26,7 +26,8 @@ var (
 	SeatElectionVoteKeyPrefix      = []byte{0x11}
 	SeatElectionCounterKey         = []byte{0x12}
 	SeatElectionVoteDedupePrefix       = []byte{0x13}
-	PhaseTransitionKeyPrefix = []byte{0x14} // lip_id -> PhaseTransitionProposal
+	PhaseTransitionKeyPrefix       = []byte{0x14} // lip_id -> PhaseTransitionProposal
+	ConstitutionalTierConfigKey    = []byte{0x15} // -> ConstitutionalTierConfig (JSON)
 )
 
 // LIPKey returns the store key for a LIP by id.

@@ -86,14 +86,11 @@ func (k Keeper) BeginBlocker(ctx sdk.Context) {
 }
 
 // tallyAndResolve tallies votes and sets the LIP to passed or failed.
+// Uses constitutional lock tiers: Standard (60%), Elevated (75%), Constitutional (90%).
 func (k Keeper) tallyAndResolve(ctx sdk.Context, lip *types.LIP, params *types.Params) {
-	// Phase transition categories use supermajority (66.7%), others use standard (50%).
-	var quorumMet, passed bool
-	if types.IsPhaseTransitionCategory(lip.Category) {
-		quorumMet, passed = k.checkQuorumAndSupermajority(ctx, lip, params)
-	} else {
-		quorumMet, passed = k.checkQuorumAndSupport(ctx, lip, params)
-	}
+	quorumMet, passed, tier, thresholdBps := k.checkQuorumAndTieredSupport(ctx, lip, params)
+	_ = tier
+	_ = thresholdBps
 
 	if quorumMet && passed {
 		lip.Stage = types.StatusPassed
@@ -151,6 +148,8 @@ func (k Keeper) tallyAndResolve(ctx sdk.Context, lip *types.LIP, params *types.P
 			sdk.NewAttribute("abstain_stake", lip.AbstainStake),
 			sdk.NewAttribute("unique_voters", fmt.Sprintf("%d", lip.UniqueVoters)),
 			sdk.NewAttribute("quorum_met", fmt.Sprintf("%t", quorumMet)),
+			sdk.NewAttribute("tier", tier),
+			sdk.NewAttribute("support_threshold_bps", fmt.Sprintf("%d", thresholdBps)),
 		),
 	)
 }
