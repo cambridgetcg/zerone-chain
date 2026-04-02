@@ -97,6 +97,13 @@ var (
 	// ─── Completion index (R31-2) ──────────────────────────────────────────
 	CompletedRoundIndexPrefix = []byte{0x57} // verdictBlock(8)/roundID → CompletedRoundMeta
 
+	// ─── Martyrance queue ────────────────────────────────────────────────────
+	MartyranceQueuePrefix         = []byte{0x58} // submissionID → exists (active martyrance queue)
+	MartyranceCountKey            = []byte{0x59} // uint64 active martyrance count
+	MartyranceParamsKey           = []byte{0x5a} // singleton MartyranceParams (JSON)
+	MartyranceSubmissionMetaPrefix = []byte{0x5b} // submissionID → MartyranceSubmissionMeta (JSON)
+	MartyranceRoundMetaPrefix     = []byte{0x5c} // roundID → MartyranceRoundMeta (JSON)
+
 	// ─── Deprecated aliases (used by keeper until migration) ───────────────
 	// TODO(R36-5): remove after keeper migration
 	FactKeyPrefix              = SampleKeyPrefix
@@ -574,6 +581,23 @@ func AgentDomainReputationKey(agentAddr, domainID string) []byte {
 func AgentDomainReputationByAgentPrefix(agentAddr string) []byte {
 	key := append(append([]byte{}, AgentDomainReputationPrefix...), []byte(agentAddr)...)
 	return append(key, '/')
+}
+
+// ─── Martyrance queue key constructors ──────────────────────────────────────
+
+// MartyranceQueueKey returns the store key for an active martyrance submission.
+func MartyranceQueueKey(submissionID string) []byte {
+	return append(append([]byte{}, MartyranceQueuePrefix...), []byte(submissionID)...)
+}
+
+// MartyranceSubmissionMetaKey returns the store key for martyrance submission metadata.
+func MartyranceSubmissionMetaKey(submissionID string) []byte {
+	return append(append([]byte{}, MartyranceSubmissionMetaPrefix...), []byte(submissionID)...)
+}
+
+// MartyranceRoundMetaKey returns the store key for martyrance round metadata.
+func MartyranceRoundMetaKey(roundID string) []byte {
+	return append(append([]byte{}, MartyranceRoundMetaPrefix...), []byte(roundID)...)
 }
 
 // ─── Deprecated key constructors (keeper migration pending) ─────────────────

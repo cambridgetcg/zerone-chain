@@ -88,6 +88,148 @@ func (k Keeper) InitiateQualityRound(
 	return roundID, nil
 }
 
+// InitiateMartyranceQualityRound creates the first-pass quality round for a
+// martyrance submission, applying elevated parameters:
+//   - Extended deadlines: CommitPeriodBlocks × DeadlineMultiplier
+//   - Elevated min validators: max(MinValidatorsPerRound, 5)
+//   - Round is flagged as is_martyrance = true
+func (k Keeper) InitiateMartyranceQualityRound(ctx context.Context, submissionID string) (string, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return "", err
+	}
+	mp := k.GetMartyranceParams(ctx)
+
+	sub, found := k.GetSubmission(ctx, submissionID)
+	if !found {
+		return "", types.ErrSubmissionNotFound.Wrapf("submission %q not found", submissionID)
+	}
+
+	block := uint64(sdkCtx.BlockHeight())
+	commitPeriod := params.CommitPeriodBlocks * mp.DeadlineMultiplier
+	revealPeriod := params.RevealPeriodBlocks * mp.DeadlineMultiplier
+	commitDeadline := block + commitPeriod
+	revealDeadline := commitDeadline + revealPeriod
+
+	roundID := k.NextRoundID(ctx)
+	round := &types.QualityRound{
+		Id:                roundID,
+		SubmissionId:      submissionID,
+		StartedAtBlock:    block,
+		Phase:             types.VerificationPhase_VERIFICATION_PHASE_COMMIT,
+		SelectedVerifiers: []string{},
+		CommitDeadline:    commitDeadline,
+		RevealDeadline:    revealDeadline,
+	}
+
+	if err := k.SetQualityRound(ctx, round); err != nil {
+		return "", err
+	}
+	if err := k.SetActiveRound(ctx, roundID); err != nil {
+		return "", err
+	}
+	if err := k.SetSubmissionRoundIndex(ctx, submissionID, roundID); err != nil {
+		return "", err
+	}
+
+	// Store martyrance round metadata separately.
+	if err := k.SetMartyranceRoundMeta(ctx, types.MartyranceRoundMeta{
+		RoundID:               roundID,
+		IsMartyrance:          true,
+		IsSecondaryMartyrance: false,
+	}); err != nil {
+		return "", err
+	}
+
+	sub.QualityRoundId = roundID
+	sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_PENDING_REVIEW
+	if err := k.SetSubmission(ctx, sub); err != nil {
+		return "", err
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"martyrance_round_started",
+		sdk.NewAttribute("round_id", roundID),
+		sdk.NewAttribute("submission_id", submissionID),
+		sdk.NewAttribute("commit_deadline", strconv.FormatUint(commitDeadline, 10)),
+		sdk.NewAttribute("reveal_deadline", strconv.FormatUint(revealDeadline, 10)),
+		sdk.NewAttribute("is_secondary", "false"),
+	))
+
+	return roundID, nil
+}
+
+// InitiateSecondaryMartyranceRound starts the second quality round after the
+// first martyrance round passes with a positive verdict. It selects a fresh
+// verifier set, explicitly excluding any verifiers from the first round.
+func (k Keeper) InitiateSecondaryMartyranceRound(ctx context.Context, submissionID string, firstRoundVerifiers []string) (string, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return "", err
+	}
+	mp := k.GetMartyranceParams(ctx)
+
+	sub, found := k.GetSubmission(ctx, submissionID)
+	if !found {
+		return "", types.ErrSubmissionNotFound.Wrapf("submission %q not found", submissionID)
+	}
+
+	block := uint64(sdkCtx.BlockHeight())
+	commitPeriod := params.CommitPeriodBlocks * mp.DeadlineMultiplier
+	revealPeriod := params.RevealPeriodBlocks * mp.DeadlineMultiplier
+	commitDeadline := block + commitPeriod
+	revealDeadline := commitDeadline + revealPeriod
+
+	roundID := k.NextRoundID(ctx)
+	round := &types.QualityRound{
+		Id:                roundID,
+		SubmissionId:      submissionID,
+		StartedAtBlock:    block,
+		Phase:             types.VerificationPhase_VERIFICATION_PHASE_COMMIT,
+		SelectedVerifiers: []string{}, // Open enrollment with exclusion via metadata
+		CommitDeadline:    commitDeadline,
+		RevealDeadline:    revealDeadline,
+	}
+
+	if err := k.SetQualityRound(ctx, round); err != nil {
+		return "", err
+	}
+	if err := k.SetActiveRound(ctx, roundID); err != nil {
+		return "", err
+	}
+	if err := k.SetSubmissionRoundIndex(ctx, submissionID, roundID); err != nil {
+		return "", err
+	}
+
+	// Store martyrance round metadata separately.
+	if err := k.SetMartyranceRoundMeta(ctx, types.MartyranceRoundMeta{
+		RoundID:               roundID,
+		IsMartyrance:          true,
+		IsSecondaryMartyrance: true,
+		ExcludedVerifiers:     firstRoundVerifiers,
+	}); err != nil {
+		return "", err
+	}
+
+	sub.QualityRoundId = roundID
+	if err := k.SetSubmission(ctx, sub); err != nil {
+		return "", err
+	}
+
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"martyrance_round_started",
+		sdk.NewAttribute("round_id", roundID),
+		sdk.NewAttribute("submission_id", submissionID),
+		sdk.NewAttribute("commit_deadline", strconv.FormatUint(commitDeadline, 10)),
+		sdk.NewAttribute("reveal_deadline", strconv.FormatUint(revealDeadline, 10)),
+		sdk.NewAttribute("is_secondary", "true"),
+	))
+
+	return roundID, nil
+}
+
 // SubmitCommitment handles MsgSubmitCommitment — stores a blinded quality vote
 // commitment and escrows the reviewer's stake.
 func (k Keeper) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCommitment) error {
@@ -106,15 +248,31 @@ func (k Keeper) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCommit
 		return types.ErrDeadlinePassed.Wrap("commit deadline has passed")
 	}
 
-	selected := false
-	for _, v := range round.SelectedVerifiers {
-		if v == msg.Verifier {
-			selected = true
-			break
+	// Check verifier eligibility: martyrance rounds use open enrollment with optional exclusion.
+	roundMeta, isMartyranceRound := k.GetMartyranceRoundMeta(ctx, msg.RoundId)
+	if isMartyranceRound {
+		// Secondary martyrance rounds exclude first-round verifiers.
+		if roundMeta.IsSecondaryMartyrance {
+			for _, excluded := range roundMeta.ExcludedVerifiers {
+				if excluded == msg.Verifier {
+					return types.ErrNotSelectedValidator.Wrapf(
+						"verifier %s excluded from secondary martyrance round (participated in first round)", msg.Verifier,
+					)
+				}
+			}
 		}
-	}
-	if !selected {
-		return types.ErrNotSelectedValidator.Wrapf("verifier %s not selected", msg.Verifier)
+		// First-pass martyrance: any verifier may commit (open enrollment).
+	} else {
+		selected := false
+		for _, v := range round.SelectedVerifiers {
+			if v == msg.Verifier {
+				selected = true
+				break
+			}
+		}
+		if !selected {
+			return types.ErrNotSelectedValidator.Wrapf("verifier %s not selected", msg.Verifier)
+		}
 	}
 
 	for _, c := range round.Commits {
@@ -162,15 +320,29 @@ func (k Keeper) SubmitReveal(ctx context.Context, msg *types.MsgSubmitReveal) er
 		return types.ErrDeadlinePassed.Wrap("reveal deadline has passed")
 	}
 
-	selected := false
-	for _, v := range round.SelectedVerifiers {
-		if v == msg.Verifier {
-			selected = true
-			break
+	// Check verifier eligibility (same semantics as SubmitCommitment).
+	roundMeta, isMartyranceRound := k.GetMartyranceRoundMeta(ctx, msg.RoundId)
+	if isMartyranceRound {
+		if roundMeta.IsSecondaryMartyrance {
+			for _, excluded := range roundMeta.ExcludedVerifiers {
+				if excluded == msg.Verifier {
+					return types.ErrNotSelectedValidator.Wrapf(
+						"verifier %s excluded from secondary martyrance round", msg.Verifier,
+					)
+				}
+			}
 		}
-	}
-	if !selected {
-		return types.ErrNotSelectedValidator.Wrapf("verifier %s not selected", msg.Verifier)
+	} else {
+		selected := false
+		for _, v := range round.SelectedVerifiers {
+			if v == msg.Verifier {
+				selected = true
+				break
+			}
+		}
+		if !selected {
+			return types.ErrNotSelectedValidator.Wrapf("verifier %s not selected", msg.Verifier)
+		}
 	}
 
 	// Find commitment
@@ -325,6 +497,132 @@ func (k Keeper) AggregateQualityRound(ctx context.Context, roundID string) error
 	accepted := verdict == types.QualityVerdict_QUALITY_VERDICT_GOLD ||
 		verdict == types.QualityVerdict_QUALITY_VERDICT_SILVER ||
 		verdict == types.QualityVerdict_QUALITY_VERDICT_BRONZE
+
+	// ─── Martyrance handling ────────────────────────────────────────────────
+	// Martyrance rounds deviate from the standard lifecycle:
+	//   - First-pass accept → initiate secondary round (no sample yet, no stake distribution)
+	//   - First-pass reject → burn full stake, dequeue
+	//   - Secondary accept → create sample with rep bonus, distribute normally
+	//   - Secondary reject → burn full stake, dequeue
+	roundMeta, isMartyranceRound := k.GetMartyranceRoundMeta(ctx, roundID)
+	if isMartyranceRound {
+		if !roundMeta.IsSecondaryMartyrance && accepted {
+			// First-pass positive verdict → start secondary round.
+			firstRoundVerifiers := make([]string, 0, len(round.Reveals))
+			for _, rev := range round.Reveals {
+				firstRoundVerifiers = append(firstRoundVerifiers, rev.Verifier)
+			}
+			// Distribute reviewer stakes for the first round normally.
+			cacheCtx, write := sdkCtx.CacheContext()
+			if err := k.distributeReviewerStakes(cacheCtx, round, sub, params); err != nil {
+				return err
+			}
+			write()
+			// Initiate secondary round — submitter stake remains escrowed.
+			// InitiateSecondaryMartyranceRound re-fetches and saves the submission
+			// with the updated QualityRoundId, so we must not overwrite it here.
+			if _, err := k.InitiateSecondaryMartyranceRound(ctx, sub.Id, firstRoundVerifiers); err != nil {
+				return err
+			}
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"martyrance_first_pass_accepted",
+				sdk.NewAttribute("round_id", roundID),
+				sdk.NewAttribute("submission_id", round.SubmissionId),
+			))
+			return nil
+		}
+
+		// Rejection on either round → burn full stake and dequeue.
+		if !accepted {
+			cacheCtx, write := sdkCtx.CacheContext()
+			if err := k.distributeMartyranceOutcome(cacheCtx, round, sub, false); err != nil {
+				return err
+			}
+			write()
+			sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_REJECTED
+			if verdict == types.QualityVerdict_QUALITY_VERDICT_CONSENT_FAIL {
+				sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_CONSENT_FAILED
+			}
+			_ = k.DequeueMartyranceClaim(ctx, sub.Id)
+			if err := k.SetSubmission(ctx, sub); err != nil {
+				return err
+			}
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"martyrance_rejected_burned",
+				sdk.NewAttribute("round_id", roundID),
+				sdk.NewAttribute("submission_id", round.SubmissionId),
+				sdk.NewAttribute("stake_burned", sub.Stake),
+			))
+			// Still emit the normal round completion event.
+			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+				"quality_round_completed",
+				sdk.NewAttribute("round_id", roundID),
+				sdk.NewAttribute("submission_id", round.SubmissionId),
+				sdk.NewAttribute("verdict", verdict.String()),
+				sdk.NewAttribute("overall_quality", strconv.FormatUint(aggregated.OverallQuality, 10)),
+			))
+			return nil
+		}
+
+		// Secondary round accepted → finalize with martyrance rep bonus.
+		cacheCtx, write := sdkCtx.CacheContext()
+		if err := k.distributeMartyranceOutcome(cacheCtx, round, sub, true); err != nil {
+			return err
+		}
+		write()
+
+		strength := ConsensusStrength(len(round.Reveals), len(round.SelectedVerifiers))
+		if err := k.createSampleFromSubmission(ctx, sub, verdict, aggregated, strength); err != nil {
+			return err
+		}
+		sub.Status = types.SubmissionStatus_SUBMISSION_STATUS_ACCEPTED
+		_ = k.DequeueMartyranceClaim(ctx, sub.Id)
+
+		// Elevated reputation for martyrance success.
+		currentHeight := sdkCtx.BlockHeight()
+		mp := k.GetMartyranceParams(ctx)
+		repParams := k.GetReputationDecayParams(ctx)
+		submitterGain := repParams.GetSubmitterGain().MulInt64(int64(mp.ReputationMultiplier))
+		_ = k.UpdateReputation(ctx, sub.Submitter, domainID, submitterGain, currentHeight)
+		k.ResetInactivityTimer(ctx, sub.Submitter, domainID, currentHeight)
+
+		// Reviewer reputation updates (standard).
+		sides := classifyVoters(round, params)
+		for verifier, side := range sides {
+			isMajority := side == sideAccept
+			if isMajority {
+				gain := repParams.GetReviewerGain()
+				_ = k.UpdateReputation(ctx, verifier, domainID, gain, currentHeight)
+				k.ResetInactivityTimer(ctx, verifier, domainID, currentHeight)
+			} else {
+				oldHeight := int64(0)
+				if oldRep, found := k.GetAgentDomainReputation(ctx, verifier, domainID); found {
+					oldHeight = oldRep.LastActiveHeight
+				}
+				penalty := repParams.GetReviewerPenalty()
+				_ = k.UpdateReputation(ctx, verifier, domainID, penalty.Neg(), oldHeight)
+			}
+		}
+
+		if err := k.SetSubmission(ctx, sub); err != nil {
+			return err
+		}
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"martyrance_verified",
+			sdk.NewAttribute("round_id", roundID),
+			sdk.NewAttribute("submission_id", round.SubmissionId),
+			sdk.NewAttribute("verdict", verdict.String()),
+		))
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"quality_round_completed",
+			sdk.NewAttribute("round_id", roundID),
+			sdk.NewAttribute("submission_id", round.SubmissionId),
+			sdk.NewAttribute("verdict", verdict.String()),
+			sdk.NewAttribute("overall_quality", strconv.FormatUint(aggregated.OverallQuality, 10)),
+		))
+		return nil
+	}
+	// ─── END martyrance handling ─────────────────────────────────────────────
 
 	if accepted {
 		strength := ConsensusStrength(len(round.Reveals), len(round.SelectedVerifiers))

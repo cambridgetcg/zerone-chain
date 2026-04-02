@@ -3,6 +3,7 @@ package keeper
 import (
 	"context"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 
 	"google.golang.org/protobuf/proto"
@@ -981,6 +982,161 @@ func (k Keeper) SetReviewerStakingParams(ctx context.Context, params types.Revie
 		return fmt.Errorf("failed to marshal reviewer staking params: %w", err)
 	}
 	return store.Set(types.ReviewerStakingParamsKey, bz)
+}
+
+// ─── Martyrance queue storage ────────────────────────────────────────────────
+
+// EnqueueMartyranceClaim marks a submission as an active martyrance claim and
+// increments the active count. Returns an error if the queue limit is reached.
+func (k Keeper) EnqueueMartyranceClaim(ctx context.Context, submissionID string) error {
+	mp := k.GetMartyranceParams(ctx)
+	current := k.GetMartyranceQueueSize(ctx)
+	if current >= mp.MaxActiveMartyranceClaims {
+		return types.ErrMartyranceQueueFull.Wrapf(
+			"martyrance queue full: %d/%d active claims",
+			current, mp.MaxActiveMartyranceClaims,
+		)
+	}
+	store := k.storeService.OpenKVStore(ctx)
+	if err := store.Set(types.MartyranceQueueKey(submissionID), []byte{0x01}); err != nil {
+		return err
+	}
+	return k.setMartyranceQueueSize(ctx, current+1)
+}
+
+// DequeueMartyranceClaim removes a submission from the martyrance queue and
+// decrements the active count.
+func (k Keeper) DequeueMartyranceClaim(ctx context.Context, submissionID string) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.MartyranceQueueKey(submissionID))
+	if err != nil || bz == nil {
+		return nil // already dequeued, idempotent
+	}
+	if err := store.Delete(types.MartyranceQueueKey(submissionID)); err != nil {
+		return err
+	}
+	current := k.GetMartyranceQueueSize(ctx)
+	if current > 0 {
+		return k.setMartyranceQueueSize(ctx, current-1)
+	}
+	return nil
+}
+
+// GetMartyranceQueueSize returns the current number of active martyrance claims.
+func (k Keeper) GetMartyranceQueueSize(ctx context.Context) uint64 {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.MartyranceCountKey)
+	if err != nil || bz == nil {
+		return 0
+	}
+	if len(bz) < 8 {
+		return 0
+	}
+	return binary.BigEndian.Uint64(bz)
+}
+
+func (k Keeper) setMartyranceQueueSize(ctx context.Context, count uint64) error {
+	store := k.storeService.OpenKVStore(ctx)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, count)
+	return store.Set(types.MartyranceCountKey, buf)
+}
+
+// IsMartyranceClaim returns true if the given submissionID is in the martyrance queue.
+func (k Keeper) IsMartyranceClaim(ctx context.Context, submissionID string) bool {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.MartyranceQueueKey(submissionID))
+	return err == nil && bz != nil
+}
+
+// IterateMartyranceQueue calls fn for each active martyrance submissionID.
+// Iteration stops early if fn returns true.
+func (k Keeper) IterateMartyranceQueue(ctx context.Context, fn func(submissionID string) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.MartyranceQueuePrefix, prefixEndBytes(types.MartyranceQueuePrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		key := iter.Key()
+		submissionID := string(key[len(types.MartyranceQueuePrefix):])
+		if fn(submissionID) {
+			break
+		}
+	}
+}
+
+// SetMartyranceParams stores the martyrance parameters.
+// SetMartyranceSubmissionMeta stores martyrance-specific metadata for a submission.
+func (k Keeper) SetMartyranceSubmissionMeta(ctx context.Context, meta types.MartyranceSubmissionMeta) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("failed to marshal martyrance submission meta: %w", err)
+	}
+	return store.Set(types.MartyranceSubmissionMetaKey(meta.SubmissionID), bz)
+}
+
+// GetMartyranceSubmissionMeta retrieves martyrance-specific metadata for a submission.
+func (k Keeper) GetMartyranceSubmissionMeta(ctx context.Context, submissionID string) (types.MartyranceSubmissionMeta, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.MartyranceSubmissionMetaKey(submissionID))
+	if err != nil || bz == nil {
+		return types.MartyranceSubmissionMeta{}, false
+	}
+	var meta types.MartyranceSubmissionMeta
+	if err := meta.UnmarshalJSON(bz); err != nil {
+		return types.MartyranceSubmissionMeta{}, false
+	}
+	return meta, true
+}
+
+// SetMartyranceRoundMeta stores martyrance-specific metadata for a quality round.
+func (k Keeper) SetMartyranceRoundMeta(ctx context.Context, meta types.MartyranceRoundMeta) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := json.Marshal(meta)
+	if err != nil {
+		return fmt.Errorf("failed to marshal martyrance round meta: %w", err)
+	}
+	return store.Set(types.MartyranceRoundMetaKey(meta.RoundID), bz)
+}
+
+// GetMartyranceRoundMeta retrieves martyrance-specific metadata for a quality round.
+func (k Keeper) GetMartyranceRoundMeta(ctx context.Context, roundID string) (types.MartyranceRoundMeta, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.MartyranceRoundMetaKey(roundID))
+	if err != nil || bz == nil {
+		return types.MartyranceRoundMeta{}, false
+	}
+	var meta types.MartyranceRoundMeta
+	if err := meta.UnmarshalJSON(bz); err != nil {
+		return types.MartyranceRoundMeta{}, false
+	}
+	return meta, true
+}
+
+func (k Keeper) SetMartyranceParams(ctx context.Context, params types.MartyranceParams) error {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := params.MarshalJSON()
+	if err != nil {
+		return fmt.Errorf("failed to marshal martyrance params: %w", err)
+	}
+	return store.Set(types.MartyranceParamsKey, bz)
+}
+
+// GetMartyranceParams returns the martyrance parameters, or defaults if unset.
+func (k Keeper) GetMartyranceParams(ctx context.Context) types.MartyranceParams {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(types.MartyranceParamsKey)
+	if err != nil || bz == nil {
+		return types.DefaultMartyranceParams()
+	}
+	var params types.MartyranceParams
+	if err := params.UnmarshalJSON(bz); err != nil {
+		return types.DefaultMartyranceParams()
+	}
+	return params
 }
 
 // GetReviewerStakingParams returns the reviewer staking parameters, or defaults if unset.

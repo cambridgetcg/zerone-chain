@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -29,6 +30,10 @@ func (m msgServer) SubmitData(ctx context.Context, msg *types.MsgSubmitData) (*t
 
 func (m msgServer) SubmitThread(ctx context.Context, msg *types.MsgSubmitThread) (*types.MsgSubmitThreadResponse, error) {
 	return m.keeper.SubmitThread(ctx, msg)
+}
+
+func (m msgServer) SubmitMartyranceClaim(ctx context.Context, msg *types.MsgSubmitMartyranceClaim) (*types.MsgSubmitMartyranceClaimResponse, error) {
+	return m.keeper.SubmitMartyranceClaim(ctx, msg)
 }
 
 func (m msgServer) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCommitment) (*types.MsgSubmitCommitmentResponse, error) {
@@ -81,11 +86,23 @@ func (m msgServer) FundBounty(ctx context.Context, msg *types.MsgFundBounty) (*t
 	return m.keeper.FundBounty(ctx, msg)
 }
 
-func (m msgServer) RateSample(_ context.Context, _ *types.MsgRateSample) (*types.MsgRateSampleResponse, error) {
+func (m msgServer) RateSample(ctx context.Context, msg *types.MsgRateSample) (*types.MsgRateSampleResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.rate_sample",
+		sdk.NewAttribute("rater", msg.Rater),
+		sdk.NewAttribute("sample_id", msg.SampleId),
+		sdk.NewAttribute("useful", fmt.Sprintf("%t", msg.Useful)),
+	))
 	return nil, status.Error(codes.Unimplemented, "RateSample not implemented (R37)")
 }
 
-func (m msgServer) UpdateParams(_ context.Context, _ *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
+func (m msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.update_params",
+		sdk.NewAttribute("authority", msg.Authority),
+	))
 	return nil, status.Error(codes.Unimplemented, "UpdateParams not implemented (R37)")
 }
 
@@ -97,19 +114,46 @@ func (m msgServer) RemoveScrapedSource(ctx context.Context, msg *types.MsgRemove
 	return m.keeper.RemoveScrapedSource(ctx, msg)
 }
 
-func (m msgServer) ProposeResearchFund(_ context.Context, _ *types.MsgProposeResearchFund) (*types.MsgProposeResearchFundResponse, error) {
+func (m msgServer) ProposeResearchFund(ctx context.Context, msg *types.MsgProposeResearchFund) (*types.MsgProposeResearchFundResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.propose_research_fund",
+		sdk.NewAttribute("proposer", msg.Proposer),
+		sdk.NewAttribute("title", msg.Title),
+		sdk.NewAttribute("amount", msg.Amount),
+	))
 	return nil, status.Error(codes.Unimplemented, "ProposeResearchFund not implemented (R37)")
 }
 
-func (m msgServer) VoteResearchProposal(_ context.Context, _ *types.MsgVoteResearchProposal) (*types.MsgVoteResearchProposalResponse, error) {
+func (m msgServer) VoteResearchProposal(ctx context.Context, msg *types.MsgVoteResearchProposal) (*types.MsgVoteResearchProposalResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.vote_research_proposal",
+		sdk.NewAttribute("voter", msg.Voter),
+		sdk.NewAttribute("proposal_id", msg.ProposalId),
+		sdk.NewAttribute("vote", fmt.Sprintf("%t", msg.Vote)),
+	))
 	return nil, status.Error(codes.Unimplemented, "VoteResearchProposal not implemented (R37)")
 }
 
-func (m msgServer) ExecuteResearchProposal(_ context.Context, _ *types.MsgExecuteResearchProposal) (*types.MsgExecuteResearchProposalResponse, error) {
+func (m msgServer) ExecuteResearchProposal(ctx context.Context, msg *types.MsgExecuteResearchProposal) (*types.MsgExecuteResearchProposalResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.research_proposal_executed",
+		sdk.NewAttribute("authority", msg.Authority),
+		sdk.NewAttribute("proposal_id", msg.ProposalId),
+	))
 	return nil, status.Error(codes.Unimplemented, "ExecuteResearchProposal not implemented (R37)")
 }
 
-func (m msgServer) AddSample(_ context.Context, _ *types.MsgAddSample) (*types.MsgAddSampleResponse, error) {
+func (m msgServer) AddSample(ctx context.Context, msg *types.MsgAddSample) (*types.MsgAddSampleResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.add_sample",
+		sdk.NewAttribute("authority", msg.Authority),
+		sdk.NewAttribute("domain", msg.Domain),
+		sdk.NewAttribute("sample_type", strconv.FormatInt(int64(msg.SampleType), 10)),
+	))
 	return nil, status.Error(codes.Unimplemented, "AddSample not implemented (R37)")
 }
 

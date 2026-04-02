@@ -175,6 +175,143 @@ func (k Keeper) SubmitData(ctx context.Context, msg *types.MsgSubmitData) (*type
 	return &types.MsgSubmitDataResponse{SubmissionId: submissionID}, nil
 }
 
+// SubmitMartyranceClaim handles MsgSubmitMartyranceClaim — the submitter stakes
+// 90% (configurable) of their balance as the ultimate act of conviction.
+//
+// Differences from SubmitData:
+//   - Testimony is mandatory
+//   - Stake is calculated as MinStakeRatioBps × balance / 10000 (not user-specified)
+//   - Submission is enqueued in the martyrance queue (limited by MaxActiveMartyranceClaims)
+//   - Quality round uses elevated parameters (extended deadlines, higher min validators)
+//   - On rejection the entire stake is burned; on success reputation is multiplied
+func (k Keeper) SubmitMartyranceClaim(ctx context.Context, msg *types.MsgSubmitMartyranceClaim) (*types.MsgSubmitMartyranceClaimResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	params, err := k.GetParams(ctx)
+	if err != nil {
+		return nil, err
+	}
+	mp := k.GetMartyranceParams(ctx)
+
+	// 1. Testimony must be non-empty.
+	if msg.Testimony == "" {
+		return nil, types.ErrMartyranceTestimonyEmpty
+	}
+
+	// 2. Validate content size.
+	if uint64(len(msg.Content)) > params.MaxContentBytes {
+		return nil, types.ErrContentTooLarge.Wrapf("content %d bytes exceeds max %d", len(msg.Content), params.MaxContentBytes)
+	}
+
+	// 3. Compute and check for duplicate content.
+	contentHash := k.ComputeContentHash(msg.Content)
+	if err := k.CheckDuplicate(ctx, contentHash); err != nil {
+		return nil, err
+	}
+
+	// 4. Validate domain exists and is active.
+	domain, found := k.GetDomain(ctx, msg.Domain)
+	if !found {
+		return nil, types.ErrDomainNotFound.Wrapf("domain %q not found", msg.Domain)
+	}
+	if domain.Status != types.DomainStatus_DOMAIN_STATUS_ACTIVE {
+		return nil, types.ErrInvalidDomain.Wrapf("domain %q is not active", msg.Domain)
+	}
+
+	// 5. Calculate martyrance stake = MinStakeRatioBps × balance / 10000.
+	submitterAddr, err := sdk.AccAddressFromBech32(msg.Submitter)
+	if err != nil {
+		return nil, types.ErrInvalidSubmission.Wrap("invalid submitter address")
+	}
+	uzrnCoin := k.bankKeeper.GetBalance(sdkCtx, submitterAddr, "uzrn")
+	uzrnBalance := uzrnCoin.Amount
+
+	stakeAmt := uzrnBalance.Mul(sdkmath.NewInt(int64(mp.MinStakeRatioBps))).Quo(sdkmath.NewInt(10_000))
+
+	// Stake must meet the minimum claim stake.
+	minStake, _ := sdkmath.NewIntFromString(params.MinSubmissionStake)
+	if stakeAmt.LT(minStake) {
+		return nil, types.ErrMartyranceStakeInsufficient.Wrapf(
+			"martyrance stake %s < minimum %s (balance %s uzrn)",
+			stakeAmt.String(), params.MinSubmissionStake, uzrnBalance.String(),
+		)
+	}
+
+	// 6. Check martyrance queue capacity.
+	if k.GetMartyranceQueueSize(ctx) >= mp.MaxActiveMartyranceClaims {
+		return nil, types.ErrMartyranceQueueFull.Wrapf(
+			"martyrance queue full: %d/%d active claims",
+			k.GetMartyranceQueueSize(ctx), mp.MaxActiveMartyranceClaims,
+		)
+	}
+
+	// 7. Escrow martyrance stake.
+	stakeCoin := sdk.NewCoin("uzrn", stakeAmt)
+	if err := k.bankKeeper.SendCoinsFromAccountToModule(
+		sdkCtx, submitterAddr, types.ModuleName, sdk.NewCoins(stakeCoin),
+	); err != nil {
+		return nil, types.ErrMartyranceStakeInsufficient.Wrap(err.Error())
+	}
+
+	// 8. Create Submission (core proto fields only; martyrance fields stored separately).
+	submissionID := k.NextSubmissionID(ctx)
+	submission := &types.Submission{
+		Id:               submissionID,
+		Submitter:        msg.Submitter,
+		Content:          msg.Content,
+		Domain:           msg.Domain,
+		Stake:            stakeAmt.String(),
+		SubmittedAtBlock: uint64(sdkCtx.BlockHeight()),
+		Status:           types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+		ContentHash:      contentHash,
+	}
+
+	if err := k.SetSubmission(ctx, submission); err != nil {
+		return nil, err
+	}
+	if err := k.SetContentHash(ctx, contentHash, submissionID); err != nil {
+		return nil, err
+	}
+	if err := k.SetSubmissionDomainIndex(ctx, msg.Domain, submissionID); err != nil {
+		return nil, err
+	}
+	if err := k.SetSubmissionSubmitterIndex(ctx, msg.Submitter, submissionID); err != nil {
+		return nil, err
+	}
+
+	// 9. Store martyrance metadata and enqueue.
+	if err := k.SetMartyranceSubmissionMeta(ctx, types.MartyranceSubmissionMeta{
+		SubmissionID: submissionID,
+		Testimony:    msg.Testimony,
+	}); err != nil {
+		return nil, err
+	}
+	if err := k.EnqueueMartyranceClaim(ctx, submissionID); err != nil {
+		return nil, err
+	}
+
+	// 10. Initiate martyrance quality round (elevated parameters).
+	roundID, err := k.InitiateMartyranceQualityRound(ctx, submissionID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 11. Emit event.
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"submit_martyrance_claim",
+		sdk.NewAttribute("submission_id", submissionID),
+		sdk.NewAttribute("submitter", msg.Submitter),
+		sdk.NewAttribute("domain", msg.Domain),
+		sdk.NewAttribute("stake", stakeAmt.String()),
+		sdk.NewAttribute("round_id", roundID),
+	))
+
+	return &types.MsgSubmitMartyranceClaimResponse{
+		SubmissionId: submissionID,
+		RoundId:      roundID,
+		StakeAmount:  stakeAmt.String(),
+	}, nil
+}
+
 // SubmitThread handles MsgSubmitThread — validates and stores each item as a linked submission.
 func (k Keeper) SubmitThread(ctx context.Context, msg *types.MsgSubmitThread) (*types.MsgSubmitThreadResponse, error) {
 	sdkCtx := sdk.UnwrapSDKContext(ctx)

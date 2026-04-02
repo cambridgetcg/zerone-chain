@@ -16,6 +16,9 @@ service Msg {
   // SubmitData submits discourse for quality validation.
   rpc SubmitData(MsgSubmitData) returns (MsgSubmitDataResponse);
 
+  // SubmitMartyranceClaim submits an ultimate-stake testimony (martyrance).
+  rpc SubmitMartyranceClaim(MsgSubmitMartyranceClaim) returns (MsgSubmitMartyranceClaimResponse);
+
   // SubmitThread submits a complete conversation thread (batch).
   rpc SubmitThread(MsgSubmitThread) returns (MsgSubmitThreadResponse);
 
@@ -180,6 +183,22 @@ message MsgSubmitThread {
 message MsgSubmitThreadResponse {
   repeated string submission_ids = 1;
   string          thread_id      = 2;
+}
+
+message MsgSubmitMartyranceClaim {
+  option (cosmos.msg.v1.signer) = "submitter";
+
+  string submitter = 1;
+  string content   = 2;
+  string domain    = 3;
+  string category  = 4;
+  string testimony = 5;  // Required justification — non-empty
+}
+
+message MsgSubmitMartyranceClaimResponse {
+  string submission_id = 1;
+  string round_id      = 2;
+  string stake_amount  = 3;  // actual uzrn amount escrowed
 }
 
 // ─── Quality validation messages ──────────────────────────────────────────────

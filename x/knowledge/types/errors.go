@@ -220,4 +220,10 @@ var (
 	ErrChallengeNotReady      = errors.Register(ModuleName, 246, "not enough shared rounds for resolution")
 	ErrCaptureNotFound        = errors.Register(ModuleName, 247, "verification capture not found")
 	ErrNotModelAgent          = errors.Register(ModuleName, 248, "agent is not backed by a model")
+
+	// ─── Martyrance queue (250–253) ─────────────────────────────────────────
+	ErrMartyranceQueueFull       = errors.Register(ModuleName, 250, "martyrance queue is full")
+	ErrMartyranceTestimonyEmpty  = errors.Register(ModuleName, 251, "martyrance testimony is required")
+	ErrMartyranceStakeInsufficient = errors.Register(ModuleName, 252, "balance insufficient for martyrance stake")
+	ErrMartyranceNotActive       = errors.Register(ModuleName, 253, "submission is not an active martyrance claim")
 )

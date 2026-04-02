@@ -443,6 +443,113 @@ func (k Keeper) sumReviewerStakes(ctx context.Context, roundID string, verifiers
 	return total
 }
 
+// distributeMartyranceOutcome handles stake distribution after a martyrance round completes.
+//
+// On accept (final secondary round):
+//   - Submitter gets their full stake back (reviewer staking distributes the reviewer pool separately)
+//   - Majority verifiers get elevated rewards (larger pool from the martyrance stake)
+//
+// On reject (either round):
+//   - Submitter's entire stake is burned (sent to protocol/research fund)
+//   - Majority verifiers still get their stake back + reject bonus from submitter stake
+func (k Keeper) distributeMartyranceOutcome(
+	sdkCtx sdk.Context,
+	round *types.QualityRound,
+	sub *types.Submission,
+	accepted bool,
+) error {
+	submitterStake, ok := sdkmath.NewIntFromString(sub.Stake)
+	if !ok || !submitterStake.IsPositive() {
+		return nil
+	}
+
+	rp := k.GetReviewerStakingParams(sdkCtx)
+	params, err := k.GetParams(sdkCtx)
+	if err != nil || params == nil {
+		defaultP := types.DefaultParams()
+		params = &defaultP
+	}
+	sides := classifyVoters(round, params)
+
+	if accepted {
+		// Return submitter stake in full.
+		if err := k.returnSubmitterStake(sdkCtx, sub, submitterStake); err != nil {
+			return err
+		}
+		// Reviewer stakes distributed via standard mechanism.
+		allStakes := k.GetAllReviewerStakes(sdkCtx, round.Id)
+		return k.returnAllReviewerStakes(sdkCtx, round.Id, allStakes)
+	}
+
+	// Rejection: burn submitter stake, pay majority verifiers elevated reward.
+	var majority, minority []string
+	for verifier, side := range sides {
+		if side == sideReject {
+			majority = append(majority, verifier)
+		} else {
+			minority = append(minority, verifier)
+		}
+	}
+
+	// Challenge bonus (elevated for martyrance — full reject bonus from submitter stake).
+	challengeBonus := submitterStake.Mul(sdkmath.NewInt(int64(rp.RejectBonusRatioBps))).Quo(sdkmath.NewInt(10_000))
+	minorityPot := k.sumReviewerStakes(sdkCtx, round.Id, minority)
+
+	// Minority partial retention (DOKIMANT).
+	minorityRetention := sdkmath.ZeroInt()
+	if len(minority) > 0 && rp.MinorityRetentionBps > 0 {
+		minorityRetention = minorityPot.Mul(sdkmath.NewInt(int64(rp.MinorityRetentionBps))).Quo(sdkmath.NewInt(10_000))
+		perMinority := minorityRetention.Quo(sdkmath.NewInt(int64(len(minority))))
+		if perMinority.IsPositive() {
+			for _, verifier := range minority {
+				addr, err := sdk.AccAddressFromBech32(verifier)
+				if err == nil {
+					_ = k.bankKeeper.SendCoinsFromModuleToAccount(
+						sdkCtx, types.ModuleName, addr,
+						sdk.NewCoins(sdk.NewCoin("uzrn", perMinority)),
+					)
+				}
+			}
+		}
+	}
+	effectiveMinorityPot := minorityPot.Sub(minorityRetention)
+
+	numMaj := int64(len(majority))
+	if numMaj > 0 {
+		rewardPool := challengeBonus.Add(effectiveMinorityPot)
+		rewardPerMaj := rewardPool.Quo(sdkmath.NewInt(numMaj))
+		for _, verifier := range majority {
+			stakeStr, found := k.GetReviewerStake(sdkCtx, round.Id, verifier)
+			if !found {
+				continue
+			}
+			reviewerStake, ok := sdkmath.NewIntFromString(stakeStr)
+			if !ok {
+				continue
+			}
+			payout := reviewerStake.Add(rewardPerMaj)
+			if payout.IsPositive() {
+				addr, err := sdk.AccAddressFromBech32(verifier)
+				if err == nil {
+					_ = k.bankKeeper.SendCoinsFromModuleToAccount(
+						sdkCtx, types.ModuleName, addr,
+						sdk.NewCoins(sdk.NewCoin("uzrn", payout)),
+					)
+				}
+			}
+		}
+	}
+
+	// Burn submitter stake: entire stake minus challenge bonus goes to protocol.
+	burnAmount := submitterStake.Sub(challengeBonus)
+	if burnAmount.IsPositive() {
+		k.depositProtocolRevenue(sdkCtx, burnAmount)
+	}
+
+	k.emitStakingEvent(sdkCtx, round.Id, "martyrance_reject_burned", len(majority), len(minority))
+	return nil
+}
+
 // emitStakingEvent emits a reviewer_staking event.
 func (k Keeper) emitStakingEvent(sdkCtx sdk.Context, roundID, outcome string, majority, minority int) {
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(

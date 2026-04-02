@@ -33,6 +33,12 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 				if params != nil && params.MinValidatorsPerRound > 0 {
 					minValidators = params.MinValidatorsPerRound
 				}
+				// Martyrance rounds require elevated minimum validators (at least 5).
+				if roundMeta, ok := k.GetMartyranceRoundMeta(ctx, round.Id); ok && roundMeta.IsMartyrance {
+					if minValidators < 5 {
+						minValidators = 5
+					}
+				}
 				if uint64(len(round.Commits)) >= minValidators {
 					round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
 					_ = k.SetQualityRound(ctx, round)

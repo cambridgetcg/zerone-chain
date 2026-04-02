@@ -7,6 +7,13 @@ option go_package = "github.com/zerone-chain/zerone/x/knowledge/types";
 // Enums
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// SubmissionType classifies whether a submission is standard or a martyrance
+// ultimate-stake testimony.
+enum SubmissionType {
+  SUBMISSION_TYPE_STANDARD   = 0;  // Normal submission
+  SUBMISSION_TYPE_MARTYRANCE = 1;  // Solitary ultimate-stake testimony
+}
+
 // SampleType classifies the discourse format of a training data sample.
 enum SampleType {
   SAMPLE_TYPE_UNSPECIFIED    = 0;
@@ -136,6 +143,8 @@ message Submission {
   string content_hash           = 20;
   string quality_round_id       = 21;
   bool   sponsored              = 22;
+  SubmissionType submission_type = 23;  // STANDARD or MARTYRANCE
+  string testimony              = 24;  // Required justification for MARTYRANCE
 }
 
 // Sample is a validated, quality-scored training data unit.
@@ -234,6 +243,8 @@ message QualityRound {
   uint64 reveal_deadline          = 11;
   uint64 aggregation_deadline     = 12;
   QualityVote aggregate_scores    = 13;
+  bool        is_martyrance         = 14;  // true if this is a martyrance quality round
+  bool        is_secondary_martyrance = 15; // true if this is the second martyrance round
 }
 
 // CommitEntry records a validator's blinded commitment (SHA-256(vote || salt)).
@@ -484,6 +495,15 @@ message AttestationRecord {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Reviewer Staking Types (R43-1)
 // ═══════════════════════════════════════════════════════════════════════════════
+
+// MartyranceConfig holds governance-tunable parameters for the martyrance queue.
+message MartyranceConfig {
+  uint64 min_stake_ratio_bps        = 1;  // min % of balance to stake (default 9000 = 90%)
+  uint64 verifier_min_tier          = 2;  // minimum verifier tier (default 3)
+  uint64 deadline_multiplier        = 3;  // commit/reveal period multiplier (default 2)
+  uint64 reputation_multiplier      = 4;  // rep gain multiplier on success (default 5)
+  uint64 max_active_martyrance      = 5;  // max concurrent martyrance claims (default 10)
+}
 
 // ReviewerStakingParams holds dual-staking economics parameters.
 message ReviewerStakingParams {
