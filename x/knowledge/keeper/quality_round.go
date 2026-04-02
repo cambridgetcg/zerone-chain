@@ -794,6 +794,32 @@ func (k Keeper) scoreValidators(ctx context.Context, round *types.QualityRound, 
 	}
 }
 
+// computeParticipationScores returns per-verifier quality scores in range [0, 1_000_000].
+// Score = 1_000_000 - deviation; a verifier whose vote exactly matches the aggregate
+// gets the maximum score, while one with maximum deviation gets zero.
+// Verifiers whose vote cannot be parsed receive a score of zero.
+// Returns an empty map if the round has no AggregateScores yet.
+func computeParticipationScores(round *types.QualityRound) map[string]uint64 {
+	scores := make(map[string]uint64, len(round.Reveals))
+	if round.AggregateScores == nil {
+		return scores
+	}
+	for _, reveal := range round.Reveals {
+		var vote types.QualityVote
+		if err := json.Unmarshal([]byte(reveal.Vote), &vote); err != nil {
+			scores[reveal.Verifier] = 0
+			continue
+		}
+		deviation := computeDeviation(&vote, round.AggregateScores)
+		if deviation >= 1_000_000 {
+			scores[reveal.Verifier] = 0
+		} else {
+			scores[reveal.Verifier] = 1_000_000 - deviation
+		}
+	}
+	return scores
+}
+
 // computeDeviation returns the maximum BPS deviation between vote and aggregated scores.
 func computeDeviation(vote, aggregated *types.QualityVote) uint64 {
 	dims := []struct{ v, a uint64 }{

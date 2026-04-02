@@ -181,8 +181,29 @@ func (k Keeper) distributeAccept(
 
 	// Show-up rewards come from minority pot only (no rewards on unanimous).
 	minorityPot := k.sumReviewerStakes(sdkCtx, round.Id, minority)
-	showUpPool := minorityPot.Mul(sdkmath.NewInt(int64(rp.ShowUpRewardRatioBps))).Quo(sdkmath.NewInt(10_000))
-	afterShowUp := minorityPot.Sub(showUpPool)
+
+	// DOKIMANT: return a fraction of the minority pot to minority verifiers (constitutive reward).
+	minorityRetention := sdkmath.ZeroInt()
+	if len(minority) > 0 && rp.MinorityRetentionBps > 0 {
+		minorityRetention = minorityPot.Mul(sdkmath.NewInt(int64(rp.MinorityRetentionBps))).Quo(sdkmath.NewInt(10_000))
+		perMinority := minorityRetention.Quo(sdkmath.NewInt(int64(len(minority))))
+		if perMinority.IsPositive() {
+			for _, verifier := range minority {
+				addr, err := sdk.AccAddressFromBech32(verifier)
+				if err == nil {
+					_ = k.bankKeeper.SendCoinsFromModuleToAccount(
+						sdkCtx, types.ModuleName, addr,
+						sdk.NewCoins(sdk.NewCoin("uzrn", perMinority)),
+					)
+				}
+			}
+		}
+	}
+	// Only the non-retained fraction of the minority pot flows to majority distribution.
+	effectiveMinorityPot := minorityPot.Sub(minorityRetention)
+
+	showUpPool := effectiveMinorityPot.Mul(sdkmath.NewInt(int64(rp.ShowUpRewardRatioBps))).Quo(sdkmath.NewInt(10_000))
+	afterShowUp := effectiveMinorityPot.Sub(showUpPool)
 
 	acceptReward := submitterStake.Mul(sdkmath.NewInt(int64(rp.AcceptRewardRatioBps))).Quo(sdkmath.NewInt(10_000))
 	if acceptReward.GT(afterShowUp) {
@@ -230,7 +251,7 @@ func (k Keeper) distributeAccept(
 		}
 	}
 
-	// Minority: lose everything (already escrowed in module, no payout).
+	// Minority: partial retention already paid above; remainder stays in module.
 	// Protocol: rounding dust stays in module account.
 
 	k.emitStakingEvent(sdkCtx, round.Id, "accept", len(majority), len(minority))
@@ -258,16 +279,35 @@ func (k Keeper) distributeReject(
 		}
 	}
 
-	// Challenge bonus from submitter stake; minority pot goes entirely to majority.
+	// Challenge bonus from submitter stake; minority pot (minus partial retention) goes to majority.
 	challengeBonus := submitterStake.Mul(sdkmath.NewInt(int64(rp.RejectBonusRatioBps))).Quo(sdkmath.NewInt(10_000))
 	minorityPot := k.sumReviewerStakes(sdkCtx, round.Id, minority)
 
+	// DOKIMANT: return a fraction of the minority pot to minority verifiers (constitutive reward).
+	minorityRetention := sdkmath.ZeroInt()
+	if len(minority) > 0 && rp.MinorityRetentionBps > 0 {
+		minorityRetention = minorityPot.Mul(sdkmath.NewInt(int64(rp.MinorityRetentionBps))).Quo(sdkmath.NewInt(10_000))
+		perMinority := minorityRetention.Quo(sdkmath.NewInt(int64(len(minority))))
+		if perMinority.IsPositive() {
+			for _, verifier := range minority {
+				addr, err := sdk.AccAddressFromBech32(verifier)
+				if err == nil {
+					_ = k.bankKeeper.SendCoinsFromModuleToAccount(
+						sdkCtx, types.ModuleName, addr,
+						sdk.NewCoins(sdk.NewCoin("uzrn", perMinority)),
+					)
+				}
+			}
+		}
+	}
+	effectiveMinorityPot := minorityPot.Sub(minorityRetention)
+
 	// Submitter: loses everything (no payout).
 
-	// Pay majority reviewers: own stake + (challengeBonus + minorityPot) / numMaj.
+	// Pay majority reviewers: own stake + (challengeBonus + effectiveMinorityPot) / numMaj.
 	numMaj := int64(len(majority))
 	if numMaj > 0 {
-		rewardPool := challengeBonus.Add(minorityPot)
+		rewardPool := challengeBonus.Add(effectiveMinorityPot)
 		rewardPerMaj := rewardPool.Quo(sdkmath.NewInt(numMaj))
 
 		for _, verifier := range majority {
@@ -298,7 +338,7 @@ func (k Keeper) distributeReject(
 		k.depositProtocolRevenue(sdkCtx, protocolShare)
 	}
 
-	// Minority: lose everything.
+	// Minority: partial retention already paid above; remainder stays in module.
 
 	k.emitStakingEvent(sdkCtx, round.Id, "reject", len(majority), len(minority))
 	return nil

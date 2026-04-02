@@ -134,15 +134,16 @@ func TestReviewerStaking_Outcomes(t *testing.T) {
 				{OverallQuality: 700000, ConsentValid: true}, // accept
 				{OverallQuality: 200000, ConsentValid: true}, // reject (minority)
 			},
-			// minorityPot=300K, showUp=30K, afterShowUp=270K
-			// acceptReward=min(300K,270K)=270K, remaining=0
-			// submitter=1M+270K=1,270K
-			// each majority=300K+(30K+0)/2=315K
-			// rv3 loses stake (no payout)
-			wantSubmitter: 1_270_000,
-			wantRV1:       315_000,
-			wantRV2:       315_000,
-			wantRV3:       -1,
+			// DOKIMANT: minorityRetention=300K*20%=60K → rv3 gets 60K back
+			// effectiveMinorityPot=240K, showUp=24K, afterShowUp=216K
+			// acceptReward=min(300K,216K)=216K, remaining=0
+			// submitter=1M+216K=1,216K
+			// each majority=300K+(24K+0)/2=312K
+			// rv3 gets 60K (partial retention)
+			wantSubmitter: 1_216_000,
+			wantRV1:       312_000,
+			wantRV2:       312_000,
+			wantRV3:       60_000,
 			wantOutcome:   "accept",
 		},
 		{
@@ -169,13 +170,14 @@ func TestReviewerStaking_Outcomes(t *testing.T) {
 				{OverallQuality: 200000, ConsentValid: true}, // reject
 				{OverallQuality: 800000, ConsentValid: true}, // accept (minority)
 			},
-			// minorityPot=300K, challengeBonus=500K
-			// rewardPool=800K, perMaj=400K
-			// rv1,rv2=300K+400K=700K. rv3 loses stake.
+			// DOKIMANT: minorityRetention=300K*20%=60K → rv3 gets 60K back
+			// effectiveMinorityPot=240K, challengeBonus=500K
+			// rewardPool=740K, perMaj=370K
+			// rv1,rv2=300K+370K=670K. rv3 gets 60K (partial retention).
 			wantSubmitter: -1,
-			wantRV1:       700_000,
-			wantRV2:       700_000,
-			wantRV3:       -1,
+			wantRV1:       670_000,
+			wantRV2:       670_000,
+			wantRV3:       60_000,
 			wantOutcome:   "reject",
 		},
 	}
@@ -618,4 +620,95 @@ func TestReviewerStaking_RejectSetsSubmissionStatus(t *testing.T) {
 	sub, found := k.GetSubmission(ctx, "s1")
 	require.True(t, found)
 	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
+}
+
+// ─── DOKIMANT: Minority Partial Retention ───────────────────────────────────
+
+// TestDOKIMANT_MinorityRetentionAccept verifies that on an ACCEPT outcome the
+// minority verifier receives MinorityRetentionBps (20%) of their escrowed stake
+// back, while the majority distribution is computed against the reduced pot.
+func TestDOKIMANT_MinorityRetentionAccept(t *testing.T) {
+	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
+
+	// rv1, rv2 accept; rv3 rejects (minority).
+	votes := []*types.QualityVote{
+		{OverallQuality: 800000, ConsentValid: true},
+		{OverallQuality: 750000, ConsentValid: true},
+		{OverallQuality: 200000, ConsentValid: true}, // minority
+	}
+	runFullRoundWithStaking(t, k, ctx, roundID, votes)
+	bk.moduleToAccountCalls = nil
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	// rv3 should receive the 20% partial retention (300K * 20% = 60K).
+	rv3Pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == rv3 })
+	require.NotNil(t, rv3Pay, "minority verifier should receive partial retention")
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 60_000), rv3Pay.amount[0])
+
+	// Total paid to rv3 must be strictly less than their escrowed stake (300K).
+	require.True(t, rv3Pay.amount[0].Amount.LT(sdkmath.NewInt(300_000)),
+		"minority retention must be less than full stake")
+}
+
+// TestDOKIMANT_MinorityRetentionReject verifies that on a REJECT outcome the
+// minority verifier (acceptor) also receives their 20% partial retention.
+func TestDOKIMANT_MinorityRetentionReject(t *testing.T) {
+	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
+
+	// rv1, rv2 reject; rv3 accepts (minority).
+	votes := []*types.QualityVote{
+		{OverallQuality: 100000, ConsentValid: true},
+		{OverallQuality: 150000, ConsentValid: true},
+		{OverallQuality: 800000, ConsentValid: true}, // minority
+	}
+	runFullRoundWithStaking(t, k, ctx, roundID, votes)
+	bk.moduleToAccountCalls = nil
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	rv3Pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == rv3 })
+	require.NotNil(t, rv3Pay, "minority verifier should receive partial retention on reject outcome")
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 60_000), rv3Pay.amount[0])
+}
+
+// TestDOKIMANT_ZeroRetentionBps verifies that setting MinorityRetentionBps=0
+// disables the feature (minority gets nothing).
+func TestDOKIMANT_ZeroRetentionBps(t *testing.T) {
+	k, ctx, bk, roundID := setupReviewerStakingRound(t, "1000000")
+
+	// Override params to disable retention.
+	rp := types.DefaultReviewerStakingParams()
+	rp.MinorityRetentionBps = 0
+	require.NoError(t, k.SetReviewerStakingParams(ctx, rp))
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 800000, ConsentValid: true},
+		{OverallQuality: 750000, ConsentValid: true},
+		{OverallQuality: 200000, ConsentValid: true}, // minority
+	}
+	runFullRoundWithStaking(t, k, ctx, roundID, votes)
+	bk.moduleToAccountCalls = nil
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	rv3Pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == rv3 })
+	require.Nil(t, rv3Pay, "minority verifier should get nothing when MinorityRetentionBps=0")
+}
+
+// TestDOKIMANT_ValidateNewParams verifies that the three new DOKIMANT params
+// are rejected when out of range.
+func TestDOKIMANT_ValidateNewParams(t *testing.T) {
+	base := types.DefaultReviewerStakingParams()
+
+	tooHigh := base
+	tooHigh.MinorityRetentionBps = 10_001
+	require.Error(t, tooHigh.Validate(), "minority_retention_bps > 10000 should fail")
+
+	tooHigh2 := base
+	tooHigh2.ParticipationRewardBps = 10_001
+	require.Error(t, tooHigh2.Validate(), "participation_reward_bps > 10000 should fail")
+
+	tooHigh3 := base
+	tooHigh3.QualityBonusBps = 10_001
+	require.Error(t, tooHigh3.Validate(), "quality_bonus_bps > 10000 should fail")
+
+	require.NoError(t, base.Validate(), "defaults should pass validation")
 }

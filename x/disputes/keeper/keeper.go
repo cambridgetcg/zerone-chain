@@ -560,9 +560,30 @@ func (k Keeper) distributeWin(ctx context.Context, dispute *types.Dispute, param
 		}
 	}
 
-	// Distribute arbiter rewards (split equally among arbiters who voted correctly)
+	// DOKIMANT: split arbiterReward 80% to correct voters, 20% participation to all voters.
 	if arbiterReward.Sign() > 0 && len(dispute.Arbiters) > 0 {
 		votes := k.GetVotesByDispute(ctx, dispute.Id)
+
+		// 20% participation reward to all voters regardless of correctness.
+		participationShare := new(big.Int).Mul(arbiterReward, big.NewInt(20))
+		participationShare.Div(participationShare, big.NewInt(100))
+		correctShare := new(big.Int).Sub(arbiterReward, participationShare)
+
+		if participationShare.Sign() > 0 && len(votes) > 0 {
+			perVoter := new(big.Int).Div(participationShare, big.NewInt(int64(len(votes))))
+			if perVoter.Sign() > 0 {
+				for _, v := range votes {
+					arbAddr, err := sdk.AccAddressFromBech32(v.Arbiter)
+					if err != nil {
+						continue
+					}
+					coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(perVoter)))
+					_ = k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, arbAddr, coins)
+				}
+			}
+		}
+
+		// 80% to correct voters only.
 		var correctVoters []string
 		for _, v := range votes {
 			if (dispute.Outcome == types.DisputeOutcome_DISPUTE_OUTCOME_CHALLENGER_WINS && v.Vote == types.ArbiterDecision_ARBITER_DECISION_CHALLENGER) ||
@@ -571,7 +592,7 @@ func (k Keeper) distributeWin(ctx context.Context, dispute *types.Dispute, param
 			}
 		}
 		if len(correctVoters) > 0 {
-			perArbiter := new(big.Int).Div(arbiterReward, big.NewInt(int64(len(correctVoters))))
+			perArbiter := new(big.Int).Div(correctShare, big.NewInt(int64(len(correctVoters))))
 			for _, arb := range correctVoters {
 				arbAddr, err := sdk.AccAddressFromBech32(arb)
 				if err != nil {

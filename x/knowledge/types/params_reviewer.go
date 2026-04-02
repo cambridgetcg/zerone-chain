@@ -19,16 +19,25 @@ type ReviewerStakingParams struct {
 	RejectBonusRatioBps uint64 `json:"reject_bonus_ratio_bps"`
 	// MaxContestedDeepCount: strikes on same content hash before permanent rejection.
 	MaxContestedDeepCount uint64 `json:"max_contested_deep_count"`
+	// MinorityRetentionBps: fraction of minority pot returned to minority verifiers (default 2000 = 20%).
+	MinorityRetentionBps uint64 `json:"minority_retention_bps"`
+	// ParticipationRewardBps: reserved for future governance-updatable participation pool (default 500 = 5%).
+	ParticipationRewardBps uint64 `json:"participation_reward_bps"`
+	// QualityBonusBps: quality bonus weight for low-deviation votes in revenue distribution (default 1500 = 15%).
+	QualityBonusBps uint64 `json:"quality_bonus_bps"`
 }
 
 // DefaultReviewerStakingParams returns the default reviewer staking parameters.
 func DefaultReviewerStakingParams() ReviewerStakingParams {
 	return ReviewerStakingParams{
-		ReviewerStakeRatioBps: 3000, // 30%
-		ShowUpRewardRatioBps:  1000, // 10%
-		AcceptRewardRatioBps:  3000, // 30%
-		RejectBonusRatioBps:   5000, // 50%
-		MaxContestedDeepCount: 3,
+		ReviewerStakeRatioBps:  3000, // 30%
+		ShowUpRewardRatioBps:   1000, // 10%
+		AcceptRewardRatioBps:   3000, // 30%
+		RejectBonusRatioBps:    5000, // 50%
+		MaxContestedDeepCount:  3,
+		MinorityRetentionBps:   2000, // 20%
+		ParticipationRewardBps: 500,  // 5%
+		QualityBonusBps:        1500, // 15%
 	}
 }
 
@@ -53,6 +62,15 @@ func (p ReviewerStakingParams) Validate() error {
 	}
 	if p.MaxContestedDeepCount == 0 {
 		return fmt.Errorf("max_contested_deep_count must be > 0")
+	}
+	if p.MinorityRetentionBps > 10_000 {
+		return fmt.Errorf("minority_retention_bps must be <= 10000, got %d", p.MinorityRetentionBps)
+	}
+	if p.ParticipationRewardBps > 10_000 {
+		return fmt.Errorf("participation_reward_bps must be <= 10000, got %d", p.ParticipationRewardBps)
+	}
+	if p.QualityBonusBps > 10_000 {
+		return fmt.Errorf("quality_bonus_bps must be <= 10000, got %d", p.QualityBonusBps)
 	}
 	return nil
 }

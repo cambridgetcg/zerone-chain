@@ -153,22 +153,48 @@ func (k Keeper) distributeToValidators(ctx context.Context, sample *types.Sample
 		return totalShare
 	}
 
-	// Equal split among validators who revealed
-	numValidators := int64(len(round.Reveals))
-	perValidator := totalShare.Quo(sdkmath.NewInt(numValidators))
-	if !perValidator.IsPositive() {
-		return totalShare
+	// Quality-weighted split: higher participation score → larger share.
+	// Falls back to equal split when no aggregate scores are available.
+	scores := computeParticipationScores(round)
+	var totalScore uint64
+	for _, s := range scores {
+		totalScore += s
 	}
 
 	var distributed sdkmath.Int = sdkmath.ZeroInt()
-	for _, reveal := range round.Reveals {
-		validatorAddr, err := sdk.AccAddressFromBech32(reveal.Verifier)
-		if err != nil {
-			continue
+	if totalScore == 0 {
+		// Fallback: equal split among validators who revealed.
+		numValidators := int64(len(round.Reveals))
+		perValidator := totalShare.Quo(sdkmath.NewInt(numValidators))
+		if !perValidator.IsPositive() {
+			return totalShare
 		}
-		coins := sdk.NewCoins(sdk.NewCoin("uzrn", perValidator))
-		if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, validatorAddr, coins); err == nil {
-			distributed = distributed.Add(perValidator)
+		for _, reveal := range round.Reveals {
+			validatorAddr, err := sdk.AccAddressFromBech32(reveal.Verifier)
+			if err != nil {
+				continue
+			}
+			coins := sdk.NewCoins(sdk.NewCoin("uzrn", perValidator))
+			if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, validatorAddr, coins); err == nil {
+				distributed = distributed.Add(perValidator)
+			}
+		}
+	} else {
+		// Weighted split proportional to participation score.
+		for _, reveal := range round.Reveals {
+			score := scores[reveal.Verifier]
+			share := totalShare.Mul(sdkmath.NewInt(int64(score))).Quo(sdkmath.NewInt(int64(totalScore)))
+			if !share.IsPositive() {
+				continue
+			}
+			validatorAddr, err := sdk.AccAddressFromBech32(reveal.Verifier)
+			if err != nil {
+				continue
+			}
+			coins := sdk.NewCoins(sdk.NewCoin("uzrn", share))
+			if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, validatorAddr, coins); err == nil {
+				distributed = distributed.Add(share)
+			}
 		}
 	}
 

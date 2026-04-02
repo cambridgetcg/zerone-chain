@@ -325,6 +325,103 @@ func TestRevenue_NoConsentProof_DefaultMultiplier(t *testing.T) {
 	require.Equal(t, sdkmath.NewInt(5500), submitterPayment)
 }
 
+// ─── DOKIMANT: Quality-weighted validator revenue split ─────────────────────
+
+// setupRoundWithScores creates a quality round where each verifier's reveal
+// contains the given vote JSON, and AggregateScores is set so that
+// computeParticipationScores() produces non-zero weights.
+func setupRoundWithScores(t *testing.T, k keeper.Keeper, ctx context.Context, submissionID, roundID string, verifiers []string, votes []string, aggregated *types.QualityVote) {
+	t.Helper()
+	reveals := make([]*types.RevealEntry, len(verifiers))
+	for i, v := range verifiers {
+		reveals[i] = &types.RevealEntry{
+			Verifier: v,
+			Vote:     votes[i],
+		}
+	}
+	round := &types.QualityRound{
+		Id:              roundID,
+		SubmissionId:    submissionID,
+		Reveals:         reveals,
+		AggregateScores: aggregated,
+	}
+	require.NoError(t, k.SetQualityRound(ctx, round))
+	require.NoError(t, k.SetSubmissionRoundIndex(ctx, submissionID, roundID))
+}
+
+// TestDOKIMANT_QualityWeightedRevenue verifies that validators whose votes
+// closely match the aggregate receive a proportionally larger share of the
+// validator revenue pool than those with high deviation.
+func TestDOKIMANT_QualityWeightedRevenue(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setDefaultParams(t, k, ctx)
+
+	// Two validators: val1 votes exactly at aggregate (low dev), val2 votes far off.
+	val1 := "zrn1qcxce9c4thzxnfmpr2dqnnlqea9ey35ydj769h"
+	val2 := "zrn1xznhxqv7zqy3h5uqg6efxwdmjkhg7uh23hkufc"
+
+	aggregated := &types.QualityVote{OverallQuality: 800_000}
+	// val1 matches aggregate perfectly (deviation=0, score=1_000_000).
+	// val2 deviates by 500_000 (score=500_000).
+	votes := []string{
+		`{"overall_quality":800000}`,
+		`{"overall_quality":300000}`,
+	}
+
+	createSampleWithSubmission(t, k, ctx, "s1", testAddr, "sub1", types.ConsentType_CONSENT_TYPE_PUBLIC_LICENSE)
+	setupRoundWithScores(t, k, ctx, "sub1", "round1", []string{val1, val2}, votes, aggregated)
+	require.NoError(t, k.SetPendingRevenue(ctx, "s1", 10_000))
+
+	triggerEpochDistribution(t, k, ctx)
+
+	// Total validator share = 22% of 10000 = 2200
+	// totalScore = 1_000_000 + 500_000 = 1_500_000
+	// val1 share = 2200 * 1_000_000 / 1_500_000 = 1466
+	// val2 share = 2200 * 500_000 / 1_500_000 = 733
+	var val1Pay, val2Pay sdkmath.Int
+	for _, call := range bk.moduleToAccountCalls {
+		switch call.to {
+		case val1:
+			val1Pay = call.amount.AmountOf("uzrn")
+		case val2:
+			val2Pay = call.amount.AmountOf("uzrn")
+		}
+	}
+	require.Equal(t, sdkmath.NewInt(1466), val1Pay, "high-quality validator should receive larger share")
+	require.Equal(t, sdkmath.NewInt(733), val2Pay, "low-quality validator should receive smaller share")
+	require.True(t, val1Pay.GT(val2Pay), "better-matching validator must earn more")
+}
+
+// TestDOKIMANT_QualityWeightedFallbackOnNoScores verifies that when a round
+// has no AggregateScores the distribution falls back to equal split.
+func TestDOKIMANT_QualityWeightedFallbackOnNoScores(t *testing.T) {
+	k, ctx, bk := setupKeeperWithBank(t)
+	setDefaultParams(t, k, ctx)
+
+	val1 := "zrn1qcxce9c4thzxnfmpr2dqnnlqea9ey35ydj769h"
+	val2 := "zrn1xznhxqv7zqy3h5uqg6efxwdmjkhg7uh23hkufc"
+
+	createSampleWithSubmission(t, k, ctx, "s1", testAddr, "sub1", types.ConsentType_CONSENT_TYPE_PUBLIC_LICENSE)
+	// Round with no AggregateScores → equal split fallback.
+	setupRoundWithValidators(t, k, ctx, "sub1", "round1", []string{val1, val2})
+	require.NoError(t, k.SetPendingRevenue(ctx, "s1", 10_000))
+
+	triggerEpochDistribution(t, k, ctx)
+
+	// Equal split: 2200 / 2 = 1100 each.
+	var val1Pay, val2Pay sdkmath.Int
+	for _, call := range bk.moduleToAccountCalls {
+		switch call.to {
+		case val1:
+			val1Pay = call.amount.AmountOf("uzrn")
+		case val2:
+			val2Pay = call.amount.AmountOf("uzrn")
+		}
+	}
+	require.Equal(t, sdkmath.NewInt(1100), val1Pay)
+	require.Equal(t, sdkmath.NewInt(1100), val2Pay)
+}
+
 // ─── EndBlocker integration ─────────────────────────────────────────────────
 
 func TestRevenue_EndBlocker_DistributesAtEpoch(t *testing.T) {
