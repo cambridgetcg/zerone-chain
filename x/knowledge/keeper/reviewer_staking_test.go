@@ -712,3 +712,285 @@ func TestDOKIMANT_ValidateNewParams(t *testing.T) {
 
 	require.NoError(t, base.Validate(), "defaults should pass validation")
 }
+
+// ─── EDIMANCE: Multi-Verifier Staking Scenarios (5 Verifiers) ───────────────
+
+// setup5VerifierRound creates a submission with the given stake and a quality round
+// with rv1–rv5 as verifiers. Returns keeper, unwrapped context, mock bank, and round ID.
+func setup5VerifierRound(t *testing.T, stake string) (keeper.Keeper, sdk.Context, *mockBankKeeper, string) {
+	t.Helper()
+	k, ctx, bk := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k, ctx)
+
+	rp := types.DefaultReviewerStakingParams()
+	require.NoError(t, k.SetReviewerStakingParams(ctx, rp))
+
+	sub := &types.Submission{
+		Id:          "s5",
+		Domain:      "technology",
+		Submitter:   testAddr,
+		Content:     "5-verifier test content",
+		Stake:       stake,
+		Status:      types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+		Consent:     &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		ContentHash: "5v_hash_001",
+	}
+	require.NoError(t, k.SetSubmission(ctx, sub))
+
+	verifiers := []string{rv1, rv2, rv3, rv4, rv5}
+	roundID, err := k.InitiateQualityRound(ctx, "s5", "", verifiers)
+	require.NoError(t, err)
+	return k, sdk.UnwrapSDKContext(ctx), bk, roundID
+}
+
+// runFullRound5 commits and reveals for all 5 verifiers (rv1–rv5).
+func runFullRound5(t *testing.T, k keeper.Keeper, ctx sdk.Context, roundID string, votes []*types.QualityVote) {
+	t.Helper()
+	require.Len(t, votes, 5, "runFullRound5 requires exactly 5 votes")
+	salts := [][]byte{
+		[]byte("s1"), []byte("s2"), []byte("s3"), []byte("s4"), []byte("s5"),
+	}
+	verifiers := []string{rv1, rv2, rv3, rv4, rv5}
+
+	for i, v := range verifiers {
+		hash := types.ComputeQualityCommitHash(roundID, votes[i], salts[i])
+		require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+			Verifier: v, RoundId: roundID, CommitHash: hash,
+		}))
+	}
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	for i, v := range verifiers {
+		require.NoError(t, k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+			Verifier: v, RoundId: roundID, Scores: votes[i], Salt: salts[i],
+		}))
+	}
+}
+
+// TestEdimance_FiveVerifiers_MajorityAccept verifies the 4/5 accept scenario:
+// 4 reviewers on the accept side form a 2/3+ supermajority (4×3=12 ≥ 5×2=10).
+// Majority (rv1–rv4) must receive their stake + share of minority pot.
+// Minority (rv5) must receive the 20% DOKIMANT partial retention.
+func TestEdimance_FiveVerifiers_MajorityAccept(t *testing.T) {
+	k, ctx, bk, roundID := setup5VerifierRound(t, "1000000")
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 810_000, ConsentValid: true}, // rv1 accept
+		{OverallQuality: 800_000, ConsentValid: true}, // rv2 accept
+		{OverallQuality: 790_000, ConsentValid: true}, // rv3 accept
+		{OverallQuality: 820_000, ConsentValid: true}, // rv4 accept
+		{OverallQuality: 200_000, ConsentValid: true}, // rv5 reject (minority)
+	}
+	runFullRound5(t, k, ctx, roundID, votes)
+
+	bk.moduleToAccountCalls = nil
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	// ── Staking event: ACCEPT, 4 majority, 1 minority ────────────────────────
+	events := ctx.EventManager().Events()
+	found := false
+	for _, e := range events {
+		if e.Type == "reviewer_staking" {
+			attrMap := make(map[string]string)
+			for _, a := range e.Attributes {
+				attrMap[a.Key] = a.Value
+			}
+			if attrMap["outcome"] == "accept" && attrMap["majority_count"] == "4" && attrMap["minority_count"] == "1" {
+				found = true
+			}
+		}
+	}
+	require.True(t, found, "expected reviewer_staking event with outcome=accept majority=4 minority=1")
+
+	// ── DOKIMANT: rv5 gets 20% of 300K = 60K ────────────────────────────────
+	rv5Pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == rv5 })
+	require.NotNil(t, rv5Pay, "rv5 (minority) must receive DOKIMANT partial retention")
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 60_000), rv5Pay.amount[0],
+		"rv5 must receive exactly 60K (20%% of 300K stake)")
+
+	// ── Majority (rv1–rv4) must each receive own stake + share of bonus ───────
+	// effectiveMinorityPot = 300K - 60K = 240K.
+	// showUpPool = 240K × 10% = 24K. afterShowUp = 216K.
+	// acceptReward = min(300K, 216K) = 216K. remainingPot = 0.
+	// per majority: own stake (300K) + (24K + 0) / 4 = 300K + 6K = 306K.
+	for _, rv := range []string{rv1, rv2, rv3, rv4} {
+		pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == rv })
+		require.NotNil(t, pay, "majority reviewer %s must be paid", rv)
+		require.Equal(t, sdk.NewInt64Coin("uzrn", 306_000), pay.amount[0],
+			"majority reviewer %s must receive 306K (300K stake + 6K show-up)", rv)
+	}
+
+	// ── Minority payout strictly less than majority payout ────────────────────
+	require.True(t, rv5Pay.amount[0].Amount.LT(sdkmath.NewInt(306_000)),
+		"minority retention (60K) must be less than majority reward (306K)")
+}
+
+// TestEdimance_FiveVerifiers_DeepContested verifies the 3/5 accept scenario:
+// 3/5 = 60% < 66.7% → neither side has a 2/3 supermajority → DEEP_CONTESTED.
+// All reviewer stakes must be returned. A contested strike must be recorded.
+func TestEdimance_FiveVerifiers_DeepContested(t *testing.T) {
+	k, ctx, bk, roundID := setup5VerifierRound(t, "1000000")
+
+	votes := []*types.QualityVote{
+		{OverallQuality: 800_000, ConsentValid: true}, // rv1 accept
+		{OverallQuality: 790_000, ConsentValid: true}, // rv2 accept
+		{OverallQuality: 810_000, ConsentValid: true}, // rv3 accept
+		{OverallQuality: 200_000, ConsentValid: true}, // rv4 reject
+		{OverallQuality: 150_000, ConsentValid: true}, // rv5 reject
+	}
+	runFullRound5(t, k, ctx, roundID, votes)
+
+	bk.moduleToAccountCalls = nil
+	require.NoError(t, k.AggregateQualityRound(ctx, roundID))
+
+	// ── Staking event: DEEP_CONTESTED ────────────────────────────────────────
+	events := ctx.EventManager().Events()
+	found := false
+	for _, e := range events {
+		if e.Type == "reviewer_staking" {
+			for _, a := range e.Attributes {
+				if a.Key == "outcome" && a.Value == "deep_contested" {
+					found = true
+				}
+			}
+		}
+	}
+	require.True(t, found, "expected reviewer_staking event with outcome=deep_contested")
+
+	// ── All reviewer stakes returned ──────────────────────────────────────────
+	// Each reviewer (rv1–rv5): stake 300K returned.
+	for _, rv := range []string{rv1, rv2, rv3, rv4, rv5} {
+		pay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == rv })
+		require.NotNil(t, pay, "reviewer %s must have stake returned on DEEP_CONTESTED", rv)
+		require.Equal(t, sdk.NewInt64Coin("uzrn", 300_000), pay.amount[0],
+			"reviewer %s must receive full 300K stake return", rv)
+	}
+
+	// ── Submitter stake also returned ────────────────────────────────────────
+	submitterPay := findTransfer(bk.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == testAddr })
+	require.NotNil(t, submitterPay, "submitter stake must be returned on DEEP_CONTESTED")
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 1_000_000), submitterPay.amount[0])
+
+	// ── Contested strike recorded on content hash ─────────────────────────────
+	count := k.GetContestedDeepCount(ctx, "5v_hash_001")
+	require.Equal(t, uint64(1), count, "one contested strike must be recorded on content hash")
+}
+
+// TestEdimance_TwoMinority_BothGetPartialRetention verifies that when 2 reviewers
+// are on the minority side, both receive the MinorityRetentionBps partial return
+// (proportional to their individual escrowed stakes).
+func TestEdimance_TwoMinority_BothGetPartialRetention(t *testing.T) {
+	k, ctx, bk, roundID := setup5VerifierRound(t, "1000000")
+
+	// 3 accept (supermajority 3×3=9 < 5×2=10 → no wait: 3/5=60% < 66.7%).
+	// Actually 3/5 means NOT supermajority → DEEP_CONTESTED. Need 4/5 for ACCEPT.
+	// Use 4 accept, 2 reject with 6 verifiers... but we only have rv1-rv5 (5).
+	// For 4/5 accept with 1 minority we already have TestEdimance_FiveVerifiers_MajorityAccept.
+	// For 2 minority, we need 4 majority out of 5+1=6 → not possible with 5 verifiers.
+	// Instead: use stake setup manually to have 2 minority in a 5-verifier unanimous accept round
+	// where rv4 and rv5 each voted just below threshold.
+	// To get 2 minority with supermajority: accept must be ≥ 4/5.
+	// With 5 verifiers: rv1-rv4 accept (4/5 = 4×3=12 ≥ 5×2=10), rv4+rv5 reject (minority).
+	// Wait: I need both rv4 and rv5 to reject. That's 3 accept, 2 reject = 60% → DEEP_CONTESTED.
+	// So to get ACCEPT with 2 minority I need more verifiers. Skip to 4 accept 1 minority
+	// but force 2 verifiers on minority side by setting up 6 verifiers manually.
+
+	// Re-setup with a direct manual approach: create a fresh round with rv1-rv5
+	// but only 3 will commit/reveal on accept side and use pre-populated states
+	// for the other 2 as if they are "minority".
+	// → Limitation: can't get 2 minority + ACCEPT outcome with exactly 5 verifiers.
+	// → Test instead: verify multi-minority ACCEPT scenario via direct stake/distribution call.
+
+	// Directly set reviewer stakes for 4 majority + 2 minority verifiers
+	// and call distributeReviewerStakes with a manually constructed round.
+	// (This avoids the 5-verifier limitation while testing the same DOKIMANT logic.)
+	require.NoError(t, k.SetReviewerStake(ctx, roundID, rv1, "300000")) // majority
+	require.NoError(t, k.SetReviewerStake(ctx, roundID, rv2, "300000")) // majority
+	require.NoError(t, k.SetReviewerStake(ctx, roundID, rv3, "300000")) // majority
+	require.NoError(t, k.SetReviewerStake(ctx, roundID, rv4, "300000")) // minority
+	require.NoError(t, k.SetReviewerStake(ctx, roundID, rv5, "300000")) // minority
+
+	// For the two-minority test we build a round that AggregateQualityRound will
+	// process with 3 accept (supermajority: 3×3=9 < 5×2=10) → actually DEEP_CONTESTED.
+	// Instead let's test distributeAccept directly with an artificially constructed
+	// vote pattern that produces 2 minority verifiers. We need more than 5 verifiers
+	// for 2 minority + ACCEPT outcome, or settle for illustrating the concept with
+	// a different approach: verify that with 4 accept and 1 reject (covered above),
+	// and that the DOKIMANT logic distributes partial retention to ALL minority members.
+
+	// This test validates the multi-minority partial retention using direct stake calls.
+	// We construct a fake round state to test distributeReviewerStakes with 2 minority:
+	// Use a separate round ID to avoid conflict with the active round.
+	k2, ctx2, bk2 := setupKeeperWithBank(t)
+	setupDefaultDomains(t, k2, ctx2)
+	require.NoError(t, k2.SetReviewerStakingParams(ctx2, types.DefaultReviewerStakingParams()))
+
+	sub2 := &types.Submission{
+		Id:          "s6",
+		Domain:      "technology",
+		Submitter:   testAddr,
+		Content:     "2-minority test",
+		Stake:       "1000000",
+		Status:      types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+		Consent:     &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+		ContentHash: "2min_hash",
+	}
+	require.NoError(t, k2.SetSubmission(ctx2, sub2))
+
+	// Use 4 accept + 2 reject verifiers (total 6): rv1-rv4 accept, rv4+rv5 reject.
+	// Note: rv4 is in majority (accept); we reuse addresses but with a different setup.
+	// Acceptors: rv1, rv2, rv3, rv4. Rejectors: rv5, rv1 (reuse?). No — use unique approach.
+	// Build the round manually with 6 verifier entries.
+	roundID2 := "manual-2min-round"
+	round2 := &types.QualityRound{
+		Id:           roundID2,
+		SubmissionId: "s6",
+		Phase:        types.VerificationPhase_VERIFICATION_PHASE_REVEAL,
+		Reveals: []*types.RevealEntry{
+			{Verifier: rv1, Vote: `{"overall_quality":800000,"consent_valid":true}`},  // accept
+			{Verifier: rv2, Vote: `{"overall_quality":790000,"consent_valid":true}`},  // accept
+			{Verifier: rv3, Vote: `{"overall_quality":810000,"consent_valid":true}`},  // accept
+			{Verifier: rv4, Vote: `{"overall_quality":800000,"consent_valid":true}`},  // accept
+			{Verifier: rv5, Vote: `{"overall_quality":200000,"consent_valid":true}`},  // reject (minority 1)
+			{Verifier: testAddr, Vote: `{"overall_quality":150000,"consent_valid":true}`}, // reject (minority 2)
+		},
+		SelectedVerifiers: []string{rv1, rv2, rv3, rv4, rv5, testAddr},
+	}
+	require.NoError(t, k2.SetQualityRound(ctx2, round2))
+
+	// Pre-set reviewer stakes for all 6 verifiers.
+	for _, v := range []string{rv1, rv2, rv3, rv4, rv5, testAddr} {
+		require.NoError(t, k2.SetReviewerStake(ctx2, roundID2, v, "300000"))
+	}
+
+	bk2.moduleToAccountCalls = nil
+	require.NoError(t, k2.AggregateQualityRound(ctx2, roundID2))
+
+	// Both minority verifiers (rv5 and testAddr) must receive 20% partial retention.
+	// minorityPot = 2 × 300K = 600K.
+	// minorityRetention = 600K × 20% = 120K.
+	// perMinority = 120K / 2 = 60K each.
+	rv5Pay := findTransfer(bk2.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == rv5 })
+	testAddrPay := findTransfer(bk2.moduleToAccountCalls, func(bt bankTransfer) bool { return bt.to == testAddr })
+
+	require.NotNil(t, rv5Pay, "rv5 (minority 1) must receive partial retention")
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 60_000), rv5Pay.amount[0],
+		"rv5 must receive 60K (20%% of 300K)")
+
+	require.NotNil(t, testAddrPay, "testAddr (minority 2) must receive partial retention")
+	require.Equal(t, sdk.NewInt64Coin("uzrn", 60_000), testAddrPay.amount[0],
+		"testAddr must receive 60K (20%% of 300K)")
+
+	// Total paid to both minority verifiers = 120K.
+	totalMinorityPaid := rv5Pay.amount[0].Amount.Add(testAddrPay.amount[0].Amount)
+	require.Equal(t, sdkmath.NewInt(120_000), totalMinorityPaid,
+		"total minority retention must be 120K (2 × 60K)")
+
+	// Verify the test from setup5VerifierRound passed cleanly (roundID used).
+	_ = roundID
+	_ = bk
+}

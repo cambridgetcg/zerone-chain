@@ -2,6 +2,7 @@ package keeper_test
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"testing"
 
@@ -1000,4 +1001,271 @@ func TestRejectVerdict_NoSampleCreated(t *testing.T) {
 	sub, found := k.GetSubmission(ctx, "s1")
 	require.True(t, found)
 	require.Equal(t, types.SubmissionStatus_SUBMISSION_STATUS_REJECTED, sub.Status)
+}
+
+// ─── EDIMANCE: Concurrent Round Isolation Tests ──────────────────────────────
+
+// runFullRoundForVerifiers is like runFullRound but accepts arbitrary verifier lists
+// and matching salts. Enables concurrent-round tests with distinct verifier sets.
+func runFullRoundForVerifiers(
+	t *testing.T,
+	k keeper.Keeper,
+	ctx context.Context,
+	roundID string,
+	verifiers []string,
+	votes []*types.QualityVote,
+) {
+	t.Helper()
+	require.Equal(t, len(verifiers), len(votes), "verifier and vote count must match")
+
+	salts := make([][]byte, len(verifiers))
+	for i := range verifiers {
+		salts[i] = []byte(fmt.Sprintf("salt_%s_%02d", roundID, i))
+	}
+
+	for i, v := range verifiers {
+		hash := types.ComputeQualityCommitHash(roundID, votes[i], salts[i])
+		require.NoError(t, k.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
+			Verifier: v, RoundId: roundID, CommitHash: hash,
+		}), "commit failed for verifier %d in round %s", i, roundID)
+	}
+
+	round, found := k.GetQualityRound(ctx, roundID)
+	require.True(t, found)
+	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_REVEAL
+	require.NoError(t, k.SetQualityRound(ctx, round))
+
+	for i, v := range verifiers {
+		require.NoError(t, k.SubmitReveal(ctx, &types.MsgSubmitReveal{
+			Verifier: v, RoundId: roundID, Scores: votes[i], Salt: salts[i],
+		}), "reveal failed for verifier %d in round %s", i, roundID)
+	}
+}
+
+// TestConcurrentRounds_Independence verifies that multiple quality rounds running
+// simultaneously with the same verifier set produce fully independent results.
+// State from one round must not bleed into another.
+func TestConcurrentRounds_Independence(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	const numRounds = 3
+	verifiers := []string{verifier1, verifier2, verifier3}
+
+	// Create submissions and initiate all 3 rounds before running any commits.
+	roundIDs := make([]string, numRounds)
+	for i := 0; i < numRounds; i++ {
+		subID := fmt.Sprintf("concurrent-sub-%d", i)
+		sub := &types.Submission{
+			Id:          subID,
+			Domain:      "technology",
+			Submitter:   testAddr,
+			Content:     fmt.Sprintf("concurrent round %d content", i),
+			Stake:       "0",
+			Status:      types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+			Consent:     &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+			ContentHash: fmt.Sprintf("concurrent_hash_%03d", i),
+		}
+		require.NoError(t, k.SetSubmission(ctx, sub))
+
+		rID, err := k.InitiateQualityRound(ctx, subID, "", verifiers)
+		require.NoError(t, err)
+		roundIDs[i] = rID
+	}
+
+	// All 3 rounds must have distinct IDs.
+	seen := make(map[string]bool)
+	for _, rID := range roundIDs {
+		require.False(t, seen[rID], "duplicate round ID: %s", rID)
+		seen[rID] = true
+	}
+
+	// All 3 rounds are in the active index.
+	actives := k.GetActiveRounds(ctx)
+	for _, rID := range roundIDs {
+		require.Contains(t, actives, rID, "round %s must be in active index", rID)
+	}
+
+	// Run commit-reveal for each round independently.
+	// Round 0: all accept (high quality → GOLD/SILVER/BRONZE verdict).
+	// Round 1: all accept (medium quality → BRONZE verdict).
+	// Round 2: all reject (low quality → REJECT verdict).
+	voteSets := [][]*types.QualityVote{
+		{
+			{OverallQuality: 900_000, ConsentValid: true},
+			{OverallQuality: 920_000, ConsentValid: true},
+			{OverallQuality: 880_000, ConsentValid: true},
+		},
+		{
+			{OverallQuality: 450_000, ConsentValid: true},
+			{OverallQuality: 430_000, ConsentValid: true},
+			{OverallQuality: 470_000, ConsentValid: true},
+		},
+		{
+			{OverallQuality: 100_000, ConsentValid: true},
+			{OverallQuality: 120_000, ConsentValid: true},
+			{OverallQuality: 80_000, ConsentValid: true},
+		},
+	}
+	for i, rID := range roundIDs {
+		runFullRound(t, k, ctx, rID, voteSets[i])
+	}
+
+	// Aggregate all rounds.
+	for _, rID := range roundIDs {
+		require.NoError(t, k.AggregateQualityRound(ctx, rID))
+	}
+
+	// ── Assert: each round has independent state ───────────────────────────────
+	for i, rID := range roundIDs {
+		round, found := k.GetQualityRound(ctx, rID)
+		require.True(t, found, "round %d must exist after aggregation", i)
+		require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_COMPLETE, round.Phase,
+			"round %d must be COMPLETE", i)
+		require.Equal(t, "concurrent-sub-"+fmt.Sprintf("%d", i), round.SubmissionId,
+			"round %d must reference its own submission", i)
+		require.Len(t, round.Reveals, 3, "round %d must have exactly 3 reveals", i)
+		require.NotNil(t, round.AggregateScores, "round %d must have aggregate scores", i)
+	}
+
+	// ── Assert: verdicts differ as expected by vote quality ────────────────────
+	r0, _ := k.GetQualityRound(ctx, roundIDs[0])
+	r1, _ := k.GetQualityRound(ctx, roundIDs[1])
+	r2, _ := k.GetQualityRound(ctx, roundIDs[2])
+
+	r0Accept := r0.Verdict == types.QualityVerdict_QUALITY_VERDICT_GOLD ||
+		r0.Verdict == types.QualityVerdict_QUALITY_VERDICT_SILVER ||
+		r0.Verdict == types.QualityVerdict_QUALITY_VERDICT_BRONZE
+	require.True(t, r0Accept, "round 0 (high quality) must be accepted")
+
+	r1Accept := r1.Verdict == types.QualityVerdict_QUALITY_VERDICT_GOLD ||
+		r1.Verdict == types.QualityVerdict_QUALITY_VERDICT_SILVER ||
+		r1.Verdict == types.QualityVerdict_QUALITY_VERDICT_BRONZE
+	require.True(t, r1Accept, "round 1 (medium quality) must be accepted")
+
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_REJECT, r2.Verdict,
+		"round 2 (low quality) must be rejected")
+
+	// ── Assert: aggregate scores are independent (high quality > low quality) ─
+	require.Greater(t, r0.AggregateScores.OverallQuality, r1.AggregateScores.OverallQuality,
+		"round 0 aggregate must be higher quality than round 1")
+	require.Greater(t, r1.AggregateScores.OverallQuality, r2.AggregateScores.OverallQuality,
+		"round 1 aggregate must be higher quality than round 2")
+
+	// ── Assert: rounds are removed from active index after completion ──────────
+	activesAfter := k.GetActiveRounds(ctx)
+	for _, rID := range roundIDs {
+		require.NotContains(t, activesAfter, rID,
+			"completed round %s must be removed from active index", rID)
+	}
+}
+
+// TestConcurrentRounds_DistinctVerifierSets verifies that 3 rounds with completely
+// disjoint verifier sets process independently — a verifier in round A cannot
+// affect the state of round B.
+func TestConcurrentRounds_DistinctVerifierSets(t *testing.T) {
+	k, ctx := setupKeeper(t)
+	setupDefaultDomains(t, k, ctx)
+
+	// 3 rounds with 3 verifiers each; verifier sets are disjoint.
+	// Round A: verifier1, verifier2, verifier3.
+	// Round B: rv1, rv2, rv3.
+	// Round C: rv4, rv5, verifier1 (overlap to test shared verifier isolation).
+	verifierSets := [][]string{
+		{verifier1, verifier2, verifier3},
+		{rv1, rv2, rv3},
+		{rv4, rv5, verifier1}, // verifier1 shared with round A — must not bleed
+	}
+
+	roundIDs := make([]string, 3)
+	for i, vs := range verifierSets {
+		subID := fmt.Sprintf("distinct-vs-sub-%d", i)
+		sub := &types.Submission{
+			Id:          subID,
+			Domain:      "technology",
+			Submitter:   testAddr,
+			Content:     fmt.Sprintf("distinct verifier set round %d", i),
+			Stake:       "0",
+			Status:      types.SubmissionStatus_SUBMISSION_STATUS_PENDING,
+			Consent:     &types.ConsentProof{Type: types.ConsentType_CONSENT_TYPE_SELF_AUTHORED},
+			ContentHash: fmt.Sprintf("dvs_hash_%03d", i),
+		}
+		require.NoError(t, k.SetSubmission(ctx, sub))
+
+		rID, err := k.InitiateQualityRound(ctx, subID, "", vs)
+		require.NoError(t, err)
+		roundIDs[i] = rID
+	}
+
+	// ── Submit commits: each verifier to its own round only ───────────────────
+	acceptVotes := []*types.QualityVote{
+		{OverallQuality: 800_000, ConsentValid: true},
+		{OverallQuality: 810_000, ConsentValid: true},
+		{OverallQuality: 790_000, ConsentValid: true},
+	}
+	rejectVotes := []*types.QualityVote{
+		{OverallQuality: 100_000, ConsentValid: true},
+		{OverallQuality: 120_000, ConsentValid: true},
+		{OverallQuality: 90_000, ConsentValid: true},
+	}
+
+	// Round A (accept), Round B (reject), Round C (accept).
+	voteGroups := [][]*types.QualityVote{acceptVotes, rejectVotes, acceptVotes}
+	for i, rID := range roundIDs {
+		runFullRoundForVerifiers(t, k, ctx, rID, verifierSets[i], voteGroups[i])
+	}
+
+	for _, rID := range roundIDs {
+		require.NoError(t, k.AggregateQualityRound(ctx, rID))
+	}
+
+	// ── Assert: verdicts are correct for each round ───────────────────────────
+	rA, _ := k.GetQualityRound(ctx, roundIDs[0])
+	rB, _ := k.GetQualityRound(ctx, roundIDs[1])
+	rC, _ := k.GetQualityRound(ctx, roundIDs[2])
+
+	aAccept := rA.Verdict == types.QualityVerdict_QUALITY_VERDICT_GOLD ||
+		rA.Verdict == types.QualityVerdict_QUALITY_VERDICT_SILVER ||
+		rA.Verdict == types.QualityVerdict_QUALITY_VERDICT_BRONZE
+	require.True(t, aAccept, "round A (accept votes) must produce accepted verdict")
+
+	require.Equal(t, types.QualityVerdict_QUALITY_VERDICT_REJECT, rB.Verdict,
+		"round B (reject votes) must produce REJECT verdict")
+
+	cAccept := rC.Verdict == types.QualityVerdict_QUALITY_VERDICT_GOLD ||
+		rC.Verdict == types.QualityVerdict_QUALITY_VERDICT_SILVER ||
+		rC.Verdict == types.QualityVerdict_QUALITY_VERDICT_BRONZE
+	require.True(t, cAccept, "round C (accept votes) must produce accepted verdict")
+
+	// ── Assert: verifier1 participation in round A didn't contaminate round C ─
+	// Round C's reveals must only include rv4, rv5, and verifier1's round C votes.
+	require.Len(t, rA.Reveals, 3, "round A must have 3 reveals")
+	require.Len(t, rB.Reveals, 3, "round B must have 3 reveals")
+	require.Len(t, rC.Reveals, 3, "round C must have 3 reveals")
+
+	// Verify that round C's verifier1 reveal uses the round C commit hash,
+	// not round A's. (If cross-contamination existed, the commit hash check would
+	// have failed during SubmitReveal, causing an error above.)
+	v1InC := false
+	for _, reveal := range rC.Reveals {
+		if reveal.Verifier == verifier1 {
+			v1InC = true
+			break
+		}
+	}
+	require.True(t, v1InC, "verifier1 must appear in round C reveals")
+
+	v1InA := false
+	for _, reveal := range rA.Reveals {
+		if reveal.Verifier == verifier1 {
+			v1InA = true
+			break
+		}
+	}
+	require.True(t, v1InA, "verifier1 must appear in round A reveals")
+
+	// Both references are independent — verifier1's vote in round A and round C
+	// have different hashes (different roundIDs in ComputeQualityCommitHash).
+	require.NotEqual(t, roundIDs[0], roundIDs[2],
+		"rounds must have distinct IDs even with shared verifiers")
 }
