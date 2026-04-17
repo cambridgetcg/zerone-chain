@@ -91,3 +91,28 @@ func TestGetDomainVerificationActivity_NoRounds(t *testing.T) {
 	activity := k.GetDomainVerificationActivity(ctx, "physics")
 	require.Equal(t, uint64(0), activity)
 }
+
+func TestGetEffectiveMinVerifiers_WithThresholdOverride(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ctx = advanceBlocks(ctx, 100)
+	// Default MinVerifiers=3, nil partnershipKeeper → base+1=4
+	// Add override +2 → expect 4+2=6
+	require.NoError(t, k.IncreaseVerificationThreshold(ctx, "physics", 2, 500))
+
+	effective := k.GetEffectiveMinVerifiers(ctx, "physics")
+	require.Equal(t, uint32(6), effective,
+		"partnership-adjusted base (4) + override (2) = 6")
+}
+
+func TestGetEffectiveMinVerifiers_ExpiredOverrideIgnored(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ctx = advanceBlocks(ctx, 100)
+	require.NoError(t, k.IncreaseVerificationThreshold(ctx, "physics", 2, 150))
+	ctx = advanceBlocks(ctx, 100) // height 200 > expiry 150
+
+	effective := k.GetEffectiveMinVerifiers(ctx, "physics")
+	params, err := k.GetParams(ctx)
+	require.NoError(t, err)
+	require.Equal(t, uint32(params.MinVerifiers+1), effective,
+		"expired override ignored → base+1 (nil partnership keeper path)")
+}

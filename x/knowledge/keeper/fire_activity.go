@@ -51,7 +51,8 @@ func (k Keeper) GetVerificationHealth(ctx context.Context) (throughputBps, dispu
 }
 
 // GetEffectiveMinVerifiers returns the adjusted minimum verifiers for a domain,
-// accounting for partnership density (R31-2: Water -> Fire).
+// accounting for partnership density (R31-2: Water -> Fire) and active
+// capture-challenge overrides (R28-8: Metal -> Fire).
 func (k Keeper) GetEffectiveMinVerifiers(ctx context.Context, domain string) uint32 {
 	params, err := k.GetParams(ctx)
 	if err != nil {
@@ -59,29 +60,28 @@ func (k Keeper) GetEffectiveMinVerifiers(ctx context.Context, domain string) uin
 	}
 	base := uint32(params.MinVerifiers)
 
+	// Start from partnership-density-adjusted base.
+	adjusted := base
 	if k.partnershipKeeper == nil {
-		// No social structure -> tighter verification
-		return base + 1
-	}
-
-	density := k.partnershipKeeper.GetDomainPartnershipDensity(ctx, domain)
-
-	if density == 0 {
-		// No social structure in this domain -> Fire burns unchecked
-		return base + 1
-	}
-
-	threshold := params.SocialSaturationThreshold
-	if threshold == 0 {
-		threshold = 10 // fallback default
-	}
-
-	if density >= threshold {
-		// High social structure -> Water quenches excess
-		if base > 2 {
-			return base - 1
+		adjusted = base + 1 // No social structure -> Fire burns unchecked
+	} else {
+		density := k.partnershipKeeper.GetDomainPartnershipDensity(ctx, domain)
+		if density == 0 {
+			adjusted = base + 1
+		} else {
+			threshold := params.SocialSaturationThreshold
+			if threshold == 0 {
+				threshold = 10 // fallback default
+			}
+			if density >= threshold && base > 2 {
+				adjusted = base - 1 // Water quenches excess
+			}
 		}
 	}
 
-	return base
+	// Apply capture-challenge override on top.
+	if additional, active := k.GetVerificationThresholdOverride(ctx, domain); active {
+		adjusted += additional
+	}
+	return adjusted
 }
