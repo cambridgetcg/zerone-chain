@@ -168,11 +168,13 @@ func TestAgentVerificationVoteWeightBonus(t *testing.T) {
 	authKeeper.accounts["zrn1validator1"] = "agent"
 	authKeeper.accounts["zrn1validator2"] = "human"
 	authKeeper.accounts["zrn1validator3"] = "human"
+	authKeeper.accounts["zrn1validator4"] = "human"
 	k.SetZeroneAuthKeeper(authKeeper)
 
 	sk.addValidator("zrn1validator1", 100_000, "genesis")
 	sk.addValidator("zrn1validator2", 100_000, "genesis")
 	sk.addValidator("zrn1validator3", 100_000, "genesis")
+	sk.addValidator("zrn1validator4", 100_000, "genesis")
 
 	claim := &types.Claim{Id: "c-avb", FactContent: "Test claim for vote weight bonus verification", Domain: "general"}
 	require.NoError(t, k.SetClaim(ctx, claim))
@@ -182,19 +184,20 @@ func TestAgentVerificationVoteWeightBonus(t *testing.T) {
 		{Verifier: "zrn1validator1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
 		{Verifier: "zrn1validator2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
 		{Verifier: "zrn1validator3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1validator4", CommitHash: []byte("h4"), CommittedAtBlock: 60},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: "zrn1validator1", Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 70},
 		{Verifier: "zrn1validator2", Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 70},
 		{Verifier: "zrn1validator3", Vote: "accept", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1validator4", Vote: "accept", Salt: []byte("s4"), RevealedAtBlock: 70},
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	// Agent val1: 100k * 1.2 = 120k; human val2+val3: 100k each
-	// Total = 320k, accept = 320k → ratio = 1M → capped at MaxConfidence (880k)
+	// All accept → ratio = 1M → capped at MaxConfidence (880k)
 	require.Equal(t, uint64(880_000), result.Confidence)
 }
 
@@ -206,6 +209,7 @@ func TestAgentVoteWeightNoAuthKeeper(t *testing.T) {
 	sk.addValidator("zrn1validator1", 100_000, "genesis")
 	sk.addValidator("zrn1validator2", 100_000, "genesis")
 	sk.addValidator("zrn1validator3", 100_000, "genesis")
+	sk.addValidator("zrn1validator4", 100_000, "genesis")
 
 	claim := &types.Claim{Id: "c-noak", FactContent: "Test claim without auth keeper set up", Domain: "general"}
 	require.NoError(t, k.SetClaim(ctx, claim))
@@ -215,11 +219,13 @@ func TestAgentVoteWeightNoAuthKeeper(t *testing.T) {
 		{Verifier: "zrn1validator1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
 		{Verifier: "zrn1validator2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
 		{Verifier: "zrn1validator3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1validator4", CommitHash: []byte("h4"), CommittedAtBlock: 60},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: "zrn1validator1", Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 70},
 		{Verifier: "zrn1validator2", Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 70},
 		{Verifier: "zrn1validator3", Vote: "accept", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1validator4", Vote: "accept", Salt: []byte("s4"), RevealedAtBlock: 70},
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
@@ -227,7 +233,7 @@ func TestAgentVoteWeightNoAuthKeeper(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
 	// Without auth keeper: all validators get base stake 100k
-	// Total = 300k, accept = 300k → ratio = 1M → capped at MaxConfidence (880k)
+	// Total = 400k, accept = 400k → ratio = 1M → capped at MaxConfidence (880k)
 	require.Equal(t, uint64(880_000), result.Confidence)
 }
 

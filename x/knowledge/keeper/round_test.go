@@ -744,16 +744,17 @@ func TestVerdict_AllValues(t *testing.T) {
 // ─── Extended Lifecycle ──────────────────────────────────────────────────────
 
 func TestRound_CommitRevealFullLifecycle(t *testing.T) {
-	// Full 3-validator commit→reveal→aggregate→complete path.
+	// Full 4-validator commit→reveal→aggregate→complete path.
+	// (effective min = 4 under R31-2 with nil partnership keeper for non-empty domain)
 	k, ctx, _, sk := setupKnowledgeTestFull(t)
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
 		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
 	}
 
 	claim := &types.Claim{
 		Id:          "claim-lifecycle",
-		FactContent: "Full lifecycle claim for three validator test",
+		FactContent: "Full lifecycle claim for four validator test",
 		Domain:      "mathematics",
 		Category:    "formal",
 		Submitter:   "zrn1sub",
@@ -766,9 +767,9 @@ func TestRound_CommitRevealFullLifecycle(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_COMMIT, round.Phase)
 
-	// --- Commit phase: 3 validators commit ---
-	salts := make([][]byte, 3)
-	for i := 0; i < 3; i++ {
+	// --- Commit phase: 4 validators commit ---
+	salts := make([][]byte, 4)
+	for i := 0; i < 4; i++ {
 		salts[i], _ = hex.DecodeString(fmt.Sprintf("aabbccdd1122334400000000000000%02x", i))
 		commitHash := types.ComputeCommitmentHash(round.Id, "accept", 800_000, salts[i])
 		commit := &types.CommitEntry{
@@ -786,8 +787,8 @@ func TestRound_CommitRevealFullLifecycle(t *testing.T) {
 	updated, _ := k.GetVerificationRound(ctx, round.Id)
 	require.Equal(t, types.VerificationPhase_VERIFICATION_PHASE_REVEAL, updated.Phase)
 
-	// --- Reveal phase: 3 validators reveal ---
-	for i := 0; i < 3; i++ {
+	// --- Reveal phase: 4 validators reveal ---
+	for i := 0; i < 4; i++ {
 		reveal := &types.RevealEntry{
 			Verifier:        makeValidatorAddr(i),
 			Vote:            "accept",
@@ -969,7 +970,7 @@ func TestRound_RejectedOutcome(t *testing.T) {
 	// All validators reject → rejected verdict.
 	k, ctx, _, sk := setupKnowledgeTestFull(t)
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
 		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
 	}
 
@@ -988,18 +989,20 @@ func TestRound_RejectedOutcome(t *testing.T) {
 		{Verifier: makeValidatorAddr(0), CommitHash: []byte("h0"), CommittedAtBlock: 85},
 		{Verifier: makeValidatorAddr(1), CommitHash: []byte("h1"), CommittedAtBlock: 85},
 		{Verifier: makeValidatorAddr(2), CommitHash: []byte("h2"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(3), CommitHash: []byte("h3"), CommittedAtBlock: 85},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: makeValidatorAddr(0), Vote: "reject", Salt: []byte("s0"), RevealedAtBlock: 90},
 		{Verifier: makeValidatorAddr(1), Vote: "reject", Salt: []byte("s1"), RevealedAtBlock: 90},
 		{Verifier: makeValidatorAddr(2), Vote: "reject", Salt: []byte("s2"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(3), Vote: "reject", Salt: []byte("s3"), RevealedAtBlock: 90},
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_REJECT, result.Verdict,
-		"all 3 reject (100%) must exceed 77% threshold → REJECT")
+		"all 4 reject (100%) must exceed 77% threshold → REJECT")
 	require.Equal(t, uint64(880_000), result.Confidence,
 		"unanimous reject gives raw 100% but capped at MaxConfidence (880,000)")
 
@@ -1010,10 +1013,10 @@ func TestRound_RejectedOutcome(t *testing.T) {
 }
 
 func TestRound_ConfidenceAggregation(t *testing.T) {
-	// 3 of 3 accept (all with equal stake) → raw confidence 1,000,000 capped at 880,000 ≥ 770,000 threshold.
+	// 4 of 4 accept (all with equal stake) → raw confidence 1,000,000 capped at 880,000 ≥ 770,000 threshold.
 	k, ctx, _, sk := setupKnowledgeTestFull(t)
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
 		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
 	}
 
@@ -1032,11 +1035,13 @@ func TestRound_ConfidenceAggregation(t *testing.T) {
 		{Verifier: makeValidatorAddr(0), CommitHash: []byte("h0"), CommittedAtBlock: 85},
 		{Verifier: makeValidatorAddr(1), CommitHash: []byte("h1"), CommittedAtBlock: 85},
 		{Verifier: makeValidatorAddr(2), CommitHash: []byte("h2"), CommittedAtBlock: 85},
+		{Verifier: makeValidatorAddr(3), CommitHash: []byte("h3"), CommittedAtBlock: 85},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: makeValidatorAddr(0), Vote: "accept", Salt: []byte("s0"), RevealedAtBlock: 90},
 		{Verifier: makeValidatorAddr(1), Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 90},
 		{Verifier: makeValidatorAddr(2), Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 90},
+		{Verifier: makeValidatorAddr(3), Vote: "accept", Salt: []byte("s3"), RevealedAtBlock: 90},
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 

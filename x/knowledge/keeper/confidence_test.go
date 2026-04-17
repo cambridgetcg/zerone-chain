@@ -16,6 +16,7 @@ func TestAggregate_UnanimousAccept(t *testing.T) {
 	sk.addValidator("zrn1v1", 100_000, "bonded")
 	sk.addValidator("zrn1v2", 100_000, "bonded")
 	sk.addValidator("zrn1v3", 100_000, "bonded")
+	sk.addValidator("zrn1v4", 100_000, "bonded")
 
 	claim := &types.Claim{Id: "c-ua", FactContent: "Unanimous accept claim content", Domain: "mathematics"}
 	require.NoError(t, k.SetClaim(ctx, claim))
@@ -25,11 +26,13 @@ func TestAggregate_UnanimousAccept(t *testing.T) {
 		{Verifier: "zrn1v1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
 		{Verifier: "zrn1v2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
 		{Verifier: "zrn1v3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v4", CommitHash: []byte("h4"), CommittedAtBlock: 60},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: "zrn1v1", Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 70},
 		{Verifier: "zrn1v2", Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 70},
 		{Verifier: "zrn1v3", Vote: "accept", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v4", Vote: "accept", Salt: []byte("s4"), RevealedAtBlock: 70},
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
@@ -738,4 +741,38 @@ func TestMalformedReward_RejectVotersGetPartial(t *testing.T) {
 		"reject voter must get 50%% partial reward on malformed verdict")
 	require.Equal(t, params.WrongVerificationSlashBps, slashMap["zrn1acc1"],
 		"accept voter must be slashed on malformed verdict")
+}
+
+func TestAggregate_UsesEffectiveMinVerifiers_NilPartnershipKeeper(t *testing.T) {
+	// With nil partnership keeper, effective min = params.MinVerifiers+1 = 4.
+	// A round with only 3 reveals for a non-empty domain should be INCONCLUSIVE.
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+	sk.addValidator("zrn1v1", 100_000, "bonded")
+	sk.addValidator("zrn1v2", 100_000, "bonded")
+	sk.addValidator("zrn1v3", 100_000, "bonded")
+
+	params, err := k.GetParams(ctx)
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), params.MinVerifiers, "test assumes default MinVerifiers=3")
+
+	claim := &types.Claim{Id: "c-emv", FactContent: "x", Domain: "physics"}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-emv", "c-emv", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 50)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: "zrn1v1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
+		{Verifier: "zrn1v3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: "zrn1v1", Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v2", Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 70},
+		{Verifier: "zrn1v3", Vote: "accept", Salt: []byte("s3"), RevealedAtBlock: 70},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_INCONCLUSIVE, result.Verdict,
+		"3 reveals < effective min (4) for domain=physics with nil partnership keeper")
 }

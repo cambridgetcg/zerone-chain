@@ -141,9 +141,10 @@ func TestCompleteRound_SlashesWrongVoter(t *testing.T) {
 	k, ctx, _, sk := setupKnowledgeTestFull(t)
 	sk.addValidator("zrn1correct1", 100_000, "bonded")
 	sk.addValidator("zrn1correct2", 100_000, "bonded")
+	sk.addValidator("zrn1correct3", 100_000, "bonded")
 	sk.addValidator("zrn1wrong", 100_000, "bonded")
 
-	// Lower threshold so 2/3 accept (66.6%) crosses it; lower headcount floor to match.
+	// Lower threshold so 3/4 accept (75%) crosses it
 	params, _ := k.GetParams(ctx)
 	params.ConfidenceThreshold = 600_000 // 60%
 	params.MinHeadcountAgreement = 2
@@ -163,19 +164,21 @@ func TestCompleteRound_SlashesWrongVoter(t *testing.T) {
 	round.Commits = []*types.CommitEntry{
 		{Verifier: "zrn1correct1", CommitHash: []byte("h1"), CommittedAtBlock: 60},
 		{Verifier: "zrn1correct2", CommitHash: []byte("h2"), CommittedAtBlock: 60},
-		{Verifier: "zrn1wrong", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1correct3", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1wrong", CommitHash: []byte("h4"), CommittedAtBlock: 60},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: "zrn1correct1", Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 70},
 		{Verifier: "zrn1correct2", Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 70},
-		{Verifier: "zrn1wrong", Vote: "reject", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1correct3", Vote: "accept", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1wrong", Vote: "reject", Salt: []byte("s4"), RevealedAtBlock: 70},
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
 	// Aggregate and complete
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
-	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict, "2/3 accept should exceed 60% threshold")
+	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict, "3/4 accept should exceed 60% threshold")
 	require.NoError(t, k.CompleteRound(ctx, round, result))
 
 	// Verify the staking keeper received the slash
@@ -196,10 +199,11 @@ func TestCompleteRound_SlashesMissedReveal(t *testing.T) {
 	sk.addValidator("zrn1revealer2", 100_000, "bonded")
 	sk.addValidator("zrn1skipper", 100_000, "bonded")
 
+	// Domain intentionally empty so the effective-min R31-2 adjustment does not
+	// engage; this test is about missed-reveal slash flow, not quorum.
 	claim := &types.Claim{
 		Id:          "claim-missed-flow",
 		FactContent: "Missed reveal slash flow test claim",
-		Domain:      "physics",
 		Submitter:   "zrn1sub",
 		Stake:       "1000000",
 		Status:      types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,

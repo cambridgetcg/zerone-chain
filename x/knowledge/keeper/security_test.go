@@ -19,9 +19,10 @@ import (
 
 func TestSecurity_HappyPath_CommitRevealFinalize(t *testing.T) {
 	// Full PoT happy path: commit→reveal→aggregate→complete with fact creation.
+	// Uses 4 validators because effective min = 4 under R31-2 with nil partnership keeper.
 	k, ctx, _, sk := setupKnowledgeTestFull(t)
 
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
 		sk.addValidator(makeValidatorAddr(i), 100_000, "bonded")
 	}
 
@@ -40,8 +41,8 @@ func TestSecurity_HappyPath_CommitRevealFinalize(t *testing.T) {
 	require.NoError(t, err)
 
 	// Commit phase
-	salts := make([][]byte, 3)
-	for i := 0; i < 3; i++ {
+	salts := make([][]byte, 4)
+	for i := 0; i < 4; i++ {
 		salts[i], _ = hex.DecodeString(fmt.Sprintf("deadbeef1122334400000000000000%02x", i))
 		commitHash := types.ComputeCommitmentHash(round.Id, "accept", 850_000, salts[i])
 		require.NoError(t, k.StoreCommitmentInRound(ctx, round.Id, &types.CommitEntry{
@@ -56,7 +57,7 @@ func TestSecurity_HappyPath_CommitRevealFinalize(t *testing.T) {
 	require.NoError(t, k.AdvanceRoundPhases(ctx))
 
 	// Reveal phase
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 4; i++ {
 		require.NoError(t, k.StoreRevealInRound(ctx, round.Id, &types.RevealEntry{
 			Verifier:        makeValidatorAddr(i),
 			Vote:            "accept",
@@ -441,10 +442,11 @@ func TestSecurity_SlashOnMissedReveal(t *testing.T) {
 	sk.addValidator("zrn1skipper", 100_000, "bonded")
 	sk.addValidator("zrn1revealer2", 100_000, "bonded")
 
+	// Domain intentionally empty so the effective-min R31-2 adjustment does not
+	// engage; this test is about missed-reveal slash mechanics, not quorum.
 	claim := &types.Claim{
 		Id:          "claim-missed-reveal",
 		FactContent: "Claim for missed reveal slash security test",
-		Domain:      "physics",
 		Submitter:   "zrn1sub",
 		Stake:       "1000000",
 		Status:      types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
@@ -591,10 +593,11 @@ func TestMalformed_SybilCostAnalysis(t *testing.T) {
 	params.ConfidenceThreshold = 600_000 // 60%
 	require.NoError(t, k.SetParams(ctx, params))
 
+	// Domain intentionally empty so the effective-min R31-2 adjustment does not
+	// engage; this test is about stake-weighted sybil defense, not domain quorum.
 	claim := &types.Claim{
 		Id:          "claim-sybil-mal",
 		FactContent: "Legitimate claim that sybils try to mark malformed",
-		Domain:      "mathematics",
 		Category:    "formal",
 		Submitter:   "zrn1sub",
 		Stake:       "1000000",

@@ -511,26 +511,30 @@ func TestAdvanceRoundPhases_RevealToAggregation(t *testing.T) {
 	}
 	require.NoError(t, k.SetClaim(ctx, claim))
 
-	// Create round in REVEAL phase with enough reveals (MinVerifiers default = 3)
+	// Create round in REVEAL phase with enough reveals (effective min = 4 under R31-2 with nil partnership keeper)
 	salt1, _ := hex.DecodeString("aabbccdd11223344aabbccdd11223344")
 	salt2, _ := hex.DecodeString("11223344aabbccdd11223344aabbccdd")
 	salt3, _ := hex.DecodeString("aabb112233445566aabb112233445566")
+	salt4, _ := hex.DecodeString("ccdd112233445566ccdd112233445566")
 
 	round := testRound("round-agg-1", "claim-agg-1", types.VerificationPhase_VERIFICATION_PHASE_REVEAL)
 	round.Commits = []*types.CommitEntry{
 		{Verifier: "zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-agg-1", "accept", 800000, salt1), CommittedAtBlock: 60},
 		{Verifier: "zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-agg-1", "accept", 800000, salt2), CommittedAtBlock: 61},
 		{Verifier: "zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-agg-1", "accept", 800000, salt3), CommittedAtBlock: 62},
+		{Verifier: "zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-agg-1", "accept", 800000, salt4), CommittedAtBlock: 63},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: "zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "accept", Salt: salt1, RevealedAtBlock: 155},
 		{Verifier: "zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "accept", Salt: salt2, RevealedAtBlock: 156},
 		{Verifier: "zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "accept", Salt: salt3, RevealedAtBlock: 157},
+		{Verifier: "zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "accept", Salt: salt4, RevealedAtBlock: 158},
 	}
 	round.SelectedVerifiers = []string{
 		"zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		"zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		"zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		"zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
@@ -580,21 +584,26 @@ func TestAdvanceRoundPhases_ExpiredWithSufficientReveals(t *testing.T) {
 	salt2, _ := hex.DecodeString("11223344aabbccdd11223344aabbccdd")
 	salt3, _ := hex.DecodeString("aabb112233445566aabb112233445566")
 
+	salt4, _ := hex.DecodeString("ccdd112233445566ccdd112233445566")
+
 	round := testRound("round-exp-suf", "claim-exp-suf", types.VerificationPhase_VERIFICATION_PHASE_COMMIT)
 	round.Commits = []*types.CommitEntry{
 		{Verifier: "zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-exp-suf", "accept", 800000, salt1), CommittedAtBlock: 60},
 		{Verifier: "zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-exp-suf", "accept", 800000, salt2), CommittedAtBlock: 61},
 		{Verifier: "zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-exp-suf", "accept", 800000, salt3), CommittedAtBlock: 62},
+		{Verifier: "zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-exp-suf", "accept", 800000, salt4), CommittedAtBlock: 63},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: "zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "accept", Salt: salt1, RevealedAtBlock: 155},
 		{Verifier: "zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "accept", Salt: salt2, RevealedAtBlock: 156},
 		{Verifier: "zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "accept", Salt: salt3, RevealedAtBlock: 157},
+		{Verifier: "zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "accept", Salt: salt4, RevealedAtBlock: 158},
 	}
 	round.SelectedVerifiers = []string{
 		"zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		"zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		"zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		"zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
@@ -918,26 +927,30 @@ func TestAdvanceRoundPhases_RevealToAggregation_Reject(t *testing.T) {
 	}
 	require.NoError(t, k.SetClaim(ctx, claim))
 
-	// Create round in REVEAL phase with 3 reject votes
+	// Create round in REVEAL phase with 4 reject votes (effective min = 4 under R31-2)
 	salt1, _ := hex.DecodeString("aabbccdd11223344aabbccdd11223344")
 	salt2, _ := hex.DecodeString("11223344aabbccdd11223344aabbccdd")
 	salt3, _ := hex.DecodeString("aabb112233445566aabb112233445566")
+	salt4, _ := hex.DecodeString("ccdd112233445566ccdd112233445566")
 
 	round := testRound("round-rej", "claim-rej", types.VerificationPhase_VERIFICATION_PHASE_REVEAL)
 	round.Commits = []*types.CommitEntry{
 		{Verifier: "zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-rej", "reject", 800000, salt1), CommittedAtBlock: 60},
 		{Verifier: "zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-rej", "reject", 800000, salt2), CommittedAtBlock: 61},
 		{Verifier: "zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-rej", "reject", 800000, salt3), CommittedAtBlock: 62},
+		{Verifier: "zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx", CommitHash: types.ComputeCommitmentHash("round-rej", "reject", 800000, salt4), CommittedAtBlock: 63},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: "zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "reject", Salt: salt1, RevealedAtBlock: 155},
 		{Verifier: "zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "reject", Salt: salt2, RevealedAtBlock: 156},
 		{Verifier: "zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "reject", Salt: salt3, RevealedAtBlock: 157},
+		{Verifier: "zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx", Vote: "reject", Salt: salt4, RevealedAtBlock: 158},
 	}
 	round.SelectedVerifiers = []string{
 		"zrn1val1xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		"zrn1val2xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		"zrn1val3xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+		"zrn1val4xxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 

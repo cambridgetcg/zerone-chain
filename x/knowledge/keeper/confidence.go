@@ -88,8 +88,12 @@ func (k Keeper) AggregateVerificationResult(ctx context.Context, round *types.Ve
 
 	result := &VerificationResult{}
 
-	// Check quorum: total reveals must be >= minVerifiers
-	if uint64(len(round.Reveals)) < params.MinVerifiers {
+	// Check quorum: total reveals must be >= effective minimum (base + partnership + override).
+	effectiveMin := uint64(params.MinVerifiers)
+	if claim, found := k.GetClaim(ctx, round.ClaimId); found && claim.Domain != "" {
+		effectiveMin = uint64(k.GetEffectiveMinVerifiers(ctx, claim.Domain))
+	}
+	if uint64(len(round.Reveals)) < effectiveMin {
 		result.Verdict = types.Verdict_VERDICT_INCONCLUSIVE
 		result.Confidence = 0
 		return result, nil
