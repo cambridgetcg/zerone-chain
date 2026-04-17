@@ -321,15 +321,15 @@ func (m *msgServer) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCo
 				// Check if fallback applies: if no qualified validators exist for this domain,
 				// allow unqualified ones through
 				qualifiedVals, _ := m.keeper.domainQualificationKeeper.GetQualifiedValidators(ctx, claim.Domain)
-				params, _ := m.keeper.GetParams(ctx)
-				if uint64(len(qualifiedVals)) >= params.MinVerifiers {
+				effectiveMin := uint64(m.keeper.GetEffectiveMinVerifiers(ctx, claim.Domain))
+				if uint64(len(qualifiedVals)) >= effectiveMin {
 					return nil, types.ErrUnqualifiedVerifier.Wrapf(
 						"validator %s is not qualified for domain %s", msg.Verifier, claim.Domain)
 				}
 				// Insufficient qualified validators — allow through with warning
 				m.keeper.Logger(ctx).Warn("allowing unqualified verifier due to insufficient qualified validators",
 					"verifier", msg.Verifier, "domain", claim.Domain,
-					"qualified_count", len(qualifiedVals), "min_verifiers", params.MinVerifiers)
+					"qualified_count", len(qualifiedVals), "effective_min_verifiers", effectiveMin)
 			}
 		}
 	}

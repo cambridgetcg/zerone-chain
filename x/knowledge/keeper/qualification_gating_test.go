@@ -95,16 +95,19 @@ func TestGetEligibleValidators_FiltersUnqualified(t *testing.T) {
 	sk.addValidator("zrn1val2", 300_000, "bonded")
 	sk.addValidator("zrn1val3", 200_000, "bonded")
 	sk.addValidator("zrn1val4", 100_000, "bonded")
+	sk.addValidator("zrn1val5", 50_000, "bonded")
 
+	// Qualify 4 — meets effective min (MinVerifiers=3 + 1 nil-partnership = 4).
 	dk := newMockDomainQualificationKeeper()
 	dk.qualify("zrn1val1", "general")
 	dk.qualify("zrn1val3", "general")
 	dk.qualify("zrn1val4", "general")
+	dk.qualify("zrn1val5", "general")
 	k.SetDomainQualificationKeeper(dk)
 
 	vals, err := k.GetEligibleValidators(ctx, "general")
 	require.NoError(t, err)
-	require.Len(t, vals, 3, "should filter out unqualified validators")
+	require.Len(t, vals, 4, "should filter out unqualified validators")
 
 	addrs := make(map[string]bool)
 	for _, v := range vals {
@@ -114,6 +117,7 @@ func TestGetEligibleValidators_FiltersUnqualified(t *testing.T) {
 	require.False(t, addrs["zrn1val2"], "unqualified val2 should be filtered")
 	require.True(t, addrs["zrn1val3"])
 	require.True(t, addrs["zrn1val4"])
+	require.True(t, addrs["zrn1val5"])
 }
 
 func TestGetEligibleValidators_FallbackWhenInsufficientQualified(t *testing.T) {
@@ -195,11 +199,13 @@ func TestSubmitCommitment_UnqualifiedVerifier_Rejected(t *testing.T) {
 		Status: types.DomainStatus_DOMAIN_STATUS_ACTIVE,
 	}))
 
-	// Set up qualification keeper — qualify enough OTHER validators but NOT the verifier
+	// Set up qualification keeper — qualify enough OTHER validators but NOT the verifier.
+	// Need >= effective min (MinVerifiers=3 + 1 nil-partnership = 4) to trigger rejection.
 	dk := newMockDomainQualificationKeeper()
 	dk.qualify("zrn1qualified1", "general")
 	dk.qualify("zrn1qualified2", "general")
 	dk.qualify("zrn1qualified3", "general")
+	dk.qualify("zrn1qualified4", "general")
 	k.SetDomainQualificationKeeper(dk)
 
 	claim, round := makeTestClaim(t, k, ctx, makeValidBech32Addr("submitter1"),
@@ -429,6 +435,29 @@ func TestMockDomainQualificationKeeper_GetQualifiedValidators(t *testing.T) {
 	vals, err = dk.GetQualifiedValidators(ctx, "empty")
 	require.NoError(t, err)
 	require.Empty(t, vals)
+}
+
+func TestGetEligibleValidators_UsesEffectiveMinVerifiers_FallbackWhenBelowEffective(t *testing.T) {
+	// MinVerifiers=3, nil partnershipKeeper → effective=4.
+	// With 3 qualified validators (== params.MinVerifiers), old code would NOT fall back.
+	// New code: 3 < effective(4) → fallback fires → returns all 5 validators.
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+	sk.addValidator("zrn1val1", 500_000, "bonded")
+	sk.addValidator("zrn1val2", 400_000, "bonded")
+	sk.addValidator("zrn1val3", 300_000, "bonded")
+	sk.addValidator("zrn1val4", 200_000, "bonded")
+	sk.addValidator("zrn1val5", 100_000, "bonded")
+
+	dk := newMockDomainQualificationKeeper()
+	dk.qualify("zrn1val1", "physics")
+	dk.qualify("zrn1val2", "physics")
+	dk.qualify("zrn1val3", "physics")
+	k.SetDomainQualificationKeeper(dk)
+
+	vals, err := k.GetEligibleValidators(ctx, "physics")
+	require.NoError(t, err)
+	require.Len(t, vals, 5,
+		"3 qualified < effective min 4 → fallback returns all validators")
 }
 
 // Suppress unused import warning
