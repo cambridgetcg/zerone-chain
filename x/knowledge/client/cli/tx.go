@@ -81,6 +81,7 @@ func GetTxCmd() *cobra.Command {
 		NewProposeResearchFundCmd(),
 		NewVoteResearchProposalCmd(),
 		NewExecuteResearchProposalCmd(),
+		NewRateFactCmd(),
 	)
 
 	return txCmd
@@ -648,6 +649,48 @@ func NewExecuteResearchProposalCmd() *cobra.Command {
 			msg := &types.MsgExecuteResearchProposal{
 				Authority:  clientCtx.GetFromAddress().String(),
 				ProposalId: args[0],
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewRateFactCmd creates a CLI command for MsgRateFact.
+// Requires a prior query receipt for the fact (emitted by QueryFact).
+func NewRateFactCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "rate-fact [fact-id] [useful] [memo]",
+		Short: "Rate a queried fact as useful or not (max 256-char memo, optional)",
+		Long: `Rate a fact you previously queried.
+  useful: "true" (satisfied) or "false" (not satisfied)
+  memo:   optional reason, max 256 chars. Pass "" for no memo.
+Requires a valid query receipt; each receipt rates at most once.`,
+		Args: cobra.RangeArgs(2, 3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			useful, err := strconv.ParseBool(args[1])
+			if err != nil {
+				return fmt.Errorf("invalid useful flag %q: must be true or false", args[1])
+			}
+
+			memo := ""
+			if len(args) == 3 {
+				memo = args[2]
+			}
+
+			msg := &types.MsgRateFact{
+				Rater:  clientCtx.GetFromAddress().String(),
+				FactId: args[0],
+				Useful: useful,
+				Memo:   memo,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
