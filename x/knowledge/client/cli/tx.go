@@ -2,7 +2,9 @@ package cli
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -82,6 +84,7 @@ func GetTxCmd() *cobra.Command {
 		NewVoteResearchProposalCmd(),
 		NewExecuteResearchProposalCmd(),
 		NewRateFactCmd(),
+		NewReportDemandCmd(),
 	)
 
 	return txCmd
@@ -691,6 +694,50 @@ Requires a valid query receipt; each receipt rates at most once.`,
 				FactId: args[0],
 				Useful: useful,
 				Memo:   memo,
+			}
+
+			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
+		},
+	}
+
+	flags.AddTxFlagsToCmd(cmd)
+	return cmd
+}
+
+// NewReportDemandCmd creates a CLI command for MsgReportDemand.
+// Reads a JSON file containing an array of DemandReport objects:
+//
+//	[
+//	  {"domain":"physics","subject":"gravity","queries":10,"fulfilled":7,"unfulfilled":3},
+//	  ...
+//	]
+func NewReportDemandCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "report-demand [reports-json-file]",
+		Short: "Report batched agent query-demand signals (whitelisted reporters only)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientTxContext(cmd)
+			if err != nil {
+				return err
+			}
+
+			raw, err := os.ReadFile(args[0])
+			if err != nil {
+				return fmt.Errorf("read %s: %w", args[0], err)
+			}
+
+			var reports []*types.DemandReport
+			if err := json.Unmarshal(raw, &reports); err != nil {
+				return fmt.Errorf("parse reports JSON: %w", err)
+			}
+			if len(reports) == 0 {
+				return fmt.Errorf("no reports in %s", args[0])
+			}
+
+			msg := &types.MsgReportDemand{
+				Reporter: clientCtx.GetFromAddress().String(),
+				Reports:  reports,
 			}
 
 			return tx.GenerateOrBroadcastTxCLI(clientCtx, cmd.Flags(), msg)
