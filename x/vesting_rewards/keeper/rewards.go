@@ -388,6 +388,35 @@ func (k Keeper) DistributeBlockReward(
 		effectiveReward.Div(effectiveReward, big.NewInt(10000))
 	}
 
+	// Knowledge-coupling: scale reward by verification throughput (T9 / thesis).
+	// Below target rate → reward decays linearly to KnowledgeCouplingFloorBps.
+	// At or above target → full reward. Disabled when target is 0 or knowledge
+	// keeper not wired (nil-safe for harnesses).
+	if params.KnowledgeCouplingTargetBps > 0 && k.knowledgeKeeper != nil {
+		rate := k.knowledgeKeeper.GetVerificationRate(ctx)
+		const bps uint64 = 1_000_000
+		var multiplier uint64
+		switch {
+		case rate >= params.KnowledgeCouplingTargetBps:
+			multiplier = bps
+		default:
+			// Linear scaling: rate/target, floored at KnowledgeCouplingFloorBps.
+			multiplier = rate * bps / params.KnowledgeCouplingTargetBps
+			if multiplier < params.KnowledgeCouplingFloorBps {
+				multiplier = params.KnowledgeCouplingFloorBps
+			}
+		}
+		effectiveReward.Mul(effectiveReward, new(big.Int).SetUint64(multiplier))
+		effectiveReward.Div(effectiveReward, new(big.Int).SetUint64(bps))
+
+		ctx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.vesting_rewards.knowledge_coupling_applied",
+			sdk.NewAttribute("verification_rate_bps", fmt.Sprintf("%d", rate)),
+			sdk.NewAttribute("target_bps", fmt.Sprintf("%d", params.KnowledgeCouplingTargetBps)),
+			sdk.NewAttribute("multiplier_bps", fmt.Sprintf("%d", multiplier)),
+		))
+	}
+
 	if effectiveReward.Sign() <= 0 {
 		dist := emptyDist()
 		k.SetBlockRewardDistribution(ctx, dist)

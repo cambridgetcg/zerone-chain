@@ -560,10 +560,11 @@ func TestMsgServer_ChallengeFact_Success(t *testing.T) {
 
 	challenger := makeValidBech32Addr("challenger1")
 
+	// Fact confidence 800k → risk-scaled stake = 11 ZRN × (1 + 0.8) = 19.8 ZRN.
 	resp, err := ms.ChallengeFact(ctx, &types.MsgChallengeFact{
 		Challenger: challenger,
 		FactId:     "challenge-target",
-		Stake:      "11000000",
+		Stake:      "19800000",
 		Reason:     "Evidence contradicts this claim",
 	})
 	require.NoError(t, err)
@@ -572,6 +573,22 @@ func TestMsgServer_ChallengeFact_Success(t *testing.T) {
 	fact, found := k.GetFact(ctx, "challenge-target")
 	require.True(t, found)
 	require.Equal(t, types.FactStatus_FACT_STATUS_CHALLENGED, fact.Status)
+}
+
+func TestMsgServer_ChallengeFact_BelowRiskScaledStake(t *testing.T) {
+	k, ctx := setupKnowledgeTest(t)
+	ms := keeper.NewMsgServerImpl(k)
+
+	makeTestFact(t, k, ctx, "challenge-expensive", "High-confidence fact", "physics", "empirical", "zrn1sub", 800_000)
+
+	_, err := ms.ChallengeFact(ctx, &types.MsgChallengeFact{
+		Challenger: makeValidBech32Addr("challenger1"),
+		FactId:     "challenge-expensive",
+		Stake:      "11000000", // base stake, insufficient for 800k confidence
+		Reason:     "under-priced challenge attempt",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "below effective minimum")
 }
 
 func TestMsgServer_ChallengeFact_NotFound(t *testing.T) {

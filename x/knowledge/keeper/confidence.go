@@ -315,3 +315,29 @@ func safeMulDiv(a, b, c uint64) uint64 {
 	}
 	return result.Uint64()
 }
+
+// EffectiveMinChallengeStake computes the risk-scaled minimum challenge stake
+// for a target fact (T12). Formula: base × (1 + confidence × scaling / BPS²).
+// At scaling=1,000,000 and confidence=880,000 → ~1.88× base stake.
+// At confidence=0 → 1× base stake.
+func EffectiveMinChallengeStake(params *types.Params, targetConfidence uint64) *big.Int {
+	if params == nil {
+		return big.NewInt(0)
+	}
+	baseStr := params.MinChallengeStake
+	base, ok := new(big.Int).SetString(baseStr, 10)
+	if !ok || base.Sign() <= 0 {
+		return big.NewInt(0)
+	}
+	if params.ChallengeConfidenceScalingBps == 0 || targetConfidence == 0 {
+		return base
+	}
+	// multiplierBps = BPS + (confidence × scaling / BPS)
+	const bps uint64 = 1_000_000
+	bonusBps := safeMulDiv(targetConfidence, params.ChallengeConfidenceScalingBps, bps)
+	multiplierBps := bps + bonusBps
+	// scaled = base × multiplierBps / BPS
+	scaled := new(big.Int).Mul(base, new(big.Int).SetUint64(multiplierBps))
+	scaled.Div(scaled, new(big.Int).SetUint64(bps))
+	return scaled
+}

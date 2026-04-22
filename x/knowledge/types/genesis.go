@@ -197,6 +197,16 @@ func DefaultParams() Params {
 		// verdict, in addition to the stake-weighted ConfidenceThreshold.
 		// Prevents a single large-stake coalition from promoting claims.
 		MinHeadcountAgreement: 3,
+
+		// ─── Risk-scaled challenge stake (T12) ───────────────────────────
+		// 1× linear: stake = base × (1 + confidence/BPS).
+		// At 880k confidence → stake ~1.88× base; at 100k → ~1.1×.
+		ChallengeConfidenceScalingBps: 1_000_000,
+
+		// ─── Independence reward modulation (T3) ─────────────────────────
+		// Maximum 30% reward reduction for full conformity; 0 reduction for
+		// maximally independent voters. Disable by setting to 0.
+		IndependenceRewardStrengthBps: 300_000,
 	}
 }
 

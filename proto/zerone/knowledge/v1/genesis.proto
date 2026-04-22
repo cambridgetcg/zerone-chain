@@ -201,6 +201,18 @@ message Params {
   // addition to the stake-weighted ConfidenceThreshold. Prevents a single
   // large-stake coalition from promoting claims past consensus.
   uint64 min_headcount_agreement = 133; // default: 3
+
+  // ─── Risk-scaled challenge stake (T12 mitigation) ───────────────────────
+  // Effective MinChallengeStake = base × (1 + target.Confidence × scaling / BPS²).
+  // Prevents flat-fee griefing on low-confidence facts and properly prices
+  // challenges against high-confidence bedrock facts.
+  uint64 challenge_confidence_scaling_bps = 134; // default: 1,000,000 (1× linear)
+
+  // ─── Schelling-point mitigation (T3) ────────────────────────────────────
+  // Verifier reward is multiplied by (1 - conformity_bps × strength / BPS²)
+  // so crowd-followers earn less than independent investigators.
+  // Score source: ValidatorIndependenceScore in x/knowledge/keeper/diversity.go.
+  uint64 independence_reward_strength_bps = 135; // default: 300,000 (max 30% reward reduction)
 }
 
 // GenesisState is the genesis state of the knowledge module.

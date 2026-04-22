@@ -235,6 +235,9 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 }
 
 // distributeVerifierRewardsFromPool distributes the 55% verifier pool among correct verifiers.
+// Each verifier's share is modulated by their historical independence score (T3):
+// persistent crowd-followers receive up to IndependenceRewardStrengthBps less than
+// they otherwise would, with the withheld amount flowing to the development fund.
 func (k Keeper) distributeVerifierRewardsFromPool(ctx context.Context, claim *types.Claim, result *VerificationResult) {
 	if k.bankKeeper == nil || len(result.Rewards) == 0 {
 		return
@@ -250,17 +253,63 @@ func (k Keeper) distributeVerifierRewardsFromPool(ctx context.Context, claim *ty
 		return
 	}
 
+	params, _ := k.GetParams(ctx)
+
 	// Divide pool equally among rewarded verifiers
 	perVerifier := poolAmount / uint64(len(result.Rewards))
 	remainder := poolAmount - (perVerifier * uint64(len(result.Rewards)))
 
+	var withheldTotal uint64
 	for i, reward := range result.Rewards {
 		amount := perVerifier
 		if i == 0 {
 			amount += remainder // first verifier gets dust
 		}
-		k.distributeVerifierReward(ctx, reward.Verifier, amount)
+		modulated := k.applyIndependenceMultiplier(ctx, reward.Verifier, amount, params)
+		if modulated < amount {
+			withheldTotal += amount - modulated
+		}
+		k.distributeVerifierReward(ctx, reward.Verifier, modulated)
 	}
+
+	// Withheld portion flows to development fund so the budget doesn't compound
+	// for crowd-followers in the verifier pool.
+	if withheldTotal > 0 {
+		k.forwardWithheldToDevelopmentFund(ctx, withheldTotal)
+	}
+}
+
+// applyIndependenceMultiplier returns the reward amount after modulation.
+// Formula: amount × (1 - conformity_bps × strength_bps / BPS²).
+// New voters (no history) get full reward. Strength=0 disables the mechanism.
+func (k Keeper) applyIndependenceMultiplier(ctx context.Context, verifier string, amount uint64, params *types.Params) uint64 {
+	if amount == 0 || params == nil || params.IndependenceRewardStrengthBps == 0 {
+		return amount
+	}
+	rec, found, err := k.GetValidatorIndependence(ctx, verifier)
+	if err != nil || !found || rec.TotalVotes == 0 {
+		return amount
+	}
+	const bps uint64 = 1_000_000
+	// conformity_bps = (total - minority) × BPS / total
+	majority := rec.TotalVotes - rec.MinorityVotes
+	conformityBps := safeMulDiv(majority, bps, rec.TotalVotes)
+	// penalty_bps = conformity_bps × strength_bps / BPS
+	penaltyBps := safeMulDiv(conformityBps, params.IndependenceRewardStrengthBps, bps)
+	if penaltyBps >= bps {
+		penaltyBps = bps - 1
+	}
+	// amount × (BPS - penalty) / BPS
+	return safeMulDiv(amount, bps-penaltyBps, bps)
+}
+
+// forwardWithheldToDevelopmentFund sends withheld reward tokens to the development fund.
+func (k Keeper) forwardWithheldToDevelopmentFund(ctx context.Context, amount uint64) {
+	if k.bankKeeper == nil || amount == 0 {
+		return
+	}
+	coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(new(big.Int).SetUint64(amount))))
+	_ = k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, developmentFundModule, coins)
 }
 
 // createFactFromClaim creates a new Fact from an accepted claim.

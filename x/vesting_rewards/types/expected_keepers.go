@@ -19,3 +19,10 @@ type BankKeeper interface {
 type StakingKeeper interface {
 	GetActiveValidatorCount(ctx context.Context) uint32
 }
+
+// KnowledgeKeeper exposes the verification rate so block rewards can be
+// coupled to knowledge throughput (T9 / thesis claim 1). Nil-safe: when this
+// keeper is not wired, block rewards fall back to the pure decay schedule.
+type KnowledgeKeeper interface {
+	GetVerificationRate(ctx context.Context) uint64
+}

@@ -1062,6 +1062,9 @@ func NewZeroneApp(
 	app.KnowledgeKeeper.SetAutopoiesisKeeper(apForKnowledge)
 	apForVesting := vestingrewardskeeper.NewAutopoiesisVestingAdapter(app.AutopoiesisKeeper)
 	app.VestingRewardsKeeper.SetAutopoiesisKeeper(apForVesting)
+	// Knowledge-coupled block reward (T9 / thesis claim 1): block rewards scale
+	// with verification throughput once this adapter is wired.
+	app.VestingRewardsKeeper.SetKnowledgeKeeper(zeroneknowledgekeeper.NewVestingRewardsKnowledgeAdapter(app.KnowledgeKeeper))
 	app.AlignmentKeeper.SetAutopoiesisKeeper(&app.AutopoiesisKeeper)
 
 	// ---- Evidence Management keeper (R7-6) ----

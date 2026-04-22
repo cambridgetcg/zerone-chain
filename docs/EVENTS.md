@@ -2354,6 +2354,12 @@ Vesting schedule fully released.
 - `vesting_id` -- vesting ID
 - `released_amount` -- total released amount
 
+### zerone.vesting_rewards.knowledge_coupling_applied
+Block reward scaled by verification throughput (T9 / thesis claim 1).
+- `verification_rate_bps` -- accepted/terminal ratio in BPS
+- `target_bps` -- configured target rate
+- `multiplier_bps` -- applied reward multiplier in BPS
+
 ### zerone.vesting_rewards.update_params
 Governance parameter update.
 - `authority` -- governance address

@@ -21,8 +21,9 @@ type Keeper struct {
 	cdc          codec.Codec
 	storeService store.KVStoreService
 
-	bankKeeper    types.BankKeeper
-	stakingKeeper types.StakingKeeper
+	bankKeeper      types.BankKeeper
+	stakingKeeper   types.StakingKeeper
+	knowledgeKeeper types.KnowledgeKeeper // optional; gates block reward by verification rate (thesis claim 1)
 
 	authority string
 
@@ -70,6 +71,13 @@ func prefixEndBytes(prefix []byte) []byte {
 // SetAutopoiesisKeeper sets the autopoiesis keeper for adaptive reward multipliers.
 func (k *Keeper) SetAutopoiesisKeeper(ak types.AutopoiesisKeeper) {
 	k.autopoiesisKeeper = ak
+}
+
+// SetKnowledgeKeeper wires the knowledge keeper so block rewards can be
+// coupled to verification throughput. Nil-safe: when unset, block rewards
+// fall back to the pure decay schedule.
+func (k *Keeper) SetKnowledgeKeeper(kk types.KnowledgeKeeper) {
+	k.knowledgeKeeper = kk
 }
 
 // Logger returns a module-specific logger.

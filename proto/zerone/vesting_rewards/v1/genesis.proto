@@ -42,6 +42,13 @@ message Params {
   uint64 empty_block_reward_rate = 14;               // bps of reward for empty blocks (default: 0)
   string floor_reward = 15;                          // minimum reward per block in uzrn (default: "100000" = 0.1 ZRN)
   string initial_fund_balance = 16;                  // uzrn total fund at genesis (default: "0" = pure PoT)
+
+  // Knowledge-coupled block reward (T9 / thesis claim 1).
+  // When enabled, block reward is multiplied by clamp(rate/target, floor, 1.0).
+  // Below target verification rate → reward decays faster; at target → full reward.
+  // 0 target = disabled (backward compat).
+  uint64 knowledge_coupling_target_bps = 17;          // target verification rate in BPS (default: 700,000 = 70%)
+  uint64 knowledge_coupling_floor_bps = 18;           // minimum reward multiplier in BPS (default: 500,000 = 50%)
 }
 
 // CategoryRewardConfig defines a per-category block reward multiplier.

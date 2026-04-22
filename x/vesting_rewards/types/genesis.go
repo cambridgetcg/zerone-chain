@@ -48,6 +48,13 @@ func DefaultParams() *Params {
 		EmptyBlockRewardRate:       0,                      // 0% for empty blocks (PoT)
 		FloorReward:                "100000",               // 0.1 ZRN in uzrn
 		InitialFundBalance:         "0",                    // pure PoT
+
+		// Knowledge-coupled block reward (T9 / thesis claim 1).
+		// Target rate 70% → at or above target, full reward. Below, reward
+		// scales linearly down to a floor of 50%. Ties money supply growth
+		// to verification throughput, per the Truth Paper.
+		KnowledgeCouplingTargetBps: 700_000,
+		KnowledgeCouplingFloorBps:  500_000,
 	}
 }
 

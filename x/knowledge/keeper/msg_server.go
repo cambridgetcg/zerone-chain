@@ -522,12 +522,24 @@ func (m *msgServer) ChallengeFact(ctx context.Context, msg *types.MsgChallengeFa
 		return nil, fmt.Errorf("fact %s is not in a challengeable state (status: %s)", msg.FactId, fact.Status)
 	}
 
+	// Risk-scaled stake check (T12): higher-confidence facts require more stake
+	// to challenge, proportional to params.ChallengeConfidenceScalingBps.
+	params, err := m.keeper.GetParams(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load params: %w", err)
+	}
+	stakeAmt, ok := new(big.Int).SetString(msg.Stake, 10)
+	if !ok || stakeAmt.Sign() <= 0 {
+		return nil, fmt.Errorf("invalid stake amount: %s", msg.Stake)
+	}
+	effectiveMinStake := EffectiveMinChallengeStake(params, fact.Confidence)
+	if stakeAmt.Cmp(effectiveMinStake) < 0 {
+		return nil, fmt.Errorf("challenge stake %s below effective minimum %s (fact confidence %d)",
+			msg.Stake, effectiveMinStake.String(), fact.Confidence)
+	}
+
 	// Lock challenge stake
 	if m.keeper.bankKeeper != nil {
-		stakeAmt, ok := new(big.Int).SetString(msg.Stake, 10)
-		if !ok || stakeAmt.Sign() <= 0 {
-			return nil, fmt.Errorf("invalid stake amount: %s", msg.Stake)
-		}
 		challengerAddr, err := sdk.AccAddressFromBech32(msg.Challenger)
 		if err != nil {
 			return nil, fmt.Errorf("invalid challenger address: %w", err)

@@ -190,8 +190,18 @@ type Params struct {
 	// addition to the stake-weighted ConfidenceThreshold. Prevents a single
 	// large-stake coalition from promoting claims past consensus.
 	MinHeadcountAgreement uint64 `protobuf:"varint,133,opt,name=min_headcount_agreement,json=minHeadcountAgreement,proto3" json:"min_headcount_agreement,omitempty"` // default: 3
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// ─── Risk-scaled challenge stake (T12 mitigation) ───────────────────────
+	// Effective MinChallengeStake = base × (1 + target.Confidence × scaling / BPS²).
+	// Prevents flat-fee griefing on low-confidence facts and properly prices
+	// challenges against high-confidence bedrock facts.
+	ChallengeConfidenceScalingBps uint64 `protobuf:"varint,134,opt,name=challenge_confidence_scaling_bps,json=challengeConfidenceScalingBps,proto3" json:"challenge_confidence_scaling_bps,omitempty"` // default: 1,000,000 (1× linear)
+	// ─── Schelling-point mitigation (T3) ────────────────────────────────────
+	// Verifier reward is multiplied by (1 - conformity_bps × strength / BPS²)
+	// so crowd-followers earn less than independent investigators.
+	// Score source: ValidatorIndependenceScore in x/knowledge/keeper/diversity.go.
+	IndependenceRewardStrengthBps uint64 `protobuf:"varint,135,opt,name=independence_reward_strength_bps,json=independenceRewardStrengthBps,proto3" json:"independence_reward_strength_bps,omitempty"` // default: 300,000 (max 30% reward reduction)
+	unknownFields                 protoimpl.UnknownFields
+	sizeCache                     protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1155,6 +1165,20 @@ func (x *Params) GetMinHeadcountAgreement() uint64 {
 	return 0
 }
 
+func (x *Params) GetChallengeConfidenceScalingBps() uint64 {
+	if x != nil {
+		return x.ChallengeConfidenceScalingBps
+	}
+	return 0
+}
+
+func (x *Params) GetIndependenceRewardStrengthBps() uint64 {
+	if x != nil {
+		return x.IndependenceRewardStrengthBps
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
@@ -1252,7 +1276,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xff?\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x93A\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1387,7 +1411,9 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x19mentorship_capacity_bonus\x18\x82\x01 \x01(\x04R\x17mentorshipCapacityBonus\x12?\n" +
 	"\x1bsocial_saturation_threshold\x18\x83\x01 \x01(\x04R\x19socialSaturationThreshold\x12;\n" +
 	"\x19observation_window_blocks\x18\x84\x01 \x01(\x04R\x17observationWindowBlocks\x127\n" +
-	"\x17min_headcount_agreement\x18\x85\x01 \x01(\x04R\x15minHeadcountAgreement\"\xcd\x03\n" +
+	"\x17min_headcount_agreement\x18\x85\x01 \x01(\x04R\x15minHeadcountAgreement\x12H\n" +
+	" challenge_confidence_scaling_bps\x18\x86\x01 \x01(\x04R\x1dchallengeConfidenceScalingBps\x12H\n" +
+	" independence_reward_strength_bps\x18\x87\x01 \x01(\x04R\x1dindependenceRewardStrengthBps\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

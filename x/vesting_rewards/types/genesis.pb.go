@@ -108,6 +108,12 @@ type Params struct {
 	EmptyBlockRewardRate       uint64 `protobuf:"varint,14,opt,name=empty_block_reward_rate,json=emptyBlockRewardRate,proto3" json:"empty_block_reward_rate,omitempty"`                     // bps of reward for empty blocks (default: 0)
 	FloorReward                string `protobuf:"bytes,15,opt,name=floor_reward,json=floorReward,proto3" json:"floor_reward,omitempty"`                                                     // minimum reward per block in uzrn (default: "100000" = 0.1 ZRN)
 	InitialFundBalance         string `protobuf:"bytes,16,opt,name=initial_fund_balance,json=initialFundBalance,proto3" json:"initial_fund_balance,omitempty"`                              // uzrn total fund at genesis (default: "0" = pure PoT)
+	// Knowledge-coupled block reward (T9 / thesis claim 1).
+	// When enabled, block reward is multiplied by clamp(rate/target, floor, 1.0).
+	// Below target verification rate → reward decays faster; at target → full reward.
+	// 0 target = disabled (backward compat).
+	KnowledgeCouplingTargetBps uint64 `protobuf:"varint,17,opt,name=knowledge_coupling_target_bps,json=knowledgeCouplingTargetBps,proto3" json:"knowledge_coupling_target_bps,omitempty"` // target verification rate in BPS (default: 700,000 = 70%)
+	KnowledgeCouplingFloorBps  uint64 `protobuf:"varint,18,opt,name=knowledge_coupling_floor_bps,json=knowledgeCouplingFloorBps,proto3" json:"knowledge_coupling_floor_bps,omitempty"`    // minimum reward multiplier in BPS (default: 500,000 = 50%)
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -254,6 +260,20 @@ func (x *Params) GetInitialFundBalance() string {
 	return ""
 }
 
+func (x *Params) GetKnowledgeCouplingTargetBps() uint64 {
+	if x != nil {
+		return x.KnowledgeCouplingTargetBps
+	}
+	return 0
+}
+
+func (x *Params) GetKnowledgeCouplingFloorBps() uint64 {
+	if x != nil {
+		return x.KnowledgeCouplingFloorBps
+	}
+	return 0
+}
+
 // CategoryRewardConfig defines a per-category block reward multiplier.
 type CategoryRewardConfig struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -315,7 +335,7 @@ const file_zerone_vesting_rewards_v1_genesis_proto_rawDesc = "" +
 	"\fGenesisState\x129\n" +
 	"\x06params\x18\x01 \x01(\v2!.zerone.vesting_rewards.v1.ParamsR\x06params\x12T\n" +
 	"\x10category_configs\x18\x02 \x03(\v2).zerone.vesting_rewards.v1.CategoryConfigR\x0fcategoryConfigs\x12W\n" +
-	"\x11vesting_schedules\x18\x03 \x03(\v2*.zerone.vesting_rewards.v1.VestingScheduleR\x10vestingSchedules\"\x93\a\n" +
+	"\x11vesting_schedules\x18\x03 \x03(\v2*.zerone.vesting_rewards.v1.VestingScheduleR\x10vestingSchedules\"\x97\b\n" +
 	"\x06Params\x12!\n" +
 	"\fblock_reward\x18\x01 \x01(\tR\vblockReward\x12(\n" +
 	"\x10reward_decay_bps\x18\x02 \x01(\x04R\x0erewardDecayBps\x125\n" +
@@ -333,7 +353,9 @@ const file_zerone_vesting_rewards_v1_genesis_proto_rawDesc = "" +
 	"\x1emin_validators_for_full_reward\x18\r \x01(\rR\x1aminValidatorsForFullReward\x125\n" +
 	"\x17empty_block_reward_rate\x18\x0e \x01(\x04R\x14emptyBlockRewardRate\x12!\n" +
 	"\ffloor_reward\x18\x0f \x01(\tR\vfloorReward\x120\n" +
-	"\x14initial_fund_balance\x18\x10 \x01(\tR\x12initialFundBalance\"Y\n" +
+	"\x14initial_fund_balance\x18\x10 \x01(\tR\x12initialFundBalance\x12A\n" +
+	"\x1dknowledge_coupling_target_bps\x18\x11 \x01(\x04R\x1aknowledgeCouplingTargetBps\x12?\n" +
+	"\x1cknowledge_coupling_floor_bps\x18\x12 \x01(\x04R\x19knowledgeCouplingFloorBps\"Y\n" +
 	"\x14CategoryRewardConfig\x12\x1a\n" +
 	"\bcategory\x18\x01 \x01(\tR\bcategory\x12%\n" +
 	"\x0emultiplier_bps\x18\x02 \x01(\x04R\rmultiplierBpsB8Z6github.com/zerone-chain/zerone/x/vesting_rewards/typesb\x06proto3"
