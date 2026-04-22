@@ -204,7 +204,7 @@ type MsgSubmitCommitment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Verifier      string                 `protobuf:"bytes,1,opt,name=verifier,proto3" json:"verifier,omitempty"`
 	RoundId       string                 `protobuf:"bytes,2,opt,name=round_id,json=roundId,proto3" json:"round_id,omitempty"`
-	CommitHash    []byte                 `protobuf:"bytes,3,opt,name=commit_hash,json=commitHash,proto3" json:"commit_hash,omitempty"` // SHA-256(vote || salt)
+	CommitHash    []byte                 `protobuf:"bytes,3,opt,name=commit_hash,json=commitHash,proto3" json:"commit_hash,omitempty"` // ComputeCommitmentHash(round_id, vote, confidence, salt) — see types/commitment.go
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -300,8 +300,9 @@ type MsgSubmitReveal struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Verifier      string                 `protobuf:"bytes,1,opt,name=verifier,proto3" json:"verifier,omitempty"`
 	RoundId       string                 `protobuf:"bytes,2,opt,name=round_id,json=roundId,proto3" json:"round_id,omitempty"`
-	Vote          string                 `protobuf:"bytes,3,opt,name=vote,proto3" json:"vote,omitempty"` // "accept" or "reject"
+	Vote          string                 `protobuf:"bytes,3,opt,name=vote,proto3" json:"vote,omitempty"` // "accept", "reject", or "malformed"
 	Salt          []byte                 `protobuf:"bytes,4,opt,name=salt,proto3" json:"salt,omitempty"`
+	Confidence    uint64                 `protobuf:"varint,5,opt,name=confidence,proto3" json:"confidence,omitempty"` // BPS; bound to commitment via ComputeCommitmentHash
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -362,6 +363,13 @@ func (x *MsgSubmitReveal) GetSalt() []byte {
 		return x.Salt
 	}
 	return nil
+}
+
+func (x *MsgSubmitReveal) GetConfidence() uint64 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
 }
 
 type MsgSubmitRevealResponse struct {
@@ -2443,12 +2451,15 @@ const file_zerone_knowledge_v1_tx_proto_rawDesc = "" +
 	"\bround_id\x18\x02 \x01(\tR\aroundId\x12\x1f\n" +
 	"\vcommit_hash\x18\x03 \x01(\fR\n" +
 	"commitHash:\r\x82\xe7\xb0*\bverifier\"\x1d\n" +
-	"\x1bMsgSubmitCommitmentResponse\"\x7f\n" +
+	"\x1bMsgSubmitCommitmentResponse\"\x9f\x01\n" +
 	"\x0fMsgSubmitReveal\x12\x1a\n" +
 	"\bverifier\x18\x01 \x01(\tR\bverifier\x12\x19\n" +
 	"\bround_id\x18\x02 \x01(\tR\aroundId\x12\x12\n" +
 	"\x04vote\x18\x03 \x01(\tR\x04vote\x12\x12\n" +
-	"\x04salt\x18\x04 \x01(\fR\x04salt:\r\x82\xe7\xb0*\bverifier\"\x19\n" +
+	"\x04salt\x18\x04 \x01(\fR\x04salt\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\x05 \x01(\x04R\n" +
+	"confidence:\r\x82\xe7\xb0*\bverifier\"\x19\n" +
 	"\x17MsgSubmitRevealResponse\"\xad\x01\n" +
 	"\x10MsgChallengeFact\x12\x1e\n" +
 	"\n" +

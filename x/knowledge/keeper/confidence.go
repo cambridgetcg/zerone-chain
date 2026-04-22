@@ -103,18 +103,40 @@ func (k Keeper) AggregateVerificationResult(ctx context.Context, round *types.Ve
 		malformedRatio = safeMulDiv(malformedStake, 1_000_000, totalVoteStake)
 	}
 
+	// Count raw headcount by vote for the T1 headcount-floor check below.
+	var acceptCount, rejectCount, malformedCount uint64
+	for _, reveal := range round.Reveals {
+		switch reveal.Vote {
+		case "accept":
+			acceptCount++
+		case "reject":
+			rejectCount++
+		case "malformed":
+			malformedCount++
+		}
+	}
+
 	// Determine verdict — check malformed FIRST: a malformed claim should
-	// never become a fact regardless of accept votes
-	if malformedRatio >= params.ConfidenceThreshold {
+	// never become a fact regardless of accept votes.
+	// Each branch must also satisfy MinHeadcountAgreement so a stake-heavy
+	// coalition cannot promote a claim past the threshold alone (T1).
+	// Cap at MinVerifiers so chain configs requiring fewer verifiers than
+	// the default headcount still produce verdicts.
+	headcountFloor := params.MinHeadcountAgreement
+	if headcountFloor > params.MinVerifiers {
+		headcountFloor = params.MinVerifiers
+	}
+	switch {
+	case malformedRatio >= params.ConfidenceThreshold && malformedCount >= headcountFloor:
 		result.Verdict = types.Verdict_VERDICT_MALFORMED
 		result.Confidence = malformedRatio
-	} else if acceptRatio >= params.ConfidenceThreshold {
+	case acceptRatio >= params.ConfidenceThreshold && acceptCount >= headcountFloor:
 		result.Verdict = types.Verdict_VERDICT_ACCEPT
 		result.Confidence = acceptRatio
-	} else if rejectRatio >= params.ConfidenceThreshold {
+	case rejectRatio >= params.ConfidenceThreshold && rejectCount >= headcountFloor:
 		result.Verdict = types.Verdict_VERDICT_REJECT
 		result.Confidence = rejectRatio
-	} else {
+	default:
 		result.Verdict = types.Verdict_VERDICT_INCONCLUSIVE
 		result.Confidence = 0
 	}

@@ -125,7 +125,7 @@ message MsgSubmitCommitment {
 
   string verifier  = 1;
   string round_id  = 2;
-  bytes  commit_hash = 3; // SHA-256(vote || salt)
+  bytes  commit_hash = 3; // ComputeCommitmentHash(round_id, vote, confidence, salt) — see types/commitment.go
 }
 
 message MsgSubmitCommitmentResponse {}
@@ -133,10 +133,11 @@ message MsgSubmitCommitmentResponse {}
 message MsgSubmitReveal {
   option (cosmos.msg.v1.signer) = "verifier";
 
-  string verifier = 1;
-  string round_id = 2;
-  string vote     = 3; // "accept" or "reject"
-  bytes  salt     = 4;
+  string verifier   = 1;
+  string round_id   = 2;
+  string vote       = 3; // "accept", "reject", or "malformed"
+  bytes  salt       = 4;
+  uint64 confidence = 5; // BPS; bound to commitment via ComputeCommitmentHash
 }
 
 message MsgSubmitRevealResponse {}

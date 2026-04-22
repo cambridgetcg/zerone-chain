@@ -2,7 +2,6 @@ package keeper_test
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"testing"
 
@@ -282,13 +281,10 @@ func makeSubmitterAddr(i int) string {
 	return fmt.Sprintf("zrn1submitter%d", i)
 }
 
-// computeMsgServerCommitHash computes the simple sha256(vote || salt) hash
-// used by msg_server.SubmitReveal (NOT the domain-separated commitment.go hash).
-func computeMsgServerCommitHash(vote string, salt []byte) []byte {
-	h := sha256.New()
-	h.Write([]byte(vote))
-	h.Write(salt)
-	return h.Sum(nil)
+// computeMsgServerCommitHash computes the domain-separated commitment hash
+// used by both the msg_server tx path and the vote-extension consensus path.
+func computeMsgServerCommitHash(roundID, vote string, confidence uint64, salt []byte) []byte {
+	return types.ComputeCommitmentHash(roundID, vote, confidence, salt)
 }
 
 // makeTestClaim creates and stores a claim with a verification round.

@@ -85,14 +85,18 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 		claim.Status = types.ClaimStatus_CLAIM_STATUS_REJECTED
 		// If this was a challenge claim, the original fact survived — energy boost
 		k.handleChallengeSurvival(ctx, claim)
+		// Contradicting claim was rejected — undo its CONTESTED side-effect on target facts (T-i4).
+		k.reverseContradictionsFromClaim(ctx, claim)
 
 	case types.Verdict_VERDICT_MALFORMED:
 		// Review fee already distributed at submission time — no additional slashing needed.
 		claim.Status = types.ClaimStatus_CLAIM_STATUS_MALFORMED
+		k.reverseContradictionsFromClaim(ctx, claim)
 
 	case types.Verdict_VERDICT_INCONCLUSIVE:
 		// Review fee is non-refundable — verifiers still did work even if inconclusive.
 		claim.Status = types.ClaimStatus_CLAIM_STATUS_INSUFFICIENT
+		k.reverseContradictionsFromClaim(ctx, claim)
 	}
 
 	if err := k.SetClaim(ctx, claim); err != nil {
@@ -105,15 +109,19 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 	// Distribute verifier rewards from the 55% fee pool
 	k.distributeVerifierRewardsFromPool(ctx, claim, result)
 
-	// Slash loop: route vindication-eligible slashes to escrow when enabled
+	// Slash loop: route vindication-eligible slashes to escrow only when a fact was
+	// created (ACCEPT verdict) — non-ACCEPT verdicts have no fact that can later be
+	// disproven, so vindication is structurally unreachable and any escrowed tokens
+	// would be orphaned (T-i3).
 	params, _ := k.GetParams(ctx)
 	var vindicationEntries []types.VindicationEntry
+	canVindicate := params.VindicationRefundEnabled && result.Verdict == types.Verdict_VERDICT_ACCEPT && factId != ""
 
 	for _, slash := range result.Slashes {
 		if k.stakingKeeper == nil {
 			continue
 		}
-		if slash.VindicationEligible && params.VindicationRefundEnabled {
+		if slash.VindicationEligible && canVindicate {
 			slashedAmt, err := k.stakingKeeper.SlashValidatorToModule(ctx, slash.Verifier, slash.SlashBps, types.VindicationEscrowModuleName)
 			if err == nil && slashedAmt.IsPositive() {
 				vote := ""
@@ -137,8 +145,8 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 		}
 	}
 
-	// Store vindication entries if any, associated with the created fact
-	if len(vindicationEntries) > 0 && factId != "" {
+	// Store vindication entries, always associated with the created fact.
+	if len(vindicationEntries) > 0 {
 		for i := range vindicationEntries {
 			vindicationEntries[i].FactId = factId
 		}
@@ -492,6 +500,56 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 	))
 
 	return factID, nil
+}
+
+// reverseContradictionsFromClaim restores any target facts this claim flipped to
+// CONTESTED via its CONTRADICTS relations, when the claim itself is not accepted.
+// Only restores when no other live claim (PENDING / IN_VERIFICATION) still
+// contradicts the same target fact (T-i4).
+func (k Keeper) reverseContradictionsFromClaim(ctx context.Context, claim *types.Claim) {
+	for _, rel := range claim.Relations {
+		if rel.Relation != types.RelationType_RELATION_TYPE_CONTRADICTS {
+			continue
+		}
+		targetFact, found := k.GetFact(ctx, rel.TargetFactId)
+		if !found || targetFact.Status != types.FactStatus_FACT_STATUS_CONTESTED {
+			continue
+		}
+		if k.hasOtherLiveContradiction(ctx, claim.Id, rel.TargetFactId) {
+			continue
+		}
+		targetFact.Status = types.FactStatus_FACT_STATUS_VERIFIED
+		_ = k.SetFact(ctx, targetFact)
+		sdk.UnwrapSDKContext(ctx).EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.contradiction_reversed",
+			sdk.NewAttribute("fact_id", rel.TargetFactId),
+			sdk.NewAttribute("reverted_by_claim", claim.Id),
+		))
+	}
+}
+
+// hasOtherLiveContradiction reports whether any claim other than excludeClaimId
+// with PENDING or IN_VERIFICATION status has a CONTRADICTS relation to targetFactId.
+func (k Keeper) hasOtherLiveContradiction(ctx context.Context, excludeClaimId, targetFactId string) bool {
+	found := false
+	k.IterateClaims(ctx, func(c *types.Claim) bool {
+		if c.Id == excludeClaimId {
+			return false
+		}
+		if c.Status != types.ClaimStatus_CLAIM_STATUS_PENDING &&
+			c.Status != types.ClaimStatus_CLAIM_STATUS_PENDING_EVALUATION &&
+			c.Status != types.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION {
+			return false
+		}
+		for _, rel := range c.Relations {
+			if rel.Relation == types.RelationType_RELATION_TYPE_CONTRADICTS && rel.TargetFactId == targetFactId {
+				found = true
+				return true
+			}
+		}
+		return false
+	})
+	return found
 }
 
 // handleChallengeSurvival restores a challenged fact and grants survival energy

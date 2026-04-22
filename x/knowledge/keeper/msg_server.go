@@ -2,7 +2,6 @@ package keeper
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"math/big"
 
@@ -307,11 +306,6 @@ func (m *msgServer) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCo
 		}
 	}
 
-	// Check for duplicate commitment
-	if existing := findCommitByVerifier(round.Commits, msg.Verifier); existing != nil {
-		return nil, fmt.Errorf("verifier %s already committed to round %s", msg.Verifier, msg.RoundId)
-	}
-
 	// Check domain qualification
 	if m.keeper.domainQualificationKeeper != nil {
 		claim, found := m.keeper.GetClaim(ctx, round.ClaimId)
@@ -340,14 +334,13 @@ func (m *msgServer) SubmitCommitment(ctx context.Context, msg *types.MsgSubmitCo
 		}
 	}
 
-	// Add commitment
-	round.Commits = append(round.Commits, &types.CommitEntry{
-		Verifier:        msg.Verifier,
-		CommitHash:      msg.CommitHash,
+	// Delegate storage to the unified helper so the tx path and the vote-extension
+	// path share equivocation detection and SelectedVerifiers tracking.
+	if err := m.keeper.StoreCommitmentInRound(ctx, msg.RoundId, &types.CommitEntry{
+		Verifier:         msg.Verifier,
+		CommitHash:       msg.CommitHash,
 		CommittedAtBlock: height,
-	})
-
-	if err := m.keeper.SetVerificationRound(ctx, round); err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
@@ -381,45 +374,19 @@ func (m *msgServer) SubmitReveal(ctx context.Context, msg *types.MsgSubmitReveal
 		return nil, fmt.Errorf("reveal phase has ended at block %d", round.RevealDeadline)
 	}
 
-	// Find matching commitment
-	commit := findCommitByVerifier(round.Commits, msg.Verifier)
-	if commit == nil {
-		return nil, fmt.Errorf("verifier %s has no commitment in round %s", msg.Verifier, msg.RoundId)
-	}
-
-	// Verify hash(vote || salt) == commitment
-	h := sha256.New()
-	h.Write([]byte(msg.Vote))
-	h.Write(msg.Salt)
-	computedHash := h.Sum(nil)
-	if len(commit.CommitHash) != len(computedHash) {
-		return nil, fmt.Errorf("reveal does not match commitment")
-	}
-	for i := range computedHash {
-		if computedHash[i] != commit.CommitHash[i] {
-			return nil, fmt.Errorf("reveal does not match commitment")
-		}
-	}
-
-	// Validate vote value
+	// Validate vote value before delegating (tx-level friendliness).
 	if msg.Vote != "accept" && msg.Vote != "reject" && msg.Vote != "malformed" {
 		return nil, fmt.Errorf("invalid vote: must be 'accept', 'reject', or 'malformed'")
 	}
 
-	// Check for duplicate reveal
-	if existing := findRevealByVerifier(round.Reveals, msg.Verifier); existing != nil {
-		return nil, fmt.Errorf("verifier %s already revealed in round %s", msg.Verifier, msg.RoundId)
-	}
-
-	// Store reveal
-	round.Reveals = append(round.Reveals, &types.RevealEntry{
-		Verifier:       msg.Verifier,
-		Vote:           msg.Vote,
-		Salt:           msg.Salt,
+	// Delegate to the unified helper which uses ComputeCommitmentHash
+	// (round_id + vote + confidence + salt) — matches the vote-extension path.
+	if err := m.keeper.StoreRevealInRound(ctx, msg.RoundId, &types.RevealEntry{
+		Verifier:        msg.Verifier,
+		Vote:            msg.Vote,
+		Salt:            msg.Salt,
 		RevealedAtBlock: height,
-	})
-
-	if err := m.keeper.SetVerificationRound(ctx, round); err != nil {
+	}, msg.Confidence); err != nil {
 		return nil, err
 	}
 

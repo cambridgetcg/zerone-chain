@@ -193,7 +193,7 @@ func TestMsgServer_SubmitCommitment_Success(t *testing.T) {
 	round := makeRoundInPhase("commit-round-1", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 98)
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
-	hash := computeMsgServerCommitHash("accept", []byte("salt123"))
+	hash := computeMsgServerCommitHash("commit-round-1", "accept", 0, []byte("salt123"))
 
 	resp, err := ms.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
 		Verifier:   verifier,
@@ -274,7 +274,7 @@ func TestMsgServer_SubmitCommitment_DuplicateVerifier(t *testing.T) {
 	round := makeRoundInPhase("dup-commit", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 98)
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
-	hash := computeMsgServerCommitHash("accept", []byte("salt1"))
+	hash := computeMsgServerCommitHash("dup-commit", "accept", 0, []byte("salt1"))
 
 	_, err := ms.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
 		Verifier:   verifier,
@@ -289,7 +289,7 @@ func TestMsgServer_SubmitCommitment_DuplicateVerifier(t *testing.T) {
 		CommitHash: hash,
 	})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "already committed")
+	require.Contains(t, err.Error(), "duplicate commitment")
 }
 
 func TestMsgServer_SubmitCommitment_InsufficientBalance(t *testing.T) {
@@ -303,7 +303,7 @@ func TestMsgServer_SubmitCommitment_InsufficientBalance(t *testing.T) {
 	round := makeRoundInPhase("bal-gate-round", "c1", types.VerificationPhase_VERIFICATION_PHASE_COMMIT, 98)
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
-	hash := computeMsgServerCommitHash("accept", []byte("salt1"))
+	hash := computeMsgServerCommitHash("bal-gate-round", "accept", 0, []byte("salt1"))
 
 	_, err := ms.SubmitCommitment(ctx, &types.MsgSubmitCommitment{
 		Verifier:   verifier,
@@ -322,7 +322,7 @@ func TestMsgServer_SubmitReveal_Success(t *testing.T) {
 
 	vote := "accept"
 	salt := []byte("test-salt-reveal")
-	hash := computeMsgServerCommitHash(vote, salt)
+	hash := computeMsgServerCommitHash("reveal-1", vote, 0, salt)
 
 	// Reveal deadline = 98+8=106 > 100
 	round := makeRoundInPhase("reveal-1", "c1", types.VerificationPhase_VERIFICATION_PHASE_REVEAL, 98)
@@ -350,7 +350,7 @@ func TestMsgServer_SubmitReveal_HashMismatch(t *testing.T) {
 	k, ctx := setupKnowledgeTest(t)
 	ms := keeper.NewMsgServerImpl(k)
 
-	hash := computeMsgServerCommitHash("accept", []byte("original-salt"))
+	hash := computeMsgServerCommitHash("reveal-mismatch", "accept", 0, []byte("original-salt"))
 
 	round := makeRoundInPhase("reveal-mismatch", "c1", types.VerificationPhase_VERIFICATION_PHASE_REVEAL, 98)
 	round.Commits = []*types.CommitEntry{
@@ -408,7 +408,7 @@ func TestMsgServer_SubmitReveal_InvalidVote(t *testing.T) {
 
 	vote := "maybe"
 	salt := []byte("salt")
-	hash := computeMsgServerCommitHash(vote, salt)
+	hash := computeMsgServerCommitHash("reveal-invalid-vote", vote, 0, salt)
 
 	round := makeRoundInPhase("reveal-invalid-vote", "c1", types.VerificationPhase_VERIFICATION_PHASE_REVEAL, 98)
 	round.Commits = []*types.CommitEntry{
@@ -432,7 +432,7 @@ func TestMsgServer_SubmitReveal_DuplicateReveal(t *testing.T) {
 
 	vote := "accept"
 	salt := []byte("salt-dup")
-	hash := computeMsgServerCommitHash(vote, salt)
+	hash := computeMsgServerCommitHash("reveal-dup", vote, 0, salt)
 
 	round := makeRoundInPhase("reveal-dup", "c1", types.VerificationPhase_VERIFICATION_PHASE_REVEAL, 98)
 	round.Commits = []*types.CommitEntry{
@@ -450,7 +450,7 @@ func TestMsgServer_SubmitReveal_DuplicateReveal(t *testing.T) {
 		Salt:     salt,
 	})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "already revealed")
+	require.Contains(t, err.Error(), "duplicate reveal")
 }
 
 // ─── AddFact (authority-only) ───────────────────────────────────────────────

@@ -195,6 +195,12 @@ message Params {
   // ─── Social verification adjustment (R31-2: Water → Fire) ──────────────
   uint64 social_saturation_threshold = 131; // Partnership density above which verification relaxes (default: 10)
   uint64 observation_window_blocks   = 132; // Lookback window for verification health metrics (default: 10000)
+
+  // ─── Consensus integrity (T1 mitigation) ────────────────────────────────
+  // Minimum distinct verifier headcount that must vote with the verdict, in
+  // addition to the stake-weighted ConfidenceThreshold. Prevents a single
+  // large-stake coalition from promoting claims past consensus.
+  uint64 min_headcount_agreement = 133; // default: 3
 }
 
 // GenesisState is the genesis state of the knowledge module.

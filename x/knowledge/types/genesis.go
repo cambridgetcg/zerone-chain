@@ -191,6 +191,12 @@ func DefaultParams() Params {
 		// ─── Social verification adjustment (R31-2: Water → Fire) ────────
 		SocialSaturationThreshold: 10,
 		ObservationWindowBlocks:   10_000,
+
+		// ─── Consensus integrity (T1 mitigation) ────────────────────────
+		// Require at least this many distinct verifiers to align with the
+		// verdict, in addition to the stake-weighted ConfidenceThreshold.
+		// Prevents a single large-stake coalition from promoting claims.
+		MinHeadcountAgreement: 3,
 	}
 }
 

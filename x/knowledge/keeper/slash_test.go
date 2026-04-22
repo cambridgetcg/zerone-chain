@@ -143,9 +143,10 @@ func TestCompleteRound_SlashesWrongVoter(t *testing.T) {
 	sk.addValidator("zrn1correct2", 100_000, "bonded")
 	sk.addValidator("zrn1wrong", 100_000, "bonded")
 
-	// Lower threshold so 2/3 accept (66.6%) crosses it
+	// Lower threshold so 2/3 accept (66.6%) crosses it; lower headcount floor to match.
 	params, _ := k.GetParams(ctx)
 	params.ConfidenceThreshold = 600_000 // 60%
+	params.MinHeadcountAgreement = 2
 	require.NoError(t, k.SetParams(ctx, params))
 
 	claim := &types.Claim{

@@ -185,8 +185,13 @@ type Params struct {
 	// ─── Social verification adjustment (R31-2: Water → Fire) ──────────────
 	SocialSaturationThreshold uint64 `protobuf:"varint,131,opt,name=social_saturation_threshold,json=socialSaturationThreshold,proto3" json:"social_saturation_threshold,omitempty"` // Partnership density above which verification relaxes (default: 10)
 	ObservationWindowBlocks   uint64 `protobuf:"varint,132,opt,name=observation_window_blocks,json=observationWindowBlocks,proto3" json:"observation_window_blocks,omitempty"`       // Lookback window for verification health metrics (default: 10000)
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// ─── Consensus integrity (T1 mitigation) ────────────────────────────────
+	// Minimum distinct verifier headcount that must vote with the verdict, in
+	// addition to the stake-weighted ConfidenceThreshold. Prevents a single
+	// large-stake coalition from promoting claims past consensus.
+	MinHeadcountAgreement uint64 `protobuf:"varint,133,opt,name=min_headcount_agreement,json=minHeadcountAgreement,proto3" json:"min_headcount_agreement,omitempty"` // default: 3
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1143,6 +1148,13 @@ func (x *Params) GetObservationWindowBlocks() uint64 {
 	return 0
 }
 
+func (x *Params) GetMinHeadcountAgreement() uint64 {
+	if x != nil {
+		return x.MinHeadcountAgreement
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
@@ -1240,7 +1252,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xc6?\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xff?\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1374,7 +1386,8 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x1amentorship_dividend_energy\x18\x81\x01 \x01(\x04R\x18mentorshipDividendEnergy\x12;\n" +
 	"\x19mentorship_capacity_bonus\x18\x82\x01 \x01(\x04R\x17mentorshipCapacityBonus\x12?\n" +
 	"\x1bsocial_saturation_threshold\x18\x83\x01 \x01(\x04R\x19socialSaturationThreshold\x12;\n" +
-	"\x19observation_window_blocks\x18\x84\x01 \x01(\x04R\x17observationWindowBlocks\"\xcd\x03\n" +
+	"\x19observation_window_blocks\x18\x84\x01 \x01(\x04R\x17observationWindowBlocks\x127\n" +
+	"\x17min_headcount_agreement\x18\x85\x01 \x01(\x04R\x15minHeadcountAgreement\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +

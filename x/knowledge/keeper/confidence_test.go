@@ -100,11 +100,14 @@ func TestAggregate_SplitVote_Inconclusive(t *testing.T) {
 
 func TestAggregate_StakeWeighted(t *testing.T) {
 	k, ctx, _, sk := setupKnowledgeTestFull(t)
-	// v1 has 900k stake, v2 and v3 have 50k each
-	// Accept: 900k, Reject: 100k → Accept ratio = 900/1000 = 90% → above 77%
+	// Three validators agree to accept (meets headcount floor) with strong stake
+	// weight: whale 900k + two supports 30k each = 960k accept vs 40k reject.
+	// Accept ratio = 960/1000 = 96% → above 77% ConfidenceThreshold.
 	sk.addValidator("zrn1whale", 900_000, "guardian")
-	sk.addValidator("zrn1small1", 50_000, "verified")
-	sk.addValidator("zrn1small2", 50_000, "verified")
+	sk.addValidator("zrn1support1", 30_000, "verified")
+	sk.addValidator("zrn1support2", 30_000, "verified")
+	sk.addValidator("zrn1dissent1", 20_000, "verified")
+	sk.addValidator("zrn1dissent2", 20_000, "verified")
 
 	claim := &types.Claim{Id: "c-weighted", FactContent: "Stake weighted claim content"}
 	require.NoError(t, k.SetClaim(ctx, claim))
@@ -112,20 +115,55 @@ func TestAggregate_StakeWeighted(t *testing.T) {
 	round := makeRoundInPhase("r-weighted", "c-weighted", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 50)
 	round.Commits = []*types.CommitEntry{
 		{Verifier: "zrn1whale", CommitHash: []byte("h1"), CommittedAtBlock: 60},
-		{Verifier: "zrn1small1", CommitHash: []byte("h2"), CommittedAtBlock: 60},
-		{Verifier: "zrn1small2", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1support1", CommitHash: []byte("h2"), CommittedAtBlock: 60},
+		{Verifier: "zrn1support2", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+		{Verifier: "zrn1dissent1", CommitHash: []byte("h4"), CommittedAtBlock: 60},
+		{Verifier: "zrn1dissent2", CommitHash: []byte("h5"), CommittedAtBlock: 60},
 	}
 	round.Reveals = []*types.RevealEntry{
 		{Verifier: "zrn1whale", Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 70},
-		{Verifier: "zrn1small1", Vote: "reject", Salt: []byte("s2"), RevealedAtBlock: 70},
-		{Verifier: "zrn1small2", Vote: "reject", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1support1", Vote: "accept", Salt: []byte("s2"), RevealedAtBlock: 70},
+		{Verifier: "zrn1support2", Vote: "accept", Salt: []byte("s3"), RevealedAtBlock: 70},
+		{Verifier: "zrn1dissent1", Vote: "reject", Salt: []byte("s4"), RevealedAtBlock: 70},
+		{Verifier: "zrn1dissent2", Vote: "reject", Salt: []byte("s5"), RevealedAtBlock: 70},
 	}
 	require.NoError(t, k.SetVerificationRound(ctx, round))
 
 	result, err := k.AggregateVerificationResult(ctx, round)
 	require.NoError(t, err)
 	require.Equal(t, types.Verdict_VERDICT_ACCEPT, result.Verdict)
-	require.Equal(t, uint64(880_000), result.Confidence) // 900k/1000k = 90% capped at MaxConfidence (880,000)
+	require.Equal(t, uint64(880_000), result.Confidence) // 96% capped at MaxConfidence (880,000)
+}
+
+// TestAggregate_StakeSingletonBlocked documents the T1 mitigation: a single
+// stake-heavy voter cannot promote a claim even if it exceeds ConfidenceThreshold
+// on stake alone. MinHeadcountAgreement ensures distinct-verifier consent.
+func TestAggregate_StakeSingletonBlocked(t *testing.T) {
+	k, ctx, _, sk := setupKnowledgeTestFull(t)
+	sk.addValidator("zrn1whale", 900_000, "guardian")
+	sk.addValidator("zrn1dissent1", 50_000, "verified")
+	sk.addValidator("zrn1dissent2", 50_000, "verified")
+
+	claim := &types.Claim{Id: "c-singleton", FactContent: "Stake singleton must not promote"}
+	require.NoError(t, k.SetClaim(ctx, claim))
+
+	round := makeRoundInPhase("r-singleton", "c-singleton", types.VerificationPhase_VERIFICATION_PHASE_AGGREGATION, 50)
+	round.Commits = []*types.CommitEntry{
+		{Verifier: "zrn1whale", CommitHash: []byte("h1"), CommittedAtBlock: 60},
+		{Verifier: "zrn1dissent1", CommitHash: []byte("h2"), CommittedAtBlock: 60},
+		{Verifier: "zrn1dissent2", CommitHash: []byte("h3"), CommittedAtBlock: 60},
+	}
+	round.Reveals = []*types.RevealEntry{
+		{Verifier: "zrn1whale", Vote: "accept", Salt: []byte("s1"), RevealedAtBlock: 70},
+		{Verifier: "zrn1dissent1", Vote: "reject", Salt: []byte("s2"), RevealedAtBlock: 70},
+		{Verifier: "zrn1dissent2", Vote: "reject", Salt: []byte("s3"), RevealedAtBlock: 70},
+	}
+	require.NoError(t, k.SetVerificationRound(ctx, round))
+
+	result, err := k.AggregateVerificationResult(ctx, round)
+	require.NoError(t, err)
+	require.Equal(t, types.Verdict_VERDICT_INCONCLUSIVE, result.Verdict,
+		"stake-heavy singleton must not pass headcount floor (T1)")
 }
 
 func TestAggregate_BelowMinVerifiers(t *testing.T) {
@@ -403,9 +441,10 @@ func TestRewardsAndSlashes_WrongVote(t *testing.T) {
 	sk.addValidator("zrn1correct2", 100_000, "bonded")
 	sk.addValidator("zrn1wrong", 100_000, "bonded")
 
-	// Lower threshold so 2/3 accept (66.6%) crosses it
+	// Lower threshold so 2/3 accept (66.6%) crosses it; lower headcount floor to match.
 	params, _ := k.GetParams(ctx)
 	params.ConfidenceThreshold = 600_000 // 60%
+	params.MinHeadcountAgreement = 2
 	require.NoError(t, k.SetParams(ctx, params))
 
 	claim := &types.Claim{Id: "c-wrong", FactContent: "Wrong vote test claim content"}
@@ -506,6 +545,7 @@ func TestAggregate_MalformedSupermajority(t *testing.T) {
 
 	params, _ := k.GetParams(ctx)
 	params.ConfidenceThreshold = 600_000 // 60% threshold
+	params.MinHeadcountAgreement = 2
 	require.NoError(t, k.SetParams(ctx, params))
 
 	claim := &types.Claim{Id: "c-malsup", FactContent: "Category error nonsense claim content"}
@@ -653,6 +693,7 @@ func TestMalformedReward_RejectVotersGetPartial(t *testing.T) {
 	params, _ := k.GetParams(ctx)
 	params.ConfidenceThreshold = 500_000 // 50% threshold
 	params.MinVerifiers = 4
+	params.MinHeadcountAgreement = 2
 	require.NoError(t, k.SetParams(ctx, params))
 
 	claim := &types.Claim{Id: "c-mal-reward", FactContent: "Malformed reward test claim content here"}
