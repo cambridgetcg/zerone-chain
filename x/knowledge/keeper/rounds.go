@@ -344,6 +344,8 @@ func (k Keeper) createFactFromClaim(ctx context.Context, claim *types.Claim, rou
 		Structure:         claim.Structure,
 		CanonicalForm:     claim.CanonicalForm,
 		CanonicalHash:     claim.CanonicalHash,
+		// Methodology (Phase 1): copy from claim; default to M-LEGACY if unset.
+		MethodId: ResolveMethodId(claim.MethodId),
 		// Fitness fields
 		FitnessScore:       params.FitnessInitialScore,
 		FitnessUpdatedBlock: height,

@@ -107,6 +107,10 @@ message FactRelation {
   // Verification weighs this against inference type; deductive claims with
   // strength < 1_000_000 are flagged as informal.
   uint64 inference_strength_bps = 7;
+  // Optional: the methodology under which this edge is claimed. Empty means
+  // the edge inherits the source claim's method. Used when a claim spans
+  // multiple methodologies (cross-method citation).
+  string method_id = 8;
 }
 
 // ClaimRelation declares a typed relationship from a claim to an existing fact.
@@ -115,6 +119,31 @@ message ClaimRelation {
   RelationType relation = 2;
   InferenceType inference = 3;
   uint64 inference_strength_bps = 4;
+  string method_id = 5;  // Optional; empty = inherit from parent claim
+}
+
+// Methodology is the bedrock of the knowledge system under the "methodology
+// over statement" model. A methodology describes HOW a class of claims is
+// adjudicated — the rule of compliance, what counts as evidence, what would
+// falsify a claim made under it. Claims declare which methodology they invoke;
+// verifiers judge method-compliance, not raw truth.
+//
+// Methodologies are amendable only via governance with a high bar.
+message Methodology {
+  string id                           = 1;  // Stable: "M-FORMAL", "M-EMPIRICAL", ...
+  string name                         = 2;  // Human-readable
+  string description                  = 3;  // The rule itself, plain language
+  repeated string compliance_criteria = 4;  // What evidence proves a claim followed this method
+  repeated string falsification_paths = 5;  // What would disprove a claim under this method
+  // cross_method_discount_bps: when a claim under THIS method cites evidence
+  // from ANOTHER method, the cited claim's contribution is capped at this
+  // BPS fraction. Map key = cited method's id. Missing entry defaults to BPS
+  // (full strength = no discount).
+  map<string, uint64> cross_method_discount_bps = 6;
+  uint64 min_qualification_weight    = 7;  // Minimum stake/qualification for verifiers
+  uint64 version                     = 8;  // Incremented on each governance amendment
+  uint64 ratified_at_block           = 9;  // Height at which this version took effect
+  bool   is_transitional             = 10; // True for M-LEGACY; retired under sunset
 }
 
 // DomainStatus tracks whether an epistemic domain is active or proposed.
@@ -221,6 +250,11 @@ message Fact {
   // to prevent high-confidence claims from floating on weak foundations.
   // 0 means "no floor computed" (e.g. axioms with no cites).
   uint64 dependency_confidence_floor = 65;
+  // ─── Methodology (Phase 1) ──────────────────────────────────────────────
+  // The methodology under which this fact was adjudicated. Copied from the
+  // originating claim at acceptance. Empty = "M-LEGACY" (pre-Phase-1 facts
+  // or claims that did not declare a method).
+  string method_id               = 66;
 }
 
 // CommonKnowledgeEntry represents a subject that LLMs already know.
@@ -255,6 +289,11 @@ message Claim {
   ClaimStructure structure = 17;  // Machine-readable decomposition (optional)
   string canonical_form      = 18;  // Machine-readable normalized form
   string canonical_hash      = 19;  // SHA-256 of canonical_form for dedup
+  // Methodology under which this claim is submitted. Empty = "M-LEGACY"
+  // (transitional; claims without declared method are adjudicated under a
+  // permissive rule-set). Governance-amendable set of valid values lives in
+  // the knowledge module's methodology registry.
+  string method_id           = 20;
 }
 
 // VerificationRound tracks one commit-reveal verification cycle.

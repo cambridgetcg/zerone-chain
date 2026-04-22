@@ -43,6 +43,8 @@ const (
 	Query_ProofTree_FullMethodName              = "/zerone.knowledge.v1.Query/ProofTree"
 	Query_DescendantTree_FullMethodName         = "/zerone.knowledge.v1.Query/DescendantTree"
 	Query_TrustProfile_FullMethodName           = "/zerone.knowledge.v1.Query/TrustProfile"
+	Query_Methodologies_FullMethodName          = "/zerone.knowledge.v1.Query/Methodologies"
+	Query_Methodology_FullMethodName            = "/zerone.knowledge.v1.Query/Methodology"
 	Query_CommonKnowledge_FullMethodName        = "/zerone.knowledge.v1.Query/CommonKnowledge"
 	Query_CheckNovelty_FullMethodName           = "/zerone.knowledge.v1.Query/CheckNovelty"
 	Query_ActiveBounties_FullMethodName         = "/zerone.knowledge.v1.Query/ActiveBounties"
@@ -124,6 +126,12 @@ type QueryClient interface {
 	// descendant count, and a computed grounded_score that weighs all three.
 	// The one-stop query for auditors (ToK Wave 7).
 	TrustProfile(ctx context.Context, in *QueryTrustProfileRequest, opts ...grpc.CallOption) (*QueryTrustProfileResponse, error)
+	// Methodologies lists every registered methodology (Phase 1: methodology
+	// over statement). The seven bootstrap methodologies are seeded at genesis;
+	// governance can add/amend more through dedicated proposals.
+	Methodologies(ctx context.Context, in *QueryMethodologiesRequest, opts ...grpc.CallOption) (*QueryMethodologiesResponse, error)
+	// Methodology returns a single methodology by id.
+	Methodology(ctx context.Context, in *QueryMethodologyRequest, opts ...grpc.CallOption) (*QueryMethodologyResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -403,6 +411,26 @@ func (c *queryClient) TrustProfile(ctx context.Context, in *QueryTrustProfileReq
 	return out, nil
 }
 
+func (c *queryClient) Methodologies(ctx context.Context, in *QueryMethodologiesRequest, opts ...grpc.CallOption) (*QueryMethodologiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMethodologiesResponse)
+	err := c.cc.Invoke(ctx, Query_Methodologies_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) Methodology(ctx context.Context, in *QueryMethodologyRequest, opts ...grpc.CallOption) (*QueryMethodologyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMethodologyResponse)
+	err := c.cc.Invoke(ctx, Query_Methodology_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -617,6 +645,12 @@ type QueryServer interface {
 	// descendant count, and a computed grounded_score that weighs all three.
 	// The one-stop query for auditors (ToK Wave 7).
 	TrustProfile(context.Context, *QueryTrustProfileRequest) (*QueryTrustProfileResponse, error)
+	// Methodologies lists every registered methodology (Phase 1: methodology
+	// over statement). The seven bootstrap methodologies are seeded at genesis;
+	// governance can add/amend more through dedicated proposals.
+	Methodologies(context.Context, *QueryMethodologiesRequest) (*QueryMethodologiesResponse, error)
+	// Methodology returns a single methodology by id.
+	Methodology(context.Context, *QueryMethodologyRequest) (*QueryMethodologyResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -727,6 +761,12 @@ func (UnimplementedQueryServer) DescendantTree(context.Context, *QueryDescendant
 }
 func (UnimplementedQueryServer) TrustProfile(context.Context, *QueryTrustProfileRequest) (*QueryTrustProfileResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TrustProfile not implemented")
+}
+func (UnimplementedQueryServer) Methodologies(context.Context, *QueryMethodologiesRequest) (*QueryMethodologiesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Methodologies not implemented")
+}
+func (UnimplementedQueryServer) Methodology(context.Context, *QueryMethodologyRequest) (*QueryMethodologyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Methodology not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -1226,6 +1266,42 @@ func _Query_TrustProfile_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_Methodologies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMethodologiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).Methodologies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_Methodologies_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).Methodologies(ctx, req.(*QueryMethodologiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_Methodology_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMethodologyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).Methodology(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_Methodology_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).Methodology(ctx, req.(*QueryMethodologyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -1598,6 +1674,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TrustProfile",
 			Handler:    _Query_TrustProfile_Handler,
+		},
+		{
+			MethodName: "Methodologies",
+			Handler:    _Query_Methodologies_Handler,
+		},
+		{
+			MethodName: "Methodology",
+			Handler:    _Query_Methodology_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",

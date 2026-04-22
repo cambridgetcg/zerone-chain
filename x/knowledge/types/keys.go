@@ -136,7 +136,15 @@ var (
 
 	// ─── Completion index (R31-2: Fire activity metrics) ──────────────
 	CompletedRoundIndexPrefix = []byte{0x57} // 0x57 | verdictBlock(8) | roundID → CompletedRoundMeta (proto)
+
+	// ─── Methodology registry (Phase 1: methodology over statement) ──
+	MethodologyKeyPrefix = []byte{0x58} // 0x58 | methodID → Methodology (proto)
 )
+
+// MethodologyKey returns the store key for a methodology by ID.
+func MethodologyKey(id string) []byte {
+	return append(append([]byte{}, MethodologyKeyPrefix...), []byte(id)...)
+}
 
 // ─── Key constructors ─────────────────────────────────────────────────────────
 

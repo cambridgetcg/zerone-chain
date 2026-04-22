@@ -546,6 +546,25 @@ func (q *queryServer) buildProgenyTree(ctx context.Context, parent *types.Fact, 
 	return result
 }
 
+// Methodologies returns every registered methodology (Phase 1).
+func (q *queryServer) Methodologies(ctx context.Context, _ *types.QueryMethodologiesRequest) (*types.QueryMethodologiesResponse, error) {
+	return &types.QueryMethodologiesResponse{
+		Methodologies: q.keeper.GetAllMethodologies(ctx),
+	}, nil
+}
+
+// Methodology returns a single methodology by id, or found=false.
+func (q *queryServer) Methodology(ctx context.Context, req *types.QueryMethodologyRequest) (*types.QueryMethodologyResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+	m, found := q.keeper.GetMethodology(ctx, req.Id)
+	return &types.QueryMethodologyResponse{
+		Methodology: m,
+		Found:       found,
+	}, nil
+}
+
 // TrustProfile returns the consolidated provenance view for a single fact:
 // own confidence, inherited floor, axiom distance, direct supporter /
 // descendant counts, min confidence found in the support chain, and a

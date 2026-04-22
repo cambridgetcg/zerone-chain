@@ -558,8 +558,12 @@ type FactRelation struct {
 	// Verification weighs this against inference type; deductive claims with
 	// strength < 1_000_000 are flagged as informal.
 	InferenceStrengthBps uint64 `protobuf:"varint,7,opt,name=inference_strength_bps,json=inferenceStrengthBps,proto3" json:"inference_strength_bps,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	// Optional: the methodology under which this edge is claimed. Empty means
+	// the edge inherits the source claim's method. Used when a claim spans
+	// multiple methodologies (cross-method citation).
+	MethodId      string `protobuf:"bytes,8,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FactRelation) Reset() {
@@ -641,6 +645,13 @@ func (x *FactRelation) GetInferenceStrengthBps() uint64 {
 	return 0
 }
 
+func (x *FactRelation) GetMethodId() string {
+	if x != nil {
+		return x.MethodId
+	}
+	return ""
+}
+
 // ClaimRelation declares a typed relationship from a claim to an existing fact.
 type ClaimRelation struct {
 	state                protoimpl.MessageState `protogen:"open.v1"`
@@ -648,6 +659,7 @@ type ClaimRelation struct {
 	Relation             RelationType           `protobuf:"varint,2,opt,name=relation,proto3,enum=zerone.knowledge.v1.RelationType" json:"relation,omitempty"`
 	Inference            InferenceType          `protobuf:"varint,3,opt,name=inference,proto3,enum=zerone.knowledge.v1.InferenceType" json:"inference,omitempty"`
 	InferenceStrengthBps uint64                 `protobuf:"varint,4,opt,name=inference_strength_bps,json=inferenceStrengthBps,proto3" json:"inference_strength_bps,omitempty"`
+	MethodId             string                 `protobuf:"bytes,5,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty"` // Optional; empty = inherit from parent claim
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -710,6 +722,140 @@ func (x *ClaimRelation) GetInferenceStrengthBps() uint64 {
 	return 0
 }
 
+func (x *ClaimRelation) GetMethodId() string {
+	if x != nil {
+		return x.MethodId
+	}
+	return ""
+}
+
+// Methodology is the bedrock of the knowledge system under the "methodology
+// over statement" model. A methodology describes HOW a class of claims is
+// adjudicated — the rule of compliance, what counts as evidence, what would
+// falsify a claim made under it. Claims declare which methodology they invoke;
+// verifiers judge method-compliance, not raw truth.
+//
+// Methodologies are amendable only via governance with a high bar.
+type Methodology struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                           // Stable: "M-FORMAL", "M-EMPIRICAL", ...
+	Name               string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`                                                       // Human-readable
+	Description        string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`                                         // The rule itself, plain language
+	ComplianceCriteria []string               `protobuf:"bytes,4,rep,name=compliance_criteria,json=complianceCriteria,proto3" json:"compliance_criteria,omitempty"` // What evidence proves a claim followed this method
+	FalsificationPaths []string               `protobuf:"bytes,5,rep,name=falsification_paths,json=falsificationPaths,proto3" json:"falsification_paths,omitempty"` // What would disprove a claim under this method
+	// cross_method_discount_bps: when a claim under THIS method cites evidence
+	// from ANOTHER method, the cited claim's contribution is capped at this
+	// BPS fraction. Map key = cited method's id. Missing entry defaults to BPS
+	// (full strength = no discount).
+	CrossMethodDiscountBps map[string]uint64 `protobuf:"bytes,6,rep,name=cross_method_discount_bps,json=crossMethodDiscountBps,proto3" json:"cross_method_discount_bps,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	MinQualificationWeight uint64            `protobuf:"varint,7,opt,name=min_qualification_weight,json=minQualificationWeight,proto3" json:"min_qualification_weight,omitempty"` // Minimum stake/qualification for verifiers
+	Version                uint64            `protobuf:"varint,8,opt,name=version,proto3" json:"version,omitempty"`                                                               // Incremented on each governance amendment
+	RatifiedAtBlock        uint64            `protobuf:"varint,9,opt,name=ratified_at_block,json=ratifiedAtBlock,proto3" json:"ratified_at_block,omitempty"`                      // Height at which this version took effect
+	IsTransitional         bool              `protobuf:"varint,10,opt,name=is_transitional,json=isTransitional,proto3" json:"is_transitional,omitempty"`                          // True for M-LEGACY; retired under sunset
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *Methodology) Reset() {
+	*x = Methodology{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Methodology) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Methodology) ProtoMessage() {}
+
+func (x *Methodology) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Methodology.ProtoReflect.Descriptor instead.
+func (*Methodology) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Methodology) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Methodology) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Methodology) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *Methodology) GetComplianceCriteria() []string {
+	if x != nil {
+		return x.ComplianceCriteria
+	}
+	return nil
+}
+
+func (x *Methodology) GetFalsificationPaths() []string {
+	if x != nil {
+		return x.FalsificationPaths
+	}
+	return nil
+}
+
+func (x *Methodology) GetCrossMethodDiscountBps() map[string]uint64 {
+	if x != nil {
+		return x.CrossMethodDiscountBps
+	}
+	return nil
+}
+
+func (x *Methodology) GetMinQualificationWeight() uint64 {
+	if x != nil {
+		return x.MinQualificationWeight
+	}
+	return 0
+}
+
+func (x *Methodology) GetVersion() uint64 {
+	if x != nil {
+		return x.Version
+	}
+	return 0
+}
+
+func (x *Methodology) GetRatifiedAtBlock() uint64 {
+	if x != nil {
+		return x.RatifiedAtBlock
+	}
+	return 0
+}
+
+func (x *Methodology) GetIsTransitional() bool {
+	if x != nil {
+		return x.IsTransitional
+	}
+	return false
+}
+
 // ClaimStructure provides machine-readable decomposition of a claim.
 // The full claim text (fact_content) remains the canonical human-readable form.
 // Structure is optional but strongly encouraged — agents prioritize structured facts.
@@ -728,7 +874,7 @@ type ClaimStructure struct {
 
 func (x *ClaimStructure) Reset() {
 	*x = ClaimStructure{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -740,7 +886,7 @@ func (x *ClaimStructure) String() string {
 func (*ClaimStructure) ProtoMessage() {}
 
 func (x *ClaimStructure) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[2]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -753,7 +899,7 @@ func (x *ClaimStructure) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimStructure.ProtoReflect.Descriptor instead.
 func (*ClaimStructure) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{2}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ClaimStructure) GetSubject() string {
@@ -882,13 +1028,18 @@ type Fact struct {
 	// to prevent high-confidence claims from floating on weak foundations.
 	// 0 means "no floor computed" (e.g. axioms with no cites).
 	DependencyConfidenceFloor uint64 `protobuf:"varint,65,opt,name=dependency_confidence_floor,json=dependencyConfidenceFloor,proto3" json:"dependency_confidence_floor,omitempty"`
-	unknownFields             protoimpl.UnknownFields
-	sizeCache                 protoimpl.SizeCache
+	// ─── Methodology (Phase 1) ──────────────────────────────────────────────
+	// The methodology under which this fact was adjudicated. Copied from the
+	// originating claim at acceptance. Empty = "M-LEGACY" (pre-Phase-1 facts
+	// or claims that did not declare a method).
+	MethodId      string `protobuf:"bytes,66,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Fact) Reset() {
 	*x = Fact{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -900,7 +1051,7 @@ func (x *Fact) String() string {
 func (*Fact) ProtoMessage() {}
 
 func (x *Fact) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[3]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -913,7 +1064,7 @@ func (x *Fact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Fact.ProtoReflect.Descriptor instead.
 func (*Fact) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{3}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *Fact) GetId() string {
@@ -1301,6 +1452,13 @@ func (x *Fact) GetDependencyConfidenceFloor() uint64 {
 	return 0
 }
 
+func (x *Fact) GetMethodId() string {
+	if x != nil {
+		return x.MethodId
+	}
+	return ""
+}
+
 // CommonKnowledgeEntry represents a subject that LLMs already know.
 // Claims matching these subjects receive a novelty penalty.
 type CommonKnowledgeEntry struct {
@@ -1317,7 +1475,7 @@ type CommonKnowledgeEntry struct {
 
 func (x *CommonKnowledgeEntry) Reset() {
 	*x = CommonKnowledgeEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1329,7 +1487,7 @@ func (x *CommonKnowledgeEntry) String() string {
 func (*CommonKnowledgeEntry) ProtoMessage() {}
 
 func (x *CommonKnowledgeEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[4]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1342,7 +1500,7 @@ func (x *CommonKnowledgeEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommonKnowledgeEntry.ProtoReflect.Descriptor instead.
 func (*CommonKnowledgeEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{4}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *CommonKnowledgeEntry) GetId() string {
@@ -1409,13 +1567,18 @@ type Claim struct {
 	Structure           *ClaimStructure        `protobuf:"bytes,17,opt,name=structure,proto3" json:"structure,omitempty"`                              // Machine-readable decomposition (optional)
 	CanonicalForm       string                 `protobuf:"bytes,18,opt,name=canonical_form,json=canonicalForm,proto3" json:"canonical_form,omitempty"` // Machine-readable normalized form
 	CanonicalHash       string                 `protobuf:"bytes,19,opt,name=canonical_hash,json=canonicalHash,proto3" json:"canonical_hash,omitempty"` // SHA-256 of canonical_form for dedup
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Methodology under which this claim is submitted. Empty = "M-LEGACY"
+	// (transitional; claims without declared method are adjudicated under a
+	// permissive rule-set). Governance-amendable set of valid values lives in
+	// the knowledge module's methodology registry.
+	MethodId      string `protobuf:"bytes,20,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Claim) Reset() {
 	*x = Claim{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1427,7 +1590,7 @@ func (x *Claim) String() string {
 func (*Claim) ProtoMessage() {}
 
 func (x *Claim) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[5]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1440,7 +1603,7 @@ func (x *Claim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Claim.ProtoReflect.Descriptor instead.
 func (*Claim) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{5}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Claim) GetId() string {
@@ -1576,6 +1739,13 @@ func (x *Claim) GetCanonicalHash() string {
 	return ""
 }
 
+func (x *Claim) GetMethodId() string {
+	if x != nil {
+		return x.MethodId
+	}
+	return ""
+}
+
 // VerificationRound tracks one commit-reveal verification cycle.
 type VerificationRound struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
@@ -1597,7 +1767,7 @@ type VerificationRound struct {
 
 func (x *VerificationRound) Reset() {
 	*x = VerificationRound{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1609,7 +1779,7 @@ func (x *VerificationRound) String() string {
 func (*VerificationRound) ProtoMessage() {}
 
 func (x *VerificationRound) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[6]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1622,7 +1792,7 @@ func (x *VerificationRound) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerificationRound.ProtoReflect.Descriptor instead.
 func (*VerificationRound) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{6}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *VerificationRound) GetId() string {
@@ -1721,7 +1891,7 @@ type CommitEntry struct {
 
 func (x *CommitEntry) Reset() {
 	*x = CommitEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1733,7 +1903,7 @@ func (x *CommitEntry) String() string {
 func (*CommitEntry) ProtoMessage() {}
 
 func (x *CommitEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[7]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1746,7 +1916,7 @@ func (x *CommitEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitEntry.ProtoReflect.Descriptor instead.
 func (*CommitEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{7}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *CommitEntry) GetVerifier() string {
@@ -1783,7 +1953,7 @@ type RevealEntry struct {
 
 func (x *RevealEntry) Reset() {
 	*x = RevealEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1795,7 +1965,7 @@ func (x *RevealEntry) String() string {
 func (*RevealEntry) ProtoMessage() {}
 
 func (x *RevealEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[8]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1808,7 +1978,7 @@ func (x *RevealEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevealEntry.ProtoReflect.Descriptor instead.
 func (*RevealEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RevealEntry) GetVerifier() string {
@@ -1852,7 +2022,7 @@ type VRFProof struct {
 
 func (x *VRFProof) Reset() {
 	*x = VRFProof{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1864,7 +2034,7 @@ func (x *VRFProof) String() string {
 func (*VRFProof) ProtoMessage() {}
 
 func (x *VRFProof) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1877,7 +2047,7 @@ func (x *VRFProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VRFProof.ProtoReflect.Descriptor instead.
 func (*VRFProof) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *VRFProof) GetProof() []byte {
@@ -1927,7 +2097,7 @@ type Domain struct {
 
 func (x *Domain) Reset() {
 	*x = Domain{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1939,7 +2109,7 @@ func (x *Domain) String() string {
 func (*Domain) ProtoMessage() {}
 
 func (x *Domain) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1952,7 +2122,7 @@ func (x *Domain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Domain.ProtoReflect.Descriptor instead.
 func (*Domain) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *Domain) GetName() string {
@@ -2039,7 +2209,7 @@ type ValidatorInfo struct {
 
 func (x *ValidatorInfo) Reset() {
 	*x = ValidatorInfo{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2051,7 +2221,7 @@ func (x *ValidatorInfo) String() string {
 func (*ValidatorInfo) ProtoMessage() {}
 
 func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2064,7 +2234,7 @@ func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatorInfo.ProtoReflect.Descriptor instead.
 func (*ValidatorInfo) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{11}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ValidatorInfo) GetAddress() string {
@@ -2129,7 +2299,7 @@ type ProvisionalChallenge struct {
 
 func (x *ProvisionalChallenge) Reset() {
 	*x = ProvisionalChallenge{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2141,7 +2311,7 @@ func (x *ProvisionalChallenge) String() string {
 func (*ProvisionalChallenge) ProtoMessage() {}
 
 func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2154,7 +2324,7 @@ func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProvisionalChallenge.ProtoReflect.Descriptor instead.
 func (*ProvisionalChallenge) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{12}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ProvisionalChallenge) GetId() string {
@@ -2279,7 +2449,7 @@ type DemandSignal struct {
 
 func (x *DemandSignal) Reset() {
 	*x = DemandSignal{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2291,7 +2461,7 @@ func (x *DemandSignal) String() string {
 func (*DemandSignal) ProtoMessage() {}
 
 func (x *DemandSignal) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2304,7 +2474,7 @@ func (x *DemandSignal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DemandSignal.ProtoReflect.Descriptor instead.
 func (*DemandSignal) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DemandSignal) GetDomain() string {
@@ -2381,7 +2551,7 @@ type KnowledgeBounty struct {
 
 func (x *KnowledgeBounty) Reset() {
 	*x = KnowledgeBounty{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2393,7 +2563,7 @@ func (x *KnowledgeBounty) String() string {
 func (*KnowledgeBounty) ProtoMessage() {}
 
 func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2406,7 +2576,7 @@ func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeBounty.ProtoReflect.Descriptor instead.
 func (*KnowledgeBounty) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *KnowledgeBounty) GetId() string {
@@ -2485,7 +2655,7 @@ type CompletedRoundMeta struct {
 
 func (x *CompletedRoundMeta) Reset() {
 	*x = CompletedRoundMeta{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2497,7 +2667,7 @@ func (x *CompletedRoundMeta) String() string {
 func (*CompletedRoundMeta) ProtoMessage() {}
 
 func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2510,7 +2680,7 @@ func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompletedRoundMeta.ProtoReflect.Descriptor instead.
 func (*CompletedRoundMeta) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *CompletedRoundMeta) GetDomain() string {
@@ -2538,7 +2708,7 @@ var File_zerone_knowledge_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\n" +
-	"\x1fzerone/knowledge/v1/types.proto\x12\x13zerone.knowledge.v1\"\xd5\x02\n" +
+	"\x1fzerone/knowledge/v1/types.proto\x12\x13zerone.knowledge.v1\"\xf2\x02\n" +
 	"\fFactRelation\x12$\n" +
 	"\x0esource_fact_id\x18\x01 \x01(\tR\fsourceFactId\x12$\n" +
 	"\x0etarget_fact_id\x18\x02 \x01(\tR\ftargetFactId\x12=\n" +
@@ -2546,12 +2716,29 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x10created_at_block\x18\x04 \x01(\x04R\x0ecreatedAtBlock\x12\x18\n" +
 	"\acreator\x18\x05 \x01(\tR\acreator\x12@\n" +
 	"\tinference\x18\x06 \x01(\x0e2\".zerone.knowledge.v1.InferenceTypeR\tinference\x124\n" +
-	"\x16inference_strength_bps\x18\a \x01(\x04R\x14inferenceStrengthBps\"\xec\x01\n" +
+	"\x16inference_strength_bps\x18\a \x01(\x04R\x14inferenceStrengthBps\x12\x1b\n" +
+	"\tmethod_id\x18\b \x01(\tR\bmethodId\"\x89\x02\n" +
 	"\rClaimRelation\x12$\n" +
 	"\x0etarget_fact_id\x18\x01 \x01(\tR\ftargetFactId\x12=\n" +
 	"\brelation\x18\x02 \x01(\x0e2!.zerone.knowledge.v1.RelationTypeR\brelation\x12@\n" +
 	"\tinference\x18\x03 \x01(\x0e2\".zerone.knowledge.v1.InferenceTypeR\tinference\x124\n" +
-	"\x16inference_strength_bps\x18\x04 \x01(\x04R\x14inferenceStrengthBps\"\xcf\x01\n" +
+	"\x16inference_strength_bps\x18\x04 \x01(\x04R\x14inferenceStrengthBps\x12\x1b\n" +
+	"\tmethod_id\x18\x05 \x01(\tR\bmethodId\"\xa2\x04\n" +
+	"\vMethodology\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
+	"\vdescription\x18\x03 \x01(\tR\vdescription\x12/\n" +
+	"\x13compliance_criteria\x18\x04 \x03(\tR\x12complianceCriteria\x12/\n" +
+	"\x13falsification_paths\x18\x05 \x03(\tR\x12falsificationPaths\x12w\n" +
+	"\x19cross_method_discount_bps\x18\x06 \x03(\v2<.zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntryR\x16crossMethodDiscountBps\x128\n" +
+	"\x18min_qualification_weight\x18\a \x01(\x04R\x16minQualificationWeight\x12\x18\n" +
+	"\aversion\x18\b \x01(\x04R\aversion\x12*\n" +
+	"\x11ratified_at_block\x18\t \x01(\x04R\x0fratifiedAtBlock\x12'\n" +
+	"\x0fis_transitional\x18\n" +
+	" \x01(\bR\x0eisTransitional\x1aI\n" +
+	"\x1bCrossMethodDiscountBpsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x04R\x05value:\x028\x01\"\xcf\x01\n" +
 	"\x0eClaimStructure\x12\x18\n" +
 	"\asubject\x18\x01 \x01(\tR\asubject\x12\x1c\n" +
 	"\tpredicate\x18\x02 \x01(\tR\tpredicate\x12\x16\n" +
@@ -2559,7 +2746,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\x12%\n" +
 	"\x0etemporal_scope\x18\x05 \x01(\tR\rtemporalScope\x12\x1c\n" +
 	"\tnegatable\x18\x06 \x01(\bR\tnegatable\x12\x12\n" +
-	"\x04tags\x18\a \x03(\tR\x04tags\"\xfe\x11\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\"\x9b\x12\n" +
 	"\x04Fact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
@@ -2626,7 +2813,8 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x15satisfaction_up_epoch\x18> \x01(\x04R\x13satisfactionUpEpoch\x126\n" +
 	"\x17satisfaction_down_epoch\x18? \x01(\x04R\x15satisfactionDownEpoch\x12%\n" +
 	"\x0eaxiom_distance\x18@ \x01(\rR\raxiomDistance\x12>\n" +
-	"\x1bdependency_confidence_floor\x18A \x01(\x04R\x19dependencyConfidenceFloor\"\xbc\x01\n" +
+	"\x1bdependency_confidence_floor\x18A \x01(\x04R\x19dependencyConfidenceFloor\x12\x1b\n" +
+	"\tmethod_id\x18B \x01(\tR\bmethodId\"\xbc\x01\n" +
 	"\x14CommonKnowledgeEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x18\n" +
@@ -2635,7 +2823,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\vpenalty_bps\x18\x05 \x01(\x04R\n" +
 	"penaltyBps\x12\x1f\n" +
 	"\vadded_block\x18\x06 \x01(\x04R\n" +
-	"addedBlock\"\x9c\x06\n" +
+	"addedBlock\"\xb9\x06\n" +
 	"\x05Claim\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
 	"\ffact_content\x18\x02 \x01(\tR\vfactContent\x12\x16\n" +
@@ -2659,7 +2847,8 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\trelations\x18\x10 \x03(\v2\".zerone.knowledge.v1.ClaimRelationR\trelations\x12A\n" +
 	"\tstructure\x18\x11 \x01(\v2#.zerone.knowledge.v1.ClaimStructureR\tstructure\x12%\n" +
 	"\x0ecanonical_form\x18\x12 \x01(\tR\rcanonicalForm\x12%\n" +
-	"\x0ecanonical_hash\x18\x13 \x01(\tR\rcanonicalHash\"\xaf\x04\n" +
+	"\x0ecanonical_hash\x18\x13 \x01(\tR\rcanonicalHash\x12\x1b\n" +
+	"\tmethod_id\x18\x14 \x01(\tR\bmethodId\"\xaf\x04\n" +
 	"\x11VerificationRound\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bclaim_id\x18\x02 \x01(\tR\aclaimId\x12(\n" +
@@ -2842,7 +3031,7 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 8)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),              // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),             // 1: zerone.knowledge.v1.ClaimStatus
@@ -2854,45 +3043,48 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(DomainStatus)(0),            // 7: zerone.knowledge.v1.DomainStatus
 	(*FactRelation)(nil),         // 8: zerone.knowledge.v1.FactRelation
 	(*ClaimRelation)(nil),        // 9: zerone.knowledge.v1.ClaimRelation
-	(*ClaimStructure)(nil),       // 10: zerone.knowledge.v1.ClaimStructure
-	(*Fact)(nil),                 // 11: zerone.knowledge.v1.Fact
-	(*CommonKnowledgeEntry)(nil), // 12: zerone.knowledge.v1.CommonKnowledgeEntry
-	(*Claim)(nil),                // 13: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),    // 14: zerone.knowledge.v1.VerificationRound
-	(*CommitEntry)(nil),          // 15: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),          // 16: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),             // 17: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),               // 18: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),        // 19: zerone.knowledge.v1.ValidatorInfo
-	(*ProvisionalChallenge)(nil), // 20: zerone.knowledge.v1.ProvisionalChallenge
-	(*DemandSignal)(nil),         // 21: zerone.knowledge.v1.DemandSignal
-	(*KnowledgeBounty)(nil),      // 22: zerone.knowledge.v1.KnowledgeBounty
-	(*CompletedRoundMeta)(nil),   // 23: zerone.knowledge.v1.CompletedRoundMeta
+	(*Methodology)(nil),          // 10: zerone.knowledge.v1.Methodology
+	(*ClaimStructure)(nil),       // 11: zerone.knowledge.v1.ClaimStructure
+	(*Fact)(nil),                 // 12: zerone.knowledge.v1.Fact
+	(*CommonKnowledgeEntry)(nil), // 13: zerone.knowledge.v1.CommonKnowledgeEntry
+	(*Claim)(nil),                // 14: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),    // 15: zerone.knowledge.v1.VerificationRound
+	(*CommitEntry)(nil),          // 16: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),          // 17: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),             // 18: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),               // 19: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),        // 20: zerone.knowledge.v1.ValidatorInfo
+	(*ProvisionalChallenge)(nil), // 21: zerone.knowledge.v1.ProvisionalChallenge
+	(*DemandSignal)(nil),         // 22: zerone.knowledge.v1.DemandSignal
+	(*KnowledgeBounty)(nil),      // 23: zerone.knowledge.v1.KnowledgeBounty
+	(*CompletedRoundMeta)(nil),   // 24: zerone.knowledge.v1.CompletedRoundMeta
+	nil,                          // 25: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 1: zerone.knowledge.v1.FactRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
 	5,  // 2: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 3: zerone.knowledge.v1.ClaimRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
-	0,  // 4: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
-	4,  // 5: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	8,  // 6: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
-	8,  // 7: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
-	10, // 8: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
-	1,  // 9: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
-	4,  // 10: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	9,  // 11: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
-	10, // 12: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
-	2,  // 13: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	15, // 14: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	16, // 15: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
-	3,  // 16: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
-	7,  // 17: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
-	18, // [18:18] is the sub-list for method output_type
-	18, // [18:18] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	25, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	0,  // 5: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
+	4,  // 6: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
+	8,  // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
+	8,  // 8: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
+	11, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	1,  // 10: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
+	4,  // 11: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
+	9,  // 12: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
+	11, // 13: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	2,  // 14: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
+	16, // 15: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	17, // 16: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	3,  // 17: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
+	7,  // 18: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
+	19, // [19:19] is the sub-list for method output_type
+	19, // [19:19] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_types_proto_init() }
@@ -2906,7 +3098,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
 			NumEnums:      8,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

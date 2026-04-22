@@ -19,6 +19,13 @@ func (k Keeper) InitGenesis(ctx context.Context, gs *types.GenesisState) error {
 		}
 	}
 
+	// Seed the methodology registry (Phase 1: methodology over statement).
+	// These six methodologies plus M-LEGACY are the "bedrock" under the new
+	// model — rules of truth-seeking, not truth statements.
+	if err := k.SeedDefaultMethodologies(ctx); err != nil {
+		return err
+	}
+
 	for _, domain := range gs.Domains {
 		if domain == nil {
 			continue

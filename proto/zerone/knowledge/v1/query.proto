@@ -140,6 +140,18 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/trust_profile";
   }
 
+  // Methodologies lists every registered methodology (Phase 1: methodology
+  // over statement). The seven bootstrap methodologies are seeded at genesis;
+  // governance can add/amend more through dedicated proposals.
+  rpc Methodologies(QueryMethodologiesRequest) returns (QueryMethodologiesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/methodologies";
+  }
+
+  // Methodology returns a single methodology by id.
+  rpc Methodology(QueryMethodologyRequest) returns (QueryMethodologyResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/methodology/{id}";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -508,6 +520,23 @@ message QueryTrustProfileResponse {
   // Score is capped at own_confidence — a fact can never be MORE trustworthy
   // than its own verification claimed.
   uint64 grounded_score_bps          = 9;
+}
+
+// ─── Methodology registry (Phase 1) ────────────────────────────────────────
+
+message QueryMethodologiesRequest {}
+
+message QueryMethodologiesResponse {
+  repeated Methodology methodologies = 1;
+}
+
+message QueryMethodologyRequest {
+  string id = 1;
+}
+
+message QueryMethodologyResponse {
+  Methodology methodology = 1;
+  bool found = 2;
 }
 
 // ─── Novelty detection queries ──────────────────────────────────────────────
