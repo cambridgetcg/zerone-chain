@@ -230,6 +230,11 @@ func DefaultParams() *Params {
 		ProtocolCitationBps:     500_000, // 50%
 		ProtocolVerificationBps: 300_000, // 30%
 		ProtocolTreasuryBps:     200_000, // 20%
+
+		// Absolute ceiling: no tool may price above this regardless of
+		// self-declared MaxPricePerCall (L5). 100 ZRN per call is generous
+		// for most tools and catches monopoly-pricing abuse.
+		AbsoluteMaxPricePerCallUzrn: "100000000", // 100 ZRN
 	}
 }
 

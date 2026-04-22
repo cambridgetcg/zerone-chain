@@ -47,4 +47,11 @@ message Params {
   uint64 protocol_citation_bps = 24;      // default: 500000 (50%)
   uint64 protocol_verification_bps = 25;  // default: 300000 (30%)
   uint64 protocol_treasury_bps = 26;      // default: 200000 (20%)
+
+  // Price collar (L5). Absolute ceiling on PricePerCall that no tool may
+  // exceed regardless of its self-declared MaxPricePerCall. Protects users
+  // from a single tool monopoly-pricing its domain. "0" = disabled (governance
+  // hasn't set a collar yet). Applies to RegisterTool + UpdateTool pricing
+  // fields (PricePerCall, MaxPricePerCall).
+  string absolute_max_price_per_call_uzrn = 27; // default: "100000000" (100 ZRN per call)
 }

@@ -49,6 +49,11 @@ func (ms *msgServer) RegisterTool(ctx context.Context, msg *types.MsgRegisterToo
 		return nil, err
 	}
 
+	// Enforce governance-set price collar (L5).
+	if err := enforcePriceCollar(ms.k.GetParams(ctx), msg.PricePerCall, msg.MaxPricePerCall); err != nil {
+		return nil, err
+	}
+
 	// Check name uniqueness.
 	if ms.k.ToolNameExists(ctx, msg.Name) {
 		return nil, types.ErrToolAlreadyExists.Wrapf("tool name %q already exists", msg.Name)
@@ -413,6 +418,11 @@ func (ms *msgServer) UpgradeTool(ctx context.Context, msg *types.MsgUpgradeTool)
 
 	// Validate USD pricing.
 	if err := validateUSDPricingFields(msg.TargetPriceUsd, msg.MinPricePerCall, msg.MaxPricePerCall); err != nil {
+		return nil, err
+	}
+
+	// Enforce governance-set price collar on updated prices (L5).
+	if err := enforcePriceCollar(ms.k.GetParams(ctx), msg.PricePerCall, msg.MaxPricePerCall); err != nil {
 		return nil, err
 	}
 

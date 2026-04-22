@@ -1941,6 +1941,15 @@ Validator tier changed.
 - `new_tier` -- new tier (msg handler)
 - `old_tier` -- previous tier (EndBlocker only)
 
+### zerone.staking.tier_transitioned
+Unified tier-change event (L3) emitted at every site that mutates a validator's tier. Pairs with the named event above.
+- `validator` -- validator operator address
+- `from_tier` -- prior tier (`apprentice`, `verified`, `scholar`, `guardian`)
+- `to_tier` -- new tier
+- `direction` -- `promotion` or `demotion`
+- `trigger` -- transaction or condition that caused the transition (e.g. `stake_delegate`, `redelegate_src`, `update_validator_stake`)
+
+
 ### zerone.staking.delegation_unbonding
 Delegation unbonding initiated.
 - `delegator` -- delegator address

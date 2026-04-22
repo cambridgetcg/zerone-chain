@@ -111,6 +111,35 @@ func (k Keeper) CheckTierTransition(ctx sdk.Context, val *types.Validator) (type
 	return val.Tier, false
 }
 
+// ApplyTierTransition mutates val.Tier and emits a unified tier-transition
+// event (L3). All call sites that previously silently mutated val.Tier should
+// route through this helper so every tier change is observable.
+//
+// `trigger` is a free-form string naming the message or condition that caused
+// the transition (e.g. "stake_delegate", "reward_recorded", "slash"). It flows
+// into the event's `trigger` attribute.
+func (k Keeper) ApplyTierTransition(ctx sdk.Context, val *types.Validator, newTier types.ValidatorTier, trigger string) {
+	if val == nil || val.Tier == newTier {
+		return
+	}
+	oldTier := val.Tier
+	val.Tier = newTier
+
+	direction := "promotion"
+	if newTier < oldTier {
+		direction = "demotion"
+	}
+
+	ctx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.staking.tier_transitioned",
+		sdk.NewAttribute("validator", val.OperatorAddress),
+		sdk.NewAttribute("from_tier", types.ValidatorTierString(oldTier)),
+		sdk.NewAttribute("to_tier", types.ValidatorTierString(newTier)),
+		sdk.NewAttribute("direction", direction),
+		sdk.NewAttribute("trigger", trigger),
+	))
+}
+
 // IsTierEligibleForCategory checks if a tier allows a specific verification category.
 func (k Keeper) IsTierEligibleForCategory(ctx sdk.Context, tier types.ValidatorTier, category string) bool {
 	tc, found := k.GetTierConfig(ctx, tier)

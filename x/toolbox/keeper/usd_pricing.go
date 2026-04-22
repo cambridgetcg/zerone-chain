@@ -143,6 +143,29 @@ func validateUSDPricingFields(targetPriceUsd, minPricePerCall, maxPricePerCall s
 	return nil
 }
 
+// enforcePriceCollar rejects any PricePerCall or MaxPricePerCall value that
+// exceeds the governance-set absolute ceiling (L5). Protects users from a
+// tool deployer monopoly-pricing its domain.
+func enforcePriceCollar(params *types.Params, pricePerCall, maxPricePerCall string) error {
+	ceilingStr := params.AbsoluteMaxPricePerCallUzrn
+	if ceilingStr == "" || ceilingStr == "0" {
+		return nil // collar disabled
+	}
+	ceiling := parseUint64(ceilingStr)
+	if ceiling == 0 {
+		return nil
+	}
+	if p := parseUint64(pricePerCall); p > ceiling {
+		return types.ErrInvalidParams.Wrapf(
+			"price_per_call %d exceeds absolute ceiling %d", p, ceiling)
+	}
+	if m := parseUint64(maxPricePerCall); m > ceiling {
+		return types.ErrInvalidParams.Wrapf(
+			"max_price_per_call %d exceeds absolute ceiling %d", m, ceiling)
+	}
+	return nil
+}
+
 // parseUintOrDefault parses a string as uint64, returning defaultVal if empty or invalid.
 func parseUintOrDefault(s string, defaultVal uint64) uint64 {
 	if s == "" {

@@ -107,8 +107,14 @@ type Params struct {
 	ProtocolCitationBps     uint64 `protobuf:"varint,24,opt,name=protocol_citation_bps,json=protocolCitationBps,proto3" json:"protocol_citation_bps,omitempty"`             // default: 500000 (50%)
 	ProtocolVerificationBps uint64 `protobuf:"varint,25,opt,name=protocol_verification_bps,json=protocolVerificationBps,proto3" json:"protocol_verification_bps,omitempty"` // default: 300000 (30%)
 	ProtocolTreasuryBps     uint64 `protobuf:"varint,26,opt,name=protocol_treasury_bps,json=protocolTreasuryBps,proto3" json:"protocol_treasury_bps,omitempty"`             // default: 200000 (20%)
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// Price collar (L5). Absolute ceiling on PricePerCall that no tool may
+	// exceed regardless of its self-declared MaxPricePerCall. Protects users
+	// from a single tool monopoly-pricing its domain. "0" = disabled (governance
+	// hasn't set a collar yet). Applies to RegisterTool + UpdateTool pricing
+	// fields (PricePerCall, MaxPricePerCall).
+	AbsoluteMaxPricePerCallUzrn string `protobuf:"bytes,27,opt,name=absolute_max_price_per_call_uzrn,json=absoluteMaxPricePerCallUzrn,proto3" json:"absolute_max_price_per_call_uzrn,omitempty"` // default: "100000000" (100 ZRN per call)
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -323,6 +329,13 @@ func (x *Params) GetProtocolTreasuryBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetAbsoluteMaxPricePerCallUzrn() string {
+	if x != nil {
+		return x.AbsoluteMaxPricePerCallUzrn
+	}
+	return ""
+}
+
 var File_zerone_toolbox_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_toolbox_v1_genesis_proto_rawDesc = "" +
@@ -330,7 +343,7 @@ const file_zerone_toolbox_v1_genesis_proto_rawDesc = "" +
 	"\x1fzerone/toolbox/v1/genesis.proto\x12\x11zerone.toolbox.v1\x1a\x1dzerone/toolbox/v1/types.proto\"p\n" +
 	"\fGenesisState\x121\n" +
 	"\x06params\x18\x01 \x01(\v2\x19.zerone.toolbox.v1.ParamsR\x06params\x12-\n" +
-	"\x05tools\x18\x02 \x03(\v2\x17.zerone.toolbox.v1.ToolR\x05tools\"\x87\n" +
+	"\x05tools\x18\x02 \x03(\v2\x17.zerone.toolbox.v1.ToolR\x05tools\"\xce\n" +
 	"\n" +
 	"\x06Params\x12)\n" +
 	"\x10max_contributors\x18\x01 \x01(\rR\x0fmaxContributors\x120\n" +
@@ -359,7 +372,8 @@ const file_zerone_toolbox_v1_genesis_proto_rawDesc = "" +
 	"\x0fdevelopment_bps\x18\x17 \x01(\x04R\x0edevelopmentBps\x122\n" +
 	"\x15protocol_citation_bps\x18\x18 \x01(\x04R\x13protocolCitationBps\x12:\n" +
 	"\x19protocol_verification_bps\x18\x19 \x01(\x04R\x17protocolVerificationBps\x122\n" +
-	"\x15protocol_treasury_bps\x18\x1a \x01(\x04R\x13protocolTreasuryBpsB0Z.github.com/zerone-chain/zerone/x/toolbox/typesb\x06proto3"
+	"\x15protocol_treasury_bps\x18\x1a \x01(\x04R\x13protocolTreasuryBps\x12E\n" +
+	" absolute_max_price_per_call_uzrn\x18\x1b \x01(\tR\x1babsoluteMaxPricePerCallUzrnB0Z.github.com/zerone-chain/zerone/x/toolbox/typesb\x06proto3"
 
 var (
 	file_zerone_toolbox_v1_genesis_proto_rawDescOnce sync.Once

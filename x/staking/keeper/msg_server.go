@@ -184,14 +184,8 @@ func (ms *msgServer) Delegate(goCtx context.Context, msg *types.MsgDelegate) (*t
 	}
 	val.TotalStake = new(big.Int).Add(selfStake, delegated).String()
 
-	newTier, changed := ms.CheckTierTransition(ctx, val)
-	if changed {
-		val.Tier = newTier
-		ctx.EventManager().EmitEvent(sdk.NewEvent(
-			"zerone.staking.validator_tier_changed",
-			sdk.NewAttribute("validator", msg.Validator),
-			sdk.NewAttribute("new_tier", types.ValidatorTierString(newTier)),
-		))
+	if newTier, changed := ms.CheckTierTransition(ctx, val); changed {
+		ms.ApplyTierTransition(ctx, val, newTier, "stake_delegate")
 	}
 	ms.SetValidator(ctx, val)
 
@@ -272,9 +266,8 @@ func (ms *msgServer) Undelegate(goCtx context.Context, msg *types.MsgUndelegate)
 		}
 		val.TotalStake = new(big.Int).Add(selfStake, delegated).String()
 
-		newTier, changed := ms.CheckTierTransition(ctx, val)
-		if changed {
-			val.Tier = newTier
+		if newTier, changed := ms.CheckTierTransition(ctx, val); changed {
+			ms.ApplyTierTransition(ctx, val, newTier, "stake_undelegate")
 		}
 		ms.SetValidator(ctx, val)
 	}
@@ -374,9 +367,8 @@ func (ms *msgServer) Redelegate(goCtx context.Context, msg *types.MsgRedelegate)
 			selfStake = new(big.Int)
 		}
 		srcVal.TotalStake = new(big.Int).Add(selfStake, delegated).String()
-		newTier, changed := ms.CheckTierTransition(ctx, srcVal)
-		if changed {
-			srcVal.Tier = newTier
+		if newTier, changed := ms.CheckTierTransition(ctx, srcVal); changed {
+			ms.ApplyTierTransition(ctx, srcVal, newTier, "redelegate_src")
 		}
 		ms.SetValidator(ctx, srcVal)
 	}
@@ -393,9 +385,8 @@ func (ms *msgServer) Redelegate(goCtx context.Context, msg *types.MsgRedelegate)
 		selfStake = new(big.Int)
 	}
 	dstVal.TotalStake = new(big.Int).Add(selfStake, delegated).String()
-	newTier, changed := ms.CheckTierTransition(ctx, dstVal)
-	if changed {
-		dstVal.Tier = newTier
+	if newTier, changed := ms.CheckTierTransition(ctx, dstVal); changed {
+		ms.ApplyTierTransition(ctx, dstVal, newTier, "redelegate_dst")
 	}
 	ms.SetValidator(ctx, dstVal)
 
@@ -515,9 +506,8 @@ func (ms *msgServer) UpdateValidatorStake(goCtx context.Context, msg *types.MsgU
 	}
 	val.TotalStake = new(big.Int).Add(selfStake, delegated).String()
 
-	newTier, changed := ms.CheckTierTransition(ctx, val)
-	if changed {
-		val.Tier = newTier
+	if newTier, changed := ms.CheckTierTransition(ctx, val); changed {
+		ms.ApplyTierTransition(ctx, val, newTier, "update_validator_stake")
 	}
 	ms.SetValidator(ctx, val)
 

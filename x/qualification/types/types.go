@@ -22,6 +22,7 @@ func DefaultParams() *Params {
 		CrossRefMinWeight:           30,
 		CrossRefWeightDiscountBps:   200000, // 20% discount
 		InheritanceWeightDiscountBps: 300000, // 30% discount
+		EndorsementMaxOverlapBps:    600000, // 60% — anti-ring guard (L3)
 	}
 }
 

@@ -108,8 +108,14 @@ type Params struct {
 	CrossRefWeightDiscountBps uint64 `protobuf:"varint,11,opt,name=cross_ref_weight_discount_bps,json=crossRefWeightDiscountBps,proto3" json:"cross_ref_weight_discount_bps,omitempty"` // discount applied to inherited weight (1M scale)
 	// Inheritance
 	InheritanceWeightDiscountBps uint64 `protobuf:"varint,12,opt,name=inheritance_weight_discount_bps,json=inheritanceWeightDiscountBps,proto3" json:"inheritance_weight_discount_bps,omitempty"` // discount for stratum inheritance (1M scale)
-	unknownFields                protoimpl.UnknownFields
-	sizeCache                    protoimpl.SizeCache
+	// Endorsement diversity guard (L3). Maximum allowed fraction of shared
+	// domain qualifications between endorser and endorsee, measured as
+	// shared / min(|endorser_domains|, |endorsee_domains|). Prevents rings
+	// where a small group of heavily-overlapped validators repeatedly endorses
+	// each other. "0" disables the guard.
+	EndorsementMaxOverlapBps uint64 `protobuf:"varint,13,opt,name=endorsement_max_overlap_bps,json=endorsementMaxOverlapBps,proto3" json:"endorsement_max_overlap_bps,omitempty"` // default: 600,000 (60%)
+	unknownFields            protoimpl.UnknownFields
+	sizeCache                protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -226,6 +232,13 @@ func (x *Params) GetInheritanceWeightDiscountBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetEndorsementMaxOverlapBps() uint64 {
+	if x != nil {
+		return x.EndorsementMaxOverlapBps
+	}
+	return 0
+}
+
 var File_zerone_qualification_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_qualification_v1_genesis_proto_rawDesc = "" +
@@ -235,7 +248,7 @@ const file_zerone_qualification_v1_genesis_proto_rawDesc = "" +
 	"\x06params\x18\x01 \x01(\v2\x1f.zerone.qualification.v1.ParamsR\x06params\x12T\n" +
 	"\x0equalifications\x18\x02 \x03(\v2,.zerone.qualification.v1.DomainQualificationR\x0equalifications\x12U\n" +
 	"\fendorsements\x18\x03 \x03(\v21.zerone.qualification.v1.QualificationEndorsementR\fendorsements\x12.\n" +
-	"\x13next_endorsement_id\x18\x04 \x01(\x04R\x11nextEndorsementId\"\xd1\x04\n" +
+	"\x13next_endorsement_id\x18\x04 \x01(\x04R\x11nextEndorsementId\"\x90\x05\n" +
 	"\x06Params\x12(\n" +
 	"\x10min_stake_amount\x18\x01 \x01(\tR\x0eminStakeAmount\x12*\n" +
 	"\x11stake_lock_period\x18\x02 \x01(\x04R\x0fstakeLockPeriod\x12+\n" +
@@ -249,7 +262,8 @@ const file_zerone_qualification_v1_genesis_proto_rawDesc = "" +
 	"\x14cross_ref_min_weight\x18\n" +
 	" \x01(\x04R\x11crossRefMinWeight\x12@\n" +
 	"\x1dcross_ref_weight_discount_bps\x18\v \x01(\x04R\x19crossRefWeightDiscountBps\x12E\n" +
-	"\x1finheritance_weight_discount_bps\x18\f \x01(\x04R\x1cinheritanceWeightDiscountBpsB6Z4github.com/zerone-chain/zerone/x/qualification/typesb\x06proto3"
+	"\x1finheritance_weight_discount_bps\x18\f \x01(\x04R\x1cinheritanceWeightDiscountBps\x12=\n" +
+	"\x1bendorsement_max_overlap_bps\x18\r \x01(\x04R\x18endorsementMaxOverlapBpsB6Z4github.com/zerone-chain/zerone/x/qualification/typesb\x06proto3"
 
 var (
 	file_zerone_qualification_v1_genesis_proto_rawDescOnce sync.Once

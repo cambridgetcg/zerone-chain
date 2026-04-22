@@ -73,6 +73,35 @@ func (k msgServer) EndorseQualification(goCtx context.Context, msg *types.MsgEnd
 		return nil, fmt.Errorf("%w: %d", types.ErrMaxEndorsements, params.MaxEndorsements)
 	}
 
+	// Endorsement-diversity guard (L3): reject endorsements from validators whose
+	// domain qualifications overlap too heavily with the endorsee's. Prevents
+	// endorsement rings where the same small group rubber-stamps each other.
+	if params.EndorsementMaxOverlapBps > 0 {
+		endorserDomains := k.Keeper.GetQualifiedDomains(goCtx, msg.Endorser)
+		endorseeDomains := k.Keeper.GetQualifiedDomains(goCtx, msg.Validator)
+		if len(endorserDomains) > 0 && len(endorseeDomains) > 0 {
+			endorseeSet := make(map[string]struct{}, len(endorseeDomains))
+			for _, d := range endorseeDomains {
+				endorseeSet[d] = struct{}{}
+			}
+			shared := uint64(0)
+			for _, d := range endorserDomains {
+				if _, in := endorseeSet[d]; in {
+					shared++
+				}
+			}
+			smaller := uint64(len(endorserDomains))
+			if uint64(len(endorseeDomains)) < smaller {
+				smaller = uint64(len(endorseeDomains))
+			}
+			overlapBps := shared * 1_000_000 / smaller
+			if overlapBps > params.EndorsementMaxOverlapBps {
+				return nil, fmt.Errorf("endorsement rejected: domain overlap %d bps exceeds max %d bps (anti-ring guard)",
+					overlapBps, params.EndorsementMaxOverlapBps)
+			}
+		}
+	}
+
 	// Validate weight.
 	if msg.Weight == 0 || msg.Weight > 100 {
 		return nil, fmt.Errorf("%w: %d", types.ErrInvalidWeight, msg.Weight)

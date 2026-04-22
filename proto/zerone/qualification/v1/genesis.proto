@@ -33,4 +33,11 @@ message Params {
 
   // Inheritance
   uint64 inheritance_weight_discount_bps = 12; // discount for stratum inheritance (1M scale)
+
+  // Endorsement diversity guard (L3). Maximum allowed fraction of shared
+  // domain qualifications between endorser and endorsee, measured as
+  // shared / min(|endorser_domains|, |endorsee_domains|). Prevents rings
+  // where a small group of heavily-overlapped validators repeatedly endorses
+  // each other. "0" disables the guard.
+  uint64 endorsement_max_overlap_bps = 13;    // default: 600,000 (60%)
 }
