@@ -44,4 +44,9 @@ message Params {
   uint64 min_confidence_for_auto_apply = 14;
   uint64 correction_bounds_min_multiplier_bps = 15;
   uint64 correction_bounds_max_multiplier_bps = 16;
+
+  // Correction banding (L7). Corrections smaller than this are *advisory only*:
+  // logged + event emitted, but not forwarded to autopoiesis. Prevents the
+  // module from chattering at every small deviation.
+  uint64 advisory_magnitude_bps = 17; // default: 30,000 (3%)
 }

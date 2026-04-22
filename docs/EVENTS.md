@@ -116,6 +116,14 @@ Verification backlog exceeded 150% of active facts; knowledge quality penalty ap
 - `pending_ratio_bps` -- pending-to-active claim ratio in BPS
 - `quality_penalty_applied` -- `"true"` or `"false"`
 
+### zerone.alignment.correction_advisory
+Correction magnitude is below `AdvisoryMagnitudeBps`; logged but not forwarded to autopoiesis (L7 banding).
+- `dimension` -- alignment dimension
+- `parameter` -- target parameter
+- `direction` -- correction direction
+- `magnitude` -- proposed magnitude
+- `advisory_threshold` -- configured advisory ceiling
+
 ### zerone.alignment.verification_health_observed
 Verification throughput and dispute rate observed by the governance sensor (R31-2 Fire→Earth).
 - `throughput_bps` -- verification throughput in BPS
@@ -1560,6 +1568,14 @@ Domain proposal voted.
 - `domain` -- proposed domain
 - `votes_for` -- final yes votes
 - `votes_against` -- final no votes
+
+### zerone.ontology.domain_status_transition
+Unified lifecycle event for any domain status change (L1). Indexers can subscribe to this single feed instead of each named event.
+- `domain` -- domain name
+- `from_status` -- prior status (empty string if newly proposed)
+- `to_status` -- new status (`proposed`, `active`, `deprecated`, `archived`, `deleted`)
+- `reason` -- free-form transition reason (e.g. `proposal_created:<id>`, `merged_into:<target>`, `proposal_expired`)
+- `height` -- block height at transition
 
 ---
 

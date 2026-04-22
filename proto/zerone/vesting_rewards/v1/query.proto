@@ -29,6 +29,14 @@ service Query {
   rpc FounderShareStatus(QueryFounderShareStatusRequest) returns (QueryFounderShareStatusResponse) {
     option (google.api.http).get = "/zerone/vesting_rewards/v1/founder_share";
   }
+  // SupplyCouplingAudit returns a first-class metric for the thesis claim
+  // that "money supply grows with verified knowledge" (L0). Exposes total
+  // minted, current supply, verification throughput, and the applied
+  // knowledge-coupling multiplier so external auditors can verify that
+  // emission is actually tied to epistemic activity.
+  rpc SupplyCouplingAudit(QuerySupplyCouplingAuditRequest) returns (QuerySupplyCouplingAuditResponse) {
+    option (google.api.http).get = "/zerone/vesting_rewards/v1/supply_coupling";
+  }
 }
 
 message QueryVestingScheduleRequest { string vesting_id = 1; }
@@ -56,4 +64,20 @@ message QueryFounderShareStatusResponse {
   string founder_address = 3;
   uint64 governance_activation_height = 4;
   uint64 current_height = 5;
+}
+
+// SupplyCouplingAudit request has no parameters — reports live values.
+message QuerySupplyCouplingAuditRequest {}
+
+// SupplyCouplingAudit response surfaces the thesis-critical metrics for
+// independent verification that emission is coupled to knowledge throughput.
+message QuerySupplyCouplingAuditResponse {
+  string total_minted = 1;                      // cumulative uzrn minted since genesis
+  string current_supply = 2;                    // live bank supply in uzrn
+  string max_supply = 3;                        // protocol cap in uzrn
+  uint64 verification_rate_bps = 4;             // current accepted/terminal ratio in BPS
+  uint64 knowledge_coupling_target_bps = 5;     // configured target rate
+  uint64 knowledge_coupling_floor_bps = 6;      // configured floor multiplier
+  uint64 effective_coupling_multiplier_bps = 7; // current applied multiplier
+  bool   coupling_enabled = 8;                  // target > 0 and keeper wired
 }

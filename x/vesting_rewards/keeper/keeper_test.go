@@ -1854,6 +1854,80 @@ func TestQueryFounderShareStatus_Inactive(t *testing.T) {
 	}
 }
 
+// ─── SupplyCouplingAudit (L0 thesis metric) ──────────────────────────────
+
+// stubKnowledgeKeeper returns a configurable verification rate for the audit.
+type stubKnowledgeKeeper struct {
+	rate uint64
+}
+
+func (s *stubKnowledgeKeeper) GetVerificationRate(_ context.Context) uint64 { return s.rate }
+
+func TestQuerySupplyCouplingAudit_NilKnowledgeKeeper(t *testing.T) {
+	bk := newMockBankKeeper()
+	sk := &mockStakingKeeper{activeCount: 22}
+	k, ctx := setupKeeperWithBank(t, bk, sk)
+
+	qs := keeper.NewQueryServerImpl(k)
+
+	resp, err := qs.SupplyCouplingAudit(ctx, &types.QuerySupplyCouplingAuditRequest{})
+	if err != nil {
+		t.Fatalf("SupplyCouplingAudit failed: %v", err)
+	}
+	if resp.CouplingEnabled {
+		t.Error("coupling must be disabled when knowledge keeper is nil")
+	}
+	if resp.EffectiveCouplingMultiplierBps != 1_000_000 {
+		t.Errorf("expected full multiplier when coupling disabled, got %d", resp.EffectiveCouplingMultiplierBps)
+	}
+	if resp.MaxSupply != types.MaxSupplyUzrn {
+		t.Errorf("expected max supply %s, got %s", types.MaxSupplyUzrn, resp.MaxSupply)
+	}
+}
+
+func TestQuerySupplyCouplingAudit_RateAboveTarget(t *testing.T) {
+	bk := newMockBankKeeper()
+	sk := &mockStakingKeeper{activeCount: 22}
+	k, ctx := setupKeeperWithBank(t, bk, sk)
+
+	k.SetKnowledgeKeeper(&stubKnowledgeKeeper{rate: 850_000}) // above 70% target
+	qs := keeper.NewQueryServerImpl(k)
+
+	resp, err := qs.SupplyCouplingAudit(ctx, &types.QuerySupplyCouplingAuditRequest{})
+	if err != nil {
+		t.Fatalf("SupplyCouplingAudit failed: %v", err)
+	}
+	if !resp.CouplingEnabled {
+		t.Error("coupling must be enabled when target > 0 and keeper wired")
+	}
+	if resp.EffectiveCouplingMultiplierBps != 1_000_000 {
+		t.Errorf("at/above target → full multiplier, got %d", resp.EffectiveCouplingMultiplierBps)
+	}
+	if resp.VerificationRateBps != 850_000 {
+		t.Errorf("expected verification rate 850000, got %d", resp.VerificationRateBps)
+	}
+}
+
+func TestQuerySupplyCouplingAudit_RateBelowTarget(t *testing.T) {
+	bk := newMockBankKeeper()
+	sk := &mockStakingKeeper{activeCount: 22}
+	k, ctx := setupKeeperWithBank(t, bk, sk)
+
+	// Verification rate 350k, target 700k → multiplier = 500k (at floor).
+	k.SetKnowledgeKeeper(&stubKnowledgeKeeper{rate: 350_000})
+	qs := keeper.NewQueryServerImpl(k)
+
+	resp, err := qs.SupplyCouplingAudit(ctx, &types.QuerySupplyCouplingAuditRequest{})
+	if err != nil {
+		t.Fatalf("SupplyCouplingAudit failed: %v", err)
+	}
+	// 350k/700k = 500k which is the configured floor; floor kicks in.
+	if resp.EffectiveCouplingMultiplierBps != resp.KnowledgeCouplingFloorBps {
+		t.Errorf("below target → floor multiplier, expected %d got %d",
+			resp.KnowledgeCouplingFloorBps, resp.EffectiveCouplingMultiplierBps)
+	}
+}
+
 // ==================== Custom RevenueSplit Params Test ====================
 
 func TestDistributeRevenue_CustomSplit(t *testing.T) {

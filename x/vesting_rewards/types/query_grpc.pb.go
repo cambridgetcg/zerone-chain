@@ -26,6 +26,7 @@ const (
 	Query_Params_FullMethodName                      = "/zerone.vesting_rewards.v1.Query/Params"
 	Query_ResearchFundBalance_FullMethodName         = "/zerone.vesting_rewards.v1.Query/ResearchFundBalance"
 	Query_FounderShareStatus_FullMethodName          = "/zerone.vesting_rewards.v1.Query/FounderShareStatus"
+	Query_SupplyCouplingAudit_FullMethodName         = "/zerone.vesting_rewards.v1.Query/SupplyCouplingAudit"
 )
 
 // QueryClient is the client API for Query service.
@@ -39,6 +40,12 @@ type QueryClient interface {
 	Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error)
 	ResearchFundBalance(ctx context.Context, in *QueryResearchFundBalanceRequest, opts ...grpc.CallOption) (*QueryResearchFundBalanceResponse, error)
 	FounderShareStatus(ctx context.Context, in *QueryFounderShareStatusRequest, opts ...grpc.CallOption) (*QueryFounderShareStatusResponse, error)
+	// SupplyCouplingAudit returns a first-class metric for the thesis claim
+	// that "money supply grows with verified knowledge" (L0). Exposes total
+	// minted, current supply, verification throughput, and the applied
+	// knowledge-coupling multiplier so external auditors can verify that
+	// emission is actually tied to epistemic activity.
+	SupplyCouplingAudit(ctx context.Context, in *QuerySupplyCouplingAuditRequest, opts ...grpc.CallOption) (*QuerySupplyCouplingAuditResponse, error)
 }
 
 type queryClient struct {
@@ -119,6 +126,16 @@ func (c *queryClient) FounderShareStatus(ctx context.Context, in *QueryFounderSh
 	return out, nil
 }
 
+func (c *queryClient) SupplyCouplingAudit(ctx context.Context, in *QuerySupplyCouplingAuditRequest, opts ...grpc.CallOption) (*QuerySupplyCouplingAuditResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QuerySupplyCouplingAuditResponse)
+	err := c.cc.Invoke(ctx, Query_SupplyCouplingAudit_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -130,6 +147,12 @@ type QueryServer interface {
 	Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error)
 	ResearchFundBalance(context.Context, *QueryResearchFundBalanceRequest) (*QueryResearchFundBalanceResponse, error)
 	FounderShareStatus(context.Context, *QueryFounderShareStatusRequest) (*QueryFounderShareStatusResponse, error)
+	// SupplyCouplingAudit returns a first-class metric for the thesis claim
+	// that "money supply grows with verified knowledge" (L0). Exposes total
+	// minted, current supply, verification throughput, and the applied
+	// knowledge-coupling multiplier so external auditors can verify that
+	// emission is actually tied to epistemic activity.
+	SupplyCouplingAudit(context.Context, *QuerySupplyCouplingAuditRequest) (*QuerySupplyCouplingAuditResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -160,6 +183,9 @@ func (UnimplementedQueryServer) ResearchFundBalance(context.Context, *QueryResea
 }
 func (UnimplementedQueryServer) FounderShareStatus(context.Context, *QueryFounderShareStatusRequest) (*QueryFounderShareStatusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FounderShareStatus not implemented")
+}
+func (UnimplementedQueryServer) SupplyCouplingAudit(context.Context, *QuerySupplyCouplingAuditRequest) (*QuerySupplyCouplingAuditResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SupplyCouplingAudit not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -308,6 +334,24 @@ func _Query_FounderShareStatus_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_SupplyCouplingAudit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuerySupplyCouplingAuditRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).SupplyCouplingAudit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_SupplyCouplingAudit_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).SupplyCouplingAudit(ctx, req.(*QuerySupplyCouplingAuditRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -342,6 +386,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FounderShareStatus",
 			Handler:    _Query_FounderShareStatus_Handler,
+		},
+		{
+			MethodName: "SupplyCouplingAudit",
+			Handler:    _Query_SupplyCouplingAudit_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

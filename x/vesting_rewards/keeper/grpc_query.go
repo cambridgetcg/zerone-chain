@@ -131,3 +131,48 @@ func (q queryServer) FounderShareStatus(goCtx context.Context, _ *types.QueryFou
 		CurrentHeight:              uint64(ctx.BlockHeight()),
 	}, nil
 }
+
+// SupplyCouplingAudit returns the live thesis-audit metric: the relationship
+// between ZRN supply growth and knowledge verification throughput (L0).
+// External auditors can periodically fetch this to verify that emission is
+// actually coupled to epistemic activity rather than time alone.
+func (q queryServer) SupplyCouplingAudit(goCtx context.Context, _ *types.QuerySupplyCouplingAuditRequest) (*types.QuerySupplyCouplingAuditResponse, error) {
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	params := q.Keeper.GetParams(ctx)
+
+	totalMinted := q.Keeper.GetTotalMinted(ctx).String()
+	currentSupply := "0"
+	if q.Keeper.bankKeeper != nil {
+		currentSupply = q.Keeper.bankKeeper.GetSupply(ctx, "uzrn").Amount.String()
+	}
+
+	var verificationRate uint64
+	if q.Keeper.knowledgeKeeper != nil {
+		verificationRate = q.Keeper.knowledgeKeeper.GetVerificationRate(ctx)
+	}
+
+	const bps uint64 = 1_000_000
+	var effectiveMultiplier uint64 = bps
+	couplingEnabled := params.KnowledgeCouplingTargetBps > 0 && q.Keeper.knowledgeKeeper != nil
+	if couplingEnabled {
+		if verificationRate >= params.KnowledgeCouplingTargetBps {
+			effectiveMultiplier = bps
+		} else {
+			effectiveMultiplier = verificationRate * bps / params.KnowledgeCouplingTargetBps
+			if effectiveMultiplier < params.KnowledgeCouplingFloorBps {
+				effectiveMultiplier = params.KnowledgeCouplingFloorBps
+			}
+		}
+	}
+
+	return &types.QuerySupplyCouplingAuditResponse{
+		TotalMinted:                    totalMinted,
+		CurrentSupply:                  currentSupply,
+		MaxSupply:                      types.MaxSupplyUzrn,
+		VerificationRateBps:            verificationRate,
+		KnowledgeCouplingTargetBps:     params.KnowledgeCouplingTargetBps,
+		KnowledgeCouplingFloorBps:      params.KnowledgeCouplingFloorBps,
+		EffectiveCouplingMultiplierBps: effectiveMultiplier,
+		CouplingEnabled:                couplingEnabled,
+	}, nil
+}

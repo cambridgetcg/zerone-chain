@@ -98,6 +98,22 @@ func (k Keeper) CountDomainsInStratum(ctx sdk.Context, stratum types.Stratum) ui
 	return uint32(len(domains))
 }
 
+// emitDomainStatusTransition emits the unified domain_status_transition event
+// so indexers can follow the full lifecycle without subscribing to each
+// named event individually (L1).
+func emitDomainStatusTransition(ctx sdk.Context, domainName, fromStatus, toStatus, reason string) {
+	ctx.EventManager().EmitEvent(
+		sdk.NewEvent(
+			"zerone.ontology.domain_status_transition",
+			sdk.NewAttribute("domain", domainName),
+			sdk.NewAttribute("from_status", fromStatus),
+			sdk.NewAttribute("to_status", toStatus),
+			sdk.NewAttribute("reason", reason),
+			sdk.NewAttribute("height", fmt.Sprintf("%d", ctx.BlockHeight())),
+		),
+	)
+}
+
 // DeprecateDomain marks a domain as deprecated. Deprecated domains cannot
 // accept new claims but existing facts remain queryable.
 func (k Keeper) DeprecateDomain(ctx sdk.Context, domainName string) error {
@@ -105,6 +121,7 @@ func (k Keeper) DeprecateDomain(ctx sdk.Context, domainName string) error {
 	if !found {
 		return fmt.Errorf("%w: %s", types.ErrDomainNotFound, domainName)
 	}
+	fromStatus := domain.Status
 	domain.Status = "deprecated"
 	domain.UpdatedAt = uint64(ctx.BlockHeight())
 	k.SetDomain(ctx, domain)
@@ -116,6 +133,7 @@ func (k Keeper) DeprecateDomain(ctx sdk.Context, domainName string) error {
 			sdk.NewAttribute("height", fmt.Sprintf("%d", ctx.BlockHeight())),
 		),
 	)
+	emitDomainStatusTransition(ctx, domainName, fromStatus, "deprecated", "deprecate_call")
 
 	return nil
 }
@@ -127,6 +145,7 @@ func (k Keeper) ArchiveDomain(ctx sdk.Context, domainName string) error {
 	if !found {
 		return fmt.Errorf("%w: %s", types.ErrDomainNotFound, domainName)
 	}
+	fromStatus := domain.Status
 	domain.Status = "archived"
 	domain.UpdatedAt = uint64(ctx.BlockHeight())
 	k.SetDomain(ctx, domain)
@@ -138,6 +157,7 @@ func (k Keeper) ArchiveDomain(ctx sdk.Context, domainName string) error {
 			sdk.NewAttribute("height", fmt.Sprintf("%d", ctx.BlockHeight())),
 		),
 	)
+	emitDomainStatusTransition(ctx, domainName, fromStatus, "archived", "archive_call")
 
 	return nil
 }
@@ -170,6 +190,7 @@ func (k Keeper) MergeDomains(ctx sdk.Context, proposal *types.DomainProposal) er
 	k.SetDomain(ctx, target)
 
 	// Archive source
+	sourceFromStatus := source.Status
 	source.Status = "archived"
 	source.UpdatedAt = uint64(ctx.BlockHeight())
 	k.SetDomain(ctx, source)
@@ -182,6 +203,7 @@ func (k Keeper) MergeDomains(ctx sdk.Context, proposal *types.DomainProposal) er
 			sdk.NewAttribute("height", fmt.Sprintf("%d", ctx.BlockHeight())),
 		),
 	)
+	emitDomainStatusTransition(ctx, sourceName, sourceFromStatus, "archived", "merged_into:"+targetName)
 
 	return nil
 }
@@ -257,6 +279,7 @@ func (k Keeper) ActivateDomain(ctx sdk.Context, domainName string) error {
 	if !found {
 		return fmt.Errorf("%w: %s", types.ErrDomainNotFound, domainName)
 	}
+	fromStatus := domain.Status
 	domain.Status = "active"
 	domain.UpdatedAt = uint64(ctx.BlockHeight())
 	k.SetDomain(ctx, domain)
@@ -268,6 +291,7 @@ func (k Keeper) ActivateDomain(ctx sdk.Context, domainName string) error {
 			sdk.NewAttribute("height", fmt.Sprintf("%d", ctx.BlockHeight())),
 		),
 	)
+	emitDomainStatusTransition(ctx, domainName, fromStatus, "active", "activate_call")
 
 	return nil
 }

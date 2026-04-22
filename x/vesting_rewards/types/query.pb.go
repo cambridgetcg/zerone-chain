@@ -686,6 +686,145 @@ func (x *QueryFounderShareStatusResponse) GetCurrentHeight() uint64 {
 	return 0
 }
 
+// SupplyCouplingAudit request has no parameters — reports live values.
+type QuerySupplyCouplingAuditRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QuerySupplyCouplingAuditRequest) Reset() {
+	*x = QuerySupplyCouplingAuditRequest{}
+	mi := &file_zerone_vesting_rewards_v1_query_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuerySupplyCouplingAuditRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuerySupplyCouplingAuditRequest) ProtoMessage() {}
+
+func (x *QuerySupplyCouplingAuditRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_vesting_rewards_v1_query_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuerySupplyCouplingAuditRequest.ProtoReflect.Descriptor instead.
+func (*QuerySupplyCouplingAuditRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_vesting_rewards_v1_query_proto_rawDescGZIP(), []int{14}
+}
+
+// SupplyCouplingAudit response surfaces the thesis-critical metrics for
+// independent verification that emission is coupled to knowledge throughput.
+type QuerySupplyCouplingAuditResponse struct {
+	state                          protoimpl.MessageState `protogen:"open.v1"`
+	TotalMinted                    string                 `protobuf:"bytes,1,opt,name=total_minted,json=totalMinted,proto3" json:"total_minted,omitempty"`                                                               // cumulative uzrn minted since genesis
+	CurrentSupply                  string                 `protobuf:"bytes,2,opt,name=current_supply,json=currentSupply,proto3" json:"current_supply,omitempty"`                                                         // live bank supply in uzrn
+	MaxSupply                      string                 `protobuf:"bytes,3,opt,name=max_supply,json=maxSupply,proto3" json:"max_supply,omitempty"`                                                                     // protocol cap in uzrn
+	VerificationRateBps            uint64                 `protobuf:"varint,4,opt,name=verification_rate_bps,json=verificationRateBps,proto3" json:"verification_rate_bps,omitempty"`                                    // current accepted/terminal ratio in BPS
+	KnowledgeCouplingTargetBps     uint64                 `protobuf:"varint,5,opt,name=knowledge_coupling_target_bps,json=knowledgeCouplingTargetBps,proto3" json:"knowledge_coupling_target_bps,omitempty"`             // configured target rate
+	KnowledgeCouplingFloorBps      uint64                 `protobuf:"varint,6,opt,name=knowledge_coupling_floor_bps,json=knowledgeCouplingFloorBps,proto3" json:"knowledge_coupling_floor_bps,omitempty"`                // configured floor multiplier
+	EffectiveCouplingMultiplierBps uint64                 `protobuf:"varint,7,opt,name=effective_coupling_multiplier_bps,json=effectiveCouplingMultiplierBps,proto3" json:"effective_coupling_multiplier_bps,omitempty"` // current applied multiplier
+	CouplingEnabled                bool                   `protobuf:"varint,8,opt,name=coupling_enabled,json=couplingEnabled,proto3" json:"coupling_enabled,omitempty"`                                                  // target > 0 and keeper wired
+	unknownFields                  protoimpl.UnknownFields
+	sizeCache                      protoimpl.SizeCache
+}
+
+func (x *QuerySupplyCouplingAuditResponse) Reset() {
+	*x = QuerySupplyCouplingAuditResponse{}
+	mi := &file_zerone_vesting_rewards_v1_query_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QuerySupplyCouplingAuditResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QuerySupplyCouplingAuditResponse) ProtoMessage() {}
+
+func (x *QuerySupplyCouplingAuditResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_vesting_rewards_v1_query_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QuerySupplyCouplingAuditResponse.ProtoReflect.Descriptor instead.
+func (*QuerySupplyCouplingAuditResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_vesting_rewards_v1_query_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *QuerySupplyCouplingAuditResponse) GetTotalMinted() string {
+	if x != nil {
+		return x.TotalMinted
+	}
+	return ""
+}
+
+func (x *QuerySupplyCouplingAuditResponse) GetCurrentSupply() string {
+	if x != nil {
+		return x.CurrentSupply
+	}
+	return ""
+}
+
+func (x *QuerySupplyCouplingAuditResponse) GetMaxSupply() string {
+	if x != nil {
+		return x.MaxSupply
+	}
+	return ""
+}
+
+func (x *QuerySupplyCouplingAuditResponse) GetVerificationRateBps() uint64 {
+	if x != nil {
+		return x.VerificationRateBps
+	}
+	return 0
+}
+
+func (x *QuerySupplyCouplingAuditResponse) GetKnowledgeCouplingTargetBps() uint64 {
+	if x != nil {
+		return x.KnowledgeCouplingTargetBps
+	}
+	return 0
+}
+
+func (x *QuerySupplyCouplingAuditResponse) GetKnowledgeCouplingFloorBps() uint64 {
+	if x != nil {
+		return x.KnowledgeCouplingFloorBps
+	}
+	return 0
+}
+
+func (x *QuerySupplyCouplingAuditResponse) GetEffectiveCouplingMultiplierBps() uint64 {
+	if x != nil {
+		return x.EffectiveCouplingMultiplierBps
+	}
+	return 0
+}
+
+func (x *QuerySupplyCouplingAuditResponse) GetCouplingEnabled() bool {
+	if x != nil {
+		return x.CouplingEnabled
+	}
+	return false
+}
+
 var File_zerone_vesting_rewards_v1_query_proto protoreflect.FileDescriptor
 
 const file_zerone_vesting_rewards_v1_query_proto_rawDesc = "" +
@@ -725,8 +864,18 @@ const file_zerone_vesting_rewards_v1_query_proto_rawDesc = "" +
 	"\x11founder_share_bps\x18\x02 \x01(\x04R\x0ffounderShareBps\x12'\n" +
 	"\x0ffounder_address\x18\x03 \x01(\tR\x0efounderAddress\x12@\n" +
 	"\x1cgovernance_activation_height\x18\x04 \x01(\x04R\x1agovernanceActivationHeight\x12%\n" +
-	"\x0ecurrent_height\x18\x05 \x01(\x04R\rcurrentHeight2\xf7\n" +
+	"\x0ecurrent_height\x18\x05 \x01(\x04R\rcurrentHeight\"!\n" +
+	"\x1fQuerySupplyCouplingAuditRequest\"\xb9\x03\n" +
+	" QuerySupplyCouplingAuditResponse\x12!\n" +
+	"\ftotal_minted\x18\x01 \x01(\tR\vtotalMinted\x12%\n" +
+	"\x0ecurrent_supply\x18\x02 \x01(\tR\rcurrentSupply\x12\x1d\n" +
 	"\n" +
+	"max_supply\x18\x03 \x01(\tR\tmaxSupply\x122\n" +
+	"\x15verification_rate_bps\x18\x04 \x01(\x04R\x13verificationRateBps\x12A\n" +
+	"\x1dknowledge_coupling_target_bps\x18\x05 \x01(\x04R\x1aknowledgeCouplingTargetBps\x12?\n" +
+	"\x1cknowledge_coupling_floor_bps\x18\x06 \x01(\x04R\x19knowledgeCouplingFloorBps\x12I\n" +
+	"!effective_coupling_multiplier_bps\x18\a \x01(\x04R\x1eeffectiveCouplingMultiplierBps\x12)\n" +
+	"\x10coupling_enabled\x18\b \x01(\bR\x0fcouplingEnabled2\xbc\f\n" +
 	"\x05Query\x12\xbc\x01\n" +
 	"\x0fVestingSchedule\x126.zerone.vesting_rewards.v1.QueryVestingScheduleRequest\x1a7.zerone.vesting_rewards.v1.QueryVestingScheduleResponse\"8\x82\xd3\xe4\x93\x022\x120/zerone/vesting_rewards/v1/schedule/{vesting_id}\x12\xea\x01\n" +
 	"\x1bVestingSchedulesByRecipient\x12B.zerone.vesting_rewards.v1.QueryVestingSchedulesByRecipientRequest\x1aC.zerone.vesting_rewards.v1.QueryVestingSchedulesByRecipientResponse\"B\x82\xd3\xe4\x93\x02<\x12:/zerone/vesting_rewards/v1/schedules/recipient/{recipient}\x12\xcc\x01\n" +
@@ -734,7 +883,8 @@ const file_zerone_vesting_rewards_v1_query_proto_rawDesc = "" +
 	"\x17BlockRewardDistribution\x12>.zerone.vesting_rewards.v1.QueryBlockRewardDistributionRequest\x1a?.zerone.vesting_rewards.v1.QueryBlockRewardDistributionResponse\">\x82\xd3\xe4\x93\x028\x126/zerone/vesting_rewards/v1/distribution/{block_height}\x12\x92\x01\n" +
 	"\x06Params\x12-.zerone.vesting_rewards.v1.QueryParamsRequest\x1a..zerone.vesting_rewards.v1.QueryParamsResponse\")\x82\xd3\xe4\x93\x02#\x12!/zerone/vesting_rewards/v1/params\x12\xc0\x01\n" +
 	"\x13ResearchFundBalance\x12:.zerone.vesting_rewards.v1.QueryResearchFundBalanceRequest\x1a;.zerone.vesting_rewards.v1.QueryResearchFundBalanceResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/vesting_rewards/v1/research_fund\x12\xbd\x01\n" +
-	"\x12FounderShareStatus\x129.zerone.vesting_rewards.v1.QueryFounderShareStatusRequest\x1a:.zerone.vesting_rewards.v1.QueryFounderShareStatusResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/vesting_rewards/v1/founder_shareB8Z6github.com/zerone-chain/zerone/x/vesting_rewards/typesb\x06proto3"
+	"\x12FounderShareStatus\x129.zerone.vesting_rewards.v1.QueryFounderShareStatusRequest\x1a:.zerone.vesting_rewards.v1.QueryFounderShareStatusResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/vesting_rewards/v1/founder_share\x12\xc2\x01\n" +
+	"\x13SupplyCouplingAudit\x12:.zerone.vesting_rewards.v1.QuerySupplyCouplingAuditRequest\x1a;.zerone.vesting_rewards.v1.QuerySupplyCouplingAuditResponse\"2\x82\xd3\xe4\x93\x02,\x12*/zerone/vesting_rewards/v1/supply_couplingB8Z6github.com/zerone-chain/zerone/x/vesting_rewards/typesb\x06proto3"
 
 var (
 	file_zerone_vesting_rewards_v1_query_proto_rawDescOnce sync.Once
@@ -748,7 +898,7 @@ func file_zerone_vesting_rewards_v1_query_proto_rawDescGZIP() []byte {
 	return file_zerone_vesting_rewards_v1_query_proto_rawDescData
 }
 
-var file_zerone_vesting_rewards_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_zerone_vesting_rewards_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_zerone_vesting_rewards_v1_query_proto_goTypes = []any{
 	(*QueryVestingScheduleRequest)(nil),              // 0: zerone.vesting_rewards.v1.QueryVestingScheduleRequest
 	(*QueryVestingScheduleResponse)(nil),             // 1: zerone.vesting_rewards.v1.QueryVestingScheduleResponse
@@ -764,18 +914,20 @@ var file_zerone_vesting_rewards_v1_query_proto_goTypes = []any{
 	(*QueryResearchFundBalanceResponse)(nil),         // 11: zerone.vesting_rewards.v1.QueryResearchFundBalanceResponse
 	(*QueryFounderShareStatusRequest)(nil),           // 12: zerone.vesting_rewards.v1.QueryFounderShareStatusRequest
 	(*QueryFounderShareStatusResponse)(nil),          // 13: zerone.vesting_rewards.v1.QueryFounderShareStatusResponse
-	(*VestingSchedule)(nil),                          // 14: zerone.vesting_rewards.v1.VestingSchedule
-	(*BlockRewardDistribution)(nil),                  // 15: zerone.vesting_rewards.v1.BlockRewardDistribution
-	(*Params)(nil),                                   // 16: zerone.vesting_rewards.v1.Params
-	(*CategoryConfig)(nil),                           // 17: zerone.vesting_rewards.v1.CategoryConfig
+	(*QuerySupplyCouplingAuditRequest)(nil),          // 14: zerone.vesting_rewards.v1.QuerySupplyCouplingAuditRequest
+	(*QuerySupplyCouplingAuditResponse)(nil),         // 15: zerone.vesting_rewards.v1.QuerySupplyCouplingAuditResponse
+	(*VestingSchedule)(nil),                          // 16: zerone.vesting_rewards.v1.VestingSchedule
+	(*BlockRewardDistribution)(nil),                  // 17: zerone.vesting_rewards.v1.BlockRewardDistribution
+	(*Params)(nil),                                   // 18: zerone.vesting_rewards.v1.Params
+	(*CategoryConfig)(nil),                           // 19: zerone.vesting_rewards.v1.CategoryConfig
 }
 var file_zerone_vesting_rewards_v1_query_proto_depIdxs = []int32{
-	14, // 0: zerone.vesting_rewards.v1.QueryVestingScheduleResponse.schedule:type_name -> zerone.vesting_rewards.v1.VestingSchedule
-	14, // 1: zerone.vesting_rewards.v1.QueryVestingSchedulesByRecipientResponse.schedules:type_name -> zerone.vesting_rewards.v1.VestingSchedule
-	14, // 2: zerone.vesting_rewards.v1.QueryActiveVestingSchedulesResponse.schedules:type_name -> zerone.vesting_rewards.v1.VestingSchedule
-	15, // 3: zerone.vesting_rewards.v1.QueryBlockRewardDistributionResponse.distribution:type_name -> zerone.vesting_rewards.v1.BlockRewardDistribution
-	16, // 4: zerone.vesting_rewards.v1.QueryParamsResponse.params:type_name -> zerone.vesting_rewards.v1.Params
-	17, // 5: zerone.vesting_rewards.v1.QueryParamsResponse.category_configs:type_name -> zerone.vesting_rewards.v1.CategoryConfig
+	16, // 0: zerone.vesting_rewards.v1.QueryVestingScheduleResponse.schedule:type_name -> zerone.vesting_rewards.v1.VestingSchedule
+	16, // 1: zerone.vesting_rewards.v1.QueryVestingSchedulesByRecipientResponse.schedules:type_name -> zerone.vesting_rewards.v1.VestingSchedule
+	16, // 2: zerone.vesting_rewards.v1.QueryActiveVestingSchedulesResponse.schedules:type_name -> zerone.vesting_rewards.v1.VestingSchedule
+	17, // 3: zerone.vesting_rewards.v1.QueryBlockRewardDistributionResponse.distribution:type_name -> zerone.vesting_rewards.v1.BlockRewardDistribution
+	18, // 4: zerone.vesting_rewards.v1.QueryParamsResponse.params:type_name -> zerone.vesting_rewards.v1.Params
+	19, // 5: zerone.vesting_rewards.v1.QueryParamsResponse.category_configs:type_name -> zerone.vesting_rewards.v1.CategoryConfig
 	0,  // 6: zerone.vesting_rewards.v1.Query.VestingSchedule:input_type -> zerone.vesting_rewards.v1.QueryVestingScheduleRequest
 	2,  // 7: zerone.vesting_rewards.v1.Query.VestingSchedulesByRecipient:input_type -> zerone.vesting_rewards.v1.QueryVestingSchedulesByRecipientRequest
 	4,  // 8: zerone.vesting_rewards.v1.Query.ActiveVestingSchedules:input_type -> zerone.vesting_rewards.v1.QueryActiveVestingSchedulesRequest
@@ -783,15 +935,17 @@ var file_zerone_vesting_rewards_v1_query_proto_depIdxs = []int32{
 	8,  // 10: zerone.vesting_rewards.v1.Query.Params:input_type -> zerone.vesting_rewards.v1.QueryParamsRequest
 	10, // 11: zerone.vesting_rewards.v1.Query.ResearchFundBalance:input_type -> zerone.vesting_rewards.v1.QueryResearchFundBalanceRequest
 	12, // 12: zerone.vesting_rewards.v1.Query.FounderShareStatus:input_type -> zerone.vesting_rewards.v1.QueryFounderShareStatusRequest
-	1,  // 13: zerone.vesting_rewards.v1.Query.VestingSchedule:output_type -> zerone.vesting_rewards.v1.QueryVestingScheduleResponse
-	3,  // 14: zerone.vesting_rewards.v1.Query.VestingSchedulesByRecipient:output_type -> zerone.vesting_rewards.v1.QueryVestingSchedulesByRecipientResponse
-	5,  // 15: zerone.vesting_rewards.v1.Query.ActiveVestingSchedules:output_type -> zerone.vesting_rewards.v1.QueryActiveVestingSchedulesResponse
-	7,  // 16: zerone.vesting_rewards.v1.Query.BlockRewardDistribution:output_type -> zerone.vesting_rewards.v1.QueryBlockRewardDistributionResponse
-	9,  // 17: zerone.vesting_rewards.v1.Query.Params:output_type -> zerone.vesting_rewards.v1.QueryParamsResponse
-	11, // 18: zerone.vesting_rewards.v1.Query.ResearchFundBalance:output_type -> zerone.vesting_rewards.v1.QueryResearchFundBalanceResponse
-	13, // 19: zerone.vesting_rewards.v1.Query.FounderShareStatus:output_type -> zerone.vesting_rewards.v1.QueryFounderShareStatusResponse
-	13, // [13:20] is the sub-list for method output_type
-	6,  // [6:13] is the sub-list for method input_type
+	14, // 13: zerone.vesting_rewards.v1.Query.SupplyCouplingAudit:input_type -> zerone.vesting_rewards.v1.QuerySupplyCouplingAuditRequest
+	1,  // 14: zerone.vesting_rewards.v1.Query.VestingSchedule:output_type -> zerone.vesting_rewards.v1.QueryVestingScheduleResponse
+	3,  // 15: zerone.vesting_rewards.v1.Query.VestingSchedulesByRecipient:output_type -> zerone.vesting_rewards.v1.QueryVestingSchedulesByRecipientResponse
+	5,  // 16: zerone.vesting_rewards.v1.Query.ActiveVestingSchedules:output_type -> zerone.vesting_rewards.v1.QueryActiveVestingSchedulesResponse
+	7,  // 17: zerone.vesting_rewards.v1.Query.BlockRewardDistribution:output_type -> zerone.vesting_rewards.v1.QueryBlockRewardDistributionResponse
+	9,  // 18: zerone.vesting_rewards.v1.Query.Params:output_type -> zerone.vesting_rewards.v1.QueryParamsResponse
+	11, // 19: zerone.vesting_rewards.v1.Query.ResearchFundBalance:output_type -> zerone.vesting_rewards.v1.QueryResearchFundBalanceResponse
+	13, // 20: zerone.vesting_rewards.v1.Query.FounderShareStatus:output_type -> zerone.vesting_rewards.v1.QueryFounderShareStatusResponse
+	15, // 21: zerone.vesting_rewards.v1.Query.SupplyCouplingAudit:output_type -> zerone.vesting_rewards.v1.QuerySupplyCouplingAuditResponse
+	14, // [14:22] is the sub-list for method output_type
+	6,  // [6:14] is the sub-list for method input_type
 	6,  // [6:6] is the sub-list for extension type_name
 	6,  // [6:6] is the sub-list for extension extendee
 	0,  // [0:6] is the sub-list for field type_name
@@ -810,7 +964,7 @@ func file_zerone_vesting_rewards_v1_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_vesting_rewards_v1_query_proto_rawDesc), len(file_zerone_vesting_rewards_v1_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

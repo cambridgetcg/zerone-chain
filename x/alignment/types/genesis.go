@@ -24,6 +24,11 @@ func DefaultParams() Params {
 		MinConfidenceForAutoApply:            200_000,   // 20%
 		CorrectionBoundsMinMultiplierBps:     300_000,   // 30%
 		CorrectionBoundsMaxMultiplierBps:     2_000_000, // 200%
+
+		// Correction banding (L7): below this magnitude, corrections are
+		// advisory-only (logged + event), not forwarded to autopoiesis.
+		// Keeps small deviations from chattering the regulatory layer.
+		AdvisoryMagnitudeBps: 30_000, // 3%
 	}
 }
 

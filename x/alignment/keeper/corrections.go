@@ -119,6 +119,24 @@ func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.Corre
 			k.SetCorrectionOutcome(ctx, outcome)
 		}
 
+		// Advisory band (L7): below params.AdvisoryMagnitudeBps, don't forward
+		// to autopoiesis — emit an advisory event and record with applied=false.
+		// Keeps small deviations from chattering the regulatory layer.
+		if params.AdvisoryMagnitudeBps > 0 && c.Magnitude < params.AdvisoryMagnitudeBps {
+			sdkCtx.EventManager().EmitEvent(
+				sdk.NewEvent("zerone.alignment.correction_advisory",
+					sdk.NewAttribute("dimension", c.Dimension),
+					sdk.NewAttribute("parameter", c.Parameter),
+					sdk.NewAttribute("direction", c.Direction),
+					sdk.NewAttribute("magnitude", fmt.Sprintf("%d", c.Magnitude)),
+					sdk.NewAttribute("advisory_threshold", fmt.Sprintf("%d", params.AdvisoryMagnitudeBps)),
+				),
+			)
+			c.Applied = false
+			k.AddCorrection(ctx, c)
+			continue
+		}
+
 		// Check magnitude bounds (dynamic via correction confidence).
 		if effectiveMax > 0 && c.Magnitude > effectiveMax {
 			k.Logger(ctx).Info("correction exceeds auto-apply bounds, requires governance",

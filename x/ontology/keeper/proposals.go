@@ -39,6 +39,10 @@ func (k Keeper) CreateProposal(ctx sdk.Context, proposal *types.DomainProposal) 
 	proposal.Domain.CreatedAt = uint64(ctx.BlockHeight())
 	k.SetDomain(ctx, proposal.Domain)
 
+	// Emit a nil→proposed transition so indexers can follow the full lifecycle
+	// from a single unified event type (L1).
+	emitDomainStatusTransition(ctx, proposal.Domain.Name, "", "proposed", "proposal_created:"+proposal.Id)
+
 	k.Logger(ctx).Info("domain proposal created",
 		"proposal_id", proposal.Id,
 		"domain", proposal.Domain.Name,
@@ -142,6 +146,7 @@ func (k Keeper) ProcessExpiredProposals(ctx sdk.Context) error {
 		domain, found := k.GetDomain(ctx, proposal.Domain.Name)
 		if found && domain.Status == "proposed" {
 			k.DeleteDomain(ctx, proposal.Domain.Name)
+			emitDomainStatusTransition(ctx, proposal.Domain.Name, "proposed", "deleted", "proposal_expired")
 		}
 
 		ctx.EventManager().EmitEvent(
