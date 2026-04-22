@@ -626,49 +626,62 @@ func (k Keeper) hasOtherLiveContradiction(ctx context.Context, excludeClaimId, t
 
 // computeProvenance walks the claim's citations (References + Relations) and
 // returns the axiom distance and dependency confidence floor for the new
-// fact (ToK Wave 2).
+// fact (ToK Waves 2 + 6).
 //
 //   - axiom_distance: min of cited facts' axiom_distance, plus 1. Facts with no
 //     cites become foundational (distance 0). Missing cites are ignored.
-//   - dependency_confidence_floor: min of cited facts' effective confidence
-//     (either the fact's clamped-to-floor confidence or its dependency_floor,
-//     whichever is lower). Facts with no cites have floor 0 (= no cap).
+//
+//   - dependency_confidence_floor: inference-weighted minimum. Each edge carries
+//     an inference strength (BPS). For each cited fact the edge contribution is
+//     target.effective_confidence × strength / BPS. A deductive edge at full
+//     strength preserves confidence; an inductive edge at 70% strength weakens
+//     the contribution by 30%. The floor is the minimum contribution across
+//     all edges. References-only cites have no declared strength and default
+//     to full BPS (pure citation preserves the cited fact's confidence).
+//     Facts with no cites have floor 0 (= no cap).
 func (k Keeper) computeProvenance(ctx context.Context, claim *types.Claim) (uint32, uint64) {
-	// Collect unique cited fact IDs from References + Relations.
-	seen := make(map[string]struct{})
-	var cited []string
+	const bps uint64 = 1_000_000
+
+	// Per-edge contributions: (factID → strengthBps). References default to
+	// full strength; Relations use declared strength (UNSPECIFIED or 0 → BPS).
+	edges := make(map[string]uint64)
 	for _, ref := range claim.References {
 		if ref == "" {
 			continue
 		}
-		if _, ok := seen[ref]; !ok {
-			seen[ref] = struct{}{}
-			cited = append(cited, ref)
+		// Plain reference = full-strength preservation.
+		if prev, ok := edges[ref]; !ok || bps > prev {
+			edges[ref] = bps
 		}
 	}
 	for _, rel := range claim.Relations {
-		// CONTRADICTS edges express disagreement, not dependence — exclude.
 		if rel.Relation == types.RelationType_RELATION_TYPE_CONTRADICTS {
 			continue
 		}
 		if rel.TargetFactId == "" {
 			continue
 		}
-		if _, ok := seen[rel.TargetFactId]; !ok {
-			seen[rel.TargetFactId] = struct{}{}
-			cited = append(cited, rel.TargetFactId)
+		strength := rel.InferenceStrengthBps
+		if strength == 0 || strength > bps {
+			strength = bps
+		}
+		// If the same fact is cited via both References and Relations, keep
+		// the stronger edge (less weakening) — the submitter declared a
+		// stronger claim somewhere.
+		if prev, ok := edges[rel.TargetFactId]; !ok || strength > prev {
+			edges[rel.TargetFactId] = strength
 		}
 	}
 
-	if len(cited) == 0 {
+	if len(edges) == 0 {
 		return 0, 0
 	}
 
-	var minDist uint32 = ^uint32(0) // max uint32; any real fact lowers it
-	var minFloor uint64             // initialized to max on first fact seen
+	var minDist uint32 = ^uint32(0)
+	var minFloor uint64
 	var floorInitialized bool
 
-	for _, factID := range cited {
+	for factID, strength := range edges {
 		target, found := k.GetFact(ctx, factID)
 		if !found {
 			continue
@@ -676,19 +689,20 @@ func (k Keeper) computeProvenance(ctx context.Context, claim *types.Claim) (uint
 		if target.AxiomDistance < minDist {
 			minDist = target.AxiomDistance
 		}
-		// Effective confidence is min(own confidence, inherited floor).
+		// target.effective_confidence = min(own, inherited floor)
 		eff := target.Confidence
 		if target.DependencyConfidenceFloor > 0 && target.DependencyConfidenceFloor < eff {
 			eff = target.DependencyConfidenceFloor
 		}
-		if !floorInitialized || eff < minFloor {
-			minFloor = eff
+		// Weaken by inference strength (ToK Wave 6).
+		contribution := safeMulDiv(eff, strength, bps)
+		if !floorInitialized || contribution < minFloor {
+			minFloor = contribution
 			floorInitialized = true
 		}
 	}
 
 	if minDist == ^uint32(0) {
-		// All cited facts were missing (unusual). Treat as foundational.
 		return 0, 0
 	}
 	return minDist + 1, minFloor

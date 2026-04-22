@@ -149,6 +149,75 @@ func TestToK_ChainedDerivation_AxiomDistanceAndConfidenceFloor(t *testing.T) {
 	require.GreaterOrEqual(t, resp.MaxDepthReached, uint32(1))
 }
 
+// TestToK_InferenceWeightedFloor pins Wave 6: a low-strength inductive edge
+// should weaken the inherited floor proportionally; a full-strength deductive
+// edge should preserve it. Same cited source, different inference strengths
+// must produce different floors.
+func TestToK_InferenceWeightedFloor(t *testing.T) {
+	h := NewTestHarness(t)
+
+	domain := "inference_weighting_domain"
+	require.NoError(t, h.KnowledgeKeeper.SetDomain(h.Ctx, &knowledgetypes.Domain{
+		Name:   domain,
+		Status: knowledgetypes.DomainStatus_DOMAIN_STATUS_ACTIVE,
+	}))
+
+	// Seed a high-confidence source fact (850k BPS).
+	source := &knowledgetypes.Fact{
+		Id:            "WEIGHT-SOURCE",
+		Content:       "Experimental heat capacity measurements for water.",
+		Domain:        domain,
+		Category:      "empirical",
+		Confidence:    850_000,
+		Status:        knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+		Submitter:     "genesis",
+		AxiomDistance: 0,
+	}
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, source))
+
+	// Deductive at full strength — preserves the 850k floor.
+	deductive := submitAndAcceptChainedClaim(t, h, domain,
+		"Heat capacity of water at 25°C is 4.184 J/(g·K).",
+		[]*knowledgetypes.ClaimRelation{
+			{
+				TargetFactId:         source.Id,
+				Relation:             knowledgetypes.RelationType_RELATION_TYPE_SUPPORTS,
+				Inference:            knowledgetypes.InferenceType_INFERENCE_TYPE_DEDUCTIVE,
+				InferenceStrengthBps: 1_000_000,
+			},
+		}, "deductive-full")
+
+	// Inductive at 700k strength — weakens 850k × 0.7 = 595k.
+	inductive := submitAndAcceptChainedClaim(t, h, domain,
+		"Most aqueous solutions have similar heat capacity near 25°C.",
+		[]*knowledgetypes.ClaimRelation{
+			{
+				TargetFactId:         source.Id,
+				Relation:             knowledgetypes.RelationType_RELATION_TYPE_SUPPORTS,
+				Inference:            knowledgetypes.InferenceType_INFERENCE_TYPE_INDUCTIVE,
+				InferenceStrengthBps: 700_000,
+			},
+		}, "inductive-weak")
+
+	// Deductive floor should be (approx) the source's effective confidence.
+	require.Equal(t, uint64(850_000), deductive.DependencyConfidenceFloor,
+		"deductive at full strength preserves source confidence")
+
+	// Inductive floor should be the weakened contribution: 850k × 700k / 1M = 595k.
+	require.Equal(t, uint64(595_000), inductive.DependencyConfidenceFloor,
+		"inductive at 70%% strength weakens source confidence proportionally")
+
+	// Therefore the inductive fact's actual confidence (after clamp) must be
+	// capped at its weakened floor — which is substantially below the
+	// 900k that its own verification gave it.
+	require.LessOrEqual(t, inductive.Confidence, uint64(595_000),
+		"inductive fact confidence must be clamped to weakened floor")
+	require.LessOrEqual(t, deductive.Confidence, uint64(850_000),
+		"deductive fact confidence must be clamped to preserved floor")
+	require.Greater(t, deductive.Confidence, inductive.Confidence,
+		"stronger-inference fact must end with higher confidence than weaker-inference peer")
+}
+
 // submitAndAcceptChainedClaim is a test helper that builds a Claim with the
 // given relations, creates a verification round, forces an ACCEPT verdict,
 // and returns the resulting Fact. Designed for writing concise chain tests
