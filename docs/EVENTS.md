@@ -1462,6 +1462,18 @@ On fact creation, the new fact's confidence was capped to its `dependency_confid
 - `dependency_floor_bps` -- inherited floor in BPS
 - `axiom_distance` -- minimum hops to a genesis axiom
 
+### zerone.knowledge.falsification_cascade
+A direct descendant of a disproven fact was flipped from VERIFIED/ACTIVE/AT_RISK to CONTESTED (ToK Wave 5). Emitted once per affected descendant.
+- `descendant_fact_id` -- fact whose status was set to CONTESTED
+- `disproven_fact_id` -- the fact that was disproven
+- `challenge_claim_id` -- the challenge claim that triggered disproof
+- `edge_relation` -- which support-bearing edge linked them (e.g. `RELATION_TYPE_REQUIRES`)
+
+### zerone.knowledge.falsification_cascade_summary
+Emitted once at the end of a falsification cascade with the total count of affected descendants (ToK Wave 5).
+- `disproven_fact_id` -- the fact that was disproven
+- `descendants_contested` -- how many direct descendants were flipped
+
 
 ## liquiditypool
 

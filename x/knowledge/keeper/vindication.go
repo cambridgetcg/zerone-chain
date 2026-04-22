@@ -196,8 +196,71 @@ func (k Keeper) handleChallengeDisproven(ctx context.Context, challengeClaim *ty
 		sdk.NewAttribute("challenge_claim_id", challengeClaim.Id),
 	))
 
+	// Falsification cascade (ToK Wave 5): mark direct descendants as CONTESTED
+	// so they'll be re-examined rather than continuing to pose as validated.
+	// Only first-hop descendants — transitive cascading is not done automatically
+	// to avoid runaway invalidation. Governance can trigger deeper cascade via
+	// a later message if needed.
+	k.cascadeFalsification(ctx, originalFact.Id, challengeClaim.Id)
+
 	// Trigger vindication for the ORIGINAL fact's minority voters
 	k.ExecuteVindication(ctx, originalFact.Id, newFactId)
+}
+
+// cascadeFalsification marks every fact that directly supports its reasoning
+// on the disproven fact as CONTESTED, so operators know the proof chain is
+// compromised. Scope: only first-hop descendants via support-bearing edges
+// (SUPPORTS / REQUIRES / REFINES / GENERALIZES / CITES). CONTRADICTS edges
+// are ignored — they express disagreement with the disproven fact, which is
+// now vindicated.
+func (k Keeper) cascadeFalsification(ctx context.Context, disprovenFactId, challengeClaimId string) {
+	incoming, err := k.GetIncomingRelations(ctx, disprovenFactId)
+	if err != nil {
+		return
+	}
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	affectedCount := 0
+	for _, rel := range incoming {
+		switch rel.Relation {
+		case types.RelationType_RELATION_TYPE_SUPPORTS,
+			types.RelationType_RELATION_TYPE_REQUIRES,
+			types.RelationType_RELATION_TYPE_REFINES,
+			types.RelationType_RELATION_TYPE_GENERALIZES,
+			types.RelationType_RELATION_TYPE_CITES:
+		default:
+			continue
+		}
+		descendant, ok := k.GetFact(ctx, rel.SourceFactId)
+		if !ok {
+			continue
+		}
+		// Only flip VERIFIED/ACTIVE/AT_RISK facts. Don't re-contest already
+		// CONTESTED/DISPROVEN/CHALLENGED facts — their status is informative.
+		switch descendant.Status {
+		case types.FactStatus_FACT_STATUS_VERIFIED,
+			types.FactStatus_FACT_STATUS_ACTIVE,
+			types.FactStatus_FACT_STATUS_AT_RISK:
+		default:
+			continue
+		}
+		descendant.Status = types.FactStatus_FACT_STATUS_CONTESTED
+		_ = k.SetFact(ctx, descendant)
+		affectedCount++
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.falsification_cascade",
+			sdk.NewAttribute("descendant_fact_id", descendant.Id),
+			sdk.NewAttribute("disproven_fact_id", disprovenFactId),
+			sdk.NewAttribute("challenge_claim_id", challengeClaimId),
+			sdk.NewAttribute("edge_relation", rel.Relation.String()),
+		))
+	}
+	if affectedCount > 0 {
+		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+			"zerone.knowledge.falsification_cascade_summary",
+			sdk.NewAttribute("disproven_fact_id", disprovenFactId),
+			sdk.NewAttribute("descendants_contested", fmt.Sprintf("%d", affectedCount)),
+		))
+	}
 }
 
 // ─── Execute Vindication ─────────────────────────────────────────────────────

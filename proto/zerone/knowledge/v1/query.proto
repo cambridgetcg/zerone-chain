@@ -124,6 +124,14 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/proof_tree";
   }
 
+  // DescendantTree is the dual of ProofTree: traverses INCOMING support edges
+  // to return all facts that transitively derive from this one. Useful before
+  // retracting a fact ("what depends on me?") and for the falsification
+  // cascade mechanism (ToK Wave 4).
+  rpc DescendantTree(QueryDescendantTreeRequest) returns (QueryDescendantTreeResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/descendant_tree";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -436,6 +444,31 @@ message QueryProofTreeResponse {
   uint32 total_nodes = 2;
   uint32 max_depth_reached = 3;
   uint64 minimum_confidence_in_tree = 4; // Weakest link in support chain
+}
+
+message QueryDescendantTreeRequest {
+  string fact_id  = 1;
+  uint32 max_depth = 2; // 0 = default 5
+}
+
+// DescendantNode is a fact that transitively derives from the query fact.
+// The edge_* fields name the INCOMING edge from descendant → the fact above
+// it in this tree (i.e. the descendant's own declaration of dependence).
+message DescendantNode {
+  Fact fact = 1;
+  RelationType edge_relation        = 2;
+  InferenceType edge_inference      = 3;
+  uint64 edge_inference_strength_bps = 4;
+  repeated DescendantNode descendants = 5;
+  uint32 depth                      = 6;
+  bool truncated                    = 7;
+}
+
+message QueryDescendantTreeResponse {
+  Fact root = 1;
+  repeated DescendantNode descendants = 2;
+  uint32 total_nodes = 3;
+  uint32 max_depth_reached = 4;
 }
 
 // ─── Novelty detection queries ──────────────────────────────────────────────

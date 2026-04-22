@@ -546,6 +546,91 @@ func (q *queryServer) buildProgenyTree(ctx context.Context, parent *types.Fact, 
 	return result
 }
 
+// DescendantTree is the dual of ProofTree: returns facts that transitively
+// derive from the given fact by walking INCOMING support edges. The typed
+// edge is named from the descendant's perspective (this descendant cited
+// the parent-in-tree via relation X / inference Y).
+func (q *queryServer) DescendantTree(ctx context.Context, req *types.QueryDescendantTreeRequest) (*types.QueryDescendantTreeResponse, error) {
+	if req == nil || req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id is required")
+	}
+	root, found := q.keeper.GetFact(ctx, req.FactId)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.FactId)
+	}
+	maxDepth := req.MaxDepth
+	if maxDepth == 0 {
+		maxDepth = 5
+	}
+	visited := make(map[string]bool)
+	nodeCount := uint32(1) // count the root
+	maxDepthReached := uint32(0)
+	descendants := q.walkDescendants(ctx, root.Id, 1, maxDepth, visited, &nodeCount, &maxDepthReached)
+	return &types.QueryDescendantTreeResponse{
+		Root:            root,
+		Descendants:     descendants,
+		TotalNodes:      nodeCount,
+		MaxDepthReached: maxDepthReached,
+	}, nil
+}
+
+// walkDescendants returns DescendantNodes for facts that cite factID via
+// support-bearing relations.
+func (q *queryServer) walkDescendants(
+	ctx context.Context,
+	factID string,
+	depth, maxDepth uint32,
+	visited map[string]bool,
+	nodeCount *uint32,
+	maxDepthReached *uint32,
+) []*types.DescendantNode {
+	if depth > maxDepth {
+		return nil
+	}
+	incoming, err := q.keeper.GetIncomingRelations(ctx, factID)
+	if err != nil {
+		return nil
+	}
+	var out []*types.DescendantNode
+	for _, rel := range incoming {
+		switch rel.Relation {
+		case types.RelationType_RELATION_TYPE_SUPPORTS,
+			types.RelationType_RELATION_TYPE_REQUIRES,
+			types.RelationType_RELATION_TYPE_REFINES,
+			types.RelationType_RELATION_TYPE_GENERALIZES,
+			types.RelationType_RELATION_TYPE_CITES:
+		default:
+			continue
+		}
+		if visited[rel.SourceFactId] {
+			continue
+		}
+		visited[rel.SourceFactId] = true
+		descendant, ok := q.keeper.GetFact(ctx, rel.SourceFactId)
+		if !ok {
+			continue
+		}
+		*nodeCount++
+		if depth > *maxDepthReached {
+			*maxDepthReached = depth
+		}
+		node := &types.DescendantNode{
+			Fact:                     descendant,
+			EdgeRelation:             rel.Relation,
+			EdgeInference:            rel.Inference,
+			EdgeInferenceStrengthBps: rel.InferenceStrengthBps,
+			Depth:                    depth,
+		}
+		if depth < maxDepth {
+			node.Descendants = q.walkDescendants(ctx, descendant.Id, depth+1, maxDepth, visited, nodeCount, maxDepthReached)
+		} else {
+			node.Truncated = true
+		}
+		out = append(out, node)
+	}
+	return out
+}
+
 // ProofTree returns the transitive support ancestry for a fact (ToK Wave 3).
 // Walks SUPPORTS / REQUIRES / REFINES / GENERALIZES / CITES edges outward
 // (excludes CONTRADICTS / SUPERSEDES). Each node carries the typed edge by

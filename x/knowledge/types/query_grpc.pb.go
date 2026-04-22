@@ -41,6 +41,7 @@ const (
 	Query_FactLineage_FullMethodName            = "/zerone.knowledge.v1.Query/FactLineage"
 	Query_FactProgeny_FullMethodName            = "/zerone.knowledge.v1.Query/FactProgeny"
 	Query_ProofTree_FullMethodName              = "/zerone.knowledge.v1.Query/ProofTree"
+	Query_DescendantTree_FullMethodName         = "/zerone.knowledge.v1.Query/DescendantTree"
 	Query_CommonKnowledge_FullMethodName        = "/zerone.knowledge.v1.Query/CommonKnowledge"
 	Query_CheckNovelty_FullMethodName           = "/zerone.knowledge.v1.Query/CheckNovelty"
 	Query_ActiveBounties_FullMethodName         = "/zerone.knowledge.v1.Query/ActiveBounties"
@@ -112,6 +113,11 @@ type QueryClient interface {
 	// node carries its inference type and strength so auditors can verify
 	// the derivation chain (ToK Wave 3).
 	ProofTree(ctx context.Context, in *QueryProofTreeRequest, opts ...grpc.CallOption) (*QueryProofTreeResponse, error)
+	// DescendantTree is the dual of ProofTree: traverses INCOMING support edges
+	// to return all facts that transitively derive from this one. Useful before
+	// retracting a fact ("what depends on me?") and for the falsification
+	// cascade mechanism (ToK Wave 4).
+	DescendantTree(ctx context.Context, in *QueryDescendantTreeRequest, opts ...grpc.CallOption) (*QueryDescendantTreeResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -371,6 +377,16 @@ func (c *queryClient) ProofTree(ctx context.Context, in *QueryProofTreeRequest, 
 	return out, nil
 }
 
+func (c *queryClient) DescendantTree(ctx context.Context, in *QueryDescendantTreeRequest, opts ...grpc.CallOption) (*QueryDescendantTreeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDescendantTreeResponse)
+	err := c.cc.Invoke(ctx, Query_DescendantTree_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -575,6 +591,11 @@ type QueryServer interface {
 	// node carries its inference type and strength so auditors can verify
 	// the derivation chain (ToK Wave 3).
 	ProofTree(context.Context, *QueryProofTreeRequest) (*QueryProofTreeResponse, error)
+	// DescendantTree is the dual of ProofTree: traverses INCOMING support edges
+	// to return all facts that transitively derive from this one. Useful before
+	// retracting a fact ("what depends on me?") and for the falsification
+	// cascade mechanism (ToK Wave 4).
+	DescendantTree(context.Context, *QueryDescendantTreeRequest) (*QueryDescendantTreeResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -679,6 +700,9 @@ func (UnimplementedQueryServer) FactProgeny(context.Context, *QueryFactProgenyRe
 }
 func (UnimplementedQueryServer) ProofTree(context.Context, *QueryProofTreeRequest) (*QueryProofTreeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ProofTree not implemented")
+}
+func (UnimplementedQueryServer) DescendantTree(context.Context, *QueryDescendantTreeRequest) (*QueryDescendantTreeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DescendantTree not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -1142,6 +1166,24 @@ func _Query_ProofTree_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_DescendantTree_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDescendantTreeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DescendantTree(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DescendantTree_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DescendantTree(ctx, req.(*QueryDescendantTreeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -1506,6 +1548,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ProofTree",
 			Handler:    _Query_ProofTree_Handler,
+		},
+		{
+			MethodName: "DescendantTree",
+			Handler:    _Query_DescendantTree_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",
