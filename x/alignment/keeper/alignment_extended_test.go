@@ -36,6 +36,7 @@ func TestSensorMaxValues(t *testing.T) {
 
 	mocks.knowledge.verificationRate = types.BPS
 	mocks.knowledge.consensusDiversity = types.BPS // both inputs at max → weighted output at max
+	mocks.knowledge.throughputBps = types.BPS      // R31-2 governance health at max
 	mocks.staking.totalStaked = big.NewInt(2_000_000_000_000) // > supply
 	mocks.staking.activeValidators = 200                       // > target
 	mocks.staking.targetValidators = 111
@@ -100,8 +101,12 @@ func TestSensorKnowledgeAboveBPS(t *testing.T) {
 func TestSensorGovernanceDomainCount(t *testing.T) {
 	k, mocks, ctx := setupKeeper(t)
 
+	// Governance blends 70% domain count with 30% verification health (R31-2).
+	// Set throughput equal to domain score so the blend collapses to the domain value.
+
 	// Test exact target (100 domains = 100%).
 	mocks.ontology.domainCount = 100
+	mocks.knowledge.throughputBps = types.BPS
 	obs := k.ObserveAll(ctx)
 	if obs.GovernanceParticipation != types.BPS {
 		t.Errorf("expected BPS for exact target, got %d", obs.GovernanceParticipation)
@@ -109,6 +114,7 @@ func TestSensorGovernanceDomainCount(t *testing.T) {
 
 	// Test partial (25 domains = 25%).
 	mocks.ontology.domainCount = 25
+	mocks.knowledge.throughputBps = uint64(25) * types.BPS / 100
 	obs = k.ObserveAll(ctx)
 	expected := uint64(25) * types.BPS / 100
 	if obs.GovernanceParticipation != expected {

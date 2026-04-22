@@ -8,6 +8,7 @@ import (
 
 	cdtypes "github.com/zerone-chain/zerone/x/capture_defense/types"
 	knowledgekeeper "github.com/zerone-chain/zerone/x/knowledge/keeper"
+	knowledgetypes "github.com/zerone-chain/zerone/x/knowledge/types"
 	ontologytypes "github.com/zerone-chain/zerone/x/ontology/types"
 	partnershipstypes "github.com/zerone-chain/zerone/x/partnerships/types"
 	qualificationtypes "github.com/zerone-chain/zerone/x/qualification/types"
@@ -192,15 +193,22 @@ func TestR31_FireMetal_HighActivityRelaxesHHIThreshold(t *testing.T) {
 		})
 	}
 
-	// Set domain diversity data with high round count (high activity)
-	currentEpoch := uint64(h.Height()) / kParams.FitnessEpochBlocks
-	require.NoError(t, h.KnowledgeKeeper.SetDomainDiversity(h.Ctx, domain, currentEpoch, knowledgekeeper.DomainDiversityRecord{
-		Domain:         domain,
-		Epoch:          currentEpoch,
-		AvgEntropy:     500_000,
-		RoundCount:     15, // 15 rounds → activity = min(15 * 100_000, 1_000_000) = 1_000_000 (full)
-		UnanimousCount: 2,
-	}))
+	// Seed completion index: verification activity reads window-based counts (R31-2).
+	// 15 rounds in the window → activity = min(15 * 100_000, 1_000_000) = 1_000_000 (full).
+	// Advance the chain first so we have headroom for past verdict blocks.
+	h.AdvanceBlocks(20)
+	currentHeight := uint64(h.Height())
+	for i := 0; i < 15; i++ {
+		require.NoError(t, h.KnowledgeKeeper.IndexCompletedRound(
+			h.Ctx,
+			currentHeight-uint64(i),
+			fmt.Sprintf("round-activity-%d", i),
+			&knowledgetypes.CompletedRoundMeta{
+				Domain:         domain,
+				DurationBlocks: 10,
+			},
+		))
+	}
 
 	// Analyze capture risk with high activity
 	cdParams := h.CaptureDefenseKeeper.GetParams(h.Ctx)
@@ -369,22 +377,34 @@ func TestR31_MetalWood_CombinedStratumDepthReducesCapacity(t *testing.T) {
 
 	capacity := h.KnowledgeKeeper.GetDomainCarryingCapacity(h.Ctx, domain)
 
-	// Depth 2 gives 80% multiplier.
-	// The capture flag doesn't directly affect carrying capacity (it affects partnerships),
-	// but the stratum depth still reduces it to 80%.
-	expectedFromStratum := baseCapacity * 800_000 / 1_000_000
-	require.Equal(t, expectedFromStratum, capacity,
-		"depth-2 captured domain must have 80%% capacity from stratum depth penalty")
+	// Both penalties compose (R31-1 Metal→Wood capture penalty, then R31-4 stratum depth).
+	// Capture penalty reduces by HerfindahlIndex/BPS first: 1000 * (1 - 0.8) = 200.
+	// Stratum depth-2 then multiplies by 0.8: 200 * 0.8 = 160.
+	afterCapturePenalty := baseCapacity - (baseCapacity * 800_000 / 1_000_000)
+	expectedCombined := afterCapturePenalty * 800_000 / 1_000_000
+	require.Equal(t, expectedCombined, capacity,
+		"depth-2 captured domain: capture penalty then stratum multiplier compose")
 
-	// Verify the capture flag is independent of carrying capacity
+	// Sanity: stratum-only path (without capture) on a sibling domain yields 80%.
+	stratumOnlyDomain := "stratum_only_reference"
+	h.App.ZeroneOntologyKeeper.SetDomain(h.Ctx, &ontologytypes.Domain{
+		Name:    stratumOnlyDomain,
+		Status:  "active",
+		Stratum: uint32(ontologytypes.StratumFormal),
+		Depth:   2,
+	})
+	stratumOnlyCapacity := h.KnowledgeKeeper.GetDomainCarryingCapacity(h.Ctx, stratumOnlyDomain)
+	require.Equal(t, baseCapacity*800_000/1_000_000, stratumOnlyCapacity,
+		"depth-2 without capture flag must be 80%% of base (stratum only)")
+
 	require.True(t, h.CaptureDefenseKeeper.IsDomainFlagged(h.Ctx, domain),
 		"domain must still be flagged as captured")
 
 	// Verify overcrowding still works correctly with reduced capacity.
-	// Set population above the reduced capacity to demonstrate combined effect.
+	// Set population above the combined-reduced capacity to demonstrate the effect.
 	h.KnowledgeKeeper.SetDomainStats(h.Ctx, &knowledgekeeper.DomainStats{
 		Domain:      domain,
-		ActiveCount: expectedFromStratum + 100, // Over the reduced capacity
+		ActiveCount: expectedCombined + 100, // Over the reduced capacity
 		AtRiskCount: 50,
 		TotalEnergy: 1_000_000,
 		LastUpdated: uint64(h.Height()),
@@ -419,6 +439,6 @@ func TestR31_MetalWood_CombinedStratumDepthReducesCapacity(t *testing.T) {
 	require.Equal(t, expectedDepth4, depth4Capacity,
 		"depth-4+ domain must have 50%% floor capacity")
 
-	t.Logf("Capacities by depth: d1=%d, d2=%d, d3=%d, d4=%d (base=%d)",
-		baseCapacity, expectedFromStratum, expectedDepth3, expectedDepth4, baseCapacity)
+	t.Logf("Capacities: captured-d2=%d, stratum-only-d2=%d, d3=%d, d4=%d (base=%d)",
+		expectedCombined, stratumOnlyCapacity, expectedDepth3, expectedDepth4, baseCapacity)
 }

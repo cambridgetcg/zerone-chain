@@ -32,6 +32,9 @@ type mockKnowledgeKeeper struct {
 	totalFacts               uint64
 	consensusDiversity       uint64
 	pendingVerificationRatio uint64
+	throughputBps            uint64
+	disputeRateBps           uint64
+	avgRoundDurationBlocks   uint64
 }
 
 func (m *mockKnowledgeKeeper) GetVerificationRate(_ context.Context) uint64 {
@@ -48,6 +51,10 @@ func (m *mockKnowledgeKeeper) GetConsensusDiversity(_ context.Context) uint64 {
 
 func (m *mockKnowledgeKeeper) GetPendingVerificationRatio(_ context.Context) uint64 {
 	return m.pendingVerificationRatio
+}
+
+func (m *mockKnowledgeKeeper) GetVerificationHealth(_ context.Context) (uint64, uint64, uint64) {
+	return m.throughputBps, m.disputeRateBps, m.avgRoundDurationBlocks
 }
 
 type mockStakingKeeper struct {
@@ -146,6 +153,7 @@ func setupKeeper(t *testing.T) (keeper.Keeper, testKeepers, sdk.Context) {
 			verificationRate:   700_000, // 70%
 			totalFacts:         1000,
 			consensusDiversity: 500_000, // 50% — neutral default
+			throughputBps:      500_000, // neutral default (R31-2)
 		},
 		staking: &mockStakingKeeper{
 			totalStaked:      big.NewInt(600_000_000_000), // 600k ZRN
