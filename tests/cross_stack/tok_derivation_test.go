@@ -218,6 +218,71 @@ func TestToK_InferenceWeightedFloor(t *testing.T) {
 		"stronger-inference fact must end with higher confidence than weaker-inference peer")
 }
 
+// TestToK_TrustProfile verifies the aggregate query surfaces all Wave 1-6
+// signals consistently and that grounded_score honours axiom distance.
+func TestToK_TrustProfile(t *testing.T) {
+	h := NewTestHarness(t)
+
+	domain := "trust_profile_domain"
+	require.NoError(t, h.KnowledgeKeeper.SetDomain(h.Ctx, &knowledgetypes.Domain{
+		Name:   domain,
+		Status: knowledgetypes.DomainStatus_DOMAIN_STATUS_ACTIVE,
+	}))
+
+	axiom := &knowledgetypes.Fact{
+		Id:            "TP-AXIOM",
+		Content:       "All triangles have three sides.",
+		Domain:        domain,
+		Category:      "formal",
+		Confidence:    1_000_000,
+		Status:        knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+		Submitter:     "genesis",
+		AxiomDistance: 0,
+	}
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, axiom))
+
+	derived := submitAndAcceptChainedClaim(t, h, domain,
+		"Equilateral triangles have three equal sides.",
+		[]*knowledgetypes.ClaimRelation{
+			{
+				TargetFactId:         axiom.Id,
+				Relation:             knowledgetypes.RelationType_RELATION_TYPE_REQUIRES,
+				Inference:            knowledgetypes.InferenceType_INFERENCE_TYPE_DEDUCTIVE,
+				InferenceStrengthBps: 1_000_000,
+			},
+		}, "TP-derived")
+
+	qs := knowledgekeeper.NewQueryServerImpl(h.KnowledgeKeeper)
+
+	// Axiom profile: distance 0, no floor, grounded == own confidence.
+	axiomProfile, err := qs.TrustProfile(h.Ctx, &knowledgetypes.QueryTrustProfileRequest{FactId: axiom.Id})
+	require.NoError(t, err)
+	require.Equal(t, uint32(0), axiomProfile.AxiomDistance)
+	require.Equal(t, uint64(1_000_000), axiomProfile.OwnConfidenceBps)
+	require.Equal(t, uint64(1_000_000), axiomProfile.GroundedScoreBps,
+		"axiom at distance 0 with no floor → grounded equals own confidence")
+	require.Equal(t, uint32(1), axiomProfile.DirectDescendants,
+		"axiom has exactly one direct descendant (derived fact)")
+
+	// Derived profile: distance 1, floor = 1M (deductive preservation),
+	// grounded score weighted down by axiom distance.
+	derivedProfile, err := qs.TrustProfile(h.Ctx, &knowledgetypes.QueryTrustProfileRequest{FactId: derived.Id})
+	require.NoError(t, err)
+	require.Equal(t, uint32(1), derivedProfile.AxiomDistance)
+	require.Equal(t, uint32(1), derivedProfile.DirectSupporters,
+		"derived fact has exactly one direct supporter")
+	require.Equal(t, uint32(0), derivedProfile.DirectDescendants)
+	// grounded should equal own_conf × axiom_weight at distance 1:
+	// axiomWeight = BPS² / (BPS + 1×50_000) = 1M/1.05 ≈ 952_380
+	// grounded = own × 952_380 / BPS (then × floor_weight = 1.0 because floor == own)
+	require.Less(t, derivedProfile.GroundedScoreBps, derivedProfile.OwnConfidenceBps,
+		"distance-1 fact's grounded score must be below its own confidence")
+	require.Greater(t, derivedProfile.GroundedScoreBps, uint64(0))
+	// The min-in-ancestry must touch the axiom's confidence (or the derived
+	// fact's floor, whichever is smaller).
+	require.LessOrEqual(t, derivedProfile.MinimumConfidenceInAncestry, axiom.Confidence)
+}
+
 // submitAndAcceptChainedClaim is a test helper that builds a Claim with the
 // given relations, creates a verification round, forces an ACCEPT verdict,
 // and returns the resulting Fact. Designed for writing concise chain tests

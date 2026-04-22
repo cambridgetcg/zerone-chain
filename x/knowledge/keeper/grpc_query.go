@@ -546,6 +546,150 @@ func (q *queryServer) buildProgenyTree(ctx context.Context, parent *types.Fact, 
 	return result
 }
 
+// TrustProfile returns the consolidated provenance view for a single fact:
+// own confidence, inherited floor, axiom distance, direct supporter /
+// descendant counts, min confidence found in the support chain, and a
+// computed grounded_score (ToK Wave 7).
+//
+// The grounded score is a single 0-1,000,000 BPS metric for UI/ranking:
+//
+//	axiom_weight = BPS² / (BPS + axiom_distance × AXIOM_DISTANCE_DECAY_BPS)
+//	floor_weight = min(floor/own_confidence, 1.0)  (if floor > 0)
+//	grounded    = own_confidence × axiom_weight × floor_weight / BPS²
+//
+// AXIOM_DISTANCE_DECAY_BPS = 50_000 → each hop from axioms trims ~5% of score.
+func (q *queryServer) TrustProfile(ctx context.Context, req *types.QueryTrustProfileRequest) (*types.QueryTrustProfileResponse, error) {
+	if req == nil || req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id is required")
+	}
+	fact, found := q.keeper.GetFact(ctx, req.FactId)
+	if !found {
+		return nil, status.Errorf(codes.NotFound, "fact %s not found", req.FactId)
+	}
+
+	// Count direct support-bearing edges (outgoing = supporters).
+	directSupporters := uint32(0)
+	if outRels, err := q.keeper.GetFactRelations(ctx, fact.Id); err == nil {
+		for _, rel := range outRels {
+			if isSupportBearing(rel.Relation) {
+				directSupporters++
+			}
+		}
+	}
+	// Count direct descendants (incoming = facts that cite me).
+	directDescendants := uint32(0)
+	if inRels, err := q.keeper.GetIncomingRelations(ctx, fact.Id); err == nil {
+		for _, rel := range inRels {
+			if isSupportBearing(rel.Relation) {
+				directDescendants++
+			}
+		}
+	}
+
+	// Minimum confidence across the support chain: reuse ProofTree math but
+	// without building the full tree — walk support edges BFS to small depth.
+	minInAncestry := fact.Confidence
+	if fact.DependencyConfidenceFloor > 0 && fact.DependencyConfidenceFloor < minInAncestry {
+		minInAncestry = fact.DependencyConfidenceFloor
+	}
+	visited := map[string]bool{fact.Id: true}
+	frontier := []string{fact.Id}
+	const ancestryDepthCap = 6
+	for depth := 0; depth < ancestryDepthCap && len(frontier) > 0; depth++ {
+		var next []string
+		for _, fid := range frontier {
+			outRels, err := q.keeper.GetFactRelations(ctx, fid)
+			if err != nil {
+				continue
+			}
+			for _, rel := range outRels {
+				if !isSupportBearing(rel.Relation) {
+					continue
+				}
+				if visited[rel.TargetFactId] {
+					continue
+				}
+				visited[rel.TargetFactId] = true
+				target, ok := q.keeper.GetFact(ctx, rel.TargetFactId)
+				if !ok {
+					continue
+				}
+				conf := target.Confidence
+				if target.DependencyConfidenceFloor > 0 && target.DependencyConfidenceFloor < conf {
+					conf = target.DependencyConfidenceFloor
+				}
+				if conf > 0 && conf < minInAncestry {
+					minInAncestry = conf
+				}
+				next = append(next, target.Id)
+			}
+		}
+		frontier = next
+	}
+
+	grounded := computeGroundedScore(fact)
+
+	return &types.QueryTrustProfileResponse{
+		Fact:                          fact,
+		OwnConfidenceBps:              fact.Confidence,
+		DependencyConfidenceFloor:     fact.DependencyConfidenceFloor,
+		AxiomDistance:                 fact.AxiomDistance,
+		DirectSupporters:              directSupporters,
+		DirectDescendants:             directDescendants,
+		MinimumConfidenceInAncestry:   minInAncestry,
+		Status:                        fact.Status,
+		GroundedScoreBps:              grounded,
+	}, nil
+}
+
+func isSupportBearing(r types.RelationType) bool {
+	switch r {
+	case types.RelationType_RELATION_TYPE_SUPPORTS,
+		types.RelationType_RELATION_TYPE_REQUIRES,
+		types.RelationType_RELATION_TYPE_REFINES,
+		types.RelationType_RELATION_TYPE_GENERALIZES,
+		types.RelationType_RELATION_TYPE_CITES:
+		return true
+	}
+	return false
+}
+
+// computeGroundedScore aggregates axiom distance + confidence floor + own
+// confidence into a single BPS metric capped at own_confidence.
+func computeGroundedScore(fact *types.Fact) uint64 {
+	const bps uint64 = 1_000_000
+	const axiomDistanceDecayBps uint64 = 50_000 // 5% per hop
+
+	own := fact.Confidence
+	if own == 0 {
+		return 0
+	}
+
+	// axiom_weight: BPS² / (BPS + distance × decay). Bounded in (0, BPS].
+	distance := uint64(fact.AxiomDistance)
+	axiomDivisor := bps + distance*axiomDistanceDecayBps
+	// axiomWeight = BPS² / axiomDivisor, fits in uint64 trivially.
+	axiomWeight := bps * bps / axiomDivisor
+	if axiomWeight > bps {
+		axiomWeight = bps // cap at BPS — cannot boost above own confidence
+	}
+
+	// floor_weight: floor/own, capped at 1.0. If no floor declared, 1.0.
+	var floorWeight uint64 = bps
+	if fact.DependencyConfidenceFloor > 0 && fact.DependencyConfidenceFloor < own {
+		floorWeight = fact.DependencyConfidenceFloor * bps / own
+	}
+
+	// grounded = own × axiomWeight × floorWeight / BPS²
+	// Intermediate: own × axiomWeight / BPS (≤ own, fits in uint64).
+	mid := own * axiomWeight / bps
+	grounded := mid * floorWeight / bps
+	if grounded > own {
+		grounded = own
+	}
+	return grounded
+}
+
 // DescendantTree is the dual of ProofTree: returns facts that transitively
 // derive from the given fact by walking INCOMING support edges. The typed
 // edge is named from the descendant's perspective (this descendant cited

@@ -132,6 +132,14 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/descendant_tree";
   }
 
+  // TrustProfile consolidates a fact's full epistemic provenance into a
+  // single response: own confidence, inherited floor, axiom distance,
+  // descendant count, and a computed grounded_score that weighs all three.
+  // The one-stop query for auditors (ToK Wave 7).
+  rpc TrustProfile(QueryTrustProfileRequest) returns (QueryTrustProfileResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/fact/{fact_id}/trust_profile";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -469,6 +477,37 @@ message QueryDescendantTreeResponse {
   repeated DescendantNode descendants = 2;
   uint32 total_nodes = 3;
   uint32 max_depth_reached = 4;
+}
+
+// ─── Trust profile (ToK Wave 7) ─────────────────────────────────────────────
+
+message QueryTrustProfileRequest {
+  string fact_id = 1;
+}
+
+// TrustProfile aggregates all ToK provenance signals for a fact.
+message QueryTrustProfileResponse {
+  Fact fact = 1;
+
+  // Direct signals (what the fact carries today).
+  uint64 own_confidence_bps          = 2;  // Fact.Confidence
+  uint64 dependency_confidence_floor = 3;  // Fact.DependencyConfidenceFloor (0 = no floor)
+  uint32 axiom_distance              = 4;  // Fact.AxiomDistance
+
+  // Derived signals.
+  uint32 direct_supporters           = 5;  // Facts this one directly cites (support-bearing)
+  uint32 direct_descendants          = 6;  // Facts that directly cite this
+  uint64 minimum_confidence_in_ancestry = 7; // Weakest link in support chain
+  FactStatus status                  = 8;  // Convenience echo
+
+  // Grounded score — a single 0-1,000,000 BPS metric that combines the three
+  // pillars. Formula (documented on the RPC):
+  //   grounded = own_confidence × axiom_weight × floor_weight / BPS²
+  //   axiom_weight = BPS × BPS / (BPS + axiom_distance × AXIOM_DISTANCE_DECAY_BPS)
+  //   floor_weight = min(floor/own_confidence, 1.0) if floor > 0 else 1.0
+  // Score is capped at own_confidence — a fact can never be MORE trustworthy
+  // than its own verification claimed.
+  uint64 grounded_score_bps          = 9;
 }
 
 // ─── Novelty detection queries ──────────────────────────────────────────────
