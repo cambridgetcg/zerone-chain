@@ -676,11 +676,27 @@ func isSupportBearing(r types.RelationType) bool {
 	return false
 }
 
-// computeGroundedScore aggregates axiom distance + confidence floor + own
-// confidence into a single BPS metric capped at own_confidence.
+// computeGroundedScore aggregates axiom distance + confidence floor +
+// corroboration count + own confidence into a single BPS metric.
+//
+// Formula (Phase 2 update):
+//
+//	axiom_weight        = BPS² / (BPS + distance × AXIOM_DISTANCE_DECAY_BPS)
+//	floor_weight        = min(floor/own, 1.0)   (1.0 if no floor)
+//	corroboration_boost = 1 + min(count, MAX_CORR) × CORR_WEIGHT_BPS / BPS
+//	grounded            = own × axiom_weight × floor_weight × corroboration_boost / BPS³
+//	                    (clamped to [0, BPS])
+//
+// Popperian intuition: a fact's epistemic warrant can grow beyond its initial
+// verification confidence as it survives falsification attempts. The score
+// is still bounded at BPS (100%) because we cannot claim absolute certainty,
+// but a well-corroborated low-confidence claim can now rise above a poorly-
+// corroborated high-confidence one.
 func computeGroundedScore(fact *types.Fact) uint64 {
 	const bps uint64 = 1_000_000
 	const axiomDistanceDecayBps uint64 = 50_000 // 5% per hop
+	const maxCorroboration uint64 = 10          // cap: 10 surviving challenges saturates
+	const corrWeightBps uint64 = 50_000         // +5% per corroboration up to cap → +50% max
 
 	own := fact.Confidence
 	if own == 0 {
@@ -690,10 +706,9 @@ func computeGroundedScore(fact *types.Fact) uint64 {
 	// axiom_weight: BPS² / (BPS + distance × decay). Bounded in (0, BPS].
 	distance := uint64(fact.AxiomDistance)
 	axiomDivisor := bps + distance*axiomDistanceDecayBps
-	// axiomWeight = BPS² / axiomDivisor, fits in uint64 trivially.
 	axiomWeight := bps * bps / axiomDivisor
 	if axiomWeight > bps {
-		axiomWeight = bps // cap at BPS — cannot boost above own confidence
+		axiomWeight = bps
 	}
 
 	// floor_weight: floor/own, capped at 1.0. If no floor declared, 1.0.
@@ -702,12 +717,21 @@ func computeGroundedScore(fact *types.Fact) uint64 {
 		floorWeight = fact.DependencyConfidenceFloor * bps / own
 	}
 
-	// grounded = own × axiomWeight × floorWeight / BPS²
-	// Intermediate: own × axiomWeight / BPS (≤ own, fits in uint64).
-	mid := own * axiomWeight / bps
-	grounded := mid * floorWeight / bps
-	if grounded > own {
-		grounded = own
+	// corroboration_boost: BPS + min(count, MAX) × CORR_WEIGHT_BPS.
+	// count=0 → 1× (no boost); count=10 → 1.5× (saturated).
+	corr := fact.CorroborationCount
+	if corr > maxCorroboration {
+		corr = maxCorroboration
+	}
+	corrBoost := bps + corr*corrWeightBps
+
+	// grounded = own × axiomWeight × floorWeight × corrBoost / BPS³
+	// Intermediate steps kept in uint64 space.
+	mid := own * axiomWeight / bps              // ≤ own
+	mid = mid * floorWeight / bps               // ≤ own
+	grounded := mid * corrBoost / bps           // can exceed own if corrBoost > BPS
+	if grounded > bps {
+		grounded = bps // absolute 100% cap — no claim earns more than this
 	}
 	return grounded
 }

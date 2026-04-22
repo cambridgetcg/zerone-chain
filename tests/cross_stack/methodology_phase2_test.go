@@ -168,3 +168,66 @@ func TestMethodologyPhase2_PopperianCorroboration(t *testing.T) {
 	require.Equal(t, knowledgetypes.MethodologyEmpirical, profile.MethodId,
 		"TrustProfile must echo the fact's declared methodology")
 }
+
+// TestMethodologyPhase2_CorroborationBoostsGroundedScore verifies the
+// Popperian move: a corroborated fact earns a higher grounded_score than
+// an identical-otherwise uncorroborated fact. This is the mechanism that
+// makes survived-falsification count in ranking.
+func TestMethodologyPhase2_CorroborationBoostsGroundedScore(t *testing.T) {
+	h := NewTestHarness(t)
+	require.NoError(t, h.KnowledgeKeeper.SeedDefaultMethodologies(h.Ctx))
+
+	domain := "corroboration_score_domain"
+	require.NoError(t, h.KnowledgeKeeper.SetDomain(h.Ctx, &knowledgetypes.Domain{
+		Name:   domain,
+		Status: knowledgetypes.DomainStatus_DOMAIN_STATUS_ACTIVE,
+	}))
+
+	// Two facts, identical except corroboration_count.
+	uncorroborated := &knowledgetypes.Fact{
+		Id:                 "FACT-UNCORROBORATED",
+		Content:            "Uncorroborated claim.",
+		Domain:             domain,
+		Category:           "empirical",
+		Confidence:         700_000,
+		Status:             knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+		Submitter:          "test",
+		AxiomDistance:      1,
+		CorroborationCount: 0,
+	}
+	corroborated := &knowledgetypes.Fact{
+		Id:                 "FACT-CORROBORATED",
+		Content:            "Same claim, but survived five challenges.",
+		Domain:             domain,
+		Category:           "empirical",
+		Confidence:         700_000,
+		Status:             knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+		Submitter:          "test",
+		AxiomDistance:      1,
+		CorroborationCount: 5,
+	}
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, uncorroborated))
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, corroborated))
+
+	qs := knowledgekeeper.NewQueryServerImpl(h.KnowledgeKeeper)
+	uncProfile, err := qs.TrustProfile(h.Ctx, &knowledgetypes.QueryTrustProfileRequest{
+		FactId: uncorroborated.Id,
+	})
+	require.NoError(t, err)
+	corrProfile, err := qs.TrustProfile(h.Ctx, &knowledgetypes.QueryTrustProfileRequest{
+		FactId: corroborated.Id,
+	})
+	require.NoError(t, err)
+
+	require.Greater(t, corrProfile.GroundedScoreBps, uncProfile.GroundedScoreBps,
+		"corroborated fact must outrank its uncorroborated twin")
+
+	// A corroborated fact's grounded_score can exceed its initial confidence
+	// — Popperian evidence accumulation above the initial verification.
+	require.Greater(t, corrProfile.GroundedScoreBps, corroborated.Confidence,
+		"5 corroborations should push grounded_score above 700_000 own_confidence")
+
+	// But still bounded at BPS (100%).
+	require.LessOrEqual(t, corrProfile.GroundedScoreBps, uint64(1_000_000),
+		"grounded_score is absolutely capped at BPS regardless of corroboration")
+}
