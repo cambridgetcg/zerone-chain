@@ -6,7 +6,9 @@ import (
 	"sort"
 	"strconv"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -1972,4 +1974,196 @@ func (q *queryServer) AugmentationsByFact(ctx context.Context, req *types.QueryA
 		augs = filtered
 	}
 	return &types.QueryAugmentationsByFactResponse{Augmentations: augs}, nil
+}
+
+// ─── Route B Wave 4 queries ──────────────────────────────────────────────
+
+// TrainingValueWeight returns the Popper-weighted TVW for a fact.
+func (q *queryServer) TrainingValueWeight(ctx context.Context, req *types.QueryTrainingValueWeightRequest) (*types.QueryTrainingValueWeightResponse, error) {
+	if req == nil || req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id required")
+	}
+	b := q.keeper.ComputeTrainingValueWeight(ctx, req.FactId)
+	return &types.QueryTrainingValueWeightResponse{
+		TvwBps:                    b.Final,
+		BaseWeight:                b.BaseWeight,
+		MethodologyMultiplierBps:  b.MethodologyMultiplier,
+		VindicationMultiplierBps:  b.VindicationMultiplier,
+		SubmitterCalibrationBps:   b.SubmitterCalibration,
+		AxiomProximityBps:         b.AxiomProximity,
+		BlockedIsOught:            b.BlockedByIsOught,
+		Disproven:                 b.Disproven,
+	}, nil
+}
+
+// ContributionChallenge returns a challenge by id.
+func (q *queryServer) ContributionChallenge(ctx context.Context, req *types.QueryContributionChallengeRequest) (*types.QueryContributionChallengeResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id required")
+	}
+	c, found := q.keeper.GetContributionChallenge(ctx, req.Id)
+	return &types.QueryContributionChallengeResponse{Challenge: c, Found: found}, nil
+}
+
+// OpenContributionChallenges lists open challenges (optionally filtered by model).
+func (q *queryServer) OpenContributionChallenges(ctx context.Context, req *types.QueryOpenContributionChallengesRequest) (*types.QueryOpenContributionChallengesResponse, error) {
+	if req == nil {
+		req = &types.QueryOpenContributionChallengesRequest{}
+	}
+	var out []*types.ContributionChallenge
+	q.keeper.IterateOpenContributionChallenges(ctx, func(c *types.ContributionChallenge) bool {
+		if req.ModelId != "" && c.ModelId != req.ModelId {
+			return false
+		}
+		out = append(out, c)
+		return false
+	})
+	return &types.QueryOpenContributionChallengesResponse{Challenges: out}, nil
+}
+
+// TrainingFundDisbursement returns a disbursement by id.
+func (q *queryServer) TrainingFundDisbursement(ctx context.Context, req *types.QueryTrainingFundDisbursementRequest) (*types.QueryTrainingFundDisbursementResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id required")
+	}
+	d, found := q.keeper.GetTrainingFundDisbursement(ctx, req.Id)
+	return &types.QueryTrainingFundDisbursementResponse{Disbursement: d, Found: found}, nil
+}
+
+// TrainingFundBalance reports the training fund module account balance and
+// a breakdown of reserved amounts.
+func (q *queryServer) TrainingFundBalance(ctx context.Context, _ *types.QueryTrainingFundBalanceRequest) (*types.QueryTrainingFundBalanceResponse, error) {
+	addr := sdk.AccAddress(crypto_address_of_module(types.TrainingFundModuleName))
+	bal := q.keeper.bankKeeper.GetBalance(ctx, addr, "uzrn")
+
+	// Sum escrow-locked across all bounties.
+	escrow := sdkmath_zero()
+	q.keeper.IterateAugmentationBounties(ctx, func(b *types.AugmentationBounty) bool {
+		if b.EscrowLocked != "" {
+			if v, ok := sdkmath_new_int_from_string(b.EscrowLocked); ok {
+				escrow = escrow.Add(v)
+			}
+		}
+		return false
+	})
+	// Sum vesting.
+	vesting := sdkmath_zero()
+	q.keeper.IterateTrainingFundDisbursements(ctx, func(d *types.TrainingFundDisbursement) bool {
+		if d.VestingAmount != "" {
+			if v, ok := sdkmath_new_int_from_string(d.VestingAmount); ok {
+				if d.ClawedBackAtBlock == 0 {
+					vesting = vesting.Add(v)
+				}
+			}
+		}
+		return false
+	})
+	available := bal.Amount.Sub(escrow).Sub(vesting)
+	if available.IsNegative() {
+		available = sdkmath_zero()
+	}
+	return &types.QueryTrainingFundBalanceResponse{
+		Balance:   bal.Amount.String(),
+		Escrowed:  escrow.String(),
+		Vesting:   vesting.String(),
+		Available: available.String(),
+	}, nil
+}
+
+// NormativeCorpus — iterates commitments and returns them tagged as normative.
+func (q *queryServer) NormativeCorpus(ctx context.Context, req *types.QueryNormativeCorpusRequest) (*types.QueryNormativeCorpusResponse, error) {
+	if req == nil {
+		req = &types.QueryNormativeCorpusRequest{}
+	}
+	limit := req.Limit
+	if limit == 0 || limit > 1000 {
+		limit = 100
+	}
+	offset := req.Offset
+	var entries []*types.NormativeCorpusEntry
+	var seen uint32
+	var total uint32
+	q.keeper.IterateNormativeCommitments(ctx, func(c *types.NormativeCommitment) bool {
+		total++
+		if seen < offset {
+			seen++
+			return false
+		}
+		if uint32(len(entries)) >= limit {
+			return false
+		}
+		entries = append(entries, &types.NormativeCorpusEntry{
+			CommitmentId: c.Id,
+			Content:      c.Statement,
+			Domain:       c.Category, // category serves as logical domain marker for this corpus
+			MethodId:     "",         // commitments have no methodology — that's the point
+			IsNormative:  true,
+		})
+		seen++
+		return false
+	})
+	return &types.QueryNormativeCorpusResponse{
+		Entries:             entries,
+		Total:               total,
+		SnapshotBlockHeight: uint64(sdk.UnwrapSDKContext(ctx).BlockHeight()),
+	}, nil
+}
+
+// DriftCorpus — iterates augmentations with DRIFT or INFERIOR verdicts.
+func (q *queryServer) DriftCorpus(ctx context.Context, req *types.QueryDriftCorpusRequest) (*types.QueryDriftCorpusResponse, error) {
+	if req == nil {
+		req = &types.QueryDriftCorpusRequest{}
+	}
+	limit := req.Limit
+	if limit == 0 || limit > 1000 {
+		limit = 100
+	}
+	offset := req.Offset
+	var entries []*types.DriftCorpusEntry
+	var seen uint32
+	var total uint32
+	q.keeper.IterateDriftAugmentations(ctx, func(a *types.Augmentation) bool {
+		total++
+		if seen < offset {
+			seen++
+			return false
+		}
+		if uint32(len(entries)) >= limit {
+			return false
+		}
+		entry := &types.DriftCorpusEntry{
+			AugmentationId: a.Id,
+			OriginalFactId: a.OriginalFactId,
+			VariantContent: a.VariantContent,
+			Verdict:        a.Verdict,
+			VerdictBlock:   a.VerdictBlock,
+		}
+		if a.BountyId != "" {
+			if bounty, ok := q.keeper.GetAugmentationBounty(ctx, a.BountyId); ok {
+				entry.MethodologyId = bounty.MethodologyId
+			}
+		}
+		entries = append(entries, entry)
+		seen++
+		return false
+	})
+	return &types.QueryDriftCorpusResponse{
+		Entries:             entries,
+		Total:               total,
+		SnapshotBlockHeight: uint64(sdk.UnwrapSDKContext(ctx).BlockHeight()),
+	}, nil
+}
+
+// ─── Helpers used above (tiny wrappers to avoid cluttering imports) ─────
+
+func crypto_address_of_module(name string) []byte {
+	return authtypes.NewModuleAddress(name)
+}
+
+func sdkmath_zero() sdkmath.Int {
+	return sdkmath.ZeroInt()
+}
+
+func sdkmath_new_int_from_string(s string) (sdkmath.Int, bool) {
+	return sdkmath.NewIntFromString(s)
 }

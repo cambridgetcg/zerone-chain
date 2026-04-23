@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
@@ -42,9 +43,14 @@ func (m *msgServer) AmendTokenizerSpec(ctx context.Context, msg *types.MsgAmendT
 	return &types.MsgAmendTokenizerSpecResponse{NewVersion: newSpec.Version}, nil
 }
 
-// AttributeContributions (Route B Wave 3b) — the model's owner posts the
-// fact_ids consumed by training. Builds the reverse index so any fact can
-// ask "which models used me?"
+// AttributeContributions (Route B Wave 3b; Wave 4 realignment) — the model's
+// owner posts the fact_ids consumed by training. Wave 4 adds:
+//   - Is-ought wall: ids resolving to NormativeCommitments are REJECTED and
+//     reported in rejected_commitment_count. Normative commitments must not
+//     generate training revenue; they are exported via NormativeCorpus.
+//   - Popper-weighted TVW: computed_tvw is the canonical revenue signal.
+//     total_weight is retained for audit but no longer drives payouts.
+//   - Per-fact calibration snapshot for audit trail.
 func (m *msgServer) AttributeContributions(ctx context.Context, msg *types.MsgAttributeContributions) (*types.MsgAttributeContributionsResponse, error) {
 	if msg == nil || msg.ModelId == "" {
 		return nil, fmt.Errorf("model_id required")
@@ -59,36 +65,37 @@ func (m *msgServer) AttributeContributions(ctx context.Context, msg *types.MsgAt
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	height := uint64(sdkCtx.BlockHeight())
 
-	// Deduplicate fact_ids and compute total weight as the sum of cited
-	// facts' corroboration + 1 (so every cited fact counts at least once).
-	seen := make(map[string]struct{})
-	var facts []string
+	// Is-ought wall: partition ids. Normative commitments are rejected.
+	facts, rejected := m.keeper.FilterIsOughtIds(ctx, msg.FactIds)
+
+	// Wave 3 total_weight (raw, for audit); Wave 4 computed TVW (Popper-weighted).
 	var totalWeight uint64
-	for _, f := range msg.FactIds {
-		if f == "" {
-			continue
-		}
-		if _, ok := seen[f]; ok {
-			continue
-		}
-		seen[f] = struct{}{}
-		facts = append(facts, f)
+	var computedTVW uint64
+	perFactCal := make([]uint64, 0, len(facts))
+	for _, f := range facts {
 		if fact, ok := m.keeper.GetFact(ctx, f); ok {
 			totalWeight += fact.CorroborationCount + 1
+			perFactCal = append(perFactCal, fact.SubmitterCalibrationSnapshotBps)
 		} else {
 			totalWeight += 1
+			perFactCal = append(perFactCal, 0)
 		}
+		tvw := m.keeper.ComputeTrainingValueWeight(ctx, f)
+		computedTVW += tvw.Final
 	}
 	if msg.TotalWeight != 0 {
-		totalWeight = msg.TotalWeight // allow explicit override
+		totalWeight = msg.TotalWeight // raw override; computed_tvw is NOT overridable
 	}
 
 	record := &types.ContributionRecord{
-		ModelId:           msg.ModelId,
-		FactIds:           facts,
-		AttributedBy:      msg.Owner,
-		AttributedAtBlock: height,
-		TotalWeight:       totalWeight,
+		ModelId:                  msg.ModelId,
+		FactIds:                  facts,
+		AttributedBy:             msg.Owner,
+		AttributedAtBlock:        height,
+		TotalWeight:              totalWeight,
+		ComputedTvw:              computedTVW,
+		RejectedCommitmentCount:  uint32(len(rejected)),
+		PerFactCalibrationBps:    perFactCal,
 	}
 	if err := m.keeper.SetContributionRecord(ctx, record); err != nil {
 		return nil, err
@@ -99,6 +106,8 @@ func (m *msgServer) AttributeContributions(ctx context.Context, msg *types.MsgAt
 		sdk.NewAttribute("attributed_by", msg.Owner),
 		sdk.NewAttribute("fact_count", fmt.Sprintf("%d", len(facts))),
 		sdk.NewAttribute("total_weight", fmt.Sprintf("%d", totalWeight)),
+		sdk.NewAttribute("computed_tvw", fmt.Sprintf("%d", computedTVW)),
+		sdk.NewAttribute("rejected_commitments", fmt.Sprintf("%d", len(rejected))),
 	))
 	return &types.MsgAttributeContributionsResponse{Recorded: uint32(len(facts))}, nil
 }
@@ -136,9 +145,11 @@ func (m *msgServer) AttestTraining(ctx context.Context, msg *types.MsgAttestTrai
 	return &types.MsgAttestTrainingResponse{}, nil
 }
 
-// CreateAugmentationBounty (Route B Wave 3e) — sponsor opens a bounty
-// pool for variant formulations of a target fact. Economic payout is a
-// follow-up; the on-chain record is sufficient for now.
+// CreateAugmentationBounty (Route B Wave 3e; Wave 4 realignment) — sponsor
+// opens a bounty pool for variant formulations of a target fact. Wave 4:
+// the sponsor LOCKS escrow (reward_per_variant × max_variants) into the
+// KnowledgeTrainingFund at creation. Payouts are released only by verifier
+// panel verdicts, never by the sponsor directly.
 func (m *msgServer) CreateAugmentationBounty(ctx context.Context, msg *types.MsgCreateAugmentationBounty) (*types.MsgCreateAugmentationBountyResponse, error) {
 	if msg == nil || msg.Id == "" {
 		return nil, fmt.Errorf("bounty id required")
@@ -149,7 +160,8 @@ func (m *msgServer) CreateAugmentationBounty(ctx context.Context, msg *types.Msg
 	if msg.TargetFactId == "" {
 		return nil, fmt.Errorf("target_fact_id required")
 	}
-	if _, ok := m.keeper.GetFact(ctx, msg.TargetFactId); !ok {
+	targetFact, ok := m.keeper.GetFact(ctx, msg.TargetFactId)
+	if !ok {
 		return nil, fmt.Errorf("target fact %s not found", msg.TargetFactId)
 	}
 	if _, exists := m.keeper.GetAugmentationBounty(ctx, msg.Id); exists {
@@ -160,6 +172,25 @@ func (m *msgServer) CreateAugmentationBounty(ctx context.Context, msg *types.Msg
 	}
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	height := uint64(sdkCtx.BlockHeight())
+
+	// Wave 4: escrow = reward_per_variant × max_variants × (1 + SUPERIOR bonus cap).
+	// Simpler: lock base × max and charge the bonus against the reserve at
+	// payout time. This keeps the basic case cheap for sponsors.
+	escrowAmount := sdkmath.NewIntFromUint64(msg.RewardPerVariant).Mul(sdkmath.NewIntFromUint64(uint64(msg.MaxVariants)))
+	// Pad for SUPERIOR bonus.
+	params, _ := m.keeper.GetParams(ctx)
+	bonusBps := params.ReformulationSuperiorBonusBps
+	if bonusBps == 0 {
+		bonusBps = 500_000
+	}
+	padding := escrowAmount.Mul(sdkmath.NewIntFromUint64(bonusBps)).Quo(sdkmath.NewIntFromUint64(1_000_000))
+	escrowTotal := escrowAmount.Add(padding)
+
+	if !escrowTotal.IsZero() {
+		if err := m.keeper.EscrowAugmentationBounty(ctx, msg.Sponsor, msg.Id, escrowTotal); err != nil {
+			return nil, fmt.Errorf("escrow failed: %w", err)
+		}
+	}
 
 	bounty := &types.AugmentationBounty{
 		Id:                msg.Id,
@@ -172,6 +203,8 @@ func (m *msgServer) CreateAugmentationBounty(ctx context.Context, msg *types.Msg
 		ExpiresAtBlock:    msg.ExpiresAtBlock,
 		Active:            true,
 		Description:       msg.Description,
+		EscrowLocked:      escrowTotal.String(),
+		MethodologyId:     targetFact.MethodId,
 	}
 	if err := m.keeper.SetAugmentationBounty(ctx, bounty); err != nil {
 		return nil, err
@@ -183,6 +216,8 @@ func (m *msgServer) CreateAugmentationBounty(ctx context.Context, msg *types.Msg
 		sdk.NewAttribute("target_fact_id", bounty.TargetFactId),
 		sdk.NewAttribute("reward_per_variant", fmt.Sprintf("%d", bounty.RewardPerVariant)),
 		sdk.NewAttribute("max_variants", fmt.Sprintf("%d", bounty.MaxVariants)),
+		sdk.NewAttribute("escrow_locked", bounty.EscrowLocked),
+		sdk.NewAttribute("methodology_id", bounty.MethodologyId),
 	))
 	return &types.MsgCreateAugmentationBountyResponse{}, nil
 }
@@ -249,8 +284,11 @@ func (m *msgServer) SubmitAugmentation(ctx context.Context, msg *types.MsgSubmit
 	return &types.MsgSubmitAugmentationResponse{}, nil
 }
 
-// AcceptAugmentation — sponsor (if bounty) or fact submitter (if volunteer)
-// marks a variant accepted. Increments the bounty's accepted count.
+// AcceptAugmentation (Route B Wave 3e; Wave 4 realignment) — RETAINED only
+// for volunteer augmentations whose original-fact submitter has elected to
+// accept, and as a legacy acceptor path where a passing verdict has already
+// been reached. Sponsors CANNOT use this to self-judge under Wave 4; the
+// only bounty path to acceptance is VoteOnAugmentation reaching consensus.
 func (m *msgServer) AcceptAugmentation(ctx context.Context, msg *types.MsgAcceptAugmentation) (*types.MsgAcceptAugmentationResponse, error) {
 	if msg == nil || msg.AugmentationId == "" {
 		return nil, fmt.Errorf("augmentation_id required")
@@ -263,39 +301,27 @@ func (m *msgServer) AcceptAugmentation(ctx context.Context, msg *types.MsgAccept
 		return nil, fmt.Errorf("augmentation %s already accepted", msg.AugmentationId)
 	}
 
-	// Authorisation
-	var authorised bool
 	if aug.BountyId != "" {
+		// Wave 4: sponsor can no longer self-accept. The only legal way to
+		// mark accepted on a bounty is a finalized passing verdict. If the
+		// verdict is already final and passing, this call is effectively a
+		// no-op that emits the accept event for downstream consumers.
+		passing := aug.Verdict == types.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT ||
+			aug.Verdict == types.AugmentationVerdict_AUGMENTATION_VERDICT_SUPERIOR
+		if !passing {
+			return nil, fmt.Errorf("bounty augmentations require a verifier-panel passing verdict; see VoteOnAugmentation")
+		}
 		bounty, ok := m.keeper.GetAugmentationBounty(ctx, aug.BountyId)
 		if !ok {
 			return nil, fmt.Errorf("bounty %s vanished", aug.BountyId)
 		}
-		if !bounty.Active {
-			return nil, fmt.Errorf("bounty %s is not active", bounty.Id)
-		}
-		if bounty.AcceptedVariants >= bounty.MaxVariants {
-			return nil, fmt.Errorf("bounty %s is saturated", bounty.Id)
-		}
-		if msg.Acceptor == bounty.SponsorAddress {
-			authorised = true
-		}
-		if authorised {
-			bounty.AcceptedVariants++
-			if bounty.AcceptedVariants >= bounty.MaxVariants {
-				bounty.Active = false
-			}
-			if err := m.keeper.SetAugmentationBounty(ctx, bounty); err != nil {
-				return nil, err
-			}
-		}
+		_ = bounty // defensive: verdict finalizer already processed bounty state
 	} else {
-		// Volunteer augmentation: original fact's submitter may accept.
-		if fact, ok := m.keeper.GetFact(ctx, aug.OriginalFactId); ok && fact.Submitter == msg.Acceptor {
-			authorised = true
+		// Volunteer path UNCHANGED: original fact's submitter may accept.
+		fact, ok := m.keeper.GetFact(ctx, aug.OriginalFactId)
+		if !ok || fact.Submitter != msg.Acceptor {
+			return nil, fmt.Errorf("only the original fact's submitter may accept a volunteer augmentation")
 		}
-	}
-	if !authorised {
-		return nil, fmt.Errorf("only the bounty sponsor (or original fact submitter for volunteer augmentations) may accept")
 	}
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)

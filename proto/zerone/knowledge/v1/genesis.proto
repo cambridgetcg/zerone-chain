@@ -213,6 +213,41 @@ message Params {
   // so crowd-followers earn less than independent investigators.
   // Score source: ValidatorIndependenceScore in x/knowledge/keeper/diversity.go.
   uint64 independence_reward_strength_bps = 135; // default: 300,000 (max 30% reward reduction)
+
+  // ─── Route B Wave 4: economic realignment ───────────────────────────────
+  // Reformulation rounds: how many verifier votes before a verdict is final.
+  uint64 reformulation_min_panel_votes = 136; // default: 3
+  // Fraction of verifiers that must agree to finalize a non-pending verdict.
+  uint64 reformulation_consensus_bps   = 137; // default: 666,000 (66.6%)
+  // SUPERIOR verdict bonus as a multiplier of reward_per_variant.
+  uint64 reformulation_superior_bonus_bps = 138; // default: 500,000 (50% bonus)
+  // Percentage of remaining-bounty escrow charged as a "kept-market-open"
+  // fee when the sponsor cancels or the bounty expires with unspent escrow.
+  uint64 augmentation_expiry_fee_bps = 139; // default: 30,000 (3%)
+  // Methodology normalization table. Keys are methodology_id strings in the
+  // Methodology registry; values are multipliers in BPS applied to TVW so
+  // methodologies with naturally-low corroboration don't get starved.
+  // Absent keys → 1,000,000 (1.0×). Set at genesis.
+  map<string, uint64> methodology_normalization_bps = 140;
+  // Vindication multiplier — facts vindicated from minority status get this
+  // fraction × TVW. >1.0× rewards epistemic courage.
+  uint64 vindication_tvw_multiplier_bps = 141; // default: 2,500,000 (2.5×)
+  // Disproval clawback — after a fact goes DISPROVEN, this fraction of the
+  // recent training revenue is clawed back from the submitter into the
+  // research fund.
+  uint64 disproval_clawback_bps = 142; // default: 500,000 (50%)
+  uint64 disproval_clawback_window_epochs = 143; // default: 30
+  // Training-fund post-hoc disbursement params.
+  uint64 training_fund_calibration_floor_bps = 144; // default: 500,000 (50%) — below = no disbursement
+  uint64 training_fund_vesting_epochs        = 145; // default: 60
+  uint64 training_fund_methodology_diversity_bonus_bps = 146; // default: 100,000 per distinct method beyond 1
+  string training_fund_base_reward          = 147; // default: "1000000000" (1,000 ZRN in uzrn)
+  // Contribution challenge — challenger bond size (uzrn as string).
+  string contribution_challenge_bond        = 148; // default: "5000000" (5 ZRN)
+  uint64 contribution_challenge_reward_multiplier_bps = 149; // default: 2,000,000 (winner takes bond × 2)
+  // Sponsor-veto forfeiture: if a sponsor vetoes a passing verdict, they
+  // forfeit this fraction of the variant payout to the research fund.
+  uint64 sponsor_veto_forfeit_bps = 150; // default: 1,000,000 (100% — full forfeiture)
 }
 
 // GenesisState is the genesis state of the knowledge module.

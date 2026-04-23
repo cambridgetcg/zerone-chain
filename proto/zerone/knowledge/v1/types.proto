@@ -79,6 +79,7 @@ enum RelationType {
   RELATION_TYPE_GENERALIZES  = 5;  // This fact is a broader version of the target
   RELATION_TYPE_SUPERSEDES   = 6;  // This fact replaces the target (newer/better)
   RELATION_TYPE_CITES        = 7;  // This fact cites the target as source material
+  RELATION_TYPE_REFORMULATES = 8;  // This fact is a semantically-equivalent surface variant (Route B Wave 4)
 }
 
 // InferenceType names HOW the source fact was derived from the target.
@@ -305,6 +306,24 @@ message Fact {
   // format is a string (JSON-encoded steps) so training pipelines can
   // schema-evolve without proto churn.
   string reasoning_trace         = 69;
+
+  // ─── Economic realignment (Route B Wave 4) ─────────────────────────────
+  // Submitter's calibration score at the moment this fact was *accepted*.
+  // Snapshotted so later revenue weighting is not retroactively gameable:
+  // a submitter who improves later can't farm old facts, and a submitter
+  // who declines later can't be penalised on work already done. 0 when
+  // pre-calibration or unknown.
+  uint64 submitter_calibration_snapshot_bps = 70;
+  // Cumulative training-use revenue earned across all contribution records
+  // citing this fact (uzrn). Drives clawback math when the fact goes
+  // DISPROVEN.
+  string training_revenue_earned = 71;
+  // Revenue earned in the last DisprovalClawbackWindowEpochs epochs, used
+  // exclusively for the clawback calculation. Resets each epoch.
+  string training_revenue_earned_recent = 72;
+  // Block height at which disproval triggered the clawback; 0 = not disproven
+  // for revenue purposes. Prevents double-clawing.
+  uint64 revenue_clawback_block = 73;
 }
 
 // TrainingQualityTier segments facts by suitability as training examples.
@@ -428,30 +447,60 @@ message ContributionRecord {
   repeated string fact_ids   = 2;
   string attributed_by       = 3;   // operator / owner posting the attribution
   uint64 attributed_at_block = 4;
-  // total_weight sums per-fact weights (e.g. corroboration count) so a
-  // quick contributor-share calculation doesn't require re-iterating facts.
+  // total_weight sums per-fact (corroboration+1). RETAINED as a raw audit
+  // figure; not used for revenue. Revenue is computed via the TVW field
+  // below (Wave 4 replaces popularity-weighting with Popper-weighting).
   uint64 total_weight        = 5;
+  // ─── Wave 4: Popper-weighted training-value weight ─────────────────────
+  // Sum of per-fact TrainingValueWeight at the moment of attribution,
+  // snapshot-locked so later fact-state changes can't retroactively inflate
+  // or deflate the claim. Revenue share = TVW_share / total_TVW_across_models.
+  uint64 computed_tvw          = 6;
+  // Count of fact_ids that resolved to NormativeCommitments at attribution
+  // time and were REJECTED (is-ought wall). Always 0 on success; non-zero
+  // only if the handler detected and blocked attempted laundering.
+  uint32 rejected_commitment_count = 7;
+  // Block snapshot of the submitter calibration scores at attribution time,
+  // parallel to fact_ids[]. Used in TVW computation; kept here so the audit
+  // trail shows exactly what weights were assigned.
+  repeated uint64 per_fact_calibration_bps = 8;
 }
 
 // AugmentationBounty is an open offer to produce variant formulations of a
-// target fact. Sponsors lock a reward; researchers submit variants. Chain
-// pays out as variants are accepted, up to max_variants (Route B Wave 3e).
+// target fact. Sponsors lock a reward *in escrow* (Wave 4); payout routes
+// through a verifier-panel verdict, never through the sponsor directly.
 message AugmentationBounty {
   string id                   = 1;
   string sponsor_address      = 2;
   string target_fact_id       = 3;
-  uint64 reward_per_variant   = 4;  // uzrn paid per accepted variant
+  uint64 reward_per_variant   = 4;  // uzrn paid per EQUIVALENT/SUPERIOR variant
   uint32 max_variants         = 5;
   uint32 accepted_variants    = 6;
   uint64 created_at_block     = 7;
   uint64 expires_at_block     = 8;
   bool   active               = 9;
   string description          = 10; // what kind of variant is wanted
+  // ─── Wave 4: escrow + method constraint ────────────────────────────────
+  // Total uzrn locked into the KnowledgeTrainingFund at bounty creation:
+  // reward_per_variant × max_variants. Released on accepted verdicts and
+  // returned (minus fee) on expiry.
+  string escrow_locked      = 11;
+  // Methodology the target fact was adjudicated under. Copied at creation
+  // so the verifier panel judges equivalence *under the same methodology*.
+  string methodology_id     = 12;
 }
 
-// Augmentation is a variant formulation of an original fact. Variants
-// preserve semantic content but rephrase; they widen the training corpus
-// without compromising provenance (the original still anchors the claim).
+// AugmentationVerdict is the verifier-panel outcome for a reformulation.
+enum AugmentationVerdict {
+  AUGMENTATION_VERDICT_PENDING     = 0;  // Round in progress
+  AUGMENTATION_VERDICT_EQUIVALENT  = 1;  // Meaning preserved under the claimed methodology → payout
+  AUGMENTATION_VERDICT_SUPERIOR    = 2;  // Same meaning, clearer/more precise → payout + bonus
+  AUGMENTATION_VERDICT_INFERIOR    = 3;  // Meaning preserved but less faithful → no payout, archived
+  AUGMENTATION_VERDICT_DRIFT       = 4;  // Meaning changed → no payout, archived in DriftCorpus
+}
+
+// Augmentation is a variant formulation of an original fact. Acceptance
+// requires a verifier-panel verdict (Wave 4) — the sponsor never judges.
 message Augmentation {
   string id                     = 1;
   string bounty_id              = 2;  // empty = volunteer (unpaid) augmentation
@@ -460,9 +509,74 @@ message Augmentation {
   string variant_reasoning_trace = 5;  // optional; parallel to Fact.reasoning_trace
   string submitter              = 6;
   uint64 created_at_block       = 7;
-  bool   accepted               = 8;
+  bool   accepted               = 8;  // true iff verdict ∈ {EQUIVALENT, SUPERIOR}
   uint64 accepted_at_block      = 9;
   string acceptance_note        = 10; // optional acceptance comment
+  // ─── Wave 4: verifier-panel verdict ───────────────────────────────────
+  AugmentationVerdict verdict        = 11;
+  uint64 verdict_block               = 12;
+  // Per-verifier votes collected during the round (verifier → verdict int).
+  // Encoded as parallel arrays for deterministic marshalling.
+  repeated string verdict_voters     = 13;
+  repeated AugmentationVerdict verdict_votes = 14;
+  // Sponsor-veto flag: if the sponsor formally vetoes a passing verdict,
+  // the payout is forfeited to the research fund. Preserved for audit.
+  bool sponsor_vetoed                = 15;
+  // Amount actually paid out for this variant (0 if not paid). Captures the
+  // SUPERIOR bonus too.
+  string payout_amount               = 16;
+}
+
+// ─── Wave 4: contribution attribution challenges ─────────────────────────
+
+// ContributionChallenge is a bonded dispute over whether a model's declared
+// ContributionRecord is accurate: a fact submitter asserts under-reporting
+// (the model used their fact but didn't attribute) or over-reporting (the
+// owner listed a colluder's fact that wasn't used). Resolves through the
+// standard PoT verification layer.
+message ContributionChallenge {
+  string id                   = 1;
+  string model_id             = 2;
+  string challenger           = 3;    // fact submitter
+  string disputed_fact_id     = 4;    // the fact whose attribution is in question
+  // "missing" — challenger claims the model trained on the fact but it isn't
+  // listed in the ContributionRecord. "fraudulent" — challenger claims the
+  // listed fact was never actually trained on.
+  string dispute_type         = 5;
+  string bond                 = 6;    // uzrn locked by challenger
+  uint64 created_at_block     = 7;
+  string evidence             = 8;    // free-form evidence bundle (usually an eval prompt + response)
+  // Resolution
+  string status               = 9;    // "open" | "upheld" | "rejected" | "withdrawn"
+  uint64 resolved_at_block    = 10;
+  string resolver             = 11;   // verifier panel representative (or authority for disputes-of-last-resort)
+  string resolution_note      = 12;
+}
+
+// ─── Wave 4: training fund disbursements ──────────────────────────────────
+
+// TrainingFundDisbursement is a post-hoc reward to a pipeline whose ModelCard
+// has demonstrated calibration in live deployment. 50% is released at claim
+// time; 50% is held in vesting escrow and clawed back if calibration drops.
+message TrainingFundDisbursement {
+  string id                       = 1;
+  string model_id                 = 2;
+  string pipeline_id              = 3;
+  string claimant                 = 4;
+  uint64 claimed_at_block         = 5;
+  // Amounts (uzrn as string — exceeds uint64 in edge cases).
+  string total_amount             = 6;
+  string released_amount          = 7;  // paid immediately (50%)
+  string vesting_amount           = 8;  // held until vesting_end_block
+  uint64 vesting_end_block        = 9;
+  // Input signals frozen at claim time.
+  uint64 calibration_score_at_claim_bps = 10;
+  uint64 methodology_diversity_count    = 11; // distinct methodologies in corpus_filter that produced GOLD facts
+  bool   reproducibility_proof_present  = 12; // reserved for verification axis; false for now
+  // Clawback state.
+  string clawed_back_amount       = 13;
+  uint64 clawed_back_at_block     = 14;
+  string clawback_reason          = 15;  // "calibration_drop", "deprecated", ""
 }
 
 // AgentMethodStats tracks calibration for a single submitter within a single
@@ -499,6 +613,7 @@ message AgentCalibration {
 
   uint64 first_submission_block = 13;
   uint64 last_submission_block  = 14;
+  // NB: Wave 4 fields start at 20 to avoid clashing with per_method / score fields below.
 
   // Per-method breakdown. Key = method_id.
   map<string, AgentMethodStats> per_method = 15;

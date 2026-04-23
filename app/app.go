@@ -310,6 +310,7 @@ var (
 		zeroneontologytypes.ModuleName:             nil,                              // ontology: receive proposal stake
 		zeroneknowledgetypes.ModuleName:            {authtypes.Burner},               // knowledge: burn slashed claim stakes
 		zeroneknowledgetypes.BootstrapFundModuleName:    {authtypes.Minter},              // knowledge_bootstrap_fund: genesis mint
+		zeroneknowledgetypes.TrainingFundModuleName:      {authtypes.Minter},              // knowledge_training_fund: Wave 4 augmentation escrow + post-hoc disbursements + vesting
 		zeroneknowledgetypes.VindicationEscrowModuleName: nil,                           // vindication_escrow: holds minority slashes until vindication or expiry
 		zeronetokenstypes.ModuleName:               {authtypes.Minter, authtypes.Burner}, // tokens: mint/burn for wrap/unwrap + emissions
 		zeronebillingtypes.ModuleName:              {authtypes.Burner},                        // billing: revenue split

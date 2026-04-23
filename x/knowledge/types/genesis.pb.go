@@ -200,8 +200,42 @@ type Params struct {
 	// so crowd-followers earn less than independent investigators.
 	// Score source: ValidatorIndependenceScore in x/knowledge/keeper/diversity.go.
 	IndependenceRewardStrengthBps uint64 `protobuf:"varint,135,opt,name=independence_reward_strength_bps,json=independenceRewardStrengthBps,proto3" json:"independence_reward_strength_bps,omitempty"` // default: 300,000 (max 30% reward reduction)
-	unknownFields                 protoimpl.UnknownFields
-	sizeCache                     protoimpl.SizeCache
+	// ─── Route B Wave 4: economic realignment ───────────────────────────────
+	// Reformulation rounds: how many verifier votes before a verdict is final.
+	ReformulationMinPanelVotes uint64 `protobuf:"varint,136,opt,name=reformulation_min_panel_votes,json=reformulationMinPanelVotes,proto3" json:"reformulation_min_panel_votes,omitempty"` // default: 3
+	// Fraction of verifiers that must agree to finalize a non-pending verdict.
+	ReformulationConsensusBps uint64 `protobuf:"varint,137,opt,name=reformulation_consensus_bps,json=reformulationConsensusBps,proto3" json:"reformulation_consensus_bps,omitempty"` // default: 666,000 (66.6%)
+	// SUPERIOR verdict bonus as a multiplier of reward_per_variant.
+	ReformulationSuperiorBonusBps uint64 `protobuf:"varint,138,opt,name=reformulation_superior_bonus_bps,json=reformulationSuperiorBonusBps,proto3" json:"reformulation_superior_bonus_bps,omitempty"` // default: 500,000 (50% bonus)
+	// Percentage of remaining-bounty escrow charged as a "kept-market-open"
+	// fee when the sponsor cancels or the bounty expires with unspent escrow.
+	AugmentationExpiryFeeBps uint64 `protobuf:"varint,139,opt,name=augmentation_expiry_fee_bps,json=augmentationExpiryFeeBps,proto3" json:"augmentation_expiry_fee_bps,omitempty"` // default: 30,000 (3%)
+	// Methodology normalization table. Keys are methodology_id strings in the
+	// Methodology registry; values are multipliers in BPS applied to TVW so
+	// methodologies with naturally-low corroboration don't get starved.
+	// Absent keys → 1,000,000 (1.0×). Set at genesis.
+	MethodologyNormalizationBps map[string]uint64 `protobuf:"bytes,140,rep,name=methodology_normalization_bps,json=methodologyNormalizationBps,proto3" json:"methodology_normalization_bps,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	// Vindication multiplier — facts vindicated from minority status get this
+	// fraction × TVW. >1.0× rewards epistemic courage.
+	VindicationTvwMultiplierBps uint64 `protobuf:"varint,141,opt,name=vindication_tvw_multiplier_bps,json=vindicationTvwMultiplierBps,proto3" json:"vindication_tvw_multiplier_bps,omitempty"` // default: 2,500,000 (2.5×)
+	// Disproval clawback — after a fact goes DISPROVEN, this fraction of the
+	// recent training revenue is clawed back from the submitter into the
+	// research fund.
+	DisprovalClawbackBps          uint64 `protobuf:"varint,142,opt,name=disproval_clawback_bps,json=disprovalClawbackBps,proto3" json:"disproval_clawback_bps,omitempty"`                              // default: 500,000 (50%)
+	DisprovalClawbackWindowEpochs uint64 `protobuf:"varint,143,opt,name=disproval_clawback_window_epochs,json=disprovalClawbackWindowEpochs,proto3" json:"disproval_clawback_window_epochs,omitempty"` // default: 30
+	// Training-fund post-hoc disbursement params.
+	TrainingFundCalibrationFloorBps          uint64 `protobuf:"varint,144,opt,name=training_fund_calibration_floor_bps,json=trainingFundCalibrationFloorBps,proto3" json:"training_fund_calibration_floor_bps,omitempty"`                              // default: 500,000 (50%) — below = no disbursement
+	TrainingFundVestingEpochs                uint64 `protobuf:"varint,145,opt,name=training_fund_vesting_epochs,json=trainingFundVestingEpochs,proto3" json:"training_fund_vesting_epochs,omitempty"`                                                  // default: 60
+	TrainingFundMethodologyDiversityBonusBps uint64 `protobuf:"varint,146,opt,name=training_fund_methodology_diversity_bonus_bps,json=trainingFundMethodologyDiversityBonusBps,proto3" json:"training_fund_methodology_diversity_bonus_bps,omitempty"` // default: 100,000 per distinct method beyond 1
+	TrainingFundBaseReward                   string `protobuf:"bytes,147,opt,name=training_fund_base_reward,json=trainingFundBaseReward,proto3" json:"training_fund_base_reward,omitempty"`                                                            // default: "1000000000" (1,000 ZRN in uzrn)
+	// Contribution challenge — challenger bond size (uzrn as string).
+	ContributionChallengeBond                string `protobuf:"bytes,148,opt,name=contribution_challenge_bond,json=contributionChallengeBond,proto3" json:"contribution_challenge_bond,omitempty"`                                                   // default: "5000000" (5 ZRN)
+	ContributionChallengeRewardMultiplierBps uint64 `protobuf:"varint,149,opt,name=contribution_challenge_reward_multiplier_bps,json=contributionChallengeRewardMultiplierBps,proto3" json:"contribution_challenge_reward_multiplier_bps,omitempty"` // default: 2,000,000 (winner takes bond × 2)
+	// Sponsor-veto forfeiture: if a sponsor vetoes a passing verdict, they
+	// forfeit this fraction of the variant payout to the research fund.
+	SponsorVetoForfeitBps uint64 `protobuf:"varint,150,opt,name=sponsor_veto_forfeit_bps,json=sponsorVetoForfeitBps,proto3" json:"sponsor_veto_forfeit_bps,omitempty"` // default: 1,000,000 (100% — full forfeiture)
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1179,6 +1213,111 @@ func (x *Params) GetIndependenceRewardStrengthBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetReformulationMinPanelVotes() uint64 {
+	if x != nil {
+		return x.ReformulationMinPanelVotes
+	}
+	return 0
+}
+
+func (x *Params) GetReformulationConsensusBps() uint64 {
+	if x != nil {
+		return x.ReformulationConsensusBps
+	}
+	return 0
+}
+
+func (x *Params) GetReformulationSuperiorBonusBps() uint64 {
+	if x != nil {
+		return x.ReformulationSuperiorBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetAugmentationExpiryFeeBps() uint64 {
+	if x != nil {
+		return x.AugmentationExpiryFeeBps
+	}
+	return 0
+}
+
+func (x *Params) GetMethodologyNormalizationBps() map[string]uint64 {
+	if x != nil {
+		return x.MethodologyNormalizationBps
+	}
+	return nil
+}
+
+func (x *Params) GetVindicationTvwMultiplierBps() uint64 {
+	if x != nil {
+		return x.VindicationTvwMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetDisprovalClawbackBps() uint64 {
+	if x != nil {
+		return x.DisprovalClawbackBps
+	}
+	return 0
+}
+
+func (x *Params) GetDisprovalClawbackWindowEpochs() uint64 {
+	if x != nil {
+		return x.DisprovalClawbackWindowEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetTrainingFundCalibrationFloorBps() uint64 {
+	if x != nil {
+		return x.TrainingFundCalibrationFloorBps
+	}
+	return 0
+}
+
+func (x *Params) GetTrainingFundVestingEpochs() uint64 {
+	if x != nil {
+		return x.TrainingFundVestingEpochs
+	}
+	return 0
+}
+
+func (x *Params) GetTrainingFundMethodologyDiversityBonusBps() uint64 {
+	if x != nil {
+		return x.TrainingFundMethodologyDiversityBonusBps
+	}
+	return 0
+}
+
+func (x *Params) GetTrainingFundBaseReward() string {
+	if x != nil {
+		return x.TrainingFundBaseReward
+	}
+	return ""
+}
+
+func (x *Params) GetContributionChallengeBond() string {
+	if x != nil {
+		return x.ContributionChallengeBond
+	}
+	return ""
+}
+
+func (x *Params) GetContributionChallengeRewardMultiplierBps() uint64 {
+	if x != nil {
+		return x.ContributionChallengeRewardMultiplierBps
+	}
+	return 0
+}
+
+func (x *Params) GetSponsorVetoForfeitBps() uint64 {
+	if x != nil {
+		return x.SponsorVetoForfeitBps
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                   protoimpl.MessageState  `protogen:"open.v1"`
@@ -1276,7 +1415,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x93A\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xc8J\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1413,7 +1552,25 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x19observation_window_blocks\x18\x84\x01 \x01(\x04R\x17observationWindowBlocks\x127\n" +
 	"\x17min_headcount_agreement\x18\x85\x01 \x01(\x04R\x15minHeadcountAgreement\x12H\n" +
 	" challenge_confidence_scaling_bps\x18\x86\x01 \x01(\x04R\x1dchallengeConfidenceScalingBps\x12H\n" +
-	" independence_reward_strength_bps\x18\x87\x01 \x01(\x04R\x1dindependenceRewardStrengthBps\"\xcd\x03\n" +
+	" independence_reward_strength_bps\x18\x87\x01 \x01(\x04R\x1dindependenceRewardStrengthBps\x12B\n" +
+	"\x1dreformulation_min_panel_votes\x18\x88\x01 \x01(\x04R\x1areformulationMinPanelVotes\x12?\n" +
+	"\x1breformulation_consensus_bps\x18\x89\x01 \x01(\x04R\x19reformulationConsensusBps\x12H\n" +
+	" reformulation_superior_bonus_bps\x18\x8a\x01 \x01(\x04R\x1dreformulationSuperiorBonusBps\x12>\n" +
+	"\x1baugmentation_expiry_fee_bps\x18\x8b\x01 \x01(\x04R\x18augmentationExpiryFeeBps\x12\x81\x01\n" +
+	"\x1dmethodology_normalization_bps\x18\x8c\x01 \x03(\v2<.zerone.knowledge.v1.Params.MethodologyNormalizationBpsEntryR\x1bmethodologyNormalizationBps\x12D\n" +
+	"\x1evindication_tvw_multiplier_bps\x18\x8d\x01 \x01(\x04R\x1bvindicationTvwMultiplierBps\x125\n" +
+	"\x16disproval_clawback_bps\x18\x8e\x01 \x01(\x04R\x14disprovalClawbackBps\x12H\n" +
+	" disproval_clawback_window_epochs\x18\x8f\x01 \x01(\x04R\x1ddisprovalClawbackWindowEpochs\x12M\n" +
+	"#training_fund_calibration_floor_bps\x18\x90\x01 \x01(\x04R\x1ftrainingFundCalibrationFloorBps\x12@\n" +
+	"\x1ctraining_fund_vesting_epochs\x18\x91\x01 \x01(\x04R\x19trainingFundVestingEpochs\x12`\n" +
+	"-training_fund_methodology_diversity_bonus_bps\x18\x92\x01 \x01(\x04R(trainingFundMethodologyDiversityBonusBps\x12:\n" +
+	"\x19training_fund_base_reward\x18\x93\x01 \x01(\tR\x16trainingFundBaseReward\x12?\n" +
+	"\x1bcontribution_challenge_bond\x18\x94\x01 \x01(\tR\x19contributionChallengeBond\x12_\n" +
+	",contribution_challenge_reward_multiplier_bps\x18\x95\x01 \x01(\x04R(contributionChallengeRewardMultiplierBps\x128\n" +
+	"\x18sponsor_veto_forfeit_bps\x18\x96\x01 \x01(\x04R\x15sponsorVetoForfeitBps\x1aN\n" +
+	" MethodologyNormalizationBpsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x04R\x05value:\x028\x01\"\xcd\x03\n" +
 	"\fGenesisState\x123\n" +
 	"\x06params\x18\x01 \x01(\v2\x1b.zerone.knowledge.v1.ParamsR\x06params\x12/\n" +
 	"\x05facts\x18\x02 \x03(\v2\x19.zerone.knowledge.v1.FactR\x05facts\x12A\n" +
@@ -1435,28 +1592,30 @@ func file_zerone_knowledge_v1_genesis_proto_rawDescGZIP() []byte {
 	return file_zerone_knowledge_v1_genesis_proto_rawDescData
 }
 
-var file_zerone_knowledge_v1_genesis_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_zerone_knowledge_v1_genesis_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_zerone_knowledge_v1_genesis_proto_goTypes = []any{
 	(*Params)(nil),               // 0: zerone.knowledge.v1.Params
 	(*GenesisState)(nil),         // 1: zerone.knowledge.v1.GenesisState
-	(*Fact)(nil),                 // 2: zerone.knowledge.v1.Fact
-	(*Claim)(nil),                // 3: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),    // 4: zerone.knowledge.v1.VerificationRound
-	(*Domain)(nil),               // 5: zerone.knowledge.v1.Domain
-	(*CommonKnowledgeEntry)(nil), // 6: zerone.knowledge.v1.CommonKnowledgeEntry
+	nil,                          // 2: zerone.knowledge.v1.Params.MethodologyNormalizationBpsEntry
+	(*Fact)(nil),                 // 3: zerone.knowledge.v1.Fact
+	(*Claim)(nil),                // 4: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),    // 5: zerone.knowledge.v1.VerificationRound
+	(*Domain)(nil),               // 6: zerone.knowledge.v1.Domain
+	(*CommonKnowledgeEntry)(nil), // 7: zerone.knowledge.v1.CommonKnowledgeEntry
 }
 var file_zerone_knowledge_v1_genesis_proto_depIdxs = []int32{
-	0, // 0: zerone.knowledge.v1.GenesisState.params:type_name -> zerone.knowledge.v1.Params
-	2, // 1: zerone.knowledge.v1.GenesisState.facts:type_name -> zerone.knowledge.v1.Fact
-	3, // 2: zerone.knowledge.v1.GenesisState.pending_claims:type_name -> zerone.knowledge.v1.Claim
-	4, // 3: zerone.knowledge.v1.GenesisState.active_rounds:type_name -> zerone.knowledge.v1.VerificationRound
-	5, // 4: zerone.knowledge.v1.GenesisState.domains:type_name -> zerone.knowledge.v1.Domain
-	6, // 5: zerone.knowledge.v1.GenesisState.common_knowledge:type_name -> zerone.knowledge.v1.CommonKnowledgeEntry
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	2, // 0: zerone.knowledge.v1.Params.methodology_normalization_bps:type_name -> zerone.knowledge.v1.Params.MethodologyNormalizationBpsEntry
+	0, // 1: zerone.knowledge.v1.GenesisState.params:type_name -> zerone.knowledge.v1.Params
+	3, // 2: zerone.knowledge.v1.GenesisState.facts:type_name -> zerone.knowledge.v1.Fact
+	4, // 3: zerone.knowledge.v1.GenesisState.pending_claims:type_name -> zerone.knowledge.v1.Claim
+	5, // 4: zerone.knowledge.v1.GenesisState.active_rounds:type_name -> zerone.knowledge.v1.VerificationRound
+	6, // 5: zerone.knowledge.v1.GenesisState.domains:type_name -> zerone.knowledge.v1.Domain
+	7, // 6: zerone.knowledge.v1.GenesisState.common_knowledge:type_name -> zerone.knowledge.v1.CommonKnowledgeEntry
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_genesis_proto_init() }
@@ -1471,7 +1630,7 @@ func file_zerone_knowledge_v1_genesis_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_genesis_proto_rawDesc), len(file_zerone_knowledge_v1_genesis_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

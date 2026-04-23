@@ -17,6 +17,10 @@ const (
 	RouterKey = ModuleName
 	// BootstrapFundModuleName is the module account that holds the knowledge bootstrap fund.
 	BootstrapFundModuleName = "knowledge_bootstrap_fund"
+	// TrainingFundModuleName is the module account that holds augmentation
+	// escrow, training fund disbursements (with vesting), and research fund
+	// forfeitures collected under Route B Wave 4.
+	TrainingFundModuleName = "knowledge_training_fund"
 )
 
 // Store key prefixes — one byte per sub-namespace.
@@ -158,6 +162,15 @@ var (
 	AugmentationKeyPrefix          = []byte{0x63} // 0x63 | augID → Augmentation
 	AugmentationByFactKeyPrefix    = []byte{0x64} // 0x64 | factID | augID → marker
 	AugmentationByBountyKeyPrefix  = []byte{0x65} // 0x65 | bountyID | augID → marker
+
+	// ─── Route B Wave 4: economic realignment ──────────────────────────
+	ContributionChallengeKeyPrefix          = []byte{0x66} // 0x66 | challenge_id → ContributionChallenge
+	ContributionChallengeByModelKeyPrefix   = []byte{0x67} // 0x67 | model_id | challenge_id → 1 (reverse index)
+	OpenContributionChallengeKeyPrefix      = []byte{0x68} // 0x68 | challenge_id → 1 (open-only set)
+	TrainingFundDisbursementKeyPrefix       = []byte{0x69} // 0x69 | disbursement_id → TrainingFundDisbursement
+	TrainingFundDisbursementByModelPrefix   = []byte{0x6A} // 0x6A | model_id | disbursement_id → 1
+	TrainingFundEscrowLockedKeyPrefix       = []byte{0x6B} // 0x6B | bounty_id → uzrn string (redundant bookkeeping for fast totals)
+	TrainingFundVestingKeyPrefix            = []byte{0x6C} // 0x6C | disbursement_id → uzrn string (redundant)
 )
 
 // MethodologyKey returns the store key for a methodology by ID.
@@ -533,4 +546,57 @@ func CompletedRoundBlockPrefix(block uint64) []byte {
 	binary.BigEndian.PutUint64(buf, block)
 	key = append(key, buf...)
 	return key
+}
+
+// ─── Route B Wave 4: economic realignment key constructors ────────────────
+
+// ContributionChallengeKey returns the store key for a challenge by id.
+func ContributionChallengeKey(id string) []byte {
+	return append(append([]byte{}, ContributionChallengeKeyPrefix...), []byte(id)...)
+}
+
+// ContributionChallengeByModelKey returns the (model, challenge) reverse key.
+func ContributionChallengeByModelKey(modelID, challengeID string) []byte {
+	out := append([]byte{}, ContributionChallengeByModelKeyPrefix...)
+	out = append(out, []byte(modelID)...)
+	out = append(out, 0)
+	out = append(out, []byte(challengeID)...)
+	return out
+}
+
+// ContributionChallengeByModelPrefix returns the iteration prefix for a model.
+func ContributionChallengeByModelPrefix(modelID string) []byte {
+	out := append([]byte{}, ContributionChallengeByModelKeyPrefix...)
+	out = append(out, []byte(modelID)...)
+	out = append(out, 0)
+	return out
+}
+
+// OpenContributionChallengeKey returns the set key marking an open challenge.
+func OpenContributionChallengeKey(id string) []byte {
+	return append(append([]byte{}, OpenContributionChallengeKeyPrefix...), []byte(id)...)
+}
+
+// TrainingFundDisbursementKey returns the store key for a disbursement by id.
+func TrainingFundDisbursementKey(id string) []byte {
+	return append(append([]byte{}, TrainingFundDisbursementKeyPrefix...), []byte(id)...)
+}
+
+// TrainingFundDisbursementByModelKey is the reverse index.
+func TrainingFundDisbursementByModelKey(modelID, disbursementID string) []byte {
+	out := append([]byte{}, TrainingFundDisbursementByModelPrefix...)
+	out = append(out, []byte(modelID)...)
+	out = append(out, 0)
+	out = append(out, []byte(disbursementID)...)
+	return out
+}
+
+// TrainingFundEscrowLockedKey returns the bookkeeping key for an active escrow.
+func TrainingFundEscrowLockedKey(bountyID string) []byte {
+	return append(append([]byte{}, TrainingFundEscrowLockedKeyPrefix...), []byte(bountyID)...)
+}
+
+// TrainingFundVestingKey returns the bookkeeping key for a vesting amount.
+func TrainingFundVestingKey(disbursementID string) []byte {
+	return append(append([]byte{}, TrainingFundVestingKeyPrefix...), []byte(disbursementID)...)
 }

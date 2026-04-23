@@ -1552,11 +1552,62 @@ A variant was submitted against an augmentation bounty or as a volunteer (Route 
 - `submitter` -- submitter address
 
 ### zerone.knowledge.augmentation_accepted
-Variant accepted — by bounty sponsor if `bounty_id` is set, else by the original fact submitter (Route B Wave 3e). Increments the bounty's accepted count; bounty auto-deactivates on saturation.
+Variant accepted (Route B Wave 3e; Wave 4 realignment). Under Wave 4 the acceptance path for bounty augmentations is the finalized verifier-panel verdict (EQUIVALENT or SUPERIOR); this event still fires but the acceptor may be a system-level marker. Volunteer augmentations continue to route through the original fact submitter.
 - `augmentation_id`
 - `original_fact_id`
 - `bounty_id` -- empty for volunteer acceptance
 - `acceptor` -- sponsor or original fact submitter
+
+### zerone.knowledge.augmentation_vote_cast
+A verifier cast a verdict on a reformulation round (Route B Wave 4d). Sponsor and submitter are rejected with an error and never appear here. `finalized=true` means this vote pushed the panel past the consensus threshold.
+- `augmentation_id`
+- `verifier` -- voting verifier address
+- `vote` -- one of PENDING / EQUIVALENT / SUPERIOR / INFERIOR / DRIFT
+- `finalized` -- boolean: did this vote finalize the verdict?
+
+### zerone.knowledge.augmentation_verdict_finalized
+The verifier panel reached consensus on a reformulation (Route B Wave 4d). For EQUIVALENT/SUPERIOR the handler releases escrow to the submitter and writes a REFORMULATES relation; for DRIFT/INFERIOR the variant is archived for the drift corpus. Never fired by the sponsor or submitter directly.
+- `augmentation_id`
+- `original_fact_id`
+- `verdict` -- final panel verdict
+- `payout` -- uzrn paid (0 for DRIFT/INFERIOR/vetoed)
+
+### zerone.knowledge.augmentation_sponsor_vetoed
+Sponsor vetoed a passing verdict, forfeiting the payout amount to the research fund (Route B Wave 4d). The only sponsor-held lever — deliberately costly so it cannot silently block legitimate variants.
+- `augmentation_id`
+- `sponsor`
+- `forfeited_amount` -- uzrn sent to the research fund
+- `reason` -- free-form rationale
+
+### zerone.knowledge.training_revenue_clawed
+Disproval clawback — future training-use revenue is cut for this fact (Route B Wave 4b). Cleared `training_revenue_earned_recent` is moved to the research fund.
+- `fact_id`
+- `submitter`
+- `cleared_recent` -- uzrn amount cleared from the 30-epoch recent window
+
+### zerone.knowledge.contribution_challenge_opened
+A fact submitter disputed a ContributionRecord and locked a bond in the training fund (Route B Wave 4e). `dispute_type` is "missing" (omitted attribution) or "fraudulent" (listed-but-unused fact).
+- `challenge_id`
+- `model_id`
+- `challenger`
+- `dispute_type`
+- `bond` -- uzrn locked
+
+### zerone.knowledge.contribution_challenge_resolved
+Governance authority resolved an attribution challenge (Route B Wave 4e). A future wave will route this through a verifier panel rather than authority; the event shape is stable.
+- `challenge_id`
+- `status` -- "upheld" | "rejected"
+- `payout` -- uzrn sent to winner (challenger on uphold; 0 on reject)
+- `resolver` -- authority address
+
+### zerone.knowledge.training_fund_disbursed
+Post-hoc, calibration-gated training-fund reward paid to a pipeline operator (Route B Wave 4f). 50% released immediately; 50% held in vesting escrow with clawback rights.
+- `disbursement_id`
+- `model_id`
+- `claimant` -- pipeline operator
+- `released` -- uzrn paid immediately
+- `vesting` -- uzrn held in escrow
+- `vesting_end_block` -- height at which vesting completes
 
 
 ## liquiditypool

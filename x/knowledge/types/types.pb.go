@@ -366,14 +366,15 @@ func (ClaimType) EnumDescriptor() ([]byte, []int) {
 type RelationType int32
 
 const (
-	RelationType_RELATION_TYPE_UNSPECIFIED RelationType = 0
-	RelationType_RELATION_TYPE_SUPPORTS    RelationType = 1 // This fact provides evidence for the target
-	RelationType_RELATION_TYPE_CONTRADICTS RelationType = 2 // This fact conflicts with the target
-	RelationType_RELATION_TYPE_REQUIRES    RelationType = 3 // This fact depends on the target being true
-	RelationType_RELATION_TYPE_REFINES     RelationType = 4 // This fact is a more precise version of the target
-	RelationType_RELATION_TYPE_GENERALIZES RelationType = 5 // This fact is a broader version of the target
-	RelationType_RELATION_TYPE_SUPERSEDES  RelationType = 6 // This fact replaces the target (newer/better)
-	RelationType_RELATION_TYPE_CITES       RelationType = 7 // This fact cites the target as source material
+	RelationType_RELATION_TYPE_UNSPECIFIED  RelationType = 0
+	RelationType_RELATION_TYPE_SUPPORTS     RelationType = 1 // This fact provides evidence for the target
+	RelationType_RELATION_TYPE_CONTRADICTS  RelationType = 2 // This fact conflicts with the target
+	RelationType_RELATION_TYPE_REQUIRES     RelationType = 3 // This fact depends on the target being true
+	RelationType_RELATION_TYPE_REFINES      RelationType = 4 // This fact is a more precise version of the target
+	RelationType_RELATION_TYPE_GENERALIZES  RelationType = 5 // This fact is a broader version of the target
+	RelationType_RELATION_TYPE_SUPERSEDES   RelationType = 6 // This fact replaces the target (newer/better)
+	RelationType_RELATION_TYPE_CITES        RelationType = 7 // This fact cites the target as source material
+	RelationType_RELATION_TYPE_REFORMULATES RelationType = 8 // This fact is a semantically-equivalent surface variant (Route B Wave 4)
 )
 
 // Enum value maps for RelationType.
@@ -387,16 +388,18 @@ var (
 		5: "RELATION_TYPE_GENERALIZES",
 		6: "RELATION_TYPE_SUPERSEDES",
 		7: "RELATION_TYPE_CITES",
+		8: "RELATION_TYPE_REFORMULATES",
 	}
 	RelationType_value = map[string]int32{
-		"RELATION_TYPE_UNSPECIFIED": 0,
-		"RELATION_TYPE_SUPPORTS":    1,
-		"RELATION_TYPE_CONTRADICTS": 2,
-		"RELATION_TYPE_REQUIRES":    3,
-		"RELATION_TYPE_REFINES":     4,
-		"RELATION_TYPE_GENERALIZES": 5,
-		"RELATION_TYPE_SUPERSEDES":  6,
-		"RELATION_TYPE_CITES":       7,
+		"RELATION_TYPE_UNSPECIFIED":  0,
+		"RELATION_TYPE_SUPPORTS":     1,
+		"RELATION_TYPE_CONTRADICTS":  2,
+		"RELATION_TYPE_REQUIRES":     3,
+		"RELATION_TYPE_REFINES":      4,
+		"RELATION_TYPE_GENERALIZES":  5,
+		"RELATION_TYPE_SUPERSEDES":   6,
+		"RELATION_TYPE_CITES":        7,
+		"RELATION_TYPE_REFORMULATES": 8,
 	}
 )
 
@@ -603,6 +606,62 @@ func (x TrainingQualityTier) Number() protoreflect.EnumNumber {
 // Deprecated: Use TrainingQualityTier.Descriptor instead.
 func (TrainingQualityTier) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{8}
+}
+
+// AugmentationVerdict is the verifier-panel outcome for a reformulation.
+type AugmentationVerdict int32
+
+const (
+	AugmentationVerdict_AUGMENTATION_VERDICT_PENDING    AugmentationVerdict = 0 // Round in progress
+	AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT AugmentationVerdict = 1 // Meaning preserved under the claimed methodology → payout
+	AugmentationVerdict_AUGMENTATION_VERDICT_SUPERIOR   AugmentationVerdict = 2 // Same meaning, clearer/more precise → payout + bonus
+	AugmentationVerdict_AUGMENTATION_VERDICT_INFERIOR   AugmentationVerdict = 3 // Meaning preserved but less faithful → no payout, archived
+	AugmentationVerdict_AUGMENTATION_VERDICT_DRIFT      AugmentationVerdict = 4 // Meaning changed → no payout, archived in DriftCorpus
+)
+
+// Enum value maps for AugmentationVerdict.
+var (
+	AugmentationVerdict_name = map[int32]string{
+		0: "AUGMENTATION_VERDICT_PENDING",
+		1: "AUGMENTATION_VERDICT_EQUIVALENT",
+		2: "AUGMENTATION_VERDICT_SUPERIOR",
+		3: "AUGMENTATION_VERDICT_INFERIOR",
+		4: "AUGMENTATION_VERDICT_DRIFT",
+	}
+	AugmentationVerdict_value = map[string]int32{
+		"AUGMENTATION_VERDICT_PENDING":    0,
+		"AUGMENTATION_VERDICT_EQUIVALENT": 1,
+		"AUGMENTATION_VERDICT_SUPERIOR":   2,
+		"AUGMENTATION_VERDICT_INFERIOR":   3,
+		"AUGMENTATION_VERDICT_DRIFT":      4,
+	}
+)
+
+func (x AugmentationVerdict) Enum() *AugmentationVerdict {
+	p := new(AugmentationVerdict)
+	*p = x
+	return p
+}
+
+func (x AugmentationVerdict) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AugmentationVerdict) Descriptor() protoreflect.EnumDescriptor {
+	return file_zerone_knowledge_v1_types_proto_enumTypes[9].Descriptor()
+}
+
+func (AugmentationVerdict) Type() protoreflect.EnumType {
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[9]
+}
+
+func (x AugmentationVerdict) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AugmentationVerdict.Descriptor instead.
+func (AugmentationVerdict) EnumDescriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
 }
 
 // FactRelation is a typed, directional edge in the knowledge graph.
@@ -1245,8 +1304,25 @@ type Fact struct {
 	// format is a string (JSON-encoded steps) so training pipelines can
 	// schema-evolve without proto churn.
 	ReasoningTrace string `protobuf:"bytes,69,opt,name=reasoning_trace,json=reasoningTrace,proto3" json:"reasoning_trace,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// ─── Economic realignment (Route B Wave 4) ─────────────────────────────
+	// Submitter's calibration score at the moment this fact was *accepted*.
+	// Snapshotted so later revenue weighting is not retroactively gameable:
+	// a submitter who improves later can't farm old facts, and a submitter
+	// who declines later can't be penalised on work already done. 0 when
+	// pre-calibration or unknown.
+	SubmitterCalibrationSnapshotBps uint64 `protobuf:"varint,70,opt,name=submitter_calibration_snapshot_bps,json=submitterCalibrationSnapshotBps,proto3" json:"submitter_calibration_snapshot_bps,omitempty"`
+	// Cumulative training-use revenue earned across all contribution records
+	// citing this fact (uzrn). Drives clawback math when the fact goes
+	// DISPROVEN.
+	TrainingRevenueEarned string `protobuf:"bytes,71,opt,name=training_revenue_earned,json=trainingRevenueEarned,proto3" json:"training_revenue_earned,omitempty"`
+	// Revenue earned in the last DisprovalClawbackWindowEpochs epochs, used
+	// exclusively for the clawback calculation. Resets each epoch.
+	TrainingRevenueEarnedRecent string `protobuf:"bytes,72,opt,name=training_revenue_earned_recent,json=trainingRevenueEarnedRecent,proto3" json:"training_revenue_earned_recent,omitempty"`
+	// Block height at which disproval triggered the clawback; 0 = not disproven
+	// for revenue purposes. Prevents double-clawing.
+	RevenueClawbackBlock uint64 `protobuf:"varint,73,opt,name=revenue_clawback_block,json=revenueClawbackBlock,proto3" json:"revenue_clawback_block,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
 }
 
 func (x *Fact) Reset() {
@@ -1690,6 +1766,34 @@ func (x *Fact) GetReasoningTrace() string {
 		return x.ReasoningTrace
 	}
 	return ""
+}
+
+func (x *Fact) GetSubmitterCalibrationSnapshotBps() uint64 {
+	if x != nil {
+		return x.SubmitterCalibrationSnapshotBps
+	}
+	return 0
+}
+
+func (x *Fact) GetTrainingRevenueEarned() string {
+	if x != nil {
+		return x.TrainingRevenueEarned
+	}
+	return ""
+}
+
+func (x *Fact) GetTrainingRevenueEarnedRecent() string {
+	if x != nil {
+		return x.TrainingRevenueEarnedRecent
+	}
+	return ""
+}
+
+func (x *Fact) GetRevenueClawbackBlock() uint64 {
+	if x != nil {
+		return x.RevenueClawbackBlock
+	}
+	return 0
 }
 
 // TokenizerSpec is the governance-ratified contract that names the special
@@ -2290,11 +2394,25 @@ type ContributionRecord struct {
 	FactIds           []string               `protobuf:"bytes,2,rep,name=fact_ids,json=factIds,proto3" json:"fact_ids,omitempty"`
 	AttributedBy      string                 `protobuf:"bytes,3,opt,name=attributed_by,json=attributedBy,proto3" json:"attributed_by,omitempty"` // operator / owner posting the attribution
 	AttributedAtBlock uint64                 `protobuf:"varint,4,opt,name=attributed_at_block,json=attributedAtBlock,proto3" json:"attributed_at_block,omitempty"`
-	// total_weight sums per-fact weights (e.g. corroboration count) so a
-	// quick contributor-share calculation doesn't require re-iterating facts.
-	TotalWeight   uint64 `protobuf:"varint,5,opt,name=total_weight,json=totalWeight,proto3" json:"total_weight,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// total_weight sums per-fact (corroboration+1). RETAINED as a raw audit
+	// figure; not used for revenue. Revenue is computed via the TVW field
+	// below (Wave 4 replaces popularity-weighting with Popper-weighting).
+	TotalWeight uint64 `protobuf:"varint,5,opt,name=total_weight,json=totalWeight,proto3" json:"total_weight,omitempty"`
+	// ─── Wave 4: Popper-weighted training-value weight ─────────────────────
+	// Sum of per-fact TrainingValueWeight at the moment of attribution,
+	// snapshot-locked so later fact-state changes can't retroactively inflate
+	// or deflate the claim. Revenue share = TVW_share / total_TVW_across_models.
+	ComputedTvw uint64 `protobuf:"varint,6,opt,name=computed_tvw,json=computedTvw,proto3" json:"computed_tvw,omitempty"`
+	// Count of fact_ids that resolved to NormativeCommitments at attribution
+	// time and were REJECTED (is-ought wall). Always 0 on success; non-zero
+	// only if the handler detected and blocked attempted laundering.
+	RejectedCommitmentCount uint32 `protobuf:"varint,7,opt,name=rejected_commitment_count,json=rejectedCommitmentCount,proto3" json:"rejected_commitment_count,omitempty"`
+	// Block snapshot of the submitter calibration scores at attribution time,
+	// parallel to fact_ids[]. Used in TVW computation; kept here so the audit
+	// trail shows exactly what weights were assigned.
+	PerFactCalibrationBps []uint64 `protobuf:"varint,8,rep,packed,name=per_fact_calibration_bps,json=perFactCalibrationBps,proto3" json:"per_fact_calibration_bps,omitempty"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *ContributionRecord) Reset() {
@@ -2362,23 +2480,52 @@ func (x *ContributionRecord) GetTotalWeight() uint64 {
 	return 0
 }
 
+func (x *ContributionRecord) GetComputedTvw() uint64 {
+	if x != nil {
+		return x.ComputedTvw
+	}
+	return 0
+}
+
+func (x *ContributionRecord) GetRejectedCommitmentCount() uint32 {
+	if x != nil {
+		return x.RejectedCommitmentCount
+	}
+	return 0
+}
+
+func (x *ContributionRecord) GetPerFactCalibrationBps() []uint64 {
+	if x != nil {
+		return x.PerFactCalibrationBps
+	}
+	return nil
+}
+
 // AugmentationBounty is an open offer to produce variant formulations of a
-// target fact. Sponsors lock a reward; researchers submit variants. Chain
-// pays out as variants are accepted, up to max_variants (Route B Wave 3e).
+// target fact. Sponsors lock a reward *in escrow* (Wave 4); payout routes
+// through a verifier-panel verdict, never through the sponsor directly.
 type AugmentationBounty struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	SponsorAddress   string                 `protobuf:"bytes,2,opt,name=sponsor_address,json=sponsorAddress,proto3" json:"sponsor_address,omitempty"`
 	TargetFactId     string                 `protobuf:"bytes,3,opt,name=target_fact_id,json=targetFactId,proto3" json:"target_fact_id,omitempty"`
-	RewardPerVariant uint64                 `protobuf:"varint,4,opt,name=reward_per_variant,json=rewardPerVariant,proto3" json:"reward_per_variant,omitempty"` // uzrn paid per accepted variant
+	RewardPerVariant uint64                 `protobuf:"varint,4,opt,name=reward_per_variant,json=rewardPerVariant,proto3" json:"reward_per_variant,omitempty"` // uzrn paid per EQUIVALENT/SUPERIOR variant
 	MaxVariants      uint32                 `protobuf:"varint,5,opt,name=max_variants,json=maxVariants,proto3" json:"max_variants,omitempty"`
 	AcceptedVariants uint32                 `protobuf:"varint,6,opt,name=accepted_variants,json=acceptedVariants,proto3" json:"accepted_variants,omitempty"`
 	CreatedAtBlock   uint64                 `protobuf:"varint,7,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
 	ExpiresAtBlock   uint64                 `protobuf:"varint,8,opt,name=expires_at_block,json=expiresAtBlock,proto3" json:"expires_at_block,omitempty"`
 	Active           bool                   `protobuf:"varint,9,opt,name=active,proto3" json:"active,omitempty"`
 	Description      string                 `protobuf:"bytes,10,opt,name=description,proto3" json:"description,omitempty"` // what kind of variant is wanted
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// ─── Wave 4: escrow + method constraint ────────────────────────────────
+	// Total uzrn locked into the KnowledgeTrainingFund at bounty creation:
+	// reward_per_variant × max_variants. Released on accepted verdicts and
+	// returned (minus fee) on expiry.
+	EscrowLocked string `protobuf:"bytes,11,opt,name=escrow_locked,json=escrowLocked,proto3" json:"escrow_locked,omitempty"`
+	// Methodology the target fact was adjudicated under. Copied at creation
+	// so the verifier panel judges equivalence *under the same methodology*.
+	MethodologyId string `protobuf:"bytes,12,opt,name=methodology_id,json=methodologyId,proto3" json:"methodology_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *AugmentationBounty) Reset() {
@@ -2481,9 +2628,22 @@ func (x *AugmentationBounty) GetDescription() string {
 	return ""
 }
 
-// Augmentation is a variant formulation of an original fact. Variants
-// preserve semantic content but rephrase; they widen the training corpus
-// without compromising provenance (the original still anchors the claim).
+func (x *AugmentationBounty) GetEscrowLocked() string {
+	if x != nil {
+		return x.EscrowLocked
+	}
+	return ""
+}
+
+func (x *AugmentationBounty) GetMethodologyId() string {
+	if x != nil {
+		return x.MethodologyId
+	}
+	return ""
+}
+
+// Augmentation is a variant formulation of an original fact. Acceptance
+// requires a verifier-panel verdict (Wave 4) — the sponsor never judges.
 type Augmentation struct {
 	state                 protoimpl.MessageState `protogen:"open.v1"`
 	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -2493,11 +2653,24 @@ type Augmentation struct {
 	VariantReasoningTrace string                 `protobuf:"bytes,5,opt,name=variant_reasoning_trace,json=variantReasoningTrace,proto3" json:"variant_reasoning_trace,omitempty"` // optional; parallel to Fact.reasoning_trace
 	Submitter             string                 `protobuf:"bytes,6,opt,name=submitter,proto3" json:"submitter,omitempty"`
 	CreatedAtBlock        uint64                 `protobuf:"varint,7,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
-	Accepted              bool                   `protobuf:"varint,8,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	Accepted              bool                   `protobuf:"varint,8,opt,name=accepted,proto3" json:"accepted,omitempty"` // true iff verdict ∈ {EQUIVALENT, SUPERIOR}
 	AcceptedAtBlock       uint64                 `protobuf:"varint,9,opt,name=accepted_at_block,json=acceptedAtBlock,proto3" json:"accepted_at_block,omitempty"`
 	AcceptanceNote        string                 `protobuf:"bytes,10,opt,name=acceptance_note,json=acceptanceNote,proto3" json:"acceptance_note,omitempty"` // optional acceptance comment
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// ─── Wave 4: verifier-panel verdict ───────────────────────────────────
+	Verdict      AugmentationVerdict `protobuf:"varint,11,opt,name=verdict,proto3,enum=zerone.knowledge.v1.AugmentationVerdict" json:"verdict,omitempty"`
+	VerdictBlock uint64              `protobuf:"varint,12,opt,name=verdict_block,json=verdictBlock,proto3" json:"verdict_block,omitempty"`
+	// Per-verifier votes collected during the round (verifier → verdict int).
+	// Encoded as parallel arrays for deterministic marshalling.
+	VerdictVoters []string              `protobuf:"bytes,13,rep,name=verdict_voters,json=verdictVoters,proto3" json:"verdict_voters,omitempty"`
+	VerdictVotes  []AugmentationVerdict `protobuf:"varint,14,rep,packed,name=verdict_votes,json=verdictVotes,proto3,enum=zerone.knowledge.v1.AugmentationVerdict" json:"verdict_votes,omitempty"`
+	// Sponsor-veto flag: if the sponsor formally vetoes a passing verdict,
+	// the payout is forfeited to the research fund. Preserved for audit.
+	SponsorVetoed bool `protobuf:"varint,15,opt,name=sponsor_vetoed,json=sponsorVetoed,proto3" json:"sponsor_vetoed,omitempty"`
+	// Amount actually paid out for this variant (0 if not paid). Captures the
+	// SUPERIOR bonus too.
+	PayoutAmount  string `protobuf:"bytes,16,opt,name=payout_amount,json=payoutAmount,proto3" json:"payout_amount,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Augmentation) Reset() {
@@ -2600,6 +2773,351 @@ func (x *Augmentation) GetAcceptanceNote() string {
 	return ""
 }
 
+func (x *Augmentation) GetVerdict() AugmentationVerdict {
+	if x != nil {
+		return x.Verdict
+	}
+	return AugmentationVerdict_AUGMENTATION_VERDICT_PENDING
+}
+
+func (x *Augmentation) GetVerdictBlock() uint64 {
+	if x != nil {
+		return x.VerdictBlock
+	}
+	return 0
+}
+
+func (x *Augmentation) GetVerdictVoters() []string {
+	if x != nil {
+		return x.VerdictVoters
+	}
+	return nil
+}
+
+func (x *Augmentation) GetVerdictVotes() []AugmentationVerdict {
+	if x != nil {
+		return x.VerdictVotes
+	}
+	return nil
+}
+
+func (x *Augmentation) GetSponsorVetoed() bool {
+	if x != nil {
+		return x.SponsorVetoed
+	}
+	return false
+}
+
+func (x *Augmentation) GetPayoutAmount() string {
+	if x != nil {
+		return x.PayoutAmount
+	}
+	return ""
+}
+
+// ContributionChallenge is a bonded dispute over whether a model's declared
+// ContributionRecord is accurate: a fact submitter asserts under-reporting
+// (the model used their fact but didn't attribute) or over-reporting (the
+// owner listed a colluder's fact that wasn't used). Resolves through the
+// standard PoT verification layer.
+type ContributionChallenge struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ModelId        string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	Challenger     string                 `protobuf:"bytes,3,opt,name=challenger,proto3" json:"challenger,omitempty"`                                 // fact submitter
+	DisputedFactId string                 `protobuf:"bytes,4,opt,name=disputed_fact_id,json=disputedFactId,proto3" json:"disputed_fact_id,omitempty"` // the fact whose attribution is in question
+	// "missing" — challenger claims the model trained on the fact but it isn't
+	// listed in the ContributionRecord. "fraudulent" — challenger claims the
+	// listed fact was never actually trained on.
+	DisputeType    string `protobuf:"bytes,5,opt,name=dispute_type,json=disputeType,proto3" json:"dispute_type,omitempty"`
+	Bond           string `protobuf:"bytes,6,opt,name=bond,proto3" json:"bond,omitempty"` // uzrn locked by challenger
+	CreatedAtBlock uint64 `protobuf:"varint,7,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	Evidence       string `protobuf:"bytes,8,opt,name=evidence,proto3" json:"evidence,omitempty"` // free-form evidence bundle (usually an eval prompt + response)
+	// Resolution
+	Status          string `protobuf:"bytes,9,opt,name=status,proto3" json:"status,omitempty"` // "open" | "upheld" | "rejected" | "withdrawn"
+	ResolvedAtBlock uint64 `protobuf:"varint,10,opt,name=resolved_at_block,json=resolvedAtBlock,proto3" json:"resolved_at_block,omitempty"`
+	Resolver        string `protobuf:"bytes,11,opt,name=resolver,proto3" json:"resolver,omitempty"` // verifier panel representative (or authority for disputes-of-last-resort)
+	ResolutionNote  string `protobuf:"bytes,12,opt,name=resolution_note,json=resolutionNote,proto3" json:"resolution_note,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ContributionChallenge) Reset() {
+	*x = ContributionChallenge{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContributionChallenge) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContributionChallenge) ProtoMessage() {}
+
+func (x *ContributionChallenge) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContributionChallenge.ProtoReflect.Descriptor instead.
+func (*ContributionChallenge) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *ContributionChallenge) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetChallenger() string {
+	if x != nil {
+		return x.Challenger
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetDisputedFactId() string {
+	if x != nil {
+		return x.DisputedFactId
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetDisputeType() string {
+	if x != nil {
+		return x.DisputeType
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetBond() string {
+	if x != nil {
+		return x.Bond
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetCreatedAtBlock() uint64 {
+	if x != nil {
+		return x.CreatedAtBlock
+	}
+	return 0
+}
+
+func (x *ContributionChallenge) GetEvidence() string {
+	if x != nil {
+		return x.Evidence
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetResolvedAtBlock() uint64 {
+	if x != nil {
+		return x.ResolvedAtBlock
+	}
+	return 0
+}
+
+func (x *ContributionChallenge) GetResolver() string {
+	if x != nil {
+		return x.Resolver
+	}
+	return ""
+}
+
+func (x *ContributionChallenge) GetResolutionNote() string {
+	if x != nil {
+		return x.ResolutionNote
+	}
+	return ""
+}
+
+// TrainingFundDisbursement is a post-hoc reward to a pipeline whose ModelCard
+// has demonstrated calibration in live deployment. 50% is released at claim
+// time; 50% is held in vesting escrow and clawed back if calibration drops.
+type TrainingFundDisbursement struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	ModelId        string                 `protobuf:"bytes,2,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	PipelineId     string                 `protobuf:"bytes,3,opt,name=pipeline_id,json=pipelineId,proto3" json:"pipeline_id,omitempty"`
+	Claimant       string                 `protobuf:"bytes,4,opt,name=claimant,proto3" json:"claimant,omitempty"`
+	ClaimedAtBlock uint64                 `protobuf:"varint,5,opt,name=claimed_at_block,json=claimedAtBlock,proto3" json:"claimed_at_block,omitempty"`
+	// Amounts (uzrn as string — exceeds uint64 in edge cases).
+	TotalAmount     string `protobuf:"bytes,6,opt,name=total_amount,json=totalAmount,proto3" json:"total_amount,omitempty"`
+	ReleasedAmount  string `protobuf:"bytes,7,opt,name=released_amount,json=releasedAmount,proto3" json:"released_amount,omitempty"` // paid immediately (50%)
+	VestingAmount   string `protobuf:"bytes,8,opt,name=vesting_amount,json=vestingAmount,proto3" json:"vesting_amount,omitempty"`    // held until vesting_end_block
+	VestingEndBlock uint64 `protobuf:"varint,9,opt,name=vesting_end_block,json=vestingEndBlock,proto3" json:"vesting_end_block,omitempty"`
+	// Input signals frozen at claim time.
+	CalibrationScoreAtClaimBps  uint64 `protobuf:"varint,10,opt,name=calibration_score_at_claim_bps,json=calibrationScoreAtClaimBps,proto3" json:"calibration_score_at_claim_bps,omitempty"`
+	MethodologyDiversityCount   uint64 `protobuf:"varint,11,opt,name=methodology_diversity_count,json=methodologyDiversityCount,proto3" json:"methodology_diversity_count,omitempty"`       // distinct methodologies in corpus_filter that produced GOLD facts
+	ReproducibilityProofPresent bool   `protobuf:"varint,12,opt,name=reproducibility_proof_present,json=reproducibilityProofPresent,proto3" json:"reproducibility_proof_present,omitempty"` // reserved for verification axis; false for now
+	// Clawback state.
+	ClawedBackAmount  string `protobuf:"bytes,13,opt,name=clawed_back_amount,json=clawedBackAmount,proto3" json:"clawed_back_amount,omitempty"`
+	ClawedBackAtBlock uint64 `protobuf:"varint,14,opt,name=clawed_back_at_block,json=clawedBackAtBlock,proto3" json:"clawed_back_at_block,omitempty"`
+	ClawbackReason    string `protobuf:"bytes,15,opt,name=clawback_reason,json=clawbackReason,proto3" json:"clawback_reason,omitempty"` // "calibration_drop", "deprecated", ""
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *TrainingFundDisbursement) Reset() {
+	*x = TrainingFundDisbursement{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrainingFundDisbursement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrainingFundDisbursement) ProtoMessage() {}
+
+func (x *TrainingFundDisbursement) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrainingFundDisbursement.ProtoReflect.Descriptor instead.
+func (*TrainingFundDisbursement) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *TrainingFundDisbursement) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *TrainingFundDisbursement) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *TrainingFundDisbursement) GetPipelineId() string {
+	if x != nil {
+		return x.PipelineId
+	}
+	return ""
+}
+
+func (x *TrainingFundDisbursement) GetClaimant() string {
+	if x != nil {
+		return x.Claimant
+	}
+	return ""
+}
+
+func (x *TrainingFundDisbursement) GetClaimedAtBlock() uint64 {
+	if x != nil {
+		return x.ClaimedAtBlock
+	}
+	return 0
+}
+
+func (x *TrainingFundDisbursement) GetTotalAmount() string {
+	if x != nil {
+		return x.TotalAmount
+	}
+	return ""
+}
+
+func (x *TrainingFundDisbursement) GetReleasedAmount() string {
+	if x != nil {
+		return x.ReleasedAmount
+	}
+	return ""
+}
+
+func (x *TrainingFundDisbursement) GetVestingAmount() string {
+	if x != nil {
+		return x.VestingAmount
+	}
+	return ""
+}
+
+func (x *TrainingFundDisbursement) GetVestingEndBlock() uint64 {
+	if x != nil {
+		return x.VestingEndBlock
+	}
+	return 0
+}
+
+func (x *TrainingFundDisbursement) GetCalibrationScoreAtClaimBps() uint64 {
+	if x != nil {
+		return x.CalibrationScoreAtClaimBps
+	}
+	return 0
+}
+
+func (x *TrainingFundDisbursement) GetMethodologyDiversityCount() uint64 {
+	if x != nil {
+		return x.MethodologyDiversityCount
+	}
+	return 0
+}
+
+func (x *TrainingFundDisbursement) GetReproducibilityProofPresent() bool {
+	if x != nil {
+		return x.ReproducibilityProofPresent
+	}
+	return false
+}
+
+func (x *TrainingFundDisbursement) GetClawedBackAmount() string {
+	if x != nil {
+		return x.ClawedBackAmount
+	}
+	return ""
+}
+
+func (x *TrainingFundDisbursement) GetClawedBackAtBlock() uint64 {
+	if x != nil {
+		return x.ClawedBackAtBlock
+	}
+	return 0
+}
+
+func (x *TrainingFundDisbursement) GetClawbackReason() string {
+	if x != nil {
+		return x.ClawbackReason
+	}
+	return ""
+}
+
 // AgentMethodStats tracks calibration for a single submitter within a single
 // methodology. Populated on round completion and challenge outcomes.
 type AgentMethodStats struct {
@@ -2615,7 +3133,7 @@ type AgentMethodStats struct {
 
 func (x *AgentMethodStats) Reset() {
 	*x = AgentMethodStats{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2627,7 +3145,7 @@ func (x *AgentMethodStats) String() string {
 func (*AgentMethodStats) ProtoMessage() {}
 
 func (x *AgentMethodStats) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2640,7 +3158,7 @@ func (x *AgentMethodStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentMethodStats.ProtoReflect.Descriptor instead.
 func (*AgentMethodStats) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *AgentMethodStats) GetSubmissions() uint64 {
@@ -2699,7 +3217,7 @@ type AgentCalibration struct {
 	ChallengesSucceeded  uint64 `protobuf:"varint,11,opt,name=challenges_succeeded,json=challengesSucceeded,proto3" json:"challenges_succeeded,omitempty"` // target fact went DISPROVEN
 	ChallengesFailed     uint64 `protobuf:"varint,12,opt,name=challenges_failed,json=challengesFailed,proto3" json:"challenges_failed,omitempty"`          // target fact survived
 	FirstSubmissionBlock uint64 `protobuf:"varint,13,opt,name=first_submission_block,json=firstSubmissionBlock,proto3" json:"first_submission_block,omitempty"`
-	LastSubmissionBlock  uint64 `protobuf:"varint,14,opt,name=last_submission_block,json=lastSubmissionBlock,proto3" json:"last_submission_block,omitempty"`
+	LastSubmissionBlock  uint64 `protobuf:"varint,14,opt,name=last_submission_block,json=lastSubmissionBlock,proto3" json:"last_submission_block,omitempty"` // NB: Wave 4 fields start at 20 to avoid clashing with per_method / score fields below.
 	// Per-method breakdown. Key = method_id.
 	PerMethod map[string]*AgentMethodStats `protobuf:"bytes,15,rep,name=per_method,json=perMethod,proto3" json:"per_method,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	// Derived calibration score in BPS. Computed from above signals; see
@@ -2712,7 +3230,7 @@ type AgentCalibration struct {
 
 func (x *AgentCalibration) Reset() {
 	*x = AgentCalibration{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2724,7 +3242,7 @@ func (x *AgentCalibration) String() string {
 func (*AgentCalibration) ProtoMessage() {}
 
 func (x *AgentCalibration) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2737,7 +3255,7 @@ func (x *AgentCalibration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentCalibration.ProtoReflect.Descriptor instead.
 func (*AgentCalibration) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *AgentCalibration) GetAddress() string {
@@ -2875,7 +3393,7 @@ type CommonKnowledgeEntry struct {
 
 func (x *CommonKnowledgeEntry) Reset() {
 	*x = CommonKnowledgeEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2887,7 +3405,7 @@ func (x *CommonKnowledgeEntry) String() string {
 func (*CommonKnowledgeEntry) ProtoMessage() {}
 
 func (x *CommonKnowledgeEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2900,7 +3418,7 @@ func (x *CommonKnowledgeEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommonKnowledgeEntry.ProtoReflect.Descriptor instead.
 func (*CommonKnowledgeEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CommonKnowledgeEntry) GetId() string {
@@ -2989,7 +3507,7 @@ type Claim struct {
 
 func (x *Claim) Reset() {
 	*x = Claim{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3001,7 +3519,7 @@ func (x *Claim) String() string {
 func (*Claim) ProtoMessage() {}
 
 func (x *Claim) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3014,7 +3532,7 @@ func (x *Claim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Claim.ProtoReflect.Descriptor instead.
 func (*Claim) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{16}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Claim) GetId() string {
@@ -3199,7 +3717,7 @@ type VerificationRound struct {
 
 func (x *VerificationRound) Reset() {
 	*x = VerificationRound{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[17]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3211,7 +3729,7 @@ func (x *VerificationRound) String() string {
 func (*VerificationRound) ProtoMessage() {}
 
 func (x *VerificationRound) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[17]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3224,7 +3742,7 @@ func (x *VerificationRound) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerificationRound.ProtoReflect.Descriptor instead.
 func (*VerificationRound) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{17}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *VerificationRound) GetId() string {
@@ -3323,7 +3841,7 @@ type CommitEntry struct {
 
 func (x *CommitEntry) Reset() {
 	*x = CommitEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[18]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3335,7 +3853,7 @@ func (x *CommitEntry) String() string {
 func (*CommitEntry) ProtoMessage() {}
 
 func (x *CommitEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[18]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3348,7 +3866,7 @@ func (x *CommitEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitEntry.ProtoReflect.Descriptor instead.
 func (*CommitEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{18}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *CommitEntry) GetVerifier() string {
@@ -3385,7 +3903,7 @@ type RevealEntry struct {
 
 func (x *RevealEntry) Reset() {
 	*x = RevealEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[19]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3397,7 +3915,7 @@ func (x *RevealEntry) String() string {
 func (*RevealEntry) ProtoMessage() {}
 
 func (x *RevealEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[19]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3410,7 +3928,7 @@ func (x *RevealEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevealEntry.ProtoReflect.Descriptor instead.
 func (*RevealEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{19}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RevealEntry) GetVerifier() string {
@@ -3454,7 +3972,7 @@ type VRFProof struct {
 
 func (x *VRFProof) Reset() {
 	*x = VRFProof{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[20]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3466,7 +3984,7 @@ func (x *VRFProof) String() string {
 func (*VRFProof) ProtoMessage() {}
 
 func (x *VRFProof) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[20]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3479,7 +3997,7 @@ func (x *VRFProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VRFProof.ProtoReflect.Descriptor instead.
 func (*VRFProof) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{20}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *VRFProof) GetProof() []byte {
@@ -3529,7 +4047,7 @@ type Domain struct {
 
 func (x *Domain) Reset() {
 	*x = Domain{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[21]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3541,7 +4059,7 @@ func (x *Domain) String() string {
 func (*Domain) ProtoMessage() {}
 
 func (x *Domain) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[21]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3554,7 +4072,7 @@ func (x *Domain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Domain.ProtoReflect.Descriptor instead.
 func (*Domain) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{21}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *Domain) GetName() string {
@@ -3641,7 +4159,7 @@ type ValidatorInfo struct {
 
 func (x *ValidatorInfo) Reset() {
 	*x = ValidatorInfo{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[22]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3653,7 +4171,7 @@ func (x *ValidatorInfo) String() string {
 func (*ValidatorInfo) ProtoMessage() {}
 
 func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[22]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3666,7 +4184,7 @@ func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatorInfo.ProtoReflect.Descriptor instead.
 func (*ValidatorInfo) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{22}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ValidatorInfo) GetAddress() string {
@@ -3731,7 +4249,7 @@ type ProvisionalChallenge struct {
 
 func (x *ProvisionalChallenge) Reset() {
 	*x = ProvisionalChallenge{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[23]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3743,7 +4261,7 @@ func (x *ProvisionalChallenge) String() string {
 func (*ProvisionalChallenge) ProtoMessage() {}
 
 func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[23]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3756,7 +4274,7 @@ func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProvisionalChallenge.ProtoReflect.Descriptor instead.
 func (*ProvisionalChallenge) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{23}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ProvisionalChallenge) GetId() string {
@@ -3881,7 +4399,7 @@ type DemandSignal struct {
 
 func (x *DemandSignal) Reset() {
 	*x = DemandSignal{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[24]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3893,7 +4411,7 @@ func (x *DemandSignal) String() string {
 func (*DemandSignal) ProtoMessage() {}
 
 func (x *DemandSignal) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[24]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3906,7 +4424,7 @@ func (x *DemandSignal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DemandSignal.ProtoReflect.Descriptor instead.
 func (*DemandSignal) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{24}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *DemandSignal) GetDomain() string {
@@ -3983,7 +4501,7 @@ type KnowledgeBounty struct {
 
 func (x *KnowledgeBounty) Reset() {
 	*x = KnowledgeBounty{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[25]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3995,7 +4513,7 @@ func (x *KnowledgeBounty) String() string {
 func (*KnowledgeBounty) ProtoMessage() {}
 
 func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[25]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4008,7 +4526,7 @@ func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeBounty.ProtoReflect.Descriptor instead.
 func (*KnowledgeBounty) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{25}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *KnowledgeBounty) GetId() string {
@@ -4087,7 +4605,7 @@ type CompletedRoundMeta struct {
 
 func (x *CompletedRoundMeta) Reset() {
 	*x = CompletedRoundMeta{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[26]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4099,7 +4617,7 @@ func (x *CompletedRoundMeta) String() string {
 func (*CompletedRoundMeta) ProtoMessage() {}
 
 func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[26]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4112,7 +4630,7 @@ func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompletedRoundMeta.ProtoReflect.Descriptor instead.
 func (*CompletedRoundMeta) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{26}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *CompletedRoundMeta) GetDomain() string {
@@ -4190,7 +4708,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x05scope\x18\x04 \x01(\tR\x05scope\x12%\n" +
 	"\x0etemporal_scope\x18\x05 \x01(\tR\rtemporalScope\x12\x1c\n" +
 	"\tnegatable\x18\x06 \x01(\bR\tnegatable\x12\x12\n" +
-	"\x04tags\x18\a \x03(\tR\x04tags\"\xad\x13\n" +
+	"\x04tags\x18\a \x03(\tR\x04tags\"\xad\x15\n" +
 	"\x04Fact\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
 	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
@@ -4261,7 +4779,11 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\tmethod_id\x18B \x01(\tR\bmethodId\x12/\n" +
 	"\x13corroboration_count\x18C \x01(\x04R\x12corroborationCount\x126\n" +
 	"\x17last_corroborated_block\x18D \x01(\x04R\x15lastCorroboratedBlock\x12'\n" +
-	"\x0freasoning_trace\x18E \x01(\tR\x0ereasoningTrace\"\xe0\x05\n" +
+	"\x0freasoning_trace\x18E \x01(\tR\x0ereasoningTrace\x12K\n" +
+	"\"submitter_calibration_snapshot_bps\x18F \x01(\x04R\x1fsubmitterCalibrationSnapshotBps\x126\n" +
+	"\x17training_revenue_earned\x18G \x01(\tR\x15trainingRevenueEarned\x12C\n" +
+	"\x1etraining_revenue_earned_recent\x18H \x01(\tR\x1btrainingRevenueEarnedRecent\x124\n" +
+	"\x16revenue_clawback_block\x18I \x01(\x04R\x14revenueClawbackBlock\"\xe0\x05\n" +
 	"\rTokenizerSpec\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x04R\aversion\x12*\n" +
 	"\x11ratified_at_block\x18\x02 \x01(\x04R\x0fratifiedAtBlock\x12.\n" +
@@ -4323,13 +4845,16 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x12completed_at_block\x18\x05 \x01(\x04R\x10completedAtBlock\x12\x1b\n" +
 	"\teval_hash\x18\x06 \x01(\tR\bevalHash\x12\x1c\n" +
 	"\tsignature\x18\a \x01(\tR\tsignature\x12\x14\n" +
-	"\x05notes\x18\b \x01(\tR\x05notes\"\xc2\x01\n" +
+	"\x05notes\x18\b \x01(\tR\x05notes\"\xda\x02\n" +
 	"\x12ContributionRecord\x12\x19\n" +
 	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12\x19\n" +
 	"\bfact_ids\x18\x02 \x03(\tR\afactIds\x12#\n" +
 	"\rattributed_by\x18\x03 \x01(\tR\fattributedBy\x12.\n" +
 	"\x13attributed_at_block\x18\x04 \x01(\x04R\x11attributedAtBlock\x12!\n" +
-	"\ftotal_weight\x18\x05 \x01(\x04R\vtotalWeight\"\xff\x02\n" +
+	"\ftotal_weight\x18\x05 \x01(\x04R\vtotalWeight\x12!\n" +
+	"\fcomputed_tvw\x18\x06 \x01(\x04R\vcomputedTvw\x12:\n" +
+	"\x19rejected_commitment_count\x18\a \x01(\rR\x17rejectedCommitmentCount\x127\n" +
+	"\x18per_fact_calibration_bps\x18\b \x03(\x04R\x15perFactCalibrationBps\"\xcb\x03\n" +
 	"\x12AugmentationBounty\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
 	"\x0fsponsor_address\x18\x02 \x01(\tR\x0esponsorAddress\x12$\n" +
@@ -4341,7 +4866,9 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x10expires_at_block\x18\b \x01(\x04R\x0eexpiresAtBlock\x12\x16\n" +
 	"\x06active\x18\t \x01(\bR\x06active\x12 \n" +
 	"\vdescription\x18\n" +
-	" \x01(\tR\vdescription\"\xff\x02\n" +
+	" \x01(\tR\vdescription\x12#\n" +
+	"\rescrow_locked\x18\v \x01(\tR\fescrowLocked\x12%\n" +
+	"\x0emethodology_id\x18\f \x01(\tR\rmethodologyId\"\xaa\x05\n" +
 	"\fAugmentation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tbounty_id\x18\x02 \x01(\tR\bbountyId\x12(\n" +
@@ -4353,7 +4880,47 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\baccepted\x18\b \x01(\bR\baccepted\x12*\n" +
 	"\x11accepted_at_block\x18\t \x01(\x04R\x0facceptedAtBlock\x12'\n" +
 	"\x0facceptance_note\x18\n" +
-	" \x01(\tR\x0eacceptanceNote\"\xbf\x01\n" +
+	" \x01(\tR\x0eacceptanceNote\x12B\n" +
+	"\averdict\x18\v \x01(\x0e2(.zerone.knowledge.v1.AugmentationVerdictR\averdict\x12#\n" +
+	"\rverdict_block\x18\f \x01(\x04R\fverdictBlock\x12%\n" +
+	"\x0everdict_voters\x18\r \x03(\tR\rverdictVoters\x12M\n" +
+	"\rverdict_votes\x18\x0e \x03(\x0e2(.zerone.knowledge.v1.AugmentationVerdictR\fverdictVotes\x12%\n" +
+	"\x0esponsor_vetoed\x18\x0f \x01(\bR\rsponsorVetoed\x12#\n" +
+	"\rpayout_amount\x18\x10 \x01(\tR\fpayoutAmount\"\x92\x03\n" +
+	"\x15ContributionChallenge\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12\x1e\n" +
+	"\n" +
+	"challenger\x18\x03 \x01(\tR\n" +
+	"challenger\x12(\n" +
+	"\x10disputed_fact_id\x18\x04 \x01(\tR\x0edisputedFactId\x12!\n" +
+	"\fdispute_type\x18\x05 \x01(\tR\vdisputeType\x12\x12\n" +
+	"\x04bond\x18\x06 \x01(\tR\x04bond\x12(\n" +
+	"\x10created_at_block\x18\a \x01(\x04R\x0ecreatedAtBlock\x12\x1a\n" +
+	"\bevidence\x18\b \x01(\tR\bevidence\x12\x16\n" +
+	"\x06status\x18\t \x01(\tR\x06status\x12*\n" +
+	"\x11resolved_at_block\x18\n" +
+	" \x01(\x04R\x0fresolvedAtBlock\x12\x1a\n" +
+	"\bresolver\x18\v \x01(\tR\bresolver\x12'\n" +
+	"\x0fresolution_note\x18\f \x01(\tR\x0eresolutionNote\"\x9b\x05\n" +
+	"\x18TrainingFundDisbursement\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
+	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12\x1f\n" +
+	"\vpipeline_id\x18\x03 \x01(\tR\n" +
+	"pipelineId\x12\x1a\n" +
+	"\bclaimant\x18\x04 \x01(\tR\bclaimant\x12(\n" +
+	"\x10claimed_at_block\x18\x05 \x01(\x04R\x0eclaimedAtBlock\x12!\n" +
+	"\ftotal_amount\x18\x06 \x01(\tR\vtotalAmount\x12'\n" +
+	"\x0freleased_amount\x18\a \x01(\tR\x0ereleasedAmount\x12%\n" +
+	"\x0evesting_amount\x18\b \x01(\tR\rvestingAmount\x12*\n" +
+	"\x11vesting_end_block\x18\t \x01(\x04R\x0fvestingEndBlock\x12B\n" +
+	"\x1ecalibration_score_at_claim_bps\x18\n" +
+	" \x01(\x04R\x1acalibrationScoreAtClaimBps\x12>\n" +
+	"\x1bmethodology_diversity_count\x18\v \x01(\x04R\x19methodologyDiversityCount\x12B\n" +
+	"\x1dreproducibility_proof_present\x18\f \x01(\bR\x1breproducibilityProofPresent\x12,\n" +
+	"\x12clawed_back_amount\x18\r \x01(\tR\x10clawedBackAmount\x12/\n" +
+	"\x14clawed_back_at_block\x18\x0e \x01(\x04R\x11clawedBackAtBlock\x12'\n" +
+	"\x0fclawback_reason\x18\x0f \x01(\tR\x0eclawbackReason\"\xbf\x01\n" +
 	"\x10AgentMethodStats\x12 \n" +
 	"\vsubmissions\x18\x01 \x01(\x04R\vsubmissions\x12\x1a\n" +
 	"\baccepted\x18\x02 \x01(\x04R\baccepted\x12\x1a\n" +
@@ -4565,7 +5132,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x15CLAIM_TYPE_CONSTRAINT\x10\x04\x12\x17\n" +
 	"\x13CLAIM_TYPE_NEGATION\x10\x05\x12\x1a\n" +
 	"\x16CLAIM_TYPE_OBSERVATION\x10\x06\x12\x1c\n" +
-	"\x18CLAIM_TYPE_COMPUTATIONAL\x10\a*\xf5\x01\n" +
+	"\x18CLAIM_TYPE_COMPUTATIONAL\x10\a*\x95\x02\n" +
 	"\fRelationType\x12\x1d\n" +
 	"\x19RELATION_TYPE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16RELATION_TYPE_SUPPORTS\x10\x01\x12\x1d\n" +
@@ -4574,7 +5141,8 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x15RELATION_TYPE_REFINES\x10\x04\x12\x1d\n" +
 	"\x19RELATION_TYPE_GENERALIZES\x10\x05\x12\x1c\n" +
 	"\x18RELATION_TYPE_SUPERSEDES\x10\x06\x12\x17\n" +
-	"\x13RELATION_TYPE_CITES\x10\a*\xe3\x01\n" +
+	"\x13RELATION_TYPE_CITES\x10\a\x12\x1e\n" +
+	"\x1aRELATION_TYPE_REFORMULATES\x10\b*\xe3\x01\n" +
 	"\rInferenceType\x12\x1e\n" +
 	"\x1aINFERENCE_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
 	"\x18INFERENCE_TYPE_DEDUCTIVE\x10\x01\x12\x1c\n" +
@@ -4594,7 +5162,13 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x1cTRAINING_QUALITY_TIER_SILVER\x10\x02\x12 \n" +
 	"\x1cTRAINING_QUALITY_TIER_BRONZE\x10\x03\x12\"\n" +
 	"\x1eTRAINING_QUALITY_TIER_NEGATIVE\x10\x04\x12$\n" +
-	" TRAINING_QUALITY_TIER_UNSUITABLE\x10\x05B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
+	" TRAINING_QUALITY_TIER_UNSUITABLE\x10\x05*\xc2\x01\n" +
+	"\x13AugmentationVerdict\x12 \n" +
+	"\x1cAUGMENTATION_VERDICT_PENDING\x10\x00\x12#\n" +
+	"\x1fAUGMENTATION_VERDICT_EQUIVALENT\x10\x01\x12!\n" +
+	"\x1dAUGMENTATION_VERDICT_SUPERIOR\x10\x02\x12!\n" +
+	"\x1dAUGMENTATION_VERDICT_INFERIOR\x10\x03\x12\x1e\n" +
+	"\x1aAUGMENTATION_VERDICT_DRIFT\x10\x04B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
 	file_zerone_knowledge_v1_types_proto_rawDescOnce sync.Once
@@ -4608,75 +5182,80 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_knowledge_v1_types_proto_rawDescData
 }
 
-var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 10)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
-	(FactStatus)(0),              // 0: zerone.knowledge.v1.FactStatus
-	(ClaimStatus)(0),             // 1: zerone.knowledge.v1.ClaimStatus
-	(VerificationPhase)(0),       // 2: zerone.knowledge.v1.VerificationPhase
-	(Verdict)(0),                 // 3: zerone.knowledge.v1.Verdict
-	(ClaimType)(0),               // 4: zerone.knowledge.v1.ClaimType
-	(RelationType)(0),            // 5: zerone.knowledge.v1.RelationType
-	(InferenceType)(0),           // 6: zerone.knowledge.v1.InferenceType
-	(DomainStatus)(0),            // 7: zerone.knowledge.v1.DomainStatus
-	(TrainingQualityTier)(0),     // 8: zerone.knowledge.v1.TrainingQualityTier
-	(*FactRelation)(nil),         // 9: zerone.knowledge.v1.FactRelation
-	(*ClaimRelation)(nil),        // 10: zerone.knowledge.v1.ClaimRelation
-	(*NormativeCommitment)(nil),  // 11: zerone.knowledge.v1.NormativeCommitment
-	(*Methodology)(nil),          // 12: zerone.knowledge.v1.Methodology
-	(*ClaimStructure)(nil),       // 13: zerone.knowledge.v1.ClaimStructure
-	(*Fact)(nil),                 // 14: zerone.knowledge.v1.Fact
-	(*TokenizerSpec)(nil),        // 15: zerone.knowledge.v1.TokenizerSpec
-	(*TrainingPipeline)(nil),     // 16: zerone.knowledge.v1.TrainingPipeline
-	(*ModelCard)(nil),            // 17: zerone.knowledge.v1.ModelCard
-	(*TrainingAttestation)(nil),  // 18: zerone.knowledge.v1.TrainingAttestation
-	(*ContributionRecord)(nil),   // 19: zerone.knowledge.v1.ContributionRecord
-	(*AugmentationBounty)(nil),   // 20: zerone.knowledge.v1.AugmentationBounty
-	(*Augmentation)(nil),         // 21: zerone.knowledge.v1.Augmentation
-	(*AgentMethodStats)(nil),     // 22: zerone.knowledge.v1.AgentMethodStats
-	(*AgentCalibration)(nil),     // 23: zerone.knowledge.v1.AgentCalibration
-	(*CommonKnowledgeEntry)(nil), // 24: zerone.knowledge.v1.CommonKnowledgeEntry
-	(*Claim)(nil),                // 25: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),    // 26: zerone.knowledge.v1.VerificationRound
-	(*CommitEntry)(nil),          // 27: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),          // 28: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),             // 29: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),               // 30: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),        // 31: zerone.knowledge.v1.ValidatorInfo
-	(*ProvisionalChallenge)(nil), // 32: zerone.knowledge.v1.ProvisionalChallenge
-	(*DemandSignal)(nil),         // 33: zerone.knowledge.v1.DemandSignal
-	(*KnowledgeBounty)(nil),      // 34: zerone.knowledge.v1.KnowledgeBounty
-	(*CompletedRoundMeta)(nil),   // 35: zerone.knowledge.v1.CompletedRoundMeta
-	nil,                          // 36: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
-	nil,                          // 37: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	(FactStatus)(0),                  // 0: zerone.knowledge.v1.FactStatus
+	(ClaimStatus)(0),                 // 1: zerone.knowledge.v1.ClaimStatus
+	(VerificationPhase)(0),           // 2: zerone.knowledge.v1.VerificationPhase
+	(Verdict)(0),                     // 3: zerone.knowledge.v1.Verdict
+	(ClaimType)(0),                   // 4: zerone.knowledge.v1.ClaimType
+	(RelationType)(0),                // 5: zerone.knowledge.v1.RelationType
+	(InferenceType)(0),               // 6: zerone.knowledge.v1.InferenceType
+	(DomainStatus)(0),                // 7: zerone.knowledge.v1.DomainStatus
+	(TrainingQualityTier)(0),         // 8: zerone.knowledge.v1.TrainingQualityTier
+	(AugmentationVerdict)(0),         // 9: zerone.knowledge.v1.AugmentationVerdict
+	(*FactRelation)(nil),             // 10: zerone.knowledge.v1.FactRelation
+	(*ClaimRelation)(nil),            // 11: zerone.knowledge.v1.ClaimRelation
+	(*NormativeCommitment)(nil),      // 12: zerone.knowledge.v1.NormativeCommitment
+	(*Methodology)(nil),              // 13: zerone.knowledge.v1.Methodology
+	(*ClaimStructure)(nil),           // 14: zerone.knowledge.v1.ClaimStructure
+	(*Fact)(nil),                     // 15: zerone.knowledge.v1.Fact
+	(*TokenizerSpec)(nil),            // 16: zerone.knowledge.v1.TokenizerSpec
+	(*TrainingPipeline)(nil),         // 17: zerone.knowledge.v1.TrainingPipeline
+	(*ModelCard)(nil),                // 18: zerone.knowledge.v1.ModelCard
+	(*TrainingAttestation)(nil),      // 19: zerone.knowledge.v1.TrainingAttestation
+	(*ContributionRecord)(nil),       // 20: zerone.knowledge.v1.ContributionRecord
+	(*AugmentationBounty)(nil),       // 21: zerone.knowledge.v1.AugmentationBounty
+	(*Augmentation)(nil),             // 22: zerone.knowledge.v1.Augmentation
+	(*ContributionChallenge)(nil),    // 23: zerone.knowledge.v1.ContributionChallenge
+	(*TrainingFundDisbursement)(nil), // 24: zerone.knowledge.v1.TrainingFundDisbursement
+	(*AgentMethodStats)(nil),         // 25: zerone.knowledge.v1.AgentMethodStats
+	(*AgentCalibration)(nil),         // 26: zerone.knowledge.v1.AgentCalibration
+	(*CommonKnowledgeEntry)(nil),     // 27: zerone.knowledge.v1.CommonKnowledgeEntry
+	(*Claim)(nil),                    // 28: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),        // 29: zerone.knowledge.v1.VerificationRound
+	(*CommitEntry)(nil),              // 30: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),              // 31: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),                 // 32: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),                   // 33: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),            // 34: zerone.knowledge.v1.ValidatorInfo
+	(*ProvisionalChallenge)(nil),     // 35: zerone.knowledge.v1.ProvisionalChallenge
+	(*DemandSignal)(nil),             // 36: zerone.knowledge.v1.DemandSignal
+	(*KnowledgeBounty)(nil),          // 37: zerone.knowledge.v1.KnowledgeBounty
+	(*CompletedRoundMeta)(nil),       // 38: zerone.knowledge.v1.CompletedRoundMeta
+	nil,                              // 39: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	nil,                              // 40: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 1: zerone.knowledge.v1.FactRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
 	5,  // 2: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 3: zerone.knowledge.v1.ClaimRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
-	36, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	39, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
 	0,  // 5: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
 	4,  // 6: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	9,  // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
-	9,  // 8: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
-	13, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
-	37, // 10: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
-	1,  // 11: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
-	4,  // 12: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	10, // 13: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
-	13, // 14: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
-	2,  // 15: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	27, // 16: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	28, // 17: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
-	3,  // 18: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
-	7,  // 19: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
-	22, // 20: zerone.knowledge.v1.AgentCalibration.PerMethodEntry.value:type_name -> zerone.knowledge.v1.AgentMethodStats
-	21, // [21:21] is the sub-list for method output_type
-	21, // [21:21] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	10, // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
+	10, // 8: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
+	14, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	9,  // 10: zerone.knowledge.v1.Augmentation.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
+	9,  // 11: zerone.knowledge.v1.Augmentation.verdict_votes:type_name -> zerone.knowledge.v1.AugmentationVerdict
+	40, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	1,  // 13: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
+	4,  // 14: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
+	11, // 15: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
+	14, // 16: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	2,  // 17: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
+	30, // 18: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	31, // 19: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	3,  // 20: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
+	7,  // 21: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
+	25, // 22: zerone.knowledge.v1.AgentCalibration.PerMethodEntry.value:type_name -> zerone.knowledge.v1.AgentMethodStats
+	23, // [23:23] is the sub-list for method output_type
+	23, // [23:23] is the sub-list for method input_type
+	23, // [23:23] is the sub-list for extension type_name
+	23, // [23:23] is the sub-list for extension extendee
+	0,  // [0:23] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_types_proto_init() }
@@ -4689,8 +5268,8 @@ func file_zerone_knowledge_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
-			NumEnums:      9,
-			NumMessages:   29,
+			NumEnums:      10,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

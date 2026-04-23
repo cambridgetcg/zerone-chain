@@ -282,6 +282,40 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/training/augmentations/fact/{fact_id}";
   }
 
+  // ─── Route B Wave 4: economic realignment ────────────────────────────
+  // TrainingValueWeight computes the Popper-weighted TVW for a fact at
+  // current state. Used by clients to preview contribution revenue share.
+  rpc TrainingValueWeight(QueryTrainingValueWeightRequest) returns (QueryTrainingValueWeightResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/tvw/{fact_id}";
+  }
+  // ContributionChallenge returns a single challenge by id.
+  rpc ContributionChallenge(QueryContributionChallengeRequest) returns (QueryContributionChallengeResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/challenge/{id}";
+  }
+  // OpenContributionChallenges lists unresolved challenges.
+  rpc OpenContributionChallenges(QueryOpenContributionChallengesRequest) returns (QueryOpenContributionChallengesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/challenges/open";
+  }
+  // TrainingFundDisbursement returns a single disbursement by id.
+  rpc TrainingFundDisbursement(QueryTrainingFundDisbursementRequest) returns (QueryTrainingFundDisbursementResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/disbursement/{id}";
+  }
+  // TrainingFundBalance returns the current training fund module account balance.
+  rpc TrainingFundBalance(QueryTrainingFundBalanceRequest) returns (QueryTrainingFundBalanceResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/fund_balance";
+  }
+  // NormativeCorpus returns the NormativeCommitment training export; these
+  // rows explicitly carry an is_normative=true flag and DO NOT generate
+  // contribution revenue (is-ought wall in money).
+  rpc NormativeCorpus(QueryNormativeCorpusRequest) returns (QueryNormativeCorpusResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/normative_corpus";
+  }
+  // DriftCorpus returns failed (DRIFT-verdict) reformulations as negative
+  // training signal for meaning-preservation learning.
+  rpc DriftCorpus(QueryDriftCorpusRequest) returns (QueryDriftCorpusResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/drift_corpus";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -1189,4 +1223,86 @@ message QueryAugmentationsByFactRequest {
 }
 message QueryAugmentationsByFactResponse {
   repeated Augmentation augmentations = 1;
+}
+
+// ─── Route B Wave 4: economic realignment queries ─────────────────────────
+
+message QueryTrainingValueWeightRequest {
+  string fact_id = 1;
+}
+message QueryTrainingValueWeightResponse {
+  uint64 tvw_bps                       = 1;  // Final TVW (BPS scale)
+  uint64 base_weight                   = 2;  // survived_falsification + 1
+  uint64 methodology_multiplier_bps    = 3;
+  uint64 vindication_multiplier_bps    = 4;
+  uint64 submitter_calibration_bps     = 5;
+  uint64 axiom_proximity_bps           = 6;
+  bool   blocked_is_ought              = 7;  // true if id resolved to NormativeCommitment
+  bool   disproven                     = 8;  // true if revenue has been clawed back
+}
+
+message QueryContributionChallengeRequest {
+  string id = 1;
+}
+message QueryContributionChallengeResponse {
+  ContributionChallenge challenge = 1;
+  bool found = 2;
+}
+
+message QueryOpenContributionChallengesRequest {
+  string model_id = 1;  // optional filter
+}
+message QueryOpenContributionChallengesResponse {
+  repeated ContributionChallenge challenges = 1;
+}
+
+message QueryTrainingFundDisbursementRequest {
+  string id = 1;
+}
+message QueryTrainingFundDisbursementResponse {
+  TrainingFundDisbursement disbursement = 1;
+  bool found = 2;
+}
+
+message QueryTrainingFundBalanceRequest {}
+message QueryTrainingFundBalanceResponse {
+  string balance   = 1;  // uzrn
+  string escrowed  = 2;  // portion locked in active bounty escrow
+  string vesting   = 3;  // portion locked in vesting disbursements
+  string available = 4;  // balance - escrowed - vesting
+}
+
+message QueryNormativeCorpusRequest {
+  uint32 limit  = 1;
+  uint32 offset = 2;
+}
+message NormativeCorpusEntry {
+  string commitment_id = 1;
+  string content       = 2;
+  string domain        = 3;
+  string method_id     = 4;
+  bool   is_normative  = 5;  // always true — the is-ought marker
+}
+message QueryNormativeCorpusResponse {
+  repeated NormativeCorpusEntry entries = 1;
+  uint32 total                          = 2;
+  uint64 snapshot_block_height          = 3;
+}
+
+message QueryDriftCorpusRequest {
+  uint32 limit  = 1;
+  uint32 offset = 2;
+}
+message DriftCorpusEntry {
+  string augmentation_id    = 1;
+  string original_fact_id   = 2;
+  string variant_content    = 3;
+  AugmentationVerdict verdict = 4;  // DRIFT or INFERIOR
+  uint64 verdict_block      = 5;
+  string methodology_id     = 6;
+}
+message QueryDriftCorpusResponse {
+  repeated DriftCorpusEntry entries = 1;
+  uint32 total                      = 2;
+  uint64 snapshot_block_height      = 3;
 }

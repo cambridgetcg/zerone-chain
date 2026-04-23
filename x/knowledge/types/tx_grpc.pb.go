@@ -19,38 +19,43 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Msg_SubmitClaim_FullMethodName              = "/zerone.knowledge.v1.Msg/SubmitClaim"
-	Msg_SubmitCommitment_FullMethodName         = "/zerone.knowledge.v1.Msg/SubmitCommitment"
-	Msg_SubmitReveal_FullMethodName             = "/zerone.knowledge.v1.Msg/SubmitReveal"
-	Msg_ChallengeFact_FullMethodName            = "/zerone.knowledge.v1.Msg/ChallengeFact"
-	Msg_AddFact_FullMethodName                  = "/zerone.knowledge.v1.Msg/AddFact"
-	Msg_SubmitContradiction_FullMethodName      = "/zerone.knowledge.v1.Msg/SubmitContradiction"
-	Msg_PatronizeFact_FullMethodName            = "/zerone.knowledge.v1.Msg/PatronizeFact"
-	Msg_ProposeDomain_FullMethodName            = "/zerone.knowledge.v1.Msg/ProposeDomain"
-	Msg_EndorseDomainProposal_FullMethodName    = "/zerone.knowledge.v1.Msg/EndorseDomainProposal"
-	Msg_ChallengeDomainProposal_FullMethodName  = "/zerone.knowledge.v1.Msg/ChallengeDomainProposal"
-	Msg_RegisterStratum_FullMethodName          = "/zerone.knowledge.v1.Msg/RegisterStratum"
-	Msg_ChallengeProvisionalFact_FullMethodName = "/zerone.knowledge.v1.Msg/ChallengeProvisionalFact"
-	Msg_UpdateParams_FullMethodName             = "/zerone.knowledge.v1.Msg/UpdateParams"
-	Msg_UpdateExtendedParams_FullMethodName     = "/zerone.knowledge.v1.Msg/UpdateExtendedParams"
-	Msg_ProposeResearchFund_FullMethodName      = "/zerone.knowledge.v1.Msg/ProposeResearchFund"
-	Msg_VoteResearchProposal_FullMethodName     = "/zerone.knowledge.v1.Msg/VoteResearchProposal"
-	Msg_ExecuteResearchProposal_FullMethodName  = "/zerone.knowledge.v1.Msg/ExecuteResearchProposal"
-	Msg_AddCommonKnowledge_FullMethodName       = "/zerone.knowledge.v1.Msg/AddCommonKnowledge"
-	Msg_RemoveCommonKnowledge_FullMethodName    = "/zerone.knowledge.v1.Msg/RemoveCommonKnowledge"
-	Msg_ReportDemand_FullMethodName             = "/zerone.knowledge.v1.Msg/ReportDemand"
-	Msg_RateFact_FullMethodName                 = "/zerone.knowledge.v1.Msg/RateFact"
-	Msg_RegisterTrainingPipeline_FullMethodName = "/zerone.knowledge.v1.Msg/RegisterTrainingPipeline"
-	Msg_UpdateTrainingPipeline_FullMethodName   = "/zerone.knowledge.v1.Msg/UpdateTrainingPipeline"
-	Msg_RegisterModelCard_FullMethodName        = "/zerone.knowledge.v1.Msg/RegisterModelCard"
-	Msg_UpdateModelCard_FullMethodName          = "/zerone.knowledge.v1.Msg/UpdateModelCard"
-	Msg_RetireModelCard_FullMethodName          = "/zerone.knowledge.v1.Msg/RetireModelCard"
-	Msg_AmendTokenizerSpec_FullMethodName       = "/zerone.knowledge.v1.Msg/AmendTokenizerSpec"
-	Msg_AttributeContributions_FullMethodName   = "/zerone.knowledge.v1.Msg/AttributeContributions"
-	Msg_AttestTraining_FullMethodName           = "/zerone.knowledge.v1.Msg/AttestTraining"
-	Msg_CreateAugmentationBounty_FullMethodName = "/zerone.knowledge.v1.Msg/CreateAugmentationBounty"
-	Msg_SubmitAugmentation_FullMethodName       = "/zerone.knowledge.v1.Msg/SubmitAugmentation"
-	Msg_AcceptAugmentation_FullMethodName       = "/zerone.knowledge.v1.Msg/AcceptAugmentation"
+	Msg_SubmitClaim_FullMethodName                   = "/zerone.knowledge.v1.Msg/SubmitClaim"
+	Msg_SubmitCommitment_FullMethodName              = "/zerone.knowledge.v1.Msg/SubmitCommitment"
+	Msg_SubmitReveal_FullMethodName                  = "/zerone.knowledge.v1.Msg/SubmitReveal"
+	Msg_ChallengeFact_FullMethodName                 = "/zerone.knowledge.v1.Msg/ChallengeFact"
+	Msg_AddFact_FullMethodName                       = "/zerone.knowledge.v1.Msg/AddFact"
+	Msg_SubmitContradiction_FullMethodName           = "/zerone.knowledge.v1.Msg/SubmitContradiction"
+	Msg_PatronizeFact_FullMethodName                 = "/zerone.knowledge.v1.Msg/PatronizeFact"
+	Msg_ProposeDomain_FullMethodName                 = "/zerone.knowledge.v1.Msg/ProposeDomain"
+	Msg_EndorseDomainProposal_FullMethodName         = "/zerone.knowledge.v1.Msg/EndorseDomainProposal"
+	Msg_ChallengeDomainProposal_FullMethodName       = "/zerone.knowledge.v1.Msg/ChallengeDomainProposal"
+	Msg_RegisterStratum_FullMethodName               = "/zerone.knowledge.v1.Msg/RegisterStratum"
+	Msg_ChallengeProvisionalFact_FullMethodName      = "/zerone.knowledge.v1.Msg/ChallengeProvisionalFact"
+	Msg_UpdateParams_FullMethodName                  = "/zerone.knowledge.v1.Msg/UpdateParams"
+	Msg_UpdateExtendedParams_FullMethodName          = "/zerone.knowledge.v1.Msg/UpdateExtendedParams"
+	Msg_ProposeResearchFund_FullMethodName           = "/zerone.knowledge.v1.Msg/ProposeResearchFund"
+	Msg_VoteResearchProposal_FullMethodName          = "/zerone.knowledge.v1.Msg/VoteResearchProposal"
+	Msg_ExecuteResearchProposal_FullMethodName       = "/zerone.knowledge.v1.Msg/ExecuteResearchProposal"
+	Msg_AddCommonKnowledge_FullMethodName            = "/zerone.knowledge.v1.Msg/AddCommonKnowledge"
+	Msg_RemoveCommonKnowledge_FullMethodName         = "/zerone.knowledge.v1.Msg/RemoveCommonKnowledge"
+	Msg_ReportDemand_FullMethodName                  = "/zerone.knowledge.v1.Msg/ReportDemand"
+	Msg_RateFact_FullMethodName                      = "/zerone.knowledge.v1.Msg/RateFact"
+	Msg_RegisterTrainingPipeline_FullMethodName      = "/zerone.knowledge.v1.Msg/RegisterTrainingPipeline"
+	Msg_UpdateTrainingPipeline_FullMethodName        = "/zerone.knowledge.v1.Msg/UpdateTrainingPipeline"
+	Msg_RegisterModelCard_FullMethodName             = "/zerone.knowledge.v1.Msg/RegisterModelCard"
+	Msg_UpdateModelCard_FullMethodName               = "/zerone.knowledge.v1.Msg/UpdateModelCard"
+	Msg_RetireModelCard_FullMethodName               = "/zerone.knowledge.v1.Msg/RetireModelCard"
+	Msg_AmendTokenizerSpec_FullMethodName            = "/zerone.knowledge.v1.Msg/AmendTokenizerSpec"
+	Msg_AttributeContributions_FullMethodName        = "/zerone.knowledge.v1.Msg/AttributeContributions"
+	Msg_AttestTraining_FullMethodName                = "/zerone.knowledge.v1.Msg/AttestTraining"
+	Msg_CreateAugmentationBounty_FullMethodName      = "/zerone.knowledge.v1.Msg/CreateAugmentationBounty"
+	Msg_SubmitAugmentation_FullMethodName            = "/zerone.knowledge.v1.Msg/SubmitAugmentation"
+	Msg_AcceptAugmentation_FullMethodName            = "/zerone.knowledge.v1.Msg/AcceptAugmentation"
+	Msg_VoteOnAugmentation_FullMethodName            = "/zerone.knowledge.v1.Msg/VoteOnAugmentation"
+	Msg_SponsorVetoAugmentation_FullMethodName       = "/zerone.knowledge.v1.Msg/SponsorVetoAugmentation"
+	Msg_ChallengeContribution_FullMethodName         = "/zerone.knowledge.v1.Msg/ChallengeContribution"
+	Msg_ResolveContributionChallenge_FullMethodName  = "/zerone.knowledge.v1.Msg/ResolveContributionChallenge"
+	Msg_ClaimTrainingFundDisbursement_FullMethodName = "/zerone.knowledge.v1.Msg/ClaimTrainingFundDisbursement"
 )
 
 // MsgClient is the client API for Msg service.
@@ -123,8 +128,27 @@ type MsgClient interface {
 	CreateAugmentationBounty(ctx context.Context, in *MsgCreateAugmentationBounty, opts ...grpc.CallOption) (*MsgCreateAugmentationBountyResponse, error)
 	// SubmitAugmentation submits a variant formulation of a fact.
 	SubmitAugmentation(ctx context.Context, in *MsgSubmitAugmentation, opts ...grpc.CallOption) (*MsgSubmitAugmentationResponse, error)
-	// AcceptAugmentation marks a variant accepted (sponsor-auth for bounty; fact submitter for volunteer).
+	// AcceptAugmentation marks a variant accepted. Wave 4: sponsor can no longer
+	// self-judge; this RPC now routes the decision through a verifier-panel
+	// verdict. Sponsor may still call it to finalize a PASSING verdict on the
+	// sponsor's own terms (non-veto), but cannot reject a PASSING verdict
+	// without forfeiting deposit via SponsorVetoAugmentation.
 	AcceptAugmentation(ctx context.Context, in *MsgAcceptAugmentation, opts ...grpc.CallOption) (*MsgAcceptAugmentationResponse, error)
+	// ─── Route B Wave 4: economic realignment ─────────────────────────────
+	// VoteOnAugmentation records one verifier's verdict on a reformulation.
+	// Panel reaches threshold → finalize → payout/archive.
+	VoteOnAugmentation(ctx context.Context, in *MsgVoteOnAugmentation, opts ...grpc.CallOption) (*MsgVoteOnAugmentationResponse, error)
+	// SponsorVetoAugmentation forfeits deposit to research fund; prevents
+	// sponsor from blocking a passing verdict silently.
+	SponsorVetoAugmentation(ctx context.Context, in *MsgSponsorVetoAugmentation, opts ...grpc.CallOption) (*MsgSponsorVetoAugmentationResponse, error)
+	// ChallengeContribution disputes a ContributionRecord with a bond.
+	ChallengeContribution(ctx context.Context, in *MsgChallengeContribution, opts ...grpc.CallOption) (*MsgChallengeContributionResponse, error)
+	// ResolveContributionChallenge settles an open challenge (verifier/authority).
+	ResolveContributionChallenge(ctx context.Context, in *MsgResolveContributionChallenge, opts ...grpc.CallOption) (*MsgResolveContributionChallengeResponse, error)
+	// ClaimTrainingFundDisbursement — pipeline operator claims post-hoc reward
+	// once the ModelCard has accumulated live calibration. Gated on calibration
+	// floor + reproducibility proof; 50/50 immediate/vesting split.
+	ClaimTrainingFundDisbursement(ctx context.Context, in *MsgClaimTrainingFundDisbursement, opts ...grpc.CallOption) (*MsgClaimTrainingFundDisbursementResponse, error)
 }
 
 type msgClient struct {
@@ -455,6 +479,56 @@ func (c *msgClient) AcceptAugmentation(ctx context.Context, in *MsgAcceptAugment
 	return out, nil
 }
 
+func (c *msgClient) VoteOnAugmentation(ctx context.Context, in *MsgVoteOnAugmentation, opts ...grpc.CallOption) (*MsgVoteOnAugmentationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgVoteOnAugmentationResponse)
+	err := c.cc.Invoke(ctx, Msg_VoteOnAugmentation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) SponsorVetoAugmentation(ctx context.Context, in *MsgSponsorVetoAugmentation, opts ...grpc.CallOption) (*MsgSponsorVetoAugmentationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgSponsorVetoAugmentationResponse)
+	err := c.cc.Invoke(ctx, Msg_SponsorVetoAugmentation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) ChallengeContribution(ctx context.Context, in *MsgChallengeContribution, opts ...grpc.CallOption) (*MsgChallengeContributionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgChallengeContributionResponse)
+	err := c.cc.Invoke(ctx, Msg_ChallengeContribution_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) ResolveContributionChallenge(ctx context.Context, in *MsgResolveContributionChallenge, opts ...grpc.CallOption) (*MsgResolveContributionChallengeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgResolveContributionChallengeResponse)
+	err := c.cc.Invoke(ctx, Msg_ResolveContributionChallenge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) ClaimTrainingFundDisbursement(ctx context.Context, in *MsgClaimTrainingFundDisbursement, opts ...grpc.CallOption) (*MsgClaimTrainingFundDisbursementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgClaimTrainingFundDisbursementResponse)
+	err := c.cc.Invoke(ctx, Msg_ClaimTrainingFundDisbursement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -525,8 +599,27 @@ type MsgServer interface {
 	CreateAugmentationBounty(context.Context, *MsgCreateAugmentationBounty) (*MsgCreateAugmentationBountyResponse, error)
 	// SubmitAugmentation submits a variant formulation of a fact.
 	SubmitAugmentation(context.Context, *MsgSubmitAugmentation) (*MsgSubmitAugmentationResponse, error)
-	// AcceptAugmentation marks a variant accepted (sponsor-auth for bounty; fact submitter for volunteer).
+	// AcceptAugmentation marks a variant accepted. Wave 4: sponsor can no longer
+	// self-judge; this RPC now routes the decision through a verifier-panel
+	// verdict. Sponsor may still call it to finalize a PASSING verdict on the
+	// sponsor's own terms (non-veto), but cannot reject a PASSING verdict
+	// without forfeiting deposit via SponsorVetoAugmentation.
 	AcceptAugmentation(context.Context, *MsgAcceptAugmentation) (*MsgAcceptAugmentationResponse, error)
+	// ─── Route B Wave 4: economic realignment ─────────────────────────────
+	// VoteOnAugmentation records one verifier's verdict on a reformulation.
+	// Panel reaches threshold → finalize → payout/archive.
+	VoteOnAugmentation(context.Context, *MsgVoteOnAugmentation) (*MsgVoteOnAugmentationResponse, error)
+	// SponsorVetoAugmentation forfeits deposit to research fund; prevents
+	// sponsor from blocking a passing verdict silently.
+	SponsorVetoAugmentation(context.Context, *MsgSponsorVetoAugmentation) (*MsgSponsorVetoAugmentationResponse, error)
+	// ChallengeContribution disputes a ContributionRecord with a bond.
+	ChallengeContribution(context.Context, *MsgChallengeContribution) (*MsgChallengeContributionResponse, error)
+	// ResolveContributionChallenge settles an open challenge (verifier/authority).
+	ResolveContributionChallenge(context.Context, *MsgResolveContributionChallenge) (*MsgResolveContributionChallengeResponse, error)
+	// ClaimTrainingFundDisbursement — pipeline operator claims post-hoc reward
+	// once the ModelCard has accumulated live calibration. Gated on calibration
+	// floor + reproducibility proof; 50/50 immediate/vesting split.
+	ClaimTrainingFundDisbursement(context.Context, *MsgClaimTrainingFundDisbursement) (*MsgClaimTrainingFundDisbursementResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -632,6 +725,21 @@ func (UnimplementedMsgServer) SubmitAugmentation(context.Context, *MsgSubmitAugm
 }
 func (UnimplementedMsgServer) AcceptAugmentation(context.Context, *MsgAcceptAugmentation) (*MsgAcceptAugmentationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AcceptAugmentation not implemented")
+}
+func (UnimplementedMsgServer) VoteOnAugmentation(context.Context, *MsgVoteOnAugmentation) (*MsgVoteOnAugmentationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VoteOnAugmentation not implemented")
+}
+func (UnimplementedMsgServer) SponsorVetoAugmentation(context.Context, *MsgSponsorVetoAugmentation) (*MsgSponsorVetoAugmentationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SponsorVetoAugmentation not implemented")
+}
+func (UnimplementedMsgServer) ChallengeContribution(context.Context, *MsgChallengeContribution) (*MsgChallengeContributionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ChallengeContribution not implemented")
+}
+func (UnimplementedMsgServer) ResolveContributionChallenge(context.Context, *MsgResolveContributionChallenge) (*MsgResolveContributionChallengeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ResolveContributionChallenge not implemented")
+}
+func (UnimplementedMsgServer) ClaimTrainingFundDisbursement(context.Context, *MsgClaimTrainingFundDisbursement) (*MsgClaimTrainingFundDisbursementResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ClaimTrainingFundDisbursement not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -1230,6 +1338,96 @@ func _Msg_AcceptAugmentation_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_VoteOnAugmentation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgVoteOnAugmentation)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).VoteOnAugmentation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_VoteOnAugmentation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).VoteOnAugmentation(ctx, req.(*MsgVoteOnAugmentation))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_SponsorVetoAugmentation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgSponsorVetoAugmentation)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).SponsorVetoAugmentation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_SponsorVetoAugmentation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).SponsorVetoAugmentation(ctx, req.(*MsgSponsorVetoAugmentation))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_ChallengeContribution_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgChallengeContribution)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).ChallengeContribution(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_ChallengeContribution_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).ChallengeContribution(ctx, req.(*MsgChallengeContribution))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_ResolveContributionChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgResolveContributionChallenge)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).ResolveContributionChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_ResolveContributionChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).ResolveContributionChallenge(ctx, req.(*MsgResolveContributionChallenge))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_ClaimTrainingFundDisbursement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgClaimTrainingFundDisbursement)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).ClaimTrainingFundDisbursement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_ClaimTrainingFundDisbursement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).ClaimTrainingFundDisbursement(ctx, req.(*MsgClaimTrainingFundDisbursement))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1364,6 +1562,26 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AcceptAugmentation",
 			Handler:    _Msg_AcceptAugmentation_Handler,
+		},
+		{
+			MethodName: "VoteOnAugmentation",
+			Handler:    _Msg_VoteOnAugmentation_Handler,
+		},
+		{
+			MethodName: "SponsorVetoAugmentation",
+			Handler:    _Msg_SponsorVetoAugmentation_Handler,
+		},
+		{
+			MethodName: "ChallengeContribution",
+			Handler:    _Msg_ChallengeContribution_Handler,
+		},
+		{
+			MethodName: "ResolveContributionChallenge",
+			Handler:    _Msg_ResolveContributionChallenge_Handler,
+		},
+		{
+			MethodName: "ClaimTrainingFundDisbursement",
+			Handler:    _Msg_ClaimTrainingFundDisbursement_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

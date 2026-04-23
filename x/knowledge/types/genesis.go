@@ -207,6 +207,30 @@ func DefaultParams() Params {
 		// Maximum 30% reward reduction for full conformity; 0 reduction for
 		// maximally independent voters. Disable by setting to 0.
 		IndependenceRewardStrengthBps: 300_000,
+
+		// ─── Route B Wave 4: economic realignment ─────────────────────────
+		ReformulationMinPanelVotes:             3,
+		ReformulationConsensusBps:              666_000, // 66.6%
+		ReformulationSuperiorBonusBps:          500_000, // +50% payout on SUPERIOR
+		AugmentationExpiryFeeBps:               30_000,  // 3% kept-market-open fee
+		MethodologyNormalizationBps:            map[string]uint64{
+			// Tune so lower-corroboration methodologies aren't starved.
+			"M-PHENOMENOLOGICAL": 2_000_000, // 2.0×
+			"M-PRACTICE":         1_750_000, // 1.75×
+			"M-ECOLOGICAL":       1_500_000, // 1.5×
+			"M-TESTIMONIAL":      1_250_000, // 1.25×
+			"M-LEGACY":           500_000,   // 0.5× — disincentivise legacy-method farming
+		},
+		VindicationTvwMultiplierBps:            2_500_000, // 2.5× for vindicated minority
+		DisprovalClawbackBps:                   500_000,   // 50% of recent revenue
+		DisprovalClawbackWindowEpochs:          30,
+		TrainingFundCalibrationFloorBps:        500_000, // 50%
+		TrainingFundVestingEpochs:              60,
+		TrainingFundMethodologyDiversityBonusBps: 100_000, // +10% per distinct methodology beyond 1
+		TrainingFundBaseReward:                 "1000000000", // 1,000 ZRN
+		ContributionChallengeBond:              "5000000",     // 5 ZRN
+		ContributionChallengeRewardMultiplierBps: 2_000_000, // 2×
+		SponsorVetoForfeitBps:                  1_000_000, // 100% forfeit on veto
 	}
 }
 

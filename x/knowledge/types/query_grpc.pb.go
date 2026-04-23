@@ -19,71 +19,78 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Params_FullMethodName                 = "/zerone.knowledge.v1.Query/Params"
-	Query_Fact_FullMethodName                   = "/zerone.knowledge.v1.Query/Fact"
-	Query_Facts_FullMethodName                  = "/zerone.knowledge.v1.Query/Facts"
-	Query_FactsByDomain_FullMethodName          = "/zerone.knowledge.v1.Query/FactsByDomain"
-	Query_FactsBySubmitter_FullMethodName       = "/zerone.knowledge.v1.Query/FactsBySubmitter"
-	Query_Claim_FullMethodName                  = "/zerone.knowledge.v1.Query/Claim"
-	Query_PendingClaims_FullMethodName          = "/zerone.knowledge.v1.Query/PendingClaims"
-	Query_VerificationRound_FullMethodName      = "/zerone.knowledge.v1.Query/VerificationRound"
-	Query_Domain_FullMethodName                 = "/zerone.knowledge.v1.Query/Domain"
-	Query_Domains_FullMethodName                = "/zerone.knowledge.v1.Query/Domains"
-	Query_FactConfidence_FullMethodName         = "/zerone.knowledge.v1.Query/FactConfidence"
-	Query_FactCitationCount_FullMethodName      = "/zerone.knowledge.v1.Query/FactCitationCount"
-	Query_FactRelations_FullMethodName          = "/zerone.knowledge.v1.Query/FactRelations"
-	Query_FactsBySubject_FullMethodName         = "/zerone.knowledge.v1.Query/FactsBySubject"
-	Query_FactsByTag_FullMethodName             = "/zerone.knowledge.v1.Query/FactsByTag"
-	Query_FactByCanonical_FullMethodName        = "/zerone.knowledge.v1.Query/FactByCanonical"
-	Query_FactsByFitness_FullMethodName         = "/zerone.knowledge.v1.Query/FactsByFitness"
-	Query_BootstrapFundStatus_FullMethodName    = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
-	Query_FactsAtRisk_FullMethodName            = "/zerone.knowledge.v1.Query/FactsAtRisk"
-	Query_FactLineage_FullMethodName            = "/zerone.knowledge.v1.Query/FactLineage"
-	Query_FactProgeny_FullMethodName            = "/zerone.knowledge.v1.Query/FactProgeny"
-	Query_ProofTree_FullMethodName              = "/zerone.knowledge.v1.Query/ProofTree"
-	Query_DescendantTree_FullMethodName         = "/zerone.knowledge.v1.Query/DescendantTree"
-	Query_TrustProfile_FullMethodName           = "/zerone.knowledge.v1.Query/TrustProfile"
-	Query_Methodologies_FullMethodName          = "/zerone.knowledge.v1.Query/Methodologies"
-	Query_Methodology_FullMethodName            = "/zerone.knowledge.v1.Query/Methodology"
-	Query_NormativeCommitments_FullMethodName   = "/zerone.knowledge.v1.Query/NormativeCommitments"
-	Query_NormativeCommitment_FullMethodName    = "/zerone.knowledge.v1.Query/NormativeCommitment"
-	Query_MethodCorpus_FullMethodName           = "/zerone.knowledge.v1.Query/MethodCorpus"
-	Query_DisprovenCorpus_FullMethodName        = "/zerone.knowledge.v1.Query/DisprovenCorpus"
-	Query_VindicationCorpus_FullMethodName      = "/zerone.knowledge.v1.Query/VindicationCorpus"
-	Query_TrainingQuality_FullMethodName        = "/zerone.knowledge.v1.Query/TrainingQuality"
-	Query_AgentCalibration_FullMethodName       = "/zerone.knowledge.v1.Query/AgentCalibration"
-	Query_AgentLeaderboard_FullMethodName       = "/zerone.knowledge.v1.Query/AgentLeaderboard"
-	Query_TokenizerSpec_FullMethodName          = "/zerone.knowledge.v1.Query/TokenizerSpec"
-	Query_TokenizerSpecAtVersion_FullMethodName = "/zerone.knowledge.v1.Query/TokenizerSpecAtVersion"
-	Query_TrainingPipelines_FullMethodName      = "/zerone.knowledge.v1.Query/TrainingPipelines"
-	Query_TrainingPipeline_FullMethodName       = "/zerone.knowledge.v1.Query/TrainingPipeline"
-	Query_ModelCards_FullMethodName             = "/zerone.knowledge.v1.Query/ModelCards"
-	Query_ModelCard_FullMethodName              = "/zerone.knowledge.v1.Query/ModelCard"
-	Query_ModelCardByDeployment_FullMethodName  = "/zerone.knowledge.v1.Query/ModelCardByDeployment"
-	Query_StructuredCorpus_FullMethodName       = "/zerone.knowledge.v1.Query/StructuredCorpus"
-	Query_DisputationCorpus_FullMethodName      = "/zerone.knowledge.v1.Query/DisputationCorpus"
-	Query_TrainingAttestation_FullMethodName    = "/zerone.knowledge.v1.Query/TrainingAttestation"
-	Query_ModelContributions_FullMethodName     = "/zerone.knowledge.v1.Query/ModelContributions"
-	Query_FactContributors_FullMethodName       = "/zerone.knowledge.v1.Query/FactContributors"
-	Query_ModelLineage_FullMethodName           = "/zerone.knowledge.v1.Query/ModelLineage"
-	Query_AugmentationBounty_FullMethodName     = "/zerone.knowledge.v1.Query/AugmentationBounty"
-	Query_AugmentationBounties_FullMethodName   = "/zerone.knowledge.v1.Query/AugmentationBounties"
-	Query_AugmentationsByFact_FullMethodName    = "/zerone.knowledge.v1.Query/AugmentationsByFact"
-	Query_CommonKnowledge_FullMethodName        = "/zerone.knowledge.v1.Query/CommonKnowledge"
-	Query_CheckNovelty_FullMethodName           = "/zerone.knowledge.v1.Query/CheckNovelty"
-	Query_ActiveBounties_FullMethodName         = "/zerone.knowledge.v1.Query/ActiveBounties"
-	Query_DemandSignals_FullMethodName          = "/zerone.knowledge.v1.Query/DemandSignals"
-	Query_TopDemandGaps_FullMethodName          = "/zerone.knowledge.v1.Query/TopDemandGaps"
-	Query_NicheInfo_FullMethodName              = "/zerone.knowledge.v1.Query/NicheInfo"
-	Query_NichesByDomain_FullMethodName         = "/zerone.knowledge.v1.Query/NichesByDomain"
-	Query_DomainDiversity_FullMethodName        = "/zerone.knowledge.v1.Query/DomainDiversity"
-	Query_DomainDiversityHistory_FullMethodName = "/zerone.knowledge.v1.Query/DomainDiversityHistory"
-	Query_ValidatorIndependence_FullMethodName  = "/zerone.knowledge.v1.Query/ValidatorIndependence"
-	Query_ConformityAlerts_FullMethodName       = "/zerone.knowledge.v1.Query/ConformityAlerts"
-	Query_MetabolismStatus_FullMethodName       = "/zerone.knowledge.v1.Query/MetabolismStatus"
-	Query_DomainCapacity_FullMethodName         = "/zerone.knowledge.v1.Query/DomainCapacity"
-	Query_EpistemicTemperature_FullMethodName   = "/zerone.knowledge.v1.Query/EpistemicTemperature"
-	Query_RoleElasticity_FullMethodName         = "/zerone.knowledge.v1.Query/RoleElasticity"
+	Query_Params_FullMethodName                     = "/zerone.knowledge.v1.Query/Params"
+	Query_Fact_FullMethodName                       = "/zerone.knowledge.v1.Query/Fact"
+	Query_Facts_FullMethodName                      = "/zerone.knowledge.v1.Query/Facts"
+	Query_FactsByDomain_FullMethodName              = "/zerone.knowledge.v1.Query/FactsByDomain"
+	Query_FactsBySubmitter_FullMethodName           = "/zerone.knowledge.v1.Query/FactsBySubmitter"
+	Query_Claim_FullMethodName                      = "/zerone.knowledge.v1.Query/Claim"
+	Query_PendingClaims_FullMethodName              = "/zerone.knowledge.v1.Query/PendingClaims"
+	Query_VerificationRound_FullMethodName          = "/zerone.knowledge.v1.Query/VerificationRound"
+	Query_Domain_FullMethodName                     = "/zerone.knowledge.v1.Query/Domain"
+	Query_Domains_FullMethodName                    = "/zerone.knowledge.v1.Query/Domains"
+	Query_FactConfidence_FullMethodName             = "/zerone.knowledge.v1.Query/FactConfidence"
+	Query_FactCitationCount_FullMethodName          = "/zerone.knowledge.v1.Query/FactCitationCount"
+	Query_FactRelations_FullMethodName              = "/zerone.knowledge.v1.Query/FactRelations"
+	Query_FactsBySubject_FullMethodName             = "/zerone.knowledge.v1.Query/FactsBySubject"
+	Query_FactsByTag_FullMethodName                 = "/zerone.knowledge.v1.Query/FactsByTag"
+	Query_FactByCanonical_FullMethodName            = "/zerone.knowledge.v1.Query/FactByCanonical"
+	Query_FactsByFitness_FullMethodName             = "/zerone.knowledge.v1.Query/FactsByFitness"
+	Query_BootstrapFundStatus_FullMethodName        = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
+	Query_FactsAtRisk_FullMethodName                = "/zerone.knowledge.v1.Query/FactsAtRisk"
+	Query_FactLineage_FullMethodName                = "/zerone.knowledge.v1.Query/FactLineage"
+	Query_FactProgeny_FullMethodName                = "/zerone.knowledge.v1.Query/FactProgeny"
+	Query_ProofTree_FullMethodName                  = "/zerone.knowledge.v1.Query/ProofTree"
+	Query_DescendantTree_FullMethodName             = "/zerone.knowledge.v1.Query/DescendantTree"
+	Query_TrustProfile_FullMethodName               = "/zerone.knowledge.v1.Query/TrustProfile"
+	Query_Methodologies_FullMethodName              = "/zerone.knowledge.v1.Query/Methodologies"
+	Query_Methodology_FullMethodName                = "/zerone.knowledge.v1.Query/Methodology"
+	Query_NormativeCommitments_FullMethodName       = "/zerone.knowledge.v1.Query/NormativeCommitments"
+	Query_NormativeCommitment_FullMethodName        = "/zerone.knowledge.v1.Query/NormativeCommitment"
+	Query_MethodCorpus_FullMethodName               = "/zerone.knowledge.v1.Query/MethodCorpus"
+	Query_DisprovenCorpus_FullMethodName            = "/zerone.knowledge.v1.Query/DisprovenCorpus"
+	Query_VindicationCorpus_FullMethodName          = "/zerone.knowledge.v1.Query/VindicationCorpus"
+	Query_TrainingQuality_FullMethodName            = "/zerone.knowledge.v1.Query/TrainingQuality"
+	Query_AgentCalibration_FullMethodName           = "/zerone.knowledge.v1.Query/AgentCalibration"
+	Query_AgentLeaderboard_FullMethodName           = "/zerone.knowledge.v1.Query/AgentLeaderboard"
+	Query_TokenizerSpec_FullMethodName              = "/zerone.knowledge.v1.Query/TokenizerSpec"
+	Query_TokenizerSpecAtVersion_FullMethodName     = "/zerone.knowledge.v1.Query/TokenizerSpecAtVersion"
+	Query_TrainingPipelines_FullMethodName          = "/zerone.knowledge.v1.Query/TrainingPipelines"
+	Query_TrainingPipeline_FullMethodName           = "/zerone.knowledge.v1.Query/TrainingPipeline"
+	Query_ModelCards_FullMethodName                 = "/zerone.knowledge.v1.Query/ModelCards"
+	Query_ModelCard_FullMethodName                  = "/zerone.knowledge.v1.Query/ModelCard"
+	Query_ModelCardByDeployment_FullMethodName      = "/zerone.knowledge.v1.Query/ModelCardByDeployment"
+	Query_StructuredCorpus_FullMethodName           = "/zerone.knowledge.v1.Query/StructuredCorpus"
+	Query_DisputationCorpus_FullMethodName          = "/zerone.knowledge.v1.Query/DisputationCorpus"
+	Query_TrainingAttestation_FullMethodName        = "/zerone.knowledge.v1.Query/TrainingAttestation"
+	Query_ModelContributions_FullMethodName         = "/zerone.knowledge.v1.Query/ModelContributions"
+	Query_FactContributors_FullMethodName           = "/zerone.knowledge.v1.Query/FactContributors"
+	Query_ModelLineage_FullMethodName               = "/zerone.knowledge.v1.Query/ModelLineage"
+	Query_AugmentationBounty_FullMethodName         = "/zerone.knowledge.v1.Query/AugmentationBounty"
+	Query_AugmentationBounties_FullMethodName       = "/zerone.knowledge.v1.Query/AugmentationBounties"
+	Query_AugmentationsByFact_FullMethodName        = "/zerone.knowledge.v1.Query/AugmentationsByFact"
+	Query_TrainingValueWeight_FullMethodName        = "/zerone.knowledge.v1.Query/TrainingValueWeight"
+	Query_ContributionChallenge_FullMethodName      = "/zerone.knowledge.v1.Query/ContributionChallenge"
+	Query_OpenContributionChallenges_FullMethodName = "/zerone.knowledge.v1.Query/OpenContributionChallenges"
+	Query_TrainingFundDisbursement_FullMethodName   = "/zerone.knowledge.v1.Query/TrainingFundDisbursement"
+	Query_TrainingFundBalance_FullMethodName        = "/zerone.knowledge.v1.Query/TrainingFundBalance"
+	Query_NormativeCorpus_FullMethodName            = "/zerone.knowledge.v1.Query/NormativeCorpus"
+	Query_DriftCorpus_FullMethodName                = "/zerone.knowledge.v1.Query/DriftCorpus"
+	Query_CommonKnowledge_FullMethodName            = "/zerone.knowledge.v1.Query/CommonKnowledge"
+	Query_CheckNovelty_FullMethodName               = "/zerone.knowledge.v1.Query/CheckNovelty"
+	Query_ActiveBounties_FullMethodName             = "/zerone.knowledge.v1.Query/ActiveBounties"
+	Query_DemandSignals_FullMethodName              = "/zerone.knowledge.v1.Query/DemandSignals"
+	Query_TopDemandGaps_FullMethodName              = "/zerone.knowledge.v1.Query/TopDemandGaps"
+	Query_NicheInfo_FullMethodName                  = "/zerone.knowledge.v1.Query/NicheInfo"
+	Query_NichesByDomain_FullMethodName             = "/zerone.knowledge.v1.Query/NichesByDomain"
+	Query_DomainDiversity_FullMethodName            = "/zerone.knowledge.v1.Query/DomainDiversity"
+	Query_DomainDiversityHistory_FullMethodName     = "/zerone.knowledge.v1.Query/DomainDiversityHistory"
+	Query_ValidatorIndependence_FullMethodName      = "/zerone.knowledge.v1.Query/ValidatorIndependence"
+	Query_ConformityAlerts_FullMethodName           = "/zerone.knowledge.v1.Query/ConformityAlerts"
+	Query_MetabolismStatus_FullMethodName           = "/zerone.knowledge.v1.Query/MetabolismStatus"
+	Query_DomainCapacity_FullMethodName             = "/zerone.knowledge.v1.Query/DomainCapacity"
+	Query_EpistemicTemperature_FullMethodName       = "/zerone.knowledge.v1.Query/EpistemicTemperature"
+	Query_RoleElasticity_FullMethodName             = "/zerone.knowledge.v1.Query/RoleElasticity"
 )
 
 // QueryClient is the client API for Query service.
@@ -227,6 +234,25 @@ type QueryClient interface {
 	AugmentationBounties(ctx context.Context, in *QueryAugmentationBountiesRequest, opts ...grpc.CallOption) (*QueryAugmentationBountiesResponse, error)
 	// AugmentationsByFact returns all augmentations of a given fact.
 	AugmentationsByFact(ctx context.Context, in *QueryAugmentationsByFactRequest, opts ...grpc.CallOption) (*QueryAugmentationsByFactResponse, error)
+	// ─── Route B Wave 4: economic realignment ────────────────────────────
+	// TrainingValueWeight computes the Popper-weighted TVW for a fact at
+	// current state. Used by clients to preview contribution revenue share.
+	TrainingValueWeight(ctx context.Context, in *QueryTrainingValueWeightRequest, opts ...grpc.CallOption) (*QueryTrainingValueWeightResponse, error)
+	// ContributionChallenge returns a single challenge by id.
+	ContributionChallenge(ctx context.Context, in *QueryContributionChallengeRequest, opts ...grpc.CallOption) (*QueryContributionChallengeResponse, error)
+	// OpenContributionChallenges lists unresolved challenges.
+	OpenContributionChallenges(ctx context.Context, in *QueryOpenContributionChallengesRequest, opts ...grpc.CallOption) (*QueryOpenContributionChallengesResponse, error)
+	// TrainingFundDisbursement returns a single disbursement by id.
+	TrainingFundDisbursement(ctx context.Context, in *QueryTrainingFundDisbursementRequest, opts ...grpc.CallOption) (*QueryTrainingFundDisbursementResponse, error)
+	// TrainingFundBalance returns the current training fund module account balance.
+	TrainingFundBalance(ctx context.Context, in *QueryTrainingFundBalanceRequest, opts ...grpc.CallOption) (*QueryTrainingFundBalanceResponse, error)
+	// NormativeCorpus returns the NormativeCommitment training export; these
+	// rows explicitly carry an is_normative=true flag and DO NOT generate
+	// contribution revenue (is-ought wall in money).
+	NormativeCorpus(ctx context.Context, in *QueryNormativeCorpusRequest, opts ...grpc.CallOption) (*QueryNormativeCorpusResponse, error)
+	// DriftCorpus returns failed (DRIFT-verdict) reformulations as negative
+	// training signal for meaning-preservation learning.
+	DriftCorpus(ctx context.Context, in *QueryDriftCorpusRequest, opts ...grpc.CallOption) (*QueryDriftCorpusResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -766,6 +792,76 @@ func (c *queryClient) AugmentationsByFact(ctx context.Context, in *QueryAugmenta
 	return out, nil
 }
 
+func (c *queryClient) TrainingValueWeight(ctx context.Context, in *QueryTrainingValueWeightRequest, opts ...grpc.CallOption) (*QueryTrainingValueWeightResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTrainingValueWeightResponse)
+	err := c.cc.Invoke(ctx, Query_TrainingValueWeight_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ContributionChallenge(ctx context.Context, in *QueryContributionChallengeRequest, opts ...grpc.CallOption) (*QueryContributionChallengeResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryContributionChallengeResponse)
+	err := c.cc.Invoke(ctx, Query_ContributionChallenge_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) OpenContributionChallenges(ctx context.Context, in *QueryOpenContributionChallengesRequest, opts ...grpc.CallOption) (*QueryOpenContributionChallengesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryOpenContributionChallengesResponse)
+	err := c.cc.Invoke(ctx, Query_OpenContributionChallenges_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TrainingFundDisbursement(ctx context.Context, in *QueryTrainingFundDisbursementRequest, opts ...grpc.CallOption) (*QueryTrainingFundDisbursementResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTrainingFundDisbursementResponse)
+	err := c.cc.Invoke(ctx, Query_TrainingFundDisbursement_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TrainingFundBalance(ctx context.Context, in *QueryTrainingFundBalanceRequest, opts ...grpc.CallOption) (*QueryTrainingFundBalanceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTrainingFundBalanceResponse)
+	err := c.cc.Invoke(ctx, Query_TrainingFundBalance_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) NormativeCorpus(ctx context.Context, in *QueryNormativeCorpusRequest, opts ...grpc.CallOption) (*QueryNormativeCorpusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryNormativeCorpusResponse)
+	err := c.cc.Invoke(ctx, Query_NormativeCorpus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) DriftCorpus(ctx context.Context, in *QueryDriftCorpusRequest, opts ...grpc.CallOption) (*QueryDriftCorpusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryDriftCorpusResponse)
+	err := c.cc.Invoke(ctx, Query_DriftCorpus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -1057,6 +1153,25 @@ type QueryServer interface {
 	AugmentationBounties(context.Context, *QueryAugmentationBountiesRequest) (*QueryAugmentationBountiesResponse, error)
 	// AugmentationsByFact returns all augmentations of a given fact.
 	AugmentationsByFact(context.Context, *QueryAugmentationsByFactRequest) (*QueryAugmentationsByFactResponse, error)
+	// ─── Route B Wave 4: economic realignment ────────────────────────────
+	// TrainingValueWeight computes the Popper-weighted TVW for a fact at
+	// current state. Used by clients to preview contribution revenue share.
+	TrainingValueWeight(context.Context, *QueryTrainingValueWeightRequest) (*QueryTrainingValueWeightResponse, error)
+	// ContributionChallenge returns a single challenge by id.
+	ContributionChallenge(context.Context, *QueryContributionChallengeRequest) (*QueryContributionChallengeResponse, error)
+	// OpenContributionChallenges lists unresolved challenges.
+	OpenContributionChallenges(context.Context, *QueryOpenContributionChallengesRequest) (*QueryOpenContributionChallengesResponse, error)
+	// TrainingFundDisbursement returns a single disbursement by id.
+	TrainingFundDisbursement(context.Context, *QueryTrainingFundDisbursementRequest) (*QueryTrainingFundDisbursementResponse, error)
+	// TrainingFundBalance returns the current training fund module account balance.
+	TrainingFundBalance(context.Context, *QueryTrainingFundBalanceRequest) (*QueryTrainingFundBalanceResponse, error)
+	// NormativeCorpus returns the NormativeCommitment training export; these
+	// rows explicitly carry an is_normative=true flag and DO NOT generate
+	// contribution revenue (is-ought wall in money).
+	NormativeCorpus(context.Context, *QueryNormativeCorpusRequest) (*QueryNormativeCorpusResponse, error)
+	// DriftCorpus returns failed (DRIFT-verdict) reformulations as negative
+	// training signal for meaning-preservation learning.
+	DriftCorpus(context.Context, *QueryDriftCorpusRequest) (*QueryDriftCorpusResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -1245,6 +1360,27 @@ func (UnimplementedQueryServer) AugmentationBounties(context.Context, *QueryAugm
 }
 func (UnimplementedQueryServer) AugmentationsByFact(context.Context, *QueryAugmentationsByFactRequest) (*QueryAugmentationsByFactResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AugmentationsByFact not implemented")
+}
+func (UnimplementedQueryServer) TrainingValueWeight(context.Context, *QueryTrainingValueWeightRequest) (*QueryTrainingValueWeightResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TrainingValueWeight not implemented")
+}
+func (UnimplementedQueryServer) ContributionChallenge(context.Context, *QueryContributionChallengeRequest) (*QueryContributionChallengeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ContributionChallenge not implemented")
+}
+func (UnimplementedQueryServer) OpenContributionChallenges(context.Context, *QueryOpenContributionChallengesRequest) (*QueryOpenContributionChallengesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method OpenContributionChallenges not implemented")
+}
+func (UnimplementedQueryServer) TrainingFundDisbursement(context.Context, *QueryTrainingFundDisbursementRequest) (*QueryTrainingFundDisbursementResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TrainingFundDisbursement not implemented")
+}
+func (UnimplementedQueryServer) TrainingFundBalance(context.Context, *QueryTrainingFundBalanceRequest) (*QueryTrainingFundBalanceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TrainingFundBalance not implemented")
+}
+func (UnimplementedQueryServer) NormativeCorpus(context.Context, *QueryNormativeCorpusRequest) (*QueryNormativeCorpusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method NormativeCorpus not implemented")
+}
+func (UnimplementedQueryServer) DriftCorpus(context.Context, *QueryDriftCorpusRequest) (*QueryDriftCorpusResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method DriftCorpus not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -2212,6 +2348,132 @@ func _Query_AugmentationsByFact_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_TrainingValueWeight_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTrainingValueWeightRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TrainingValueWeight(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TrainingValueWeight_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TrainingValueWeight(ctx, req.(*QueryTrainingValueWeightRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ContributionChallenge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryContributionChallengeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ContributionChallenge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ContributionChallenge_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ContributionChallenge(ctx, req.(*QueryContributionChallengeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_OpenContributionChallenges_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryOpenContributionChallengesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).OpenContributionChallenges(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_OpenContributionChallenges_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).OpenContributionChallenges(ctx, req.(*QueryOpenContributionChallengesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TrainingFundDisbursement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTrainingFundDisbursementRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TrainingFundDisbursement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TrainingFundDisbursement_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TrainingFundDisbursement(ctx, req.(*QueryTrainingFundDisbursementRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TrainingFundBalance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTrainingFundBalanceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TrainingFundBalance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TrainingFundBalance_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TrainingFundBalance(ctx, req.(*QueryTrainingFundBalanceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_NormativeCorpus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryNormativeCorpusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).NormativeCorpus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_NormativeCorpus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).NormativeCorpus(ctx, req.(*QueryNormativeCorpusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_DriftCorpus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryDriftCorpusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).DriftCorpus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_DriftCorpus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).DriftCorpus(ctx, req.(*QueryDriftCorpusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -2688,6 +2950,34 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AugmentationsByFact",
 			Handler:    _Query_AugmentationsByFact_Handler,
+		},
+		{
+			MethodName: "TrainingValueWeight",
+			Handler:    _Query_TrainingValueWeight_Handler,
+		},
+		{
+			MethodName: "ContributionChallenge",
+			Handler:    _Query_ContributionChallenge_Handler,
+		},
+		{
+			MethodName: "OpenContributionChallenges",
+			Handler:    _Query_OpenContributionChallenges_Handler,
+		},
+		{
+			MethodName: "TrainingFundDisbursement",
+			Handler:    _Query_TrainingFundDisbursement_Handler,
+		},
+		{
+			MethodName: "TrainingFundBalance",
+			Handler:    _Query_TrainingFundBalance_Handler,
+		},
+		{
+			MethodName: "NormativeCorpus",
+			Handler:    _Query_NormativeCorpus_Handler,
+		},
+		{
+			MethodName: "DriftCorpus",
+			Handler:    _Query_DriftCorpus_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",

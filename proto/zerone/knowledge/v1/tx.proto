@@ -117,8 +117,28 @@ service Msg {
   rpc CreateAugmentationBounty(MsgCreateAugmentationBounty) returns (MsgCreateAugmentationBountyResponse);
   // SubmitAugmentation submits a variant formulation of a fact.
   rpc SubmitAugmentation(MsgSubmitAugmentation) returns (MsgSubmitAugmentationResponse);
-  // AcceptAugmentation marks a variant accepted (sponsor-auth for bounty; fact submitter for volunteer).
+  // AcceptAugmentation marks a variant accepted. Wave 4: sponsor can no longer
+  // self-judge; this RPC now routes the decision through a verifier-panel
+  // verdict. Sponsor may still call it to finalize a PASSING verdict on the
+  // sponsor's own terms (non-veto), but cannot reject a PASSING verdict
+  // without forfeiting deposit via SponsorVetoAugmentation.
   rpc AcceptAugmentation(MsgAcceptAugmentation) returns (MsgAcceptAugmentationResponse);
+
+  // ─── Route B Wave 4: economic realignment ─────────────────────────────
+  // VoteOnAugmentation records one verifier's verdict on a reformulation.
+  // Panel reaches threshold → finalize → payout/archive.
+  rpc VoteOnAugmentation(MsgVoteOnAugmentation) returns (MsgVoteOnAugmentationResponse);
+  // SponsorVetoAugmentation forfeits deposit to research fund; prevents
+  // sponsor from blocking a passing verdict silently.
+  rpc SponsorVetoAugmentation(MsgSponsorVetoAugmentation) returns (MsgSponsorVetoAugmentationResponse);
+  // ChallengeContribution disputes a ContributionRecord with a bond.
+  rpc ChallengeContribution(MsgChallengeContribution) returns (MsgChallengeContributionResponse);
+  // ResolveContributionChallenge settles an open challenge (verifier/authority).
+  rpc ResolveContributionChallenge(MsgResolveContributionChallenge) returns (MsgResolveContributionChallengeResponse);
+  // ClaimTrainingFundDisbursement — pipeline operator claims post-hoc reward
+  // once the ModelCard has accumulated live calibration. Gated on calibration
+  // floor + reproducibility proof; 50/50 immediate/vesting split.
+  rpc ClaimTrainingFundDisbursement(MsgClaimTrainingFundDisbursement) returns (MsgClaimTrainingFundDisbursementResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -545,3 +565,69 @@ message MsgAcceptAugmentation {
   string note            = 3;
 }
 message MsgAcceptAugmentationResponse {}
+
+// ─── Wave 4: reformulation verdicts ───────────────────────────────────────
+message MsgVoteOnAugmentation {
+  option (cosmos.msg.v1.signer) = "verifier";
+
+  string verifier         = 1;
+  string augmentation_id  = 2;
+  AugmentationVerdict vote = 3;
+  string rationale        = 4;  // short verifier note (optional)
+}
+message MsgVoteOnAugmentationResponse {
+  bool verdict_finalized             = 1;
+  AugmentationVerdict finalized_verdict = 2;
+}
+
+message MsgSponsorVetoAugmentation {
+  option (cosmos.msg.v1.signer) = "sponsor";
+
+  string sponsor         = 1;
+  string augmentation_id = 2;
+  string reason          = 3;
+}
+message MsgSponsorVetoAugmentationResponse {}
+
+// ─── Wave 4: attribution challenges ───────────────────────────────────────
+message MsgChallengeContribution {
+  option (cosmos.msg.v1.signer) = "challenger";
+
+  string challenger       = 1;
+  string model_id         = 2;
+  string disputed_fact_id = 3;
+  string dispute_type     = 4;   // "missing" | "fraudulent"
+  string evidence         = 5;
+  string id               = 6;   // unique challenge id (client-chosen)
+}
+message MsgChallengeContributionResponse {
+  string bond_escrowed = 1;
+}
+
+message MsgResolveContributionChallenge {
+  option (cosmos.msg.v1.signer) = "resolver";
+
+  string resolver        = 1;
+  string challenge_id    = 2;
+  bool   uphold          = 3;    // true = challenge succeeds; false = rejected
+  string note            = 4;
+}
+message MsgResolveContributionChallengeResponse {
+  string payout_to_winner = 1;   // uzrn the winner received
+}
+
+// ─── Wave 4: training fund post-hoc disbursement ──────────────────────────
+message MsgClaimTrainingFundDisbursement {
+  option (cosmos.msg.v1.signer) = "claimant";
+
+  string claimant   = 1;
+  string model_id   = 2;
+  string id         = 3;   // unique disbursement id (client-chosen)
+}
+message MsgClaimTrainingFundDisbursementResponse {
+  string total_amount    = 1;
+  string released_amount = 2;  // paid immediately
+  string vesting_amount  = 3;  // held for vesting_end_block
+  uint64 vesting_end_block = 4;
+}
+
