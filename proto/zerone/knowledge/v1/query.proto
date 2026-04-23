@@ -339,6 +339,28 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/training/trace_schema/{version}";
   }
 
+  // ─── Route B Wave 7: manifests + capabilities ────────────────────────
+  // TrainingManifest returns a single manifest by id.
+  rpc TrainingManifest(QueryTrainingManifestRequest) returns (QueryTrainingManifestResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/manifest/{id}";
+  }
+  // TrainingManifests lists manifests with optional filters.
+  rpc TrainingManifests(QueryTrainingManifestsRequest) returns (QueryTrainingManifestsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/manifests";
+  }
+  // TrainingManifestBundle returns the manifest plus the referenced
+  // training artefacts (traces + pairs + drifts + normative commitments)
+  // in a single payload — the downloadable training-run bundle.
+  rpc TrainingManifestBundle(QueryTrainingManifestBundleRequest) returns (QueryTrainingManifestBundleResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/manifest/{id}/bundle";
+  }
+  // RouteBCapabilities returns the chain's self-description of the Route B
+  // training surface — versions, counts, seed status, financial pins,
+  // available corpora. The first query a trainer runs.
+  rpc RouteBCapabilities(QueryRouteBCapabilitiesRequest) returns (QueryRouteBCapabilitiesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/capabilities";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -1373,4 +1395,50 @@ message QueryTraceSchemaAtVersionRequest {
 message QueryTraceSchemaAtVersionResponse {
   TraceSchema schema = 1;
   bool found = 2;
+}
+
+// ─── Route B Wave 7: manifests + capabilities queries ─────────────────────
+
+message QueryTrainingManifestRequest {
+  string id = 1;
+}
+message QueryTrainingManifestResponse {
+  TrainingManifest manifest = 1;
+  bool found                = 2;
+}
+
+message QueryTrainingManifestsRequest {
+  string pipeline_id        = 1;  // optional filter
+  string creator            = 2;  // optional filter
+  ManifestStatus status     = 3;  // UNSPECIFIED = all
+  uint32 limit              = 4;
+  uint32 offset             = 5;
+}
+message QueryTrainingManifestsResponse {
+  repeated TrainingManifest manifests = 1;
+  uint32 total                        = 2;
+  uint64 snapshot_block_height        = 3;
+}
+
+message QueryTrainingManifestBundleRequest {
+  string id = 1;
+}
+// BundledArtifact carries the entire downloadable payload for a manifest.
+// Trainers receive this single response and can verify it against the
+// manifest's Merkle root without further RPC calls.
+message QueryTrainingManifestBundleResponse {
+  TrainingManifest manifest                          = 1;
+  repeated MethodologyApplicationTrace traces        = 2;
+  repeated ContrastivePair contrastive_pairs         = 3;
+  repeated DriftCorpusEntry drift_entries            = 4;
+  repeated NormativeCorpusEntry normative_entries    = 5;
+  // Re-derived root for client-side verification.
+  string derived_merkle_root                         = 6;
+  // true iff derived_merkle_root == manifest.merkle_root.
+  bool merkle_root_valid                             = 7;
+}
+
+message QueryRouteBCapabilitiesRequest {}
+message QueryRouteBCapabilitiesResponse {
+  RouteBCapabilities capabilities = 1;
 }

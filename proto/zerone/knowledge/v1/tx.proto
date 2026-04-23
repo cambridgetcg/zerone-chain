@@ -144,6 +144,19 @@ service Msg {
   // AmendTraceSchema governance-amends the MethodologyApplicationTrace
   // serialisation contract; version auto-increments like TokenizerSpec.
   rpc AmendTraceSchema(MsgAmendTraceSchema) returns (MsgAmendTraceSchemaResponse);
+
+  // ─── Route B Wave 7: training manifests (the atomic run bundle) ───────
+  // CreateTrainingManifest materialises a manifest in DRAFT status by
+  // applying the supplied CorpusSelector to current chain state, computing
+  // the included-ID sets, and stamping all version pins.
+  rpc CreateTrainingManifest(MsgCreateTrainingManifest) returns (MsgCreateTrainingManifestResponse);
+  // FinalizeTrainingManifest freezes the Merkle root and promotes DRAFT →
+  // FINALIZED. After this point the manifest is immutable.
+  rpc FinalizeTrainingManifest(MsgFinalizeTrainingManifest) returns (MsgFinalizeTrainingManifestResponse);
+  // BindManifestToAttestation links a FINALIZED manifest to an existing
+  // TrainingAttestation so on-chain attestations name the bundle they
+  // reference. Promotes the manifest to ATTESTED.
+  rpc BindManifestToAttestation(MsgBindManifestToAttestation) returns (MsgBindManifestToAttestationResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -647,3 +660,41 @@ message MsgAmendTraceSchema {
 message MsgAmendTraceSchemaResponse {
   uint64 new_version = 1;
 }
+
+// ─── Route B Wave 7: training manifests ──────────────────────────────────
+message MsgCreateTrainingManifest {
+  option (cosmos.msg.v1.signer) = "creator";
+
+  string creator                    = 1;  // pipeline operator
+  string id                         = 2;  // client-chosen manifest id
+  string pipeline_id                = 3;
+  CorpusSelector corpus_selector    = 4;
+  string description                = 5;
+}
+message MsgCreateTrainingManifestResponse {
+  uint32 total_included             = 1;
+  uint32 fact_count                 = 2;
+  uint32 trace_count                = 3;
+  uint32 pair_count                 = 4;
+  uint32 drift_count                = 5;
+  uint32 normative_count            = 6;
+}
+
+message MsgFinalizeTrainingManifest {
+  option (cosmos.msg.v1.signer) = "creator";
+
+  string creator     = 1;  // must match the manifest creator
+  string manifest_id = 2;
+}
+message MsgFinalizeTrainingManifestResponse {
+  string merkle_root = 1;  // the locked commitment
+}
+
+message MsgBindManifestToAttestation {
+  option (cosmos.msg.v1.signer) = "creator";
+
+  string creator        = 1;
+  string manifest_id    = 2;
+  string attestation_id = 3;  // references TrainingAttestation.pipeline_id (1:1 with pipeline)
+}
+message MsgBindManifestToAttestationResponse {}

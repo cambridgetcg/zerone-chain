@@ -2311,3 +2311,72 @@ func qualityRank(t types.TrainingQualityTier) int {
 		return 0
 	}
 }
+
+// ─── Route B Wave 7 queries ──────────────────────────────────────────────
+
+// TrainingManifest returns a single manifest by id.
+func (q *queryServer) TrainingManifest(ctx context.Context, req *types.QueryTrainingManifestRequest) (*types.QueryTrainingManifestResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+	m, found := q.keeper.GetTrainingManifest(ctx, req.Id)
+	return &types.QueryTrainingManifestResponse{Manifest: m, Found: found}, nil
+}
+
+// TrainingManifests lists manifests with optional filters.
+func (q *queryServer) TrainingManifests(ctx context.Context, req *types.QueryTrainingManifestsRequest) (*types.QueryTrainingManifestsResponse, error) {
+	if req == nil {
+		req = &types.QueryTrainingManifestsRequest{}
+	}
+	limit := req.Limit
+	if limit == 0 || limit > 1000 {
+		limit = 100
+	}
+	offset := req.Offset
+	var out []*types.TrainingManifest
+	var total uint32
+	var seen uint32
+	q.keeper.IterateTrainingManifests(ctx, func(m *types.TrainingManifest) bool {
+		if req.PipelineId != "" && m.PipelineId != req.PipelineId {
+			return false
+		}
+		if req.Creator != "" && m.Creator != req.Creator {
+			return false
+		}
+		if req.Status != types.ManifestStatus_MANIFEST_STATUS_UNSPECIFIED && m.Status != req.Status {
+			return false
+		}
+		total++
+		if seen < offset {
+			seen++
+			return false
+		}
+		if uint32(len(out)) >= limit {
+			return false
+		}
+		out = append(out, m)
+		seen++
+		return false
+	})
+	return &types.QueryTrainingManifestsResponse{
+		Manifests:           out,
+		Total:               total,
+		SnapshotBlockHeight: uint64(sdk.UnwrapSDKContext(ctx).BlockHeight()),
+	}, nil
+}
+
+// TrainingManifestBundle returns the manifest plus the full set of
+// referenced artefacts, with a re-derived Merkle root for verification.
+func (q *queryServer) TrainingManifestBundle(ctx context.Context, req *types.QueryTrainingManifestBundleRequest) (*types.QueryTrainingManifestBundleResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+	return q.keeper.AssembleManifestBundle(ctx, req.Id)
+}
+
+// RouteBCapabilities returns the chain's Route B self-description.
+func (q *queryServer) RouteBCapabilities(ctx context.Context, _ *types.QueryRouteBCapabilitiesRequest) (*types.QueryRouteBCapabilitiesResponse, error) {
+	return &types.QueryRouteBCapabilitiesResponse{
+		Capabilities: q.keeper.BuildRouteBCapabilities(ctx),
+	}, nil
+}

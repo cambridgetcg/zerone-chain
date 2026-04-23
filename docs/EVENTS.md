@@ -1615,6 +1615,27 @@ Governance amended the MethodologyApplicationTrace serialisation contract (Route
 - `json_schema_hash` -- SHA-256 of the canonical JSON Schema bytes
 - `authority` -- governance authority address
 
+### zerone.knowledge.training_manifest_created
+Pipeline operator materialised a DRAFT manifest by applying a CorpusSelector to current chain state (Route B Wave 7). The included ID sets are sorted and ready for Merkle commitment but the root is not yet locked.
+- `manifest_id`
+- `pipeline_id`
+- `creator` -- pipeline operator
+- `total_included` -- sum across FACTS / TRACES / PAIRS / DRIFT / NORMATIVE sets
+- `tokenizer_version` -- pinned at creation
+- `trace_schema_version` -- pinned at creation
+
+### zerone.knowledge.training_manifest_finalized
+Manifest Merkle root computed and committed (Route B Wave 7). Manifest transitions DRAFT → FINALIZED and becomes immutable. Clients can re-derive the root offline from the manifest's sorted ID lists.
+- `manifest_id`
+- `merkle_root` -- hex-encoded SHA-256 commitment
+- `total_included`
+
+### zerone.knowledge.training_manifest_attested
+A FINALIZED manifest was bound to a TrainingAttestation, linking "what ran" (FLOPs + wallclock + eval hash) with "what it consumed" (Merkle-committed ID sets). Promotes the manifest to ATTESTED (Route B Wave 7).
+- `manifest_id`
+- `attestation_id` -- pipeline_id the attestation was keyed under
+- `creator` -- pipeline operator
+
 
 ## liquiditypool
 

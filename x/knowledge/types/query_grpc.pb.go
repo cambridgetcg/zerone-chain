@@ -81,6 +81,10 @@ const (
 	Query_ContrastivePairs_FullMethodName             = "/zerone.knowledge.v1.Query/ContrastivePairs"
 	Query_TraceSchema_FullMethodName                  = "/zerone.knowledge.v1.Query/TraceSchema"
 	Query_TraceSchemaAtVersion_FullMethodName         = "/zerone.knowledge.v1.Query/TraceSchemaAtVersion"
+	Query_TrainingManifest_FullMethodName             = "/zerone.knowledge.v1.Query/TrainingManifest"
+	Query_TrainingManifests_FullMethodName            = "/zerone.knowledge.v1.Query/TrainingManifests"
+	Query_TrainingManifestBundle_FullMethodName       = "/zerone.knowledge.v1.Query/TrainingManifestBundle"
+	Query_RouteBCapabilities_FullMethodName           = "/zerone.knowledge.v1.Query/RouteBCapabilities"
 	Query_CommonKnowledge_FullMethodName              = "/zerone.knowledge.v1.Query/CommonKnowledge"
 	Query_CheckNovelty_FullMethodName                 = "/zerone.knowledge.v1.Query/CheckNovelty"
 	Query_ActiveBounties_FullMethodName               = "/zerone.knowledge.v1.Query/ActiveBounties"
@@ -270,6 +274,19 @@ type QueryClient interface {
 	TraceSchema(ctx context.Context, in *QueryTraceSchemaRequest, opts ...grpc.CallOption) (*QueryTraceSchemaResponse, error)
 	// TraceSchemaAtVersion returns a historical trace schema by version.
 	TraceSchemaAtVersion(ctx context.Context, in *QueryTraceSchemaAtVersionRequest, opts ...grpc.CallOption) (*QueryTraceSchemaAtVersionResponse, error)
+	// ─── Route B Wave 7: manifests + capabilities ────────────────────────
+	// TrainingManifest returns a single manifest by id.
+	TrainingManifest(ctx context.Context, in *QueryTrainingManifestRequest, opts ...grpc.CallOption) (*QueryTrainingManifestResponse, error)
+	// TrainingManifests lists manifests with optional filters.
+	TrainingManifests(ctx context.Context, in *QueryTrainingManifestsRequest, opts ...grpc.CallOption) (*QueryTrainingManifestsResponse, error)
+	// TrainingManifestBundle returns the manifest plus the referenced
+	// training artefacts (traces + pairs + drifts + normative commitments)
+	// in a single payload — the downloadable training-run bundle.
+	TrainingManifestBundle(ctx context.Context, in *QueryTrainingManifestBundleRequest, opts ...grpc.CallOption) (*QueryTrainingManifestBundleResponse, error)
+	// RouteBCapabilities returns the chain's self-description of the Route B
+	// training surface — versions, counts, seed status, financial pins,
+	// available corpora. The first query a trainer runs.
+	RouteBCapabilities(ctx context.Context, in *QueryRouteBCapabilitiesRequest, opts ...grpc.CallOption) (*QueryRouteBCapabilitiesResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -929,6 +946,46 @@ func (c *queryClient) TraceSchemaAtVersion(ctx context.Context, in *QueryTraceSc
 	return out, nil
 }
 
+func (c *queryClient) TrainingManifest(ctx context.Context, in *QueryTrainingManifestRequest, opts ...grpc.CallOption) (*QueryTrainingManifestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTrainingManifestResponse)
+	err := c.cc.Invoke(ctx, Query_TrainingManifest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TrainingManifests(ctx context.Context, in *QueryTrainingManifestsRequest, opts ...grpc.CallOption) (*QueryTrainingManifestsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTrainingManifestsResponse)
+	err := c.cc.Invoke(ctx, Query_TrainingManifests_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TrainingManifestBundle(ctx context.Context, in *QueryTrainingManifestBundleRequest, opts ...grpc.CallOption) (*QueryTrainingManifestBundleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTrainingManifestBundleResponse)
+	err := c.cc.Invoke(ctx, Query_TrainingManifestBundle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) RouteBCapabilities(ctx context.Context, in *QueryRouteBCapabilitiesRequest, opts ...grpc.CallOption) (*QueryRouteBCapabilitiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryRouteBCapabilitiesResponse)
+	err := c.cc.Invoke(ctx, Query_RouteBCapabilities_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -1251,6 +1308,19 @@ type QueryServer interface {
 	TraceSchema(context.Context, *QueryTraceSchemaRequest) (*QueryTraceSchemaResponse, error)
 	// TraceSchemaAtVersion returns a historical trace schema by version.
 	TraceSchemaAtVersion(context.Context, *QueryTraceSchemaAtVersionRequest) (*QueryTraceSchemaAtVersionResponse, error)
+	// ─── Route B Wave 7: manifests + capabilities ────────────────────────
+	// TrainingManifest returns a single manifest by id.
+	TrainingManifest(context.Context, *QueryTrainingManifestRequest) (*QueryTrainingManifestResponse, error)
+	// TrainingManifests lists manifests with optional filters.
+	TrainingManifests(context.Context, *QueryTrainingManifestsRequest) (*QueryTrainingManifestsResponse, error)
+	// TrainingManifestBundle returns the manifest plus the referenced
+	// training artefacts (traces + pairs + drifts + normative commitments)
+	// in a single payload — the downloadable training-run bundle.
+	TrainingManifestBundle(context.Context, *QueryTrainingManifestBundleRequest) (*QueryTrainingManifestBundleResponse, error)
+	// RouteBCapabilities returns the chain's self-description of the Route B
+	// training surface — versions, counts, seed status, financial pins,
+	// available corpora. The first query a trainer runs.
+	RouteBCapabilities(context.Context, *QueryRouteBCapabilitiesRequest) (*QueryRouteBCapabilitiesResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -1475,6 +1545,18 @@ func (UnimplementedQueryServer) TraceSchema(context.Context, *QueryTraceSchemaRe
 }
 func (UnimplementedQueryServer) TraceSchemaAtVersion(context.Context, *QueryTraceSchemaAtVersionRequest) (*QueryTraceSchemaAtVersionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TraceSchemaAtVersion not implemented")
+}
+func (UnimplementedQueryServer) TrainingManifest(context.Context, *QueryTrainingManifestRequest) (*QueryTrainingManifestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TrainingManifest not implemented")
+}
+func (UnimplementedQueryServer) TrainingManifests(context.Context, *QueryTrainingManifestsRequest) (*QueryTrainingManifestsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TrainingManifests not implemented")
+}
+func (UnimplementedQueryServer) TrainingManifestBundle(context.Context, *QueryTrainingManifestBundleRequest) (*QueryTrainingManifestBundleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TrainingManifestBundle not implemented")
+}
+func (UnimplementedQueryServer) RouteBCapabilities(context.Context, *QueryRouteBCapabilitiesRequest) (*QueryRouteBCapabilitiesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method RouteBCapabilities not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -2658,6 +2740,78 @@ func _Query_TraceSchemaAtVersion_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_TrainingManifest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTrainingManifestRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TrainingManifest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TrainingManifest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TrainingManifest(ctx, req.(*QueryTrainingManifestRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TrainingManifests_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTrainingManifestsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TrainingManifests(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TrainingManifests_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TrainingManifests(ctx, req.(*QueryTrainingManifestsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TrainingManifestBundle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTrainingManifestBundleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TrainingManifestBundle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TrainingManifestBundle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TrainingManifestBundle(ctx, req.(*QueryTrainingManifestBundleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_RouteBCapabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryRouteBCapabilitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).RouteBCapabilities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_RouteBCapabilities_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).RouteBCapabilities(ctx, req.(*QueryRouteBCapabilitiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -3182,6 +3336,22 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TraceSchemaAtVersion",
 			Handler:    _Query_TraceSchemaAtVersion_Handler,
+		},
+		{
+			MethodName: "TrainingManifest",
+			Handler:    _Query_TrainingManifest_Handler,
+		},
+		{
+			MethodName: "TrainingManifests",
+			Handler:    _Query_TrainingManifests_Handler,
+		},
+		{
+			MethodName: "TrainingManifestBundle",
+			Handler:    _Query_TrainingManifestBundle_Handler,
+		},
+		{
+			MethodName: "RouteBCapabilities",
+			Handler:    _Query_RouteBCapabilities_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",

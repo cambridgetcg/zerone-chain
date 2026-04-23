@@ -57,6 +57,9 @@ const (
 	Msg_ResolveContributionChallenge_FullMethodName  = "/zerone.knowledge.v1.Msg/ResolveContributionChallenge"
 	Msg_ClaimTrainingFundDisbursement_FullMethodName = "/zerone.knowledge.v1.Msg/ClaimTrainingFundDisbursement"
 	Msg_AmendTraceSchema_FullMethodName              = "/zerone.knowledge.v1.Msg/AmendTraceSchema"
+	Msg_CreateTrainingManifest_FullMethodName        = "/zerone.knowledge.v1.Msg/CreateTrainingManifest"
+	Msg_FinalizeTrainingManifest_FullMethodName      = "/zerone.knowledge.v1.Msg/FinalizeTrainingManifest"
+	Msg_BindManifestToAttestation_FullMethodName     = "/zerone.knowledge.v1.Msg/BindManifestToAttestation"
 )
 
 // MsgClient is the client API for Msg service.
@@ -154,6 +157,18 @@ type MsgClient interface {
 	// AmendTraceSchema governance-amends the MethodologyApplicationTrace
 	// serialisation contract; version auto-increments like TokenizerSpec.
 	AmendTraceSchema(ctx context.Context, in *MsgAmendTraceSchema, opts ...grpc.CallOption) (*MsgAmendTraceSchemaResponse, error)
+	// ─── Route B Wave 7: training manifests (the atomic run bundle) ───────
+	// CreateTrainingManifest materialises a manifest in DRAFT status by
+	// applying the supplied CorpusSelector to current chain state, computing
+	// the included-ID sets, and stamping all version pins.
+	CreateTrainingManifest(ctx context.Context, in *MsgCreateTrainingManifest, opts ...grpc.CallOption) (*MsgCreateTrainingManifestResponse, error)
+	// FinalizeTrainingManifest freezes the Merkle root and promotes DRAFT →
+	// FINALIZED. After this point the manifest is immutable.
+	FinalizeTrainingManifest(ctx context.Context, in *MsgFinalizeTrainingManifest, opts ...grpc.CallOption) (*MsgFinalizeTrainingManifestResponse, error)
+	// BindManifestToAttestation links a FINALIZED manifest to an existing
+	// TrainingAttestation so on-chain attestations name the bundle they
+	// reference. Promotes the manifest to ATTESTED.
+	BindManifestToAttestation(ctx context.Context, in *MsgBindManifestToAttestation, opts ...grpc.CallOption) (*MsgBindManifestToAttestationResponse, error)
 }
 
 type msgClient struct {
@@ -544,6 +559,36 @@ func (c *msgClient) AmendTraceSchema(ctx context.Context, in *MsgAmendTraceSchem
 	return out, nil
 }
 
+func (c *msgClient) CreateTrainingManifest(ctx context.Context, in *MsgCreateTrainingManifest, opts ...grpc.CallOption) (*MsgCreateTrainingManifestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgCreateTrainingManifestResponse)
+	err := c.cc.Invoke(ctx, Msg_CreateTrainingManifest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) FinalizeTrainingManifest(ctx context.Context, in *MsgFinalizeTrainingManifest, opts ...grpc.CallOption) (*MsgFinalizeTrainingManifestResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgFinalizeTrainingManifestResponse)
+	err := c.cc.Invoke(ctx, Msg_FinalizeTrainingManifest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) BindManifestToAttestation(ctx context.Context, in *MsgBindManifestToAttestation, opts ...grpc.CallOption) (*MsgBindManifestToAttestationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgBindManifestToAttestationResponse)
+	err := c.cc.Invoke(ctx, Msg_BindManifestToAttestation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -639,6 +684,18 @@ type MsgServer interface {
 	// AmendTraceSchema governance-amends the MethodologyApplicationTrace
 	// serialisation contract; version auto-increments like TokenizerSpec.
 	AmendTraceSchema(context.Context, *MsgAmendTraceSchema) (*MsgAmendTraceSchemaResponse, error)
+	// ─── Route B Wave 7: training manifests (the atomic run bundle) ───────
+	// CreateTrainingManifest materialises a manifest in DRAFT status by
+	// applying the supplied CorpusSelector to current chain state, computing
+	// the included-ID sets, and stamping all version pins.
+	CreateTrainingManifest(context.Context, *MsgCreateTrainingManifest) (*MsgCreateTrainingManifestResponse, error)
+	// FinalizeTrainingManifest freezes the Merkle root and promotes DRAFT →
+	// FINALIZED. After this point the manifest is immutable.
+	FinalizeTrainingManifest(context.Context, *MsgFinalizeTrainingManifest) (*MsgFinalizeTrainingManifestResponse, error)
+	// BindManifestToAttestation links a FINALIZED manifest to an existing
+	// TrainingAttestation so on-chain attestations name the bundle they
+	// reference. Promotes the manifest to ATTESTED.
+	BindManifestToAttestation(context.Context, *MsgBindManifestToAttestation) (*MsgBindManifestToAttestationResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -762,6 +819,15 @@ func (UnimplementedMsgServer) ClaimTrainingFundDisbursement(context.Context, *Ms
 }
 func (UnimplementedMsgServer) AmendTraceSchema(context.Context, *MsgAmendTraceSchema) (*MsgAmendTraceSchemaResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method AmendTraceSchema not implemented")
+}
+func (UnimplementedMsgServer) CreateTrainingManifest(context.Context, *MsgCreateTrainingManifest) (*MsgCreateTrainingManifestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateTrainingManifest not implemented")
+}
+func (UnimplementedMsgServer) FinalizeTrainingManifest(context.Context, *MsgFinalizeTrainingManifest) (*MsgFinalizeTrainingManifestResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FinalizeTrainingManifest not implemented")
+}
+func (UnimplementedMsgServer) BindManifestToAttestation(context.Context, *MsgBindManifestToAttestation) (*MsgBindManifestToAttestationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method BindManifestToAttestation not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -1468,6 +1534,60 @@ func _Msg_AmendTraceSchema_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_CreateTrainingManifest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgCreateTrainingManifest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).CreateTrainingManifest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_CreateTrainingManifest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).CreateTrainingManifest(ctx, req.(*MsgCreateTrainingManifest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_FinalizeTrainingManifest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgFinalizeTrainingManifest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).FinalizeTrainingManifest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_FinalizeTrainingManifest_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).FinalizeTrainingManifest(ctx, req.(*MsgFinalizeTrainingManifest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_BindManifestToAttestation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgBindManifestToAttestation)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).BindManifestToAttestation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_BindManifestToAttestation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).BindManifestToAttestation(ctx, req.(*MsgBindManifestToAttestation))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1626,6 +1746,18 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AmendTraceSchema",
 			Handler:    _Msg_AmendTraceSchema_Handler,
+		},
+		{
+			MethodName: "CreateTrainingManifest",
+			Handler:    _Msg_CreateTrainingManifest_Handler,
+		},
+		{
+			MethodName: "FinalizeTrainingManifest",
+			Handler:    _Msg_FinalizeTrainingManifest_Handler,
+		},
+		{
+			MethodName: "BindManifestToAttestation",
+			Handler:    _Msg_BindManifestToAttestation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

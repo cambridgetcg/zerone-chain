@@ -118,3 +118,40 @@ Every enrichment above is a wager. Some will prove too rare to matter; some will
 We long for perfection; we do not claim it. We claim: *each field is a considered bet against a documented failure mode.* That is the most a data structure can honestly promise.
 
 — **Route B, Waves 5 & 6** · 2026-04-23
+
+---
+
+## Wave 7 — consolidation (the foundation underneath)
+
+Waves 1–6 assembled rooms. Wave 7 laid the foundation underneath them so the rooms stop being separate: a single `TrainingManifest` type that pins every version pin the chain knows about (`tokenizer_version`, `canonical_serialisation_version`, `trace_schema_version`, `methodology_set_version`, `snapshot_block_height`, `chain_id`), applies a declarative `CorpusSelector` against chain state, writes the canonical sorted ID sets, and commits a domain-separated Merkle root over them.
+
+### What the manifest gives the training stack
+
+- **One atomic download.** `TrainingManifestBundle(id)` returns the manifest + all referenced traces + pairs + drift entries + normative entries + the re-derived Merkle root + a `merkle_root_valid` flag. Any trainer, any indexer, any auditor reads a single payload and knows everything the chain knows about the run.
+- **Trust-minimized verification.** The Merkle root is computed from IDs alone, never from payloads. A client who has only the `included_*_ids` lists (authenticated once via the root) can re-derive the root locally and verify membership without trusting any RPC to faithfully serialise. Domain tags (`FACTS:`, `TRACES:`, `PAIRS:`, `DRIFT:`, `NORMATIVE:`) prevent set-swap collisions; length prefixes prevent length-extension; sorted inputs make the commitment iteration-order-independent.
+- **Time-pinned replay.** Because every version is pinned, a training run is re-derivable at any future block. If governance amends `TraceSchema` to v2, a manifest that cited v1 retrieves v1 via `TraceSchemaAtVersion(1)` and reconstructs the same canonical rows years later. The foundation outlives any single run.
+- **"What ran" ↔ "what it consumed" binding.** `MsgBindManifestToAttestation` links `TrainingAttestation` (FLOPs, wallclock, eval hash) to `TrainingManifest` (Merkle-committed ID sets). The binding closes a loop that Waves 3c + 7 could not close separately.
+
+### Beauty at the system level
+
+- **`RouteBCapabilities`** — the chain self-describes. A trainer's first query returns versions, counts, seed status, fund balances, available corpora. One payload, full situational awareness.
+- **`SeedRouteB`** — one-shot, idempotent bootstrap. Replaces the scattered `SeedDefault*` calls with a single entry point and a structured report.
+- **`route_b_constants.go`** — every scattered magic number (BPS denominator, tier thresholds, decay steps, fallback defaults) consolidated into named constants. The numeric contract of the module is now discoverable in one file.
+- **`docs/ROUTE_B_OPERATOR_GUIDE.md`** — end-to-end narrative from `RouteBCapabilities` through manifest bundle download. The human-facing counterpart to the machine-facing format.
+
+### What Wave 7 does NOT claim
+
+- **External verifiability is still a matter of having the ID lists.** A client who trusts only the chain's root but not its RPC must fetch the ID lists via some independently-verified path (state proofs, light-client attestations, etc.). Wave 7 makes the commitment trust-minimisable; it does not by itself make the distribution trustless.
+- **The attestation binding is 1:1 per pipeline.** A future iteration may want many-to-one (multiple manifests per attestation for incremental training) or many-to-many (cross-pipeline bundles). The current schema accommodates this at `attestation_id` granularity but the handler enforces 1:1.
+- **Signed manifest payloads** — the chain signs with validator consensus (block finality), but there is no separate operator signature over the manifest contents for pre-consensus distribution. Worth adding when the chain supports off-chain gossip.
+
+### The horizon after Wave 7
+
+- Composable manifests (a manifest that cites other manifests as subsets — for fine-tuning runs building on earlier SFT bundles).
+- Differential manifests (manifest v2 as `v1 + delta`).
+- Manifest cross-signing between chains (a ZK bridge where Chain A's manifest is posted and re-attested on Chain B's training registry).
+- ZK proofs of corpus-selector application — prove the ID set *is* the correct selector output against the snapshot state, without the verifier re-running the whole selector.
+
+---
+
+— **Route B, Wave 7** · 2026-04-23 · the foundation underneath

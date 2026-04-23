@@ -175,6 +175,12 @@ var (
 	// ─── Route B Wave 5: unified training data format ─────────────────
 	TraceSchemaKey                = []byte{0x6D} // singleton: current TraceSchema
 	TraceSchemaHistoryKeyPrefix   = []byte{0x6E} // 0x6E | be64(version) → TraceSchema (historical)
+
+	// ─── Route B Wave 7: training-run manifests ──────────────────────
+	TrainingManifestKeyPrefix            = []byte{0x6F} // 0x6F | manifest_id → TrainingManifest
+	TrainingManifestByPipelineKeyPrefix  = []byte{0x70} // 0x70 | pipeline_id | manifest_id → 1 (reverse index)
+	TrainingManifestByCreatorKeyPrefix   = []byte{0x71} // 0x71 | creator | manifest_id → 1 (reverse index)
+	TrainingManifestByStatusKeyPrefix    = []byte{0x72} // 0x72 | be8(status) | manifest_id → 1 (reverse index)
 )
 
 // MethodologyKey returns the store key for a methodology by ID.
@@ -612,4 +618,46 @@ func TraceSchemaHistoryKey(version uint64) []byte {
 	buf := make([]byte, 8)
 	binary.BigEndian.PutUint64(buf, version)
 	return append(key, buf...)
+}
+
+// ─── Route B Wave 7: training-manifest key constructors ───────────────────
+
+// TrainingManifestKey returns the store key for a manifest by id.
+func TrainingManifestKey(id string) []byte {
+	return append(append([]byte{}, TrainingManifestKeyPrefix...), []byte(id)...)
+}
+
+// TrainingManifestByPipelineKey returns the (pipeline, manifest) reverse key.
+func TrainingManifestByPipelineKey(pipelineID, manifestID string) []byte {
+	out := append([]byte{}, TrainingManifestByPipelineKeyPrefix...)
+	out = append(out, []byte(pipelineID)...)
+	out = append(out, 0)
+	out = append(out, []byte(manifestID)...)
+	return out
+}
+
+// TrainingManifestByPipelinePrefix returns the iteration prefix for a pipeline.
+func TrainingManifestByPipelinePrefix(pipelineID string) []byte {
+	out := append([]byte{}, TrainingManifestByPipelineKeyPrefix...)
+	out = append(out, []byte(pipelineID)...)
+	out = append(out, 0)
+	return out
+}
+
+// TrainingManifestByCreatorKey returns the (creator, manifest) reverse key.
+func TrainingManifestByCreatorKey(creator, manifestID string) []byte {
+	out := append([]byte{}, TrainingManifestByCreatorKeyPrefix...)
+	out = append(out, []byte(creator)...)
+	out = append(out, 0)
+	out = append(out, []byte(manifestID)...)
+	return out
+}
+
+// TrainingManifestByStatusKey returns the (status, manifest) reverse key.
+// status is encoded as a single byte.
+func TrainingManifestByStatusKey(status byte, manifestID string) []byte {
+	out := append([]byte{}, TrainingManifestByStatusKeyPrefix...)
+	out = append(out, status)
+	out = append(out, []byte(manifestID)...)
+	return out
 }

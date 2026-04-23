@@ -1181,3 +1181,149 @@ message TraceSchema {
   repeated string deprecated_fields = 6;
   string notes               = 7;
 }
+
+// ─── Route B Wave 7: training-run manifest (the crown infrastructure) ────
+//
+// The thing a training pipeline operator actually downloads. Every pin
+// a trainer needs to re-derive the corpus years later, every ID that
+// went into the run, and a Merkle root committing to the exact set so
+// the bundle can be externally verified without trusting the chain RPC.
+//
+// Design principle: a TrainingAttestation (Wave 3c) asserts *that* a run
+// completed; a TrainingManifest asserts *what* the run consumed. Binding
+// them closes the loop.
+
+// CorpusSelector is the declarative predicate that, applied against the
+// chain state at snapshot_block_height, reproduces the manifest's included
+// ID set exactly. Pure data — no side effects — so the derivation is
+// auditable and replayable.
+message CorpusSelector {
+  // Methodology filter (empty = all).
+  string method_id                        = 1;
+  // Minimum survived-falsification count (Popperian floor).
+  uint64 min_corroboration                = 2;
+  // Minimum training-quality tier (GOLD / SILVER / BRONZE / NEGATIVE).
+  TrainingQualityTier min_quality_tier    = 3;
+  // Minimum curriculum tier (FOUNDATION / INTERMEDIATE / …).
+  CurriculumTier min_curriculum_tier      = 4;
+  // Whether to include DISPROVEN facts as NEGATIVE-tier contrastive rows.
+  bool include_disproven                  = 5;
+  // Whether to include DRIFT/INFERIOR augmentation variants as negatives.
+  bool include_drift                      = 6;
+  // Whether to include the parallel NormativeCorpus (is-ought-flagged).
+  bool include_normative                  = 7;
+  // Whether to include ContrastivePair rows.
+  bool include_contrastive_pairs          = 8;
+  // If contrastive_pairs included, optionally restrict by pair type.
+  ContrastivePairType pair_type_filter    = 9;
+  // Optional domain allow-list (empty = all).
+  repeated string domain_whitelist        = 10;
+  // Optional domain deny-list.
+  repeated string domain_blacklist        = 11;
+  // Minimum submitter calibration at submission (BPS). Filters out rows
+  // whose producer was a new/unproven agent at the time.
+  uint64 min_submitter_calibration_bps    = 12;
+}
+
+// ManifestStatus tracks the manifest lifecycle.
+enum ManifestStatus {
+  MANIFEST_STATUS_UNSPECIFIED = 0;
+  MANIFEST_STATUS_DRAFT       = 1;  // created, selector locked, IDs computed, but Merkle not frozen
+  MANIFEST_STATUS_FINALIZED   = 2;  // Merkle root committed; immutable
+  MANIFEST_STATUS_ATTESTED    = 3;  // bound to a TrainingAttestation (run complete)
+  MANIFEST_STATUS_SUPERSEDED  = 4;  // a later manifest for the same pipeline supersedes this one
+}
+
+// TrainingManifest is the atomic, verifiable unit of a training run: every
+// version pin, every included ID, one Merkle root. Distributed as JSON for
+// off-chain consumers; the on-chain record is authoritative.
+message TrainingManifest {
+  string manifest_id              = 1;
+  string pipeline_id              = 2;    // references TrainingPipeline
+  string creator                  = 3;    // pipeline operator
+  uint64 created_at_block         = 4;
+  string description              = 5;
+
+  // ─── Version pins — every layer a trainer must lock ─────────────────
+  uint64 tokenizer_version                = 10;
+  uint64 canonical_serialisation_version  = 11;
+  uint64 trace_schema_version             = 12;
+  uint64 methodology_set_version          = 13;
+  uint64 snapshot_block_height            = 14;
+  string chain_id                         = 15;
+
+  // ─── Corpus selection ───────────────────────────────────────────────
+  CorpusSelector corpus_selector          = 20;
+
+  // ─── Included ID sets (canonical, sorted) ───────────────────────────
+  repeated string included_fact_ids                  = 21;
+  repeated string included_trace_ids                 = 22;
+  repeated string included_pair_ids                  = 23;
+  repeated string included_drift_augmentation_ids    = 24;
+  repeated string included_normative_commitment_ids  = 25;
+
+  // ─── Merkle commitment ──────────────────────────────────────────────
+  // SHA-256 over the canonical sorted concat of all included IDs,
+  // domain-separated per set. Anyone can re-derive and verify without
+  // trusting the chain RPC.
+  string merkle_root              = 30;  // hex-encoded SHA-256
+  uint32 total_included           = 31;  // sum of all set sizes
+
+  // ─── Counts (denormalised for fast listing) ─────────────────────────
+  uint32 fact_count               = 40;
+  uint32 trace_count              = 41;
+  uint32 pair_count               = 42;
+  uint32 drift_count              = 43;
+  uint32 normative_count          = 44;
+
+  // ─── Lifecycle ──────────────────────────────────────────────────────
+  ManifestStatus status           = 50;
+  uint64 finalized_at_block       = 51;
+  string attestation_id           = 52;  // references TrainingAttestation when bound
+  uint64 attested_at_block        = 53;
+}
+
+// ─── Route B Wave 7: capability manifest (chain self-description) ────────
+
+// SeedStatus reports which bootstrap seeds have run. A freshly-spawned
+// chain reports all false; SeedRouteB brings them all to true.
+message SeedStatus {
+  bool methodologies_seeded       = 1;
+  bool tokenizer_spec_seeded      = 2;
+  bool trace_schema_seeded        = 3;
+  bool commitments_seeded         = 4;
+}
+
+// RouteBCapabilities is the chain's self-description — what versions of
+// what contracts it exposes, and how much state it holds right now. The
+// first query a trainer runs against a new chain.
+message RouteBCapabilities {
+  // Version pins (0 when unseeded).
+  uint64 current_tokenizer_version            = 1;
+  uint64 current_trace_schema_version         = 2;
+  uint64 current_methodology_set_version      = 3;
+
+  // Live counts (approximate — snapshot at query time).
+  uint64 methodology_count                    = 10;
+  uint64 fact_count                           = 11;
+  uint64 active_pipeline_count                = 12;
+  uint64 model_card_count                     = 13;
+  uint64 active_bounty_count                  = 14;
+  uint64 finalized_manifest_count             = 15;
+  uint64 open_contribution_challenge_count    = 16;
+
+  // Financial pins.
+  string training_fund_balance_uzrn           = 20;
+  string training_fund_escrowed_uzrn          = 21;
+  string training_fund_vesting_uzrn           = 22;
+
+  // Corpora the chain currently exposes.
+  repeated string available_corpora           = 30;
+
+  // Seed state.
+  SeedStatus seed_status                      = 40;
+
+  // Snapshot.
+  uint64 snapshot_block_height                = 50;
+  string chain_id                             = 51;
+}

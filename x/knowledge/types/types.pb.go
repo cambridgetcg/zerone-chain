@@ -1123,6 +1123,62 @@ func (ContrastivePairType) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{16}
 }
 
+// ManifestStatus tracks the manifest lifecycle.
+type ManifestStatus int32
+
+const (
+	ManifestStatus_MANIFEST_STATUS_UNSPECIFIED ManifestStatus = 0
+	ManifestStatus_MANIFEST_STATUS_DRAFT       ManifestStatus = 1 // created, selector locked, IDs computed, but Merkle not frozen
+	ManifestStatus_MANIFEST_STATUS_FINALIZED   ManifestStatus = 2 // Merkle root committed; immutable
+	ManifestStatus_MANIFEST_STATUS_ATTESTED    ManifestStatus = 3 // bound to a TrainingAttestation (run complete)
+	ManifestStatus_MANIFEST_STATUS_SUPERSEDED  ManifestStatus = 4 // a later manifest for the same pipeline supersedes this one
+)
+
+// Enum value maps for ManifestStatus.
+var (
+	ManifestStatus_name = map[int32]string{
+		0: "MANIFEST_STATUS_UNSPECIFIED",
+		1: "MANIFEST_STATUS_DRAFT",
+		2: "MANIFEST_STATUS_FINALIZED",
+		3: "MANIFEST_STATUS_ATTESTED",
+		4: "MANIFEST_STATUS_SUPERSEDED",
+	}
+	ManifestStatus_value = map[string]int32{
+		"MANIFEST_STATUS_UNSPECIFIED": 0,
+		"MANIFEST_STATUS_DRAFT":       1,
+		"MANIFEST_STATUS_FINALIZED":   2,
+		"MANIFEST_STATUS_ATTESTED":    3,
+		"MANIFEST_STATUS_SUPERSEDED":  4,
+	}
+)
+
+func (x ManifestStatus) Enum() *ManifestStatus {
+	p := new(ManifestStatus)
+	*p = x
+	return p
+}
+
+func (x ManifestStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ManifestStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_zerone_knowledge_v1_types_proto_enumTypes[17].Descriptor()
+}
+
+func (ManifestStatus) Type() protoreflect.EnumType {
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[17]
+}
+
+func (x ManifestStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ManifestStatus.Descriptor instead.
+func (ManifestStatus) EnumDescriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{17}
+}
+
 // FactRelation is a typed, directional edge in the knowledge graph.
 type FactRelation struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -6652,6 +6708,678 @@ func (x *TraceSchema) GetNotes() string {
 	return ""
 }
 
+// CorpusSelector is the declarative predicate that, applied against the
+// chain state at snapshot_block_height, reproduces the manifest's included
+// ID set exactly. Pure data — no side effects — so the derivation is
+// auditable and replayable.
+type CorpusSelector struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Methodology filter (empty = all).
+	MethodId string `protobuf:"bytes,1,opt,name=method_id,json=methodId,proto3" json:"method_id,omitempty"`
+	// Minimum survived-falsification count (Popperian floor).
+	MinCorroboration uint64 `protobuf:"varint,2,opt,name=min_corroboration,json=minCorroboration,proto3" json:"min_corroboration,omitempty"`
+	// Minimum training-quality tier (GOLD / SILVER / BRONZE / NEGATIVE).
+	MinQualityTier TrainingQualityTier `protobuf:"varint,3,opt,name=min_quality_tier,json=minQualityTier,proto3,enum=zerone.knowledge.v1.TrainingQualityTier" json:"min_quality_tier,omitempty"`
+	// Minimum curriculum tier (FOUNDATION / INTERMEDIATE / …).
+	MinCurriculumTier CurriculumTier `protobuf:"varint,4,opt,name=min_curriculum_tier,json=minCurriculumTier,proto3,enum=zerone.knowledge.v1.CurriculumTier" json:"min_curriculum_tier,omitempty"`
+	// Whether to include DISPROVEN facts as NEGATIVE-tier contrastive rows.
+	IncludeDisproven bool `protobuf:"varint,5,opt,name=include_disproven,json=includeDisproven,proto3" json:"include_disproven,omitempty"`
+	// Whether to include DRIFT/INFERIOR augmentation variants as negatives.
+	IncludeDrift bool `protobuf:"varint,6,opt,name=include_drift,json=includeDrift,proto3" json:"include_drift,omitempty"`
+	// Whether to include the parallel NormativeCorpus (is-ought-flagged).
+	IncludeNormative bool `protobuf:"varint,7,opt,name=include_normative,json=includeNormative,proto3" json:"include_normative,omitempty"`
+	// Whether to include ContrastivePair rows.
+	IncludeContrastivePairs bool `protobuf:"varint,8,opt,name=include_contrastive_pairs,json=includeContrastivePairs,proto3" json:"include_contrastive_pairs,omitempty"`
+	// If contrastive_pairs included, optionally restrict by pair type.
+	PairTypeFilter ContrastivePairType `protobuf:"varint,9,opt,name=pair_type_filter,json=pairTypeFilter,proto3,enum=zerone.knowledge.v1.ContrastivePairType" json:"pair_type_filter,omitempty"`
+	// Optional domain allow-list (empty = all).
+	DomainWhitelist []string `protobuf:"bytes,10,rep,name=domain_whitelist,json=domainWhitelist,proto3" json:"domain_whitelist,omitempty"`
+	// Optional domain deny-list.
+	DomainBlacklist []string `protobuf:"bytes,11,rep,name=domain_blacklist,json=domainBlacklist,proto3" json:"domain_blacklist,omitempty"`
+	// Minimum submitter calibration at submission (BPS). Filters out rows
+	// whose producer was a new/unproven agent at the time.
+	MinSubmitterCalibrationBps uint64 `protobuf:"varint,12,opt,name=min_submitter_calibration_bps,json=minSubmitterCalibrationBps,proto3" json:"min_submitter_calibration_bps,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CorpusSelector) Reset() {
+	*x = CorpusSelector{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CorpusSelector) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CorpusSelector) ProtoMessage() {}
+
+func (x *CorpusSelector) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CorpusSelector.ProtoReflect.Descriptor instead.
+func (*CorpusSelector) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *CorpusSelector) GetMethodId() string {
+	if x != nil {
+		return x.MethodId
+	}
+	return ""
+}
+
+func (x *CorpusSelector) GetMinCorroboration() uint64 {
+	if x != nil {
+		return x.MinCorroboration
+	}
+	return 0
+}
+
+func (x *CorpusSelector) GetMinQualityTier() TrainingQualityTier {
+	if x != nil {
+		return x.MinQualityTier
+	}
+	return TrainingQualityTier_TRAINING_QUALITY_TIER_UNSPECIFIED
+}
+
+func (x *CorpusSelector) GetMinCurriculumTier() CurriculumTier {
+	if x != nil {
+		return x.MinCurriculumTier
+	}
+	return CurriculumTier_CURRICULUM_TIER_UNSPECIFIED
+}
+
+func (x *CorpusSelector) GetIncludeDisproven() bool {
+	if x != nil {
+		return x.IncludeDisproven
+	}
+	return false
+}
+
+func (x *CorpusSelector) GetIncludeDrift() bool {
+	if x != nil {
+		return x.IncludeDrift
+	}
+	return false
+}
+
+func (x *CorpusSelector) GetIncludeNormative() bool {
+	if x != nil {
+		return x.IncludeNormative
+	}
+	return false
+}
+
+func (x *CorpusSelector) GetIncludeContrastivePairs() bool {
+	if x != nil {
+		return x.IncludeContrastivePairs
+	}
+	return false
+}
+
+func (x *CorpusSelector) GetPairTypeFilter() ContrastivePairType {
+	if x != nil {
+		return x.PairTypeFilter
+	}
+	return ContrastivePairType_CONTRASTIVE_PAIR_UNSPECIFIED
+}
+
+func (x *CorpusSelector) GetDomainWhitelist() []string {
+	if x != nil {
+		return x.DomainWhitelist
+	}
+	return nil
+}
+
+func (x *CorpusSelector) GetDomainBlacklist() []string {
+	if x != nil {
+		return x.DomainBlacklist
+	}
+	return nil
+}
+
+func (x *CorpusSelector) GetMinSubmitterCalibrationBps() uint64 {
+	if x != nil {
+		return x.MinSubmitterCalibrationBps
+	}
+	return 0
+}
+
+// TrainingManifest is the atomic, verifiable unit of a training run: every
+// version pin, every included ID, one Merkle root. Distributed as JSON for
+// off-chain consumers; the on-chain record is authoritative.
+type TrainingManifest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ManifestId     string                 `protobuf:"bytes,1,opt,name=manifest_id,json=manifestId,proto3" json:"manifest_id,omitempty"`
+	PipelineId     string                 `protobuf:"bytes,2,opt,name=pipeline_id,json=pipelineId,proto3" json:"pipeline_id,omitempty"` // references TrainingPipeline
+	Creator        string                 `protobuf:"bytes,3,opt,name=creator,proto3" json:"creator,omitempty"`                         // pipeline operator
+	CreatedAtBlock uint64                 `protobuf:"varint,4,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	Description    string                 `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
+	// ─── Version pins — every layer a trainer must lock ─────────────────
+	TokenizerVersion              uint64 `protobuf:"varint,10,opt,name=tokenizer_version,json=tokenizerVersion,proto3" json:"tokenizer_version,omitempty"`
+	CanonicalSerialisationVersion uint64 `protobuf:"varint,11,opt,name=canonical_serialisation_version,json=canonicalSerialisationVersion,proto3" json:"canonical_serialisation_version,omitempty"`
+	TraceSchemaVersion            uint64 `protobuf:"varint,12,opt,name=trace_schema_version,json=traceSchemaVersion,proto3" json:"trace_schema_version,omitempty"`
+	MethodologySetVersion         uint64 `protobuf:"varint,13,opt,name=methodology_set_version,json=methodologySetVersion,proto3" json:"methodology_set_version,omitempty"`
+	SnapshotBlockHeight           uint64 `protobuf:"varint,14,opt,name=snapshot_block_height,json=snapshotBlockHeight,proto3" json:"snapshot_block_height,omitempty"`
+	ChainId                       string `protobuf:"bytes,15,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	// ─── Corpus selection ───────────────────────────────────────────────
+	CorpusSelector *CorpusSelector `protobuf:"bytes,20,opt,name=corpus_selector,json=corpusSelector,proto3" json:"corpus_selector,omitempty"`
+	// ─── Included ID sets (canonical, sorted) ───────────────────────────
+	IncludedFactIds                []string `protobuf:"bytes,21,rep,name=included_fact_ids,json=includedFactIds,proto3" json:"included_fact_ids,omitempty"`
+	IncludedTraceIds               []string `protobuf:"bytes,22,rep,name=included_trace_ids,json=includedTraceIds,proto3" json:"included_trace_ids,omitempty"`
+	IncludedPairIds                []string `protobuf:"bytes,23,rep,name=included_pair_ids,json=includedPairIds,proto3" json:"included_pair_ids,omitempty"`
+	IncludedDriftAugmentationIds   []string `protobuf:"bytes,24,rep,name=included_drift_augmentation_ids,json=includedDriftAugmentationIds,proto3" json:"included_drift_augmentation_ids,omitempty"`
+	IncludedNormativeCommitmentIds []string `protobuf:"bytes,25,rep,name=included_normative_commitment_ids,json=includedNormativeCommitmentIds,proto3" json:"included_normative_commitment_ids,omitempty"`
+	// ─── Merkle commitment ──────────────────────────────────────────────
+	// SHA-256 over the canonical sorted concat of all included IDs,
+	// domain-separated per set. Anyone can re-derive and verify without
+	// trusting the chain RPC.
+	MerkleRoot    string `protobuf:"bytes,30,opt,name=merkle_root,json=merkleRoot,proto3" json:"merkle_root,omitempty"`           // hex-encoded SHA-256
+	TotalIncluded uint32 `protobuf:"varint,31,opt,name=total_included,json=totalIncluded,proto3" json:"total_included,omitempty"` // sum of all set sizes
+	// ─── Counts (denormalised for fast listing) ─────────────────────────
+	FactCount      uint32 `protobuf:"varint,40,opt,name=fact_count,json=factCount,proto3" json:"fact_count,omitempty"`
+	TraceCount     uint32 `protobuf:"varint,41,opt,name=trace_count,json=traceCount,proto3" json:"trace_count,omitempty"`
+	PairCount      uint32 `protobuf:"varint,42,opt,name=pair_count,json=pairCount,proto3" json:"pair_count,omitempty"`
+	DriftCount     uint32 `protobuf:"varint,43,opt,name=drift_count,json=driftCount,proto3" json:"drift_count,omitempty"`
+	NormativeCount uint32 `protobuf:"varint,44,opt,name=normative_count,json=normativeCount,proto3" json:"normative_count,omitempty"`
+	// ─── Lifecycle ──────────────────────────────────────────────────────
+	Status           ManifestStatus `protobuf:"varint,50,opt,name=status,proto3,enum=zerone.knowledge.v1.ManifestStatus" json:"status,omitempty"`
+	FinalizedAtBlock uint64         `protobuf:"varint,51,opt,name=finalized_at_block,json=finalizedAtBlock,proto3" json:"finalized_at_block,omitempty"`
+	AttestationId    string         `protobuf:"bytes,52,opt,name=attestation_id,json=attestationId,proto3" json:"attestation_id,omitempty"` // references TrainingAttestation when bound
+	AttestedAtBlock  uint64         `protobuf:"varint,53,opt,name=attested_at_block,json=attestedAtBlock,proto3" json:"attested_at_block,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TrainingManifest) Reset() {
+	*x = TrainingManifest{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrainingManifest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrainingManifest) ProtoMessage() {}
+
+func (x *TrainingManifest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrainingManifest.ProtoReflect.Descriptor instead.
+func (*TrainingManifest) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *TrainingManifest) GetManifestId() string {
+	if x != nil {
+		return x.ManifestId
+	}
+	return ""
+}
+
+func (x *TrainingManifest) GetPipelineId() string {
+	if x != nil {
+		return x.PipelineId
+	}
+	return ""
+}
+
+func (x *TrainingManifest) GetCreator() string {
+	if x != nil {
+		return x.Creator
+	}
+	return ""
+}
+
+func (x *TrainingManifest) GetCreatedAtBlock() uint64 {
+	if x != nil {
+		return x.CreatedAtBlock
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *TrainingManifest) GetTokenizerVersion() uint64 {
+	if x != nil {
+		return x.TokenizerVersion
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetCanonicalSerialisationVersion() uint64 {
+	if x != nil {
+		return x.CanonicalSerialisationVersion
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetTraceSchemaVersion() uint64 {
+	if x != nil {
+		return x.TraceSchemaVersion
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetMethodologySetVersion() uint64 {
+	if x != nil {
+		return x.MethodologySetVersion
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetSnapshotBlockHeight() uint64 {
+	if x != nil {
+		return x.SnapshotBlockHeight
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetChainId() string {
+	if x != nil {
+		return x.ChainId
+	}
+	return ""
+}
+
+func (x *TrainingManifest) GetCorpusSelector() *CorpusSelector {
+	if x != nil {
+		return x.CorpusSelector
+	}
+	return nil
+}
+
+func (x *TrainingManifest) GetIncludedFactIds() []string {
+	if x != nil {
+		return x.IncludedFactIds
+	}
+	return nil
+}
+
+func (x *TrainingManifest) GetIncludedTraceIds() []string {
+	if x != nil {
+		return x.IncludedTraceIds
+	}
+	return nil
+}
+
+func (x *TrainingManifest) GetIncludedPairIds() []string {
+	if x != nil {
+		return x.IncludedPairIds
+	}
+	return nil
+}
+
+func (x *TrainingManifest) GetIncludedDriftAugmentationIds() []string {
+	if x != nil {
+		return x.IncludedDriftAugmentationIds
+	}
+	return nil
+}
+
+func (x *TrainingManifest) GetIncludedNormativeCommitmentIds() []string {
+	if x != nil {
+		return x.IncludedNormativeCommitmentIds
+	}
+	return nil
+}
+
+func (x *TrainingManifest) GetMerkleRoot() string {
+	if x != nil {
+		return x.MerkleRoot
+	}
+	return ""
+}
+
+func (x *TrainingManifest) GetTotalIncluded() uint32 {
+	if x != nil {
+		return x.TotalIncluded
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetFactCount() uint32 {
+	if x != nil {
+		return x.FactCount
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetTraceCount() uint32 {
+	if x != nil {
+		return x.TraceCount
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetPairCount() uint32 {
+	if x != nil {
+		return x.PairCount
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetDriftCount() uint32 {
+	if x != nil {
+		return x.DriftCount
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetNormativeCount() uint32 {
+	if x != nil {
+		return x.NormativeCount
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetStatus() ManifestStatus {
+	if x != nil {
+		return x.Status
+	}
+	return ManifestStatus_MANIFEST_STATUS_UNSPECIFIED
+}
+
+func (x *TrainingManifest) GetFinalizedAtBlock() uint64 {
+	if x != nil {
+		return x.FinalizedAtBlock
+	}
+	return 0
+}
+
+func (x *TrainingManifest) GetAttestationId() string {
+	if x != nil {
+		return x.AttestationId
+	}
+	return ""
+}
+
+func (x *TrainingManifest) GetAttestedAtBlock() uint64 {
+	if x != nil {
+		return x.AttestedAtBlock
+	}
+	return 0
+}
+
+// SeedStatus reports which bootstrap seeds have run. A freshly-spawned
+// chain reports all false; SeedRouteB brings them all to true.
+type SeedStatus struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	MethodologiesSeeded bool                   `protobuf:"varint,1,opt,name=methodologies_seeded,json=methodologiesSeeded,proto3" json:"methodologies_seeded,omitempty"`
+	TokenizerSpecSeeded bool                   `protobuf:"varint,2,opt,name=tokenizer_spec_seeded,json=tokenizerSpecSeeded,proto3" json:"tokenizer_spec_seeded,omitempty"`
+	TraceSchemaSeeded   bool                   `protobuf:"varint,3,opt,name=trace_schema_seeded,json=traceSchemaSeeded,proto3" json:"trace_schema_seeded,omitempty"`
+	CommitmentsSeeded   bool                   `protobuf:"varint,4,opt,name=commitments_seeded,json=commitmentsSeeded,proto3" json:"commitments_seeded,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SeedStatus) Reset() {
+	*x = SeedStatus{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SeedStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SeedStatus) ProtoMessage() {}
+
+func (x *SeedStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SeedStatus.ProtoReflect.Descriptor instead.
+func (*SeedStatus) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *SeedStatus) GetMethodologiesSeeded() bool {
+	if x != nil {
+		return x.MethodologiesSeeded
+	}
+	return false
+}
+
+func (x *SeedStatus) GetTokenizerSpecSeeded() bool {
+	if x != nil {
+		return x.TokenizerSpecSeeded
+	}
+	return false
+}
+
+func (x *SeedStatus) GetTraceSchemaSeeded() bool {
+	if x != nil {
+		return x.TraceSchemaSeeded
+	}
+	return false
+}
+
+func (x *SeedStatus) GetCommitmentsSeeded() bool {
+	if x != nil {
+		return x.CommitmentsSeeded
+	}
+	return false
+}
+
+// RouteBCapabilities is the chain's self-description — what versions of
+// what contracts it exposes, and how much state it holds right now. The
+// first query a trainer runs against a new chain.
+type RouteBCapabilities struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Version pins (0 when unseeded).
+	CurrentTokenizerVersion      uint64 `protobuf:"varint,1,opt,name=current_tokenizer_version,json=currentTokenizerVersion,proto3" json:"current_tokenizer_version,omitempty"`
+	CurrentTraceSchemaVersion    uint64 `protobuf:"varint,2,opt,name=current_trace_schema_version,json=currentTraceSchemaVersion,proto3" json:"current_trace_schema_version,omitempty"`
+	CurrentMethodologySetVersion uint64 `protobuf:"varint,3,opt,name=current_methodology_set_version,json=currentMethodologySetVersion,proto3" json:"current_methodology_set_version,omitempty"`
+	// Live counts (approximate — snapshot at query time).
+	MethodologyCount               uint64 `protobuf:"varint,10,opt,name=methodology_count,json=methodologyCount,proto3" json:"methodology_count,omitempty"`
+	FactCount                      uint64 `protobuf:"varint,11,opt,name=fact_count,json=factCount,proto3" json:"fact_count,omitempty"`
+	ActivePipelineCount            uint64 `protobuf:"varint,12,opt,name=active_pipeline_count,json=activePipelineCount,proto3" json:"active_pipeline_count,omitempty"`
+	ModelCardCount                 uint64 `protobuf:"varint,13,opt,name=model_card_count,json=modelCardCount,proto3" json:"model_card_count,omitempty"`
+	ActiveBountyCount              uint64 `protobuf:"varint,14,opt,name=active_bounty_count,json=activeBountyCount,proto3" json:"active_bounty_count,omitempty"`
+	FinalizedManifestCount         uint64 `protobuf:"varint,15,opt,name=finalized_manifest_count,json=finalizedManifestCount,proto3" json:"finalized_manifest_count,omitempty"`
+	OpenContributionChallengeCount uint64 `protobuf:"varint,16,opt,name=open_contribution_challenge_count,json=openContributionChallengeCount,proto3" json:"open_contribution_challenge_count,omitempty"`
+	// Financial pins.
+	TrainingFundBalanceUzrn  string `protobuf:"bytes,20,opt,name=training_fund_balance_uzrn,json=trainingFundBalanceUzrn,proto3" json:"training_fund_balance_uzrn,omitempty"`
+	TrainingFundEscrowedUzrn string `protobuf:"bytes,21,opt,name=training_fund_escrowed_uzrn,json=trainingFundEscrowedUzrn,proto3" json:"training_fund_escrowed_uzrn,omitempty"`
+	TrainingFundVestingUzrn  string `protobuf:"bytes,22,opt,name=training_fund_vesting_uzrn,json=trainingFundVestingUzrn,proto3" json:"training_fund_vesting_uzrn,omitempty"`
+	// Corpora the chain currently exposes.
+	AvailableCorpora []string `protobuf:"bytes,30,rep,name=available_corpora,json=availableCorpora,proto3" json:"available_corpora,omitempty"`
+	// Seed state.
+	SeedStatus *SeedStatus `protobuf:"bytes,40,opt,name=seed_status,json=seedStatus,proto3" json:"seed_status,omitempty"`
+	// Snapshot.
+	SnapshotBlockHeight uint64 `protobuf:"varint,50,opt,name=snapshot_block_height,json=snapshotBlockHeight,proto3" json:"snapshot_block_height,omitempty"`
+	ChainId             string `protobuf:"bytes,51,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *RouteBCapabilities) Reset() {
+	*x = RouteBCapabilities{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RouteBCapabilities) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RouteBCapabilities) ProtoMessage() {}
+
+func (x *RouteBCapabilities) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RouteBCapabilities.ProtoReflect.Descriptor instead.
+func (*RouteBCapabilities) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *RouteBCapabilities) GetCurrentTokenizerVersion() uint64 {
+	if x != nil {
+		return x.CurrentTokenizerVersion
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetCurrentTraceSchemaVersion() uint64 {
+	if x != nil {
+		return x.CurrentTraceSchemaVersion
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetCurrentMethodologySetVersion() uint64 {
+	if x != nil {
+		return x.CurrentMethodologySetVersion
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetMethodologyCount() uint64 {
+	if x != nil {
+		return x.MethodologyCount
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetFactCount() uint64 {
+	if x != nil {
+		return x.FactCount
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetActivePipelineCount() uint64 {
+	if x != nil {
+		return x.ActivePipelineCount
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetModelCardCount() uint64 {
+	if x != nil {
+		return x.ModelCardCount
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetActiveBountyCount() uint64 {
+	if x != nil {
+		return x.ActiveBountyCount
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetFinalizedManifestCount() uint64 {
+	if x != nil {
+		return x.FinalizedManifestCount
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetOpenContributionChallengeCount() uint64 {
+	if x != nil {
+		return x.OpenContributionChallengeCount
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetTrainingFundBalanceUzrn() string {
+	if x != nil {
+		return x.TrainingFundBalanceUzrn
+	}
+	return ""
+}
+
+func (x *RouteBCapabilities) GetTrainingFundEscrowedUzrn() string {
+	if x != nil {
+		return x.TrainingFundEscrowedUzrn
+	}
+	return ""
+}
+
+func (x *RouteBCapabilities) GetTrainingFundVestingUzrn() string {
+	if x != nil {
+		return x.TrainingFundVestingUzrn
+	}
+	return ""
+}
+
+func (x *RouteBCapabilities) GetAvailableCorpora() []string {
+	if x != nil {
+		return x.AvailableCorpora
+	}
+	return nil
+}
+
+func (x *RouteBCapabilities) GetSeedStatus() *SeedStatus {
+	if x != nil {
+		return x.SeedStatus
+	}
+	return nil
+}
+
+func (x *RouteBCapabilities) GetSnapshotBlockHeight() uint64 {
+	if x != nil {
+		return x.SnapshotBlockHeight
+	}
+	return 0
+}
+
+func (x *RouteBCapabilities) GetChainId() string {
+	if x != nil {
+		return x.ChainId
+	}
+	return ""
+}
+
 var File_zerone_knowledge_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
@@ -7225,7 +7953,85 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"jsonSchema\x12'\n" +
 	"\x0frequired_fields\x18\x05 \x03(\tR\x0erequiredFields\x12+\n" +
 	"\x11deprecated_fields\x18\x06 \x03(\tR\x10deprecatedFields\x12\x14\n" +
-	"\x05notes\x18\a \x01(\tR\x05notes*\xe2\x02\n" +
+	"\x05notes\x18\a \x01(\tR\x05notes\"\xab\x05\n" +
+	"\x0eCorpusSelector\x12\x1b\n" +
+	"\tmethod_id\x18\x01 \x01(\tR\bmethodId\x12+\n" +
+	"\x11min_corroboration\x18\x02 \x01(\x04R\x10minCorroboration\x12R\n" +
+	"\x10min_quality_tier\x18\x03 \x01(\x0e2(.zerone.knowledge.v1.TrainingQualityTierR\x0eminQualityTier\x12S\n" +
+	"\x13min_curriculum_tier\x18\x04 \x01(\x0e2#.zerone.knowledge.v1.CurriculumTierR\x11minCurriculumTier\x12+\n" +
+	"\x11include_disproven\x18\x05 \x01(\bR\x10includeDisproven\x12#\n" +
+	"\rinclude_drift\x18\x06 \x01(\bR\fincludeDrift\x12+\n" +
+	"\x11include_normative\x18\a \x01(\bR\x10includeNormative\x12:\n" +
+	"\x19include_contrastive_pairs\x18\b \x01(\bR\x17includeContrastivePairs\x12R\n" +
+	"\x10pair_type_filter\x18\t \x01(\x0e2(.zerone.knowledge.v1.ContrastivePairTypeR\x0epairTypeFilter\x12)\n" +
+	"\x10domain_whitelist\x18\n" +
+	" \x03(\tR\x0fdomainWhitelist\x12)\n" +
+	"\x10domain_blacklist\x18\v \x03(\tR\x0fdomainBlacklist\x12A\n" +
+	"\x1dmin_submitter_calibration_bps\x18\f \x01(\x04R\x1aminSubmitterCalibrationBps\"\xfd\t\n" +
+	"\x10TrainingManifest\x12\x1f\n" +
+	"\vmanifest_id\x18\x01 \x01(\tR\n" +
+	"manifestId\x12\x1f\n" +
+	"\vpipeline_id\x18\x02 \x01(\tR\n" +
+	"pipelineId\x12\x18\n" +
+	"\acreator\x18\x03 \x01(\tR\acreator\x12(\n" +
+	"\x10created_at_block\x18\x04 \x01(\x04R\x0ecreatedAtBlock\x12 \n" +
+	"\vdescription\x18\x05 \x01(\tR\vdescription\x12+\n" +
+	"\x11tokenizer_version\x18\n" +
+	" \x01(\x04R\x10tokenizerVersion\x12F\n" +
+	"\x1fcanonical_serialisation_version\x18\v \x01(\x04R\x1dcanonicalSerialisationVersion\x120\n" +
+	"\x14trace_schema_version\x18\f \x01(\x04R\x12traceSchemaVersion\x126\n" +
+	"\x17methodology_set_version\x18\r \x01(\x04R\x15methodologySetVersion\x122\n" +
+	"\x15snapshot_block_height\x18\x0e \x01(\x04R\x13snapshotBlockHeight\x12\x19\n" +
+	"\bchain_id\x18\x0f \x01(\tR\achainId\x12L\n" +
+	"\x0fcorpus_selector\x18\x14 \x01(\v2#.zerone.knowledge.v1.CorpusSelectorR\x0ecorpusSelector\x12*\n" +
+	"\x11included_fact_ids\x18\x15 \x03(\tR\x0fincludedFactIds\x12,\n" +
+	"\x12included_trace_ids\x18\x16 \x03(\tR\x10includedTraceIds\x12*\n" +
+	"\x11included_pair_ids\x18\x17 \x03(\tR\x0fincludedPairIds\x12E\n" +
+	"\x1fincluded_drift_augmentation_ids\x18\x18 \x03(\tR\x1cincludedDriftAugmentationIds\x12I\n" +
+	"!included_normative_commitment_ids\x18\x19 \x03(\tR\x1eincludedNormativeCommitmentIds\x12\x1f\n" +
+	"\vmerkle_root\x18\x1e \x01(\tR\n" +
+	"merkleRoot\x12%\n" +
+	"\x0etotal_included\x18\x1f \x01(\rR\rtotalIncluded\x12\x1d\n" +
+	"\n" +
+	"fact_count\x18( \x01(\rR\tfactCount\x12\x1f\n" +
+	"\vtrace_count\x18) \x01(\rR\n" +
+	"traceCount\x12\x1d\n" +
+	"\n" +
+	"pair_count\x18* \x01(\rR\tpairCount\x12\x1f\n" +
+	"\vdrift_count\x18+ \x01(\rR\n" +
+	"driftCount\x12'\n" +
+	"\x0fnormative_count\x18, \x01(\rR\x0enormativeCount\x12;\n" +
+	"\x06status\x182 \x01(\x0e2#.zerone.knowledge.v1.ManifestStatusR\x06status\x12,\n" +
+	"\x12finalized_at_block\x183 \x01(\x04R\x10finalizedAtBlock\x12%\n" +
+	"\x0eattestation_id\x184 \x01(\tR\rattestationId\x12*\n" +
+	"\x11attested_at_block\x185 \x01(\x04R\x0fattestedAtBlock\"\xd2\x01\n" +
+	"\n" +
+	"SeedStatus\x121\n" +
+	"\x14methodologies_seeded\x18\x01 \x01(\bR\x13methodologiesSeeded\x122\n" +
+	"\x15tokenizer_spec_seeded\x18\x02 \x01(\bR\x13tokenizerSpecSeeded\x12.\n" +
+	"\x13trace_schema_seeded\x18\x03 \x01(\bR\x11traceSchemaSeeded\x12-\n" +
+	"\x12commitments_seeded\x18\x04 \x01(\bR\x11commitmentsSeeded\"\xae\a\n" +
+	"\x12RouteBCapabilities\x12:\n" +
+	"\x19current_tokenizer_version\x18\x01 \x01(\x04R\x17currentTokenizerVersion\x12?\n" +
+	"\x1ccurrent_trace_schema_version\x18\x02 \x01(\x04R\x19currentTraceSchemaVersion\x12E\n" +
+	"\x1fcurrent_methodology_set_version\x18\x03 \x01(\x04R\x1ccurrentMethodologySetVersion\x12+\n" +
+	"\x11methodology_count\x18\n" +
+	" \x01(\x04R\x10methodologyCount\x12\x1d\n" +
+	"\n" +
+	"fact_count\x18\v \x01(\x04R\tfactCount\x122\n" +
+	"\x15active_pipeline_count\x18\f \x01(\x04R\x13activePipelineCount\x12(\n" +
+	"\x10model_card_count\x18\r \x01(\x04R\x0emodelCardCount\x12.\n" +
+	"\x13active_bounty_count\x18\x0e \x01(\x04R\x11activeBountyCount\x128\n" +
+	"\x18finalized_manifest_count\x18\x0f \x01(\x04R\x16finalizedManifestCount\x12I\n" +
+	"!open_contribution_challenge_count\x18\x10 \x01(\x04R\x1eopenContributionChallengeCount\x12;\n" +
+	"\x1atraining_fund_balance_uzrn\x18\x14 \x01(\tR\x17trainingFundBalanceUzrn\x12=\n" +
+	"\x1btraining_fund_escrowed_uzrn\x18\x15 \x01(\tR\x18trainingFundEscrowedUzrn\x12;\n" +
+	"\x1atraining_fund_vesting_uzrn\x18\x16 \x01(\tR\x17trainingFundVestingUzrn\x12+\n" +
+	"\x11available_corpora\x18\x1e \x03(\tR\x10availableCorpora\x12@\n" +
+	"\vseed_status\x18( \x01(\v2\x1f.zerone.knowledge.v1.SeedStatusR\n" +
+	"seedStatus\x122\n" +
+	"\x15snapshot_block_height\x182 \x01(\x04R\x13snapshotBlockHeight\x12\x19\n" +
+	"\bchain_id\x183 \x01(\tR\achainId*\xe2\x02\n" +
 	"\n" +
 	"FactStatus\x12\x1b\n" +
 	"\x17FACT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -7379,7 +8185,13 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"&CONTRASTIVE_PAIR_SURVIVED_VS_DISPROVEN\x10\x01\x12(\n" +
 	"$CONTRASTIVE_PAIR_EQUIVALENT_VS_DRIFT\x10\x02\x12+\n" +
 	"'CONTRASTIVE_PAIR_EQUIVALENT_VS_INFERIOR\x10\x03\x12(\n" +
-	"$CONTRASTIVE_PAIR_VINDICATED_MINORITY\x10\x04B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
+	"$CONTRASTIVE_PAIR_VINDICATED_MINORITY\x10\x04*\xa9\x01\n" +
+	"\x0eManifestStatus\x12\x1f\n" +
+	"\x1bMANIFEST_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15MANIFEST_STATUS_DRAFT\x10\x01\x12\x1d\n" +
+	"\x19MANIFEST_STATUS_FINALIZED\x10\x02\x12\x1c\n" +
+	"\x18MANIFEST_STATUS_ATTESTED\x10\x03\x12\x1e\n" +
+	"\x1aMANIFEST_STATUS_SUPERSEDED\x10\x04B2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
 	file_zerone_knowledge_v1_types_proto_rawDescOnce sync.Once
@@ -7393,8 +8205,8 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_knowledge_v1_types_proto_rawDescData
 }
 
-var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 17)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
+var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 18)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 48)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),                     // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),                    // 1: zerone.knowledge.v1.ClaimStatus
@@ -7413,107 +8225,118 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(RevisionReason)(0),                 // 14: zerone.knowledge.v1.RevisionReason
 	(DialecticRole)(0),                  // 15: zerone.knowledge.v1.DialecticRole
 	(ContrastivePairType)(0),            // 16: zerone.knowledge.v1.ContrastivePairType
-	(*FactRelation)(nil),                // 17: zerone.knowledge.v1.FactRelation
-	(*ClaimRelation)(nil),               // 18: zerone.knowledge.v1.ClaimRelation
-	(*NormativeCommitment)(nil),         // 19: zerone.knowledge.v1.NormativeCommitment
-	(*Methodology)(nil),                 // 20: zerone.knowledge.v1.Methodology
-	(*ClaimStructure)(nil),              // 21: zerone.knowledge.v1.ClaimStructure
-	(*Fact)(nil),                        // 22: zerone.knowledge.v1.Fact
-	(*TokenizerSpec)(nil),               // 23: zerone.knowledge.v1.TokenizerSpec
-	(*TrainingPipeline)(nil),            // 24: zerone.knowledge.v1.TrainingPipeline
-	(*ModelCard)(nil),                   // 25: zerone.knowledge.v1.ModelCard
-	(*TrainingAttestation)(nil),         // 26: zerone.knowledge.v1.TrainingAttestation
-	(*ContributionRecord)(nil),          // 27: zerone.knowledge.v1.ContributionRecord
-	(*AugmentationBounty)(nil),          // 28: zerone.knowledge.v1.AugmentationBounty
-	(*Augmentation)(nil),                // 29: zerone.knowledge.v1.Augmentation
-	(*ContributionChallenge)(nil),       // 30: zerone.knowledge.v1.ContributionChallenge
-	(*TrainingFundDisbursement)(nil),    // 31: zerone.knowledge.v1.TrainingFundDisbursement
-	(*AgentMethodStats)(nil),            // 32: zerone.knowledge.v1.AgentMethodStats
-	(*AgentCalibration)(nil),            // 33: zerone.knowledge.v1.AgentCalibration
-	(*CommonKnowledgeEntry)(nil),        // 34: zerone.knowledge.v1.CommonKnowledgeEntry
-	(*Claim)(nil),                       // 35: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),           // 36: zerone.knowledge.v1.VerificationRound
-	(*CommitEntry)(nil),                 // 37: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),                 // 38: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),                    // 39: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),                      // 40: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),               // 41: zerone.knowledge.v1.ValidatorInfo
-	(*ProvisionalChallenge)(nil),        // 42: zerone.knowledge.v1.ProvisionalChallenge
-	(*DemandSignal)(nil),                // 43: zerone.knowledge.v1.DemandSignal
-	(*KnowledgeBounty)(nil),             // 44: zerone.knowledge.v1.KnowledgeBounty
-	(*CompletedRoundMeta)(nil),          // 45: zerone.knowledge.v1.CompletedRoundMeta
-	(*MethodologyApplicationTrace)(nil), // 46: zerone.knowledge.v1.MethodologyApplicationTrace
-	(*TraceChallenge)(nil),              // 47: zerone.knowledge.v1.TraceChallenge
-	(*ReasoningStep)(nil),               // 48: zerone.knowledge.v1.ReasoningStep
-	(*DriftDiagnosis)(nil),              // 49: zerone.knowledge.v1.DriftDiagnosis
-	(*MethodologyChoice)(nil),           // 50: zerone.knowledge.v1.MethodologyChoice
-	(*BeliefRevision)(nil),              // 51: zerone.knowledge.v1.BeliefRevision
-	(*DialecticNode)(nil),               // 52: zerone.knowledge.v1.DialecticNode
-	(*TraceVindication)(nil),            // 53: zerone.knowledge.v1.TraceVindication
-	(*TraceDisproval)(nil),              // 54: zerone.knowledge.v1.TraceDisproval
-	(*TraceReformulation)(nil),          // 55: zerone.knowledge.v1.TraceReformulation
-	(*TraceDrift)(nil),                  // 56: zerone.knowledge.v1.TraceDrift
-	(*ContrastivePair)(nil),             // 57: zerone.knowledge.v1.ContrastivePair
-	(*TraceSchema)(nil),                 // 58: zerone.knowledge.v1.TraceSchema
-	nil,                                 // 59: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
-	nil,                                 // 60: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	(ManifestStatus)(0),                 // 17: zerone.knowledge.v1.ManifestStatus
+	(*FactRelation)(nil),                // 18: zerone.knowledge.v1.FactRelation
+	(*ClaimRelation)(nil),               // 19: zerone.knowledge.v1.ClaimRelation
+	(*NormativeCommitment)(nil),         // 20: zerone.knowledge.v1.NormativeCommitment
+	(*Methodology)(nil),                 // 21: zerone.knowledge.v1.Methodology
+	(*ClaimStructure)(nil),              // 22: zerone.knowledge.v1.ClaimStructure
+	(*Fact)(nil),                        // 23: zerone.knowledge.v1.Fact
+	(*TokenizerSpec)(nil),               // 24: zerone.knowledge.v1.TokenizerSpec
+	(*TrainingPipeline)(nil),            // 25: zerone.knowledge.v1.TrainingPipeline
+	(*ModelCard)(nil),                   // 26: zerone.knowledge.v1.ModelCard
+	(*TrainingAttestation)(nil),         // 27: zerone.knowledge.v1.TrainingAttestation
+	(*ContributionRecord)(nil),          // 28: zerone.knowledge.v1.ContributionRecord
+	(*AugmentationBounty)(nil),          // 29: zerone.knowledge.v1.AugmentationBounty
+	(*Augmentation)(nil),                // 30: zerone.knowledge.v1.Augmentation
+	(*ContributionChallenge)(nil),       // 31: zerone.knowledge.v1.ContributionChallenge
+	(*TrainingFundDisbursement)(nil),    // 32: zerone.knowledge.v1.TrainingFundDisbursement
+	(*AgentMethodStats)(nil),            // 33: zerone.knowledge.v1.AgentMethodStats
+	(*AgentCalibration)(nil),            // 34: zerone.knowledge.v1.AgentCalibration
+	(*CommonKnowledgeEntry)(nil),        // 35: zerone.knowledge.v1.CommonKnowledgeEntry
+	(*Claim)(nil),                       // 36: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),           // 37: zerone.knowledge.v1.VerificationRound
+	(*CommitEntry)(nil),                 // 38: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),                 // 39: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),                    // 40: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),                      // 41: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),               // 42: zerone.knowledge.v1.ValidatorInfo
+	(*ProvisionalChallenge)(nil),        // 43: zerone.knowledge.v1.ProvisionalChallenge
+	(*DemandSignal)(nil),                // 44: zerone.knowledge.v1.DemandSignal
+	(*KnowledgeBounty)(nil),             // 45: zerone.knowledge.v1.KnowledgeBounty
+	(*CompletedRoundMeta)(nil),          // 46: zerone.knowledge.v1.CompletedRoundMeta
+	(*MethodologyApplicationTrace)(nil), // 47: zerone.knowledge.v1.MethodologyApplicationTrace
+	(*TraceChallenge)(nil),              // 48: zerone.knowledge.v1.TraceChallenge
+	(*ReasoningStep)(nil),               // 49: zerone.knowledge.v1.ReasoningStep
+	(*DriftDiagnosis)(nil),              // 50: zerone.knowledge.v1.DriftDiagnosis
+	(*MethodologyChoice)(nil),           // 51: zerone.knowledge.v1.MethodologyChoice
+	(*BeliefRevision)(nil),              // 52: zerone.knowledge.v1.BeliefRevision
+	(*DialecticNode)(nil),               // 53: zerone.knowledge.v1.DialecticNode
+	(*TraceVindication)(nil),            // 54: zerone.knowledge.v1.TraceVindication
+	(*TraceDisproval)(nil),              // 55: zerone.knowledge.v1.TraceDisproval
+	(*TraceReformulation)(nil),          // 56: zerone.knowledge.v1.TraceReformulation
+	(*TraceDrift)(nil),                  // 57: zerone.knowledge.v1.TraceDrift
+	(*ContrastivePair)(nil),             // 58: zerone.knowledge.v1.ContrastivePair
+	(*TraceSchema)(nil),                 // 59: zerone.knowledge.v1.TraceSchema
+	(*CorpusSelector)(nil),              // 60: zerone.knowledge.v1.CorpusSelector
+	(*TrainingManifest)(nil),            // 61: zerone.knowledge.v1.TrainingManifest
+	(*SeedStatus)(nil),                  // 62: zerone.knowledge.v1.SeedStatus
+	(*RouteBCapabilities)(nil),          // 63: zerone.knowledge.v1.RouteBCapabilities
+	nil,                                 // 64: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	nil,                                 // 65: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 1: zerone.knowledge.v1.FactRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
 	5,  // 2: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 3: zerone.knowledge.v1.ClaimRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
-	59, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	64, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
 	0,  // 5: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
 	4,  // 6: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	17, // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
-	17, // 8: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
-	21, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	18, // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
+	18, // 8: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
+	22, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
 	10, // 10: zerone.knowledge.v1.Augmentation.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
 	10, // 11: zerone.knowledge.v1.Augmentation.verdict_votes:type_name -> zerone.knowledge.v1.AugmentationVerdict
-	60, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	65, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 	1,  // 13: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
 	4,  // 14: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	18, // 15: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
-	21, // 16: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	19, // 15: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
+	22, // 16: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
 	2,  // 17: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	37, // 18: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	38, // 19: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	38, // 18: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	39, // 19: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
 	3,  // 20: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
 	7,  // 21: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
-	17, // 22: zerone.knowledge.v1.MethodologyApplicationTrace.predecessor_edges:type_name -> zerone.knowledge.v1.FactRelation
-	17, // 23: zerone.knowledge.v1.MethodologyApplicationTrace.descendant_edges:type_name -> zerone.knowledge.v1.FactRelation
-	47, // 24: zerone.knowledge.v1.MethodologyApplicationTrace.challenges:type_name -> zerone.knowledge.v1.TraceChallenge
+	18, // 22: zerone.knowledge.v1.MethodologyApplicationTrace.predecessor_edges:type_name -> zerone.knowledge.v1.FactRelation
+	18, // 23: zerone.knowledge.v1.MethodologyApplicationTrace.descendant_edges:type_name -> zerone.knowledge.v1.FactRelation
+	48, // 24: zerone.knowledge.v1.MethodologyApplicationTrace.challenges:type_name -> zerone.knowledge.v1.TraceChallenge
 	0,  // 25: zerone.knowledge.v1.MethodologyApplicationTrace.status:type_name -> zerone.knowledge.v1.FactStatus
-	53, // 26: zerone.knowledge.v1.MethodologyApplicationTrace.vindication:type_name -> zerone.knowledge.v1.TraceVindication
-	54, // 27: zerone.knowledge.v1.MethodologyApplicationTrace.disproval:type_name -> zerone.knowledge.v1.TraceDisproval
-	55, // 28: zerone.knowledge.v1.MethodologyApplicationTrace.reformulations:type_name -> zerone.knowledge.v1.TraceReformulation
-	56, // 29: zerone.knowledge.v1.MethodologyApplicationTrace.drift_examples:type_name -> zerone.knowledge.v1.TraceDrift
+	54, // 26: zerone.knowledge.v1.MethodologyApplicationTrace.vindication:type_name -> zerone.knowledge.v1.TraceVindication
+	55, // 27: zerone.knowledge.v1.MethodologyApplicationTrace.disproval:type_name -> zerone.knowledge.v1.TraceDisproval
+	56, // 28: zerone.knowledge.v1.MethodologyApplicationTrace.reformulations:type_name -> zerone.knowledge.v1.TraceReformulation
+	57, // 29: zerone.knowledge.v1.MethodologyApplicationTrace.drift_examples:type_name -> zerone.knowledge.v1.TraceDrift
 	8,  // 30: zerone.knowledge.v1.MethodologyApplicationTrace.curriculum_tier:type_name -> zerone.knowledge.v1.CurriculumTier
 	9,  // 31: zerone.knowledge.v1.MethodologyApplicationTrace.quality_tier:type_name -> zerone.knowledge.v1.TrainingQualityTier
-	48, // 32: zerone.knowledge.v1.MethodologyApplicationTrace.reasoning_steps:type_name -> zerone.knowledge.v1.ReasoningStep
-	50, // 33: zerone.knowledge.v1.MethodologyApplicationTrace.methodology_choice:type_name -> zerone.knowledge.v1.MethodologyChoice
-	51, // 34: zerone.knowledge.v1.MethodologyApplicationTrace.belief_revisions:type_name -> zerone.knowledge.v1.BeliefRevision
-	52, // 35: zerone.knowledge.v1.MethodologyApplicationTrace.dialectic_tree:type_name -> zerone.knowledge.v1.DialecticNode
-	52, // 36: zerone.knowledge.v1.TraceChallenge.children:type_name -> zerone.knowledge.v1.DialecticNode
+	49, // 32: zerone.knowledge.v1.MethodologyApplicationTrace.reasoning_steps:type_name -> zerone.knowledge.v1.ReasoningStep
+	51, // 33: zerone.knowledge.v1.MethodologyApplicationTrace.methodology_choice:type_name -> zerone.knowledge.v1.MethodologyChoice
+	52, // 34: zerone.knowledge.v1.MethodologyApplicationTrace.belief_revisions:type_name -> zerone.knowledge.v1.BeliefRevision
+	53, // 35: zerone.knowledge.v1.MethodologyApplicationTrace.dialectic_tree:type_name -> zerone.knowledge.v1.DialecticNode
+	53, // 36: zerone.knowledge.v1.TraceChallenge.children:type_name -> zerone.knowledge.v1.DialecticNode
 	11, // 37: zerone.knowledge.v1.ReasoningStep.step_inference:type_name -> zerone.knowledge.v1.StepInference
 	12, // 38: zerone.knowledge.v1.ReasoningStep.verdict:type_name -> zerone.knowledge.v1.StepVerdict
 	13, // 39: zerone.knowledge.v1.DriftDiagnosis.drift_kind:type_name -> zerone.knowledge.v1.DriftKind
 	14, // 40: zerone.knowledge.v1.BeliefRevision.reason:type_name -> zerone.knowledge.v1.RevisionReason
 	15, // 41: zerone.knowledge.v1.DialecticNode.role:type_name -> zerone.knowledge.v1.DialecticRole
-	52, // 42: zerone.knowledge.v1.DialecticNode.children:type_name -> zerone.knowledge.v1.DialecticNode
+	53, // 42: zerone.knowledge.v1.DialecticNode.children:type_name -> zerone.knowledge.v1.DialecticNode
 	12, // 43: zerone.knowledge.v1.DialecticNode.node_verdict:type_name -> zerone.knowledge.v1.StepVerdict
 	10, // 44: zerone.knowledge.v1.TraceReformulation.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
 	10, // 45: zerone.knowledge.v1.TraceDrift.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
-	49, // 46: zerone.knowledge.v1.TraceDrift.diagnosis:type_name -> zerone.knowledge.v1.DriftDiagnosis
-	48, // 47: zerone.knowledge.v1.TraceDrift.drifter_steps:type_name -> zerone.knowledge.v1.ReasoningStep
+	50, // 46: zerone.knowledge.v1.TraceDrift.diagnosis:type_name -> zerone.knowledge.v1.DriftDiagnosis
+	49, // 47: zerone.knowledge.v1.TraceDrift.drifter_steps:type_name -> zerone.knowledge.v1.ReasoningStep
 	16, // 48: zerone.knowledge.v1.ContrastivePair.pair_type:type_name -> zerone.knowledge.v1.ContrastivePairType
-	32, // 49: zerone.knowledge.v1.AgentCalibration.PerMethodEntry.value:type_name -> zerone.knowledge.v1.AgentMethodStats
-	50, // [50:50] is the sub-list for method output_type
-	50, // [50:50] is the sub-list for method input_type
-	50, // [50:50] is the sub-list for extension type_name
-	50, // [50:50] is the sub-list for extension extendee
-	0,  // [0:50] is the sub-list for field type_name
+	9,  // 49: zerone.knowledge.v1.CorpusSelector.min_quality_tier:type_name -> zerone.knowledge.v1.TrainingQualityTier
+	8,  // 50: zerone.knowledge.v1.CorpusSelector.min_curriculum_tier:type_name -> zerone.knowledge.v1.CurriculumTier
+	16, // 51: zerone.knowledge.v1.CorpusSelector.pair_type_filter:type_name -> zerone.knowledge.v1.ContrastivePairType
+	60, // 52: zerone.knowledge.v1.TrainingManifest.corpus_selector:type_name -> zerone.knowledge.v1.CorpusSelector
+	17, // 53: zerone.knowledge.v1.TrainingManifest.status:type_name -> zerone.knowledge.v1.ManifestStatus
+	62, // 54: zerone.knowledge.v1.RouteBCapabilities.seed_status:type_name -> zerone.knowledge.v1.SeedStatus
+	33, // 55: zerone.knowledge.v1.AgentCalibration.PerMethodEntry.value:type_name -> zerone.knowledge.v1.AgentMethodStats
+	56, // [56:56] is the sub-list for method output_type
+	56, // [56:56] is the sub-list for method input_type
+	56, // [56:56] is the sub-list for extension type_name
+	56, // [56:56] is the sub-list for extension extendee
+	0,  // [0:56] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_types_proto_init() }
@@ -7526,8 +8349,8 @@ func file_zerone_knowledge_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
-			NumEnums:      17,
-			NumMessages:   44,
+			NumEnums:      18,
+			NumMessages:   48,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
