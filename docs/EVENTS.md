@@ -1481,6 +1481,16 @@ Popperian survival counter incremented: a fact withstood a falsification attempt
 - `new_count` -- corroboration_count after increment
 - `block_height` -- height at which the challenge was resolved
 
+### zerone.knowledge.agent_calibration_updated
+Submitter's track record changed — Phase 5 feedback loop. Emitted after round outcomes, corroborations earned, and disprovals. Closes the loop between training-pipeline output and on-chain evaluation.
+- `address` -- submitter address
+- `account_type` -- "agent" / "human" / "hybrid"
+- `total_submissions` -- lifetime submission count
+- `accepted` -- lifetime accepted count
+- `disproven_count` -- facts disproved post-acceptance
+- `corroborations_earned` -- sum across submitter's facts
+- `calibration_score_bps` -- computed score in BPS
+
 
 ## liquiditypool
 

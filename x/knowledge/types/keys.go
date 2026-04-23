@@ -142,6 +142,9 @@ var (
 
 	// ─── Normative commitment registry (Phase 6: is-ought wall) ──────
 	NormativeCommitmentKeyPrefix = []byte{0x59} // 0x59 | commitmentID → NormativeCommitment (proto)
+
+	// ─── Agent calibration (Phase 5: feedback loop) ──────────────────
+	AgentCalibrationKeyPrefix = []byte{0x5A} // 0x5A | address → AgentCalibration (proto)
 )
 
 // MethodologyKey returns the store key for a methodology by ID.
@@ -152,6 +155,11 @@ func MethodologyKey(id string) []byte {
 // NormativeCommitmentKey returns the store key for a normative commitment.
 func NormativeCommitmentKey(id string) []byte {
 	return append(append([]byte{}, NormativeCommitmentKeyPrefix...), []byte(id)...)
+}
+
+// AgentCalibrationKey returns the store key for a submitter's calibration record.
+func AgentCalibrationKey(addr string) []byte {
+	return append(append([]byte{}, AgentCalibrationKeyPrefix...), []byte(addr)...)
 }
 
 // ─── Key constructors ─────────────────────────────────────────────────────────

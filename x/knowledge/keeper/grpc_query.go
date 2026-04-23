@@ -735,6 +735,91 @@ func (q *queryServer) VindicationCorpus(ctx context.Context, req *types.QueryVin
 	}, nil
 }
 
+// AgentCalibration returns the feedback-loop track record for a submitter.
+func (q *queryServer) AgentCalibration(ctx context.Context, req *types.QueryAgentCalibrationRequest) (*types.QueryAgentCalibrationResponse, error) {
+	if req == nil || req.Address == "" {
+		return nil, status.Error(codes.InvalidArgument, "address is required")
+	}
+	c, found := q.keeper.GetAgentCalibration(ctx, req.Address)
+	return &types.QueryAgentCalibrationResponse{
+		Calibration: c,
+		Found:       found,
+	}, nil
+}
+
+// AgentLeaderboard ranks submitters by calibration score, optionally
+// restricted to a single methodology's per-method stats.
+func (q *queryServer) AgentLeaderboard(ctx context.Context, req *types.QueryAgentLeaderboardRequest) (*types.QueryAgentLeaderboardResponse, error) {
+	if req == nil {
+		req = &types.QueryAgentLeaderboardRequest{}
+	}
+	limit := req.Limit
+	if limit == 0 || limit > 500 {
+		limit = 50
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	snapshotHeight := uint64(sdkCtx.BlockHeight())
+
+	type rankEntry struct {
+		e *types.AgentLeaderboardEntry
+	}
+	var all []rankEntry
+
+	q.keeper.IterateAgentCalibrations(ctx, func(c *types.AgentCalibration) bool {
+		var submissions, accepted, corroborations, disproven uint64
+		if req.MethodId == "" {
+			submissions = c.TotalSubmissions
+			accepted = c.Accepted
+			corroborations = c.CorroborationsEarned
+			disproven = c.DisprovenCount
+		} else {
+			ms, ok := c.PerMethod[req.MethodId]
+			if !ok {
+				return false
+			}
+			submissions = ms.Submissions
+			accepted = ms.Accepted
+			corroborations = ms.CorroborationsEarned
+			disproven = ms.Disproven
+		}
+		if submissions < req.MinSubmissions {
+			return false
+		}
+		all = append(all, rankEntry{e: &types.AgentLeaderboardEntry{
+			Address:              c.Address,
+			AccountType:          c.AccountType,
+			Submissions:          submissions,
+			Accepted:             accepted,
+			CorroborationsEarned: corroborations,
+			DisprovenCount:       disproven,
+			CalibrationScoreBps:  c.CalibrationScoreBps,
+		}})
+		return false
+	})
+
+	// Sort by calibration_score_bps descending; tie-break by accepted.
+	sort.Slice(all, func(i, j int) bool {
+		if all[i].e.CalibrationScoreBps != all[j].e.CalibrationScoreBps {
+			return all[i].e.CalibrationScoreBps > all[j].e.CalibrationScoreBps
+		}
+		return all[i].e.Accepted > all[j].e.Accepted
+	})
+
+	entries := make([]*types.AgentLeaderboardEntry, 0, limit)
+	for i, r := range all {
+		if uint32(i) >= limit {
+			break
+		}
+		entries = append(entries, r.e)
+	}
+
+	return &types.QueryAgentLeaderboardResponse{
+		Entries:             entries,
+		SnapshotBlockHeight: snapshotHeight,
+	}, nil
+}
+
 // TrainingQuality returns the computed tier for a single fact, with reason.
 func (q *queryServer) TrainingQuality(ctx context.Context, req *types.QueryTrainingQualityRequest) (*types.QueryTrainingQualityResponse, error) {
 	if req == nil || req.FactId == "" {

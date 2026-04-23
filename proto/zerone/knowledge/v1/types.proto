@@ -318,6 +318,50 @@ enum TrainingQualityTier {
   TRAINING_QUALITY_TIER_UNSUITABLE  = 5;   // CONTESTED / EXPIRED / MALFORMED — exclude from training
 }
 
+// AgentMethodStats tracks calibration for a single submitter within a single
+// methodology. Populated on round completion and challenge outcomes.
+message AgentMethodStats {
+  uint64 submissions           = 1;
+  uint64 accepted              = 2;
+  uint64 rejected              = 3;
+  uint64 corroborations_earned = 4; // sum across submitter's facts under this method
+  uint64 disproven             = 5;
+}
+
+// AgentCalibration is the feedback record for a submitter — agent or human.
+// It is the mechanism by which ZERONE-trained models (and human participants)
+// are measured against the same adjudication they were trained on. Closes
+// the loop between training pipeline output and on-chain evaluation (Phase 5).
+message AgentCalibration {
+  string address              = 1;
+  string account_type         = 2;  // "agent", "human", "hybrid" (cached from x/auth)
+
+  // Lifetime submission stats (aggregated across all methods).
+  uint64 total_submissions    = 3;
+  uint64 accepted             = 4;
+  uint64 rejected             = 5;
+  uint64 malformed            = 6;
+  uint64 inconclusive         = 7;
+  uint64 corroborations_earned = 8; // sum across the submitter's accepted facts
+  uint64 disproven_count      = 9;  // facts that went DISPROVEN post-acceptance
+
+  // Challenge-issuer stats — when this address is the CHALLENGER.
+  uint64 challenges_issued    = 10;
+  uint64 challenges_succeeded = 11; // target fact went DISPROVEN
+  uint64 challenges_failed    = 12; // target fact survived
+
+  uint64 first_submission_block = 13;
+  uint64 last_submission_block  = 14;
+
+  // Per-method breakdown. Key = method_id.
+  map<string, AgentMethodStats> per_method = 15;
+
+  // Derived calibration score in BPS. Computed from above signals; see
+  // ComputeAgentCalibrationScore in the keeper.
+  uint64 calibration_score_bps = 16;
+  uint64 last_updated_block    = 17;
+}
+
 // CommonKnowledgeEntry represents a subject that LLMs already know.
 // Claims matching these subjects receive a novelty penalty.
 message CommonKnowledgeEntry {

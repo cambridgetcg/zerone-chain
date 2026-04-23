@@ -191,6 +191,21 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/training/quality/{fact_id}";
   }
 
+  // ─── Feedback loop (Phase 5) ───────────────────────────────────────
+  // AgentCalibration: returns the per-submitter track record that the
+  // feedback loop writes after every round outcome, corroboration, and
+  // disproval. The mechanism by which a ZERONE-trained model is measured
+  // against the same adjudication it was trained on.
+  rpc AgentCalibration(QueryAgentCalibrationRequest) returns (QueryAgentCalibrationResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/agent/{address}/calibration";
+  }
+
+  // AgentLeaderboard: rank submitters by calibration score. Optional
+  // methodology filter so you can get "top agents in M-EMPIRICAL."
+  rpc AgentLeaderboard(QueryAgentLeaderboardRequest) returns (QueryAgentLeaderboardResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/agent/leaderboard";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -675,6 +690,38 @@ message QueryTrainingQualityResponse {
   string method_id = 3;
   FactStatus status = 4;
   string reason = 5;  // Human-readable classification reason
+}
+
+// ─── Feedback loop queries (Phase 5) ──────────────────────────────────────
+
+message QueryAgentCalibrationRequest {
+  string address = 1;
+}
+
+message QueryAgentCalibrationResponse {
+  AgentCalibration calibration = 1;
+  bool found = 2;
+}
+
+message QueryAgentLeaderboardRequest {
+  string method_id = 1;       // Empty = overall; else restrict to per-method stats
+  uint64 min_submissions = 2; // Exclude agents with too-small sample size
+  uint32 limit = 3;
+}
+
+message AgentLeaderboardEntry {
+  string address = 1;
+  string account_type = 2;
+  uint64 submissions = 3;
+  uint64 accepted = 4;
+  uint64 corroborations_earned = 5;
+  uint64 disproven_count = 6;
+  uint64 calibration_score_bps = 7;
+}
+
+message QueryAgentLeaderboardResponse {
+  repeated AgentLeaderboardEntry entries = 1;
+  uint64 snapshot_block_height = 2;
 }
 
 // ─── Novelty detection queries ──────────────────────────────────────────────

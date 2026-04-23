@@ -51,6 +51,8 @@ const (
 	Query_DisprovenCorpus_FullMethodName        = "/zerone.knowledge.v1.Query/DisprovenCorpus"
 	Query_VindicationCorpus_FullMethodName      = "/zerone.knowledge.v1.Query/VindicationCorpus"
 	Query_TrainingQuality_FullMethodName        = "/zerone.knowledge.v1.Query/TrainingQuality"
+	Query_AgentCalibration_FullMethodName       = "/zerone.knowledge.v1.Query/AgentCalibration"
+	Query_AgentLeaderboard_FullMethodName       = "/zerone.knowledge.v1.Query/AgentLeaderboard"
 	Query_CommonKnowledge_FullMethodName        = "/zerone.knowledge.v1.Query/CommonKnowledge"
 	Query_CheckNovelty_FullMethodName           = "/zerone.knowledge.v1.Query/CheckNovelty"
 	Query_ActiveBounties_FullMethodName         = "/zerone.knowledge.v1.Query/ActiveBounties"
@@ -159,6 +161,15 @@ type QueryClient interface {
 	VindicationCorpus(ctx context.Context, in *QueryVindicationCorpusRequest, opts ...grpc.CallOption) (*QueryVindicationCorpusResponse, error)
 	// TrainingQuality: returns the computed training-quality tier for a fact.
 	TrainingQuality(ctx context.Context, in *QueryTrainingQualityRequest, opts ...grpc.CallOption) (*QueryTrainingQualityResponse, error)
+	// ─── Feedback loop (Phase 5) ───────────────────────────────────────
+	// AgentCalibration: returns the per-submitter track record that the
+	// feedback loop writes after every round outcome, corroboration, and
+	// disproval. The mechanism by which a ZERONE-trained model is measured
+	// against the same adjudication it was trained on.
+	AgentCalibration(ctx context.Context, in *QueryAgentCalibrationRequest, opts ...grpc.CallOption) (*QueryAgentCalibrationResponse, error)
+	// AgentLeaderboard: rank submitters by calibration score. Optional
+	// methodology filter so you can get "top agents in M-EMPIRICAL."
+	AgentLeaderboard(ctx context.Context, in *QueryAgentLeaderboardRequest, opts ...grpc.CallOption) (*QueryAgentLeaderboardResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -518,6 +529,26 @@ func (c *queryClient) TrainingQuality(ctx context.Context, in *QueryTrainingQual
 	return out, nil
 }
 
+func (c *queryClient) AgentCalibration(ctx context.Context, in *QueryAgentCalibrationRequest, opts ...grpc.CallOption) (*QueryAgentCalibrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryAgentCalibrationResponse)
+	err := c.cc.Invoke(ctx, Query_AgentCalibration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) AgentLeaderboard(ctx context.Context, in *QueryAgentLeaderboardRequest, opts ...grpc.CallOption) (*QueryAgentLeaderboardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryAgentLeaderboardResponse)
+	err := c.cc.Invoke(ctx, Query_AgentLeaderboard_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -759,6 +790,15 @@ type QueryServer interface {
 	VindicationCorpus(context.Context, *QueryVindicationCorpusRequest) (*QueryVindicationCorpusResponse, error)
 	// TrainingQuality: returns the computed training-quality tier for a fact.
 	TrainingQuality(context.Context, *QueryTrainingQualityRequest) (*QueryTrainingQualityResponse, error)
+	// ─── Feedback loop (Phase 5) ───────────────────────────────────────
+	// AgentCalibration: returns the per-submitter track record that the
+	// feedback loop writes after every round outcome, corroboration, and
+	// disproval. The mechanism by which a ZERONE-trained model is measured
+	// against the same adjudication it was trained on.
+	AgentCalibration(context.Context, *QueryAgentCalibrationRequest) (*QueryAgentCalibrationResponse, error)
+	// AgentLeaderboard: rank submitters by calibration score. Optional
+	// methodology filter so you can get "top agents in M-EMPIRICAL."
+	AgentLeaderboard(context.Context, *QueryAgentLeaderboardRequest) (*QueryAgentLeaderboardResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -893,6 +933,12 @@ func (UnimplementedQueryServer) VindicationCorpus(context.Context, *QueryVindica
 }
 func (UnimplementedQueryServer) TrainingQuality(context.Context, *QueryTrainingQualityRequest) (*QueryTrainingQualityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method TrainingQuality not implemented")
+}
+func (UnimplementedQueryServer) AgentCalibration(context.Context, *QueryAgentCalibrationRequest) (*QueryAgentCalibrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AgentCalibration not implemented")
+}
+func (UnimplementedQueryServer) AgentLeaderboard(context.Context, *QueryAgentLeaderboardRequest) (*QueryAgentLeaderboardResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AgentLeaderboard not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -1536,6 +1582,42 @@ func _Query_TrainingQuality_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_AgentCalibration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAgentCalibrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).AgentCalibration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_AgentCalibration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).AgentCalibration(ctx, req.(*QueryAgentCalibrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_AgentLeaderboard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAgentLeaderboardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).AgentLeaderboard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_AgentLeaderboard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).AgentLeaderboard(ctx, req.(*QueryAgentLeaderboardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -1940,6 +2022,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TrainingQuality",
 			Handler:    _Query_TrainingQuality_Handler,
+		},
+		{
+			MethodName: "AgentCalibration",
+			Handler:    _Query_AgentCalibration_Handler,
+		},
+		{
+			MethodName: "AgentLeaderboard",
+			Handler:    _Query_AgentLeaderboard_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",

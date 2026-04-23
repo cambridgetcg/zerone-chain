@@ -68,6 +68,11 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 	round.VerdictBlock = height
 	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_COMPLETE
 
+	// Record submitter calibration (Phase 5 — feedback loop). Every round
+	// outcome updates the submitter's track record. Challenge claims are
+	// handled below with their own challenger-side recording.
+	k.RecordSubmissionOutcome(ctx, claim.Submitter, ResolveMethodId(claim.MethodId), result.Verdict)
+
 	var factId string
 	switch result.Verdict {
 	case types.Verdict_VERDICT_ACCEPT:
@@ -85,6 +90,10 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 		claim.Status = types.ClaimStatus_CLAIM_STATUS_REJECTED
 		// If this was a challenge claim, the original fact survived — energy boost
 		k.handleChallengeSurvival(ctx, claim)
+		// Challenge lost: record on the challenger's side of the ledger (Phase 5).
+		if claim.ProvisionalFactId != "" {
+			k.RecordChallengeOutcome(ctx, claim.Submitter, false)
+		}
 		// Contradicting claim was rejected — undo its CONTESTED side-effect on target facts (T-i4).
 		k.reverseContradictionsFromClaim(ctx, claim)
 
@@ -738,6 +747,9 @@ func (k Keeper) handleChallengeSurvival(ctx context.Context, challengeClaim *typ
 	// verified" but "how many tests has it withstood."
 	originalFact.CorroborationCount++
 	originalFact.LastCorroboratedBlock = height
+
+	// Phase 5: a corroboration accrues for the submitter of the surviving fact.
+	k.RecordCorroborationForSubmitter(ctx, originalFact.Submitter, originalFact.MethodId)
 
 	// Restore from challenged status
 	originalFact.Status = types.FactStatus_FACT_STATUS_ACTIVE

@@ -217,6 +217,12 @@ func (k Keeper) handleChallengeDisproven(ctx context.Context, challengeClaim *ty
 		sdk.NewAttribute("challenge_claim_id", challengeClaim.Id),
 	))
 
+	// Phase 5 feedback loop:
+	//  · the disproven fact's submitter accrues a disproven_count
+	//  · the challenger is credited with a successful challenge
+	k.RecordDisprovalForSubmitter(ctx, originalFact.Submitter, originalFact.MethodId)
+	k.RecordChallengeOutcome(ctx, challengeClaim.Submitter, true)
+
 	// Falsification cascade (ToK Wave 5): mark direct descendants as CONTESTED
 	// so they'll be re-examined rather than continuing to pose as validated.
 	// Only first-hop descendants — transitive cascading is not done automatically
