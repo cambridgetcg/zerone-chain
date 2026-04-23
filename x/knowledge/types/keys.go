@@ -151,6 +151,13 @@ var (
 	TokenizerSpecHistoryKeyPrefix  = []byte{0x5C} // 0x5C | be64(version) → TokenizerSpec (historical)
 	TrainingPipelineKeyPrefix      = []byte{0x5D} // 0x5D | pipelineID → TrainingPipeline
 	ModelCardKeyPrefix             = []byte{0x5E} // 0x5E | modelID → ModelCard
+	TrainingAttestationKeyPrefix   = []byte{0x5F} // 0x5F | pipelineID → TrainingAttestation
+	ContributionByModelKeyPrefix   = []byte{0x60} // 0x60 | modelID → ContributionRecord
+	ContributionByFactKeyPrefix    = []byte{0x61} // 0x61 | factID | modelID → 1 byte marker
+	AugmentationBountyKeyPrefix    = []byte{0x62} // 0x62 | bountyID → AugmentationBounty
+	AugmentationKeyPrefix          = []byte{0x63} // 0x63 | augID → Augmentation
+	AugmentationByFactKeyPrefix    = []byte{0x64} // 0x64 | factID | augID → marker
+	AugmentationByBountyKeyPrefix  = []byte{0x65} // 0x65 | bountyID | augID → marker
 )
 
 // MethodologyKey returns the store key for a methodology by ID.
@@ -185,6 +192,77 @@ func TrainingPipelineKey(id string) []byte {
 // ModelCardKey returns the store key for a model card record.
 func ModelCardKey(id string) []byte {
 	return append(append([]byte{}, ModelCardKeyPrefix...), []byte(id)...)
+}
+
+// TrainingAttestationKey returns the store key for a training attestation.
+func TrainingAttestationKey(pipelineID string) []byte {
+	return append(append([]byte{}, TrainingAttestationKeyPrefix...), []byte(pipelineID)...)
+}
+
+// ContributionByModelKey returns the store key for a model's contribution record.
+func ContributionByModelKey(modelID string) []byte {
+	return append(append([]byte{}, ContributionByModelKeyPrefix...), []byte(modelID)...)
+}
+
+// ContributionByFactKey returns the reverse-index key for fact → model.
+func ContributionByFactKey(factID, modelID string) []byte {
+	out := append([]byte{}, ContributionByFactKeyPrefix...)
+	out = append(out, []byte(factID)...)
+	out = append(out, 0) // separator
+	out = append(out, []byte(modelID)...)
+	return out
+}
+
+// ContributionByFactPrefix returns the iteration prefix for all models that used factID.
+func ContributionByFactPrefix(factID string) []byte {
+	out := append([]byte{}, ContributionByFactKeyPrefix...)
+	out = append(out, []byte(factID)...)
+	out = append(out, 0)
+	return out
+}
+
+// AugmentationBountyKey returns the store key for an augmentation bounty.
+func AugmentationBountyKey(id string) []byte {
+	return append(append([]byte{}, AugmentationBountyKeyPrefix...), []byte(id)...)
+}
+
+// AugmentationKey returns the store key for an augmentation.
+func AugmentationKey(id string) []byte {
+	return append(append([]byte{}, AugmentationKeyPrefix...), []byte(id)...)
+}
+
+// AugmentationByFactKey returns the reverse-index key for fact → augmentation.
+func AugmentationByFactKey(factID, augID string) []byte {
+	out := append([]byte{}, AugmentationByFactKeyPrefix...)
+	out = append(out, []byte(factID)...)
+	out = append(out, 0)
+	out = append(out, []byte(augID)...)
+	return out
+}
+
+// AugmentationByFactPrefix returns the iteration prefix for all augmentations of a fact.
+func AugmentationByFactPrefix(factID string) []byte {
+	out := append([]byte{}, AugmentationByFactKeyPrefix...)
+	out = append(out, []byte(factID)...)
+	out = append(out, 0)
+	return out
+}
+
+// AugmentationByBountyKey returns the reverse-index key for bounty → augmentation.
+func AugmentationByBountyKey(bountyID, augID string) []byte {
+	out := append([]byte{}, AugmentationByBountyKeyPrefix...)
+	out = append(out, []byte(bountyID)...)
+	out = append(out, 0)
+	out = append(out, []byte(augID)...)
+	return out
+}
+
+// AugmentationByBountyPrefix returns the iteration prefix for all augmentations of a bounty.
+func AugmentationByBountyPrefix(bountyID string) []byte {
+	out := append([]byte{}, AugmentationByBountyKeyPrefix...)
+	out = append(out, []byte(bountyID)...)
+	out = append(out, 0)
+	return out
 }
 
 // ─── Key constructors ─────────────────────────────────────────────────────────

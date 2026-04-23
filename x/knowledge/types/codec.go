@@ -34,6 +34,13 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgRegisterModelCard{}, "zerone_knowledge/RegisterModelCard", nil)
 	cdc.RegisterConcrete(&MsgUpdateModelCard{}, "zerone_knowledge/UpdateModelCard", nil)
 	cdc.RegisterConcrete(&MsgRetireModelCard{}, "zerone_knowledge/RetireModelCard", nil)
+	// Route B Wave 3
+	cdc.RegisterConcrete(&MsgAmendTokenizerSpec{}, "zerone_knowledge/AmendTokenizerSpec", nil)
+	cdc.RegisterConcrete(&MsgAttributeContributions{}, "zerone_knowledge/AttributeContributions", nil)
+	cdc.RegisterConcrete(&MsgAttestTraining{}, "zerone_knowledge/AttestTraining", nil)
+	cdc.RegisterConcrete(&MsgCreateAugmentationBounty{}, "zerone_knowledge/CreateAugmentationBounty", nil)
+	cdc.RegisterConcrete(&MsgSubmitAugmentation{}, "zerone_knowledge/SubmitAugmentation", nil)
+	cdc.RegisterConcrete(&MsgAcceptAugmentation{}, "zerone_knowledge/AcceptAugmentation", nil)
 }
 
 // RegisterInterfaces registers the knowledge module's interface implementations.
@@ -66,6 +73,13 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgRegisterModelCard{},
 		&MsgUpdateModelCard{},
 		&MsgRetireModelCard{},
+		// Route B Wave 3
+		&MsgAmendTokenizerSpec{},
+		&MsgAttributeContributions{},
+		&MsgAttestTraining{},
+		&MsgCreateAugmentationBounty{},
+		&MsgSubmitAugmentation{},
+		&MsgAcceptAugmentation{},
 	)
 }
 

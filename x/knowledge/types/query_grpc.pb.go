@@ -62,6 +62,13 @@ const (
 	Query_ModelCardByDeployment_FullMethodName  = "/zerone.knowledge.v1.Query/ModelCardByDeployment"
 	Query_StructuredCorpus_FullMethodName       = "/zerone.knowledge.v1.Query/StructuredCorpus"
 	Query_DisputationCorpus_FullMethodName      = "/zerone.knowledge.v1.Query/DisputationCorpus"
+	Query_TrainingAttestation_FullMethodName    = "/zerone.knowledge.v1.Query/TrainingAttestation"
+	Query_ModelContributions_FullMethodName     = "/zerone.knowledge.v1.Query/ModelContributions"
+	Query_FactContributors_FullMethodName       = "/zerone.knowledge.v1.Query/FactContributors"
+	Query_ModelLineage_FullMethodName           = "/zerone.knowledge.v1.Query/ModelLineage"
+	Query_AugmentationBounty_FullMethodName     = "/zerone.knowledge.v1.Query/AugmentationBounty"
+	Query_AugmentationBounties_FullMethodName   = "/zerone.knowledge.v1.Query/AugmentationBounties"
+	Query_AugmentationsByFact_FullMethodName    = "/zerone.knowledge.v1.Query/AugmentationsByFact"
 	Query_CommonKnowledge_FullMethodName        = "/zerone.knowledge.v1.Query/CommonKnowledge"
 	Query_CheckNovelty_FullMethodName           = "/zerone.knowledge.v1.Query/CheckNovelty"
 	Query_ActiveBounties_FullMethodName         = "/zerone.knowledge.v1.Query/ActiveBounties"
@@ -205,6 +212,21 @@ type QueryClient interface {
 	// because natural-language argument + its outcome is rare in web crawl
 	// and priceless for training models to reason dialectically.
 	DisputationCorpus(ctx context.Context, in *QueryDisputationCorpusRequest, opts ...grpc.CallOption) (*QueryDisputationCorpusResponse, error)
+	// ─── Route B Wave 3 queries ────────────────────────────────────────
+	// TrainingAttestation returns the training-completion attestation for a pipeline.
+	TrainingAttestation(ctx context.Context, in *QueryTrainingAttestationRequest, opts ...grpc.CallOption) (*QueryTrainingAttestationResponse, error)
+	// ModelContributions returns the fact_ids attributed to a model.
+	ModelContributions(ctx context.Context, in *QueryModelContributionsRequest, opts ...grpc.CallOption) (*QueryModelContributionsResponse, error)
+	// FactContributors returns the models that used a given fact in training.
+	FactContributors(ctx context.Context, in *QueryFactContributorsRequest, opts ...grpc.CallOption) (*QueryFactContributorsResponse, error)
+	// ModelLineage walks the predecessor chain from a given model back to roots.
+	ModelLineage(ctx context.Context, in *QueryModelLineageRequest, opts ...grpc.CallOption) (*QueryModelLineageResponse, error)
+	// AugmentationBounty returns a single bounty by id.
+	AugmentationBounty(ctx context.Context, in *QueryAugmentationBountyRequest, opts ...grpc.CallOption) (*QueryAugmentationBountyResponse, error)
+	// AugmentationBounties lists bounties with optional filters.
+	AugmentationBounties(ctx context.Context, in *QueryAugmentationBountiesRequest, opts ...grpc.CallOption) (*QueryAugmentationBountiesResponse, error)
+	// AugmentationsByFact returns all augmentations of a given fact.
+	AugmentationsByFact(ctx context.Context, in *QueryAugmentationsByFactRequest, opts ...grpc.CallOption) (*QueryAugmentationsByFactResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -674,6 +696,76 @@ func (c *queryClient) DisputationCorpus(ctx context.Context, in *QueryDisputatio
 	return out, nil
 }
 
+func (c *queryClient) TrainingAttestation(ctx context.Context, in *QueryTrainingAttestationRequest, opts ...grpc.CallOption) (*QueryTrainingAttestationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTrainingAttestationResponse)
+	err := c.cc.Invoke(ctx, Query_TrainingAttestation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ModelContributions(ctx context.Context, in *QueryModelContributionsRequest, opts ...grpc.CallOption) (*QueryModelContributionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryModelContributionsResponse)
+	err := c.cc.Invoke(ctx, Query_ModelContributions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) FactContributors(ctx context.Context, in *QueryFactContributorsRequest, opts ...grpc.CallOption) (*QueryFactContributorsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFactContributorsResponse)
+	err := c.cc.Invoke(ctx, Query_FactContributors_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ModelLineage(ctx context.Context, in *QueryModelLineageRequest, opts ...grpc.CallOption) (*QueryModelLineageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryModelLineageResponse)
+	err := c.cc.Invoke(ctx, Query_ModelLineage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) AugmentationBounty(ctx context.Context, in *QueryAugmentationBountyRequest, opts ...grpc.CallOption) (*QueryAugmentationBountyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryAugmentationBountyResponse)
+	err := c.cc.Invoke(ctx, Query_AugmentationBounty_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) AugmentationBounties(ctx context.Context, in *QueryAugmentationBountiesRequest, opts ...grpc.CallOption) (*QueryAugmentationBountiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryAugmentationBountiesResponse)
+	err := c.cc.Invoke(ctx, Query_AugmentationBounties_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) AugmentationsByFact(ctx context.Context, in *QueryAugmentationsByFactRequest, opts ...grpc.CallOption) (*QueryAugmentationsByFactResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryAugmentationsByFactResponse)
+	err := c.cc.Invoke(ctx, Query_AugmentationsByFact_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -950,6 +1042,21 @@ type QueryServer interface {
 	// because natural-language argument + its outcome is rare in web crawl
 	// and priceless for training models to reason dialectically.
 	DisputationCorpus(context.Context, *QueryDisputationCorpusRequest) (*QueryDisputationCorpusResponse, error)
+	// ─── Route B Wave 3 queries ────────────────────────────────────────
+	// TrainingAttestation returns the training-completion attestation for a pipeline.
+	TrainingAttestation(context.Context, *QueryTrainingAttestationRequest) (*QueryTrainingAttestationResponse, error)
+	// ModelContributions returns the fact_ids attributed to a model.
+	ModelContributions(context.Context, *QueryModelContributionsRequest) (*QueryModelContributionsResponse, error)
+	// FactContributors returns the models that used a given fact in training.
+	FactContributors(context.Context, *QueryFactContributorsRequest) (*QueryFactContributorsResponse, error)
+	// ModelLineage walks the predecessor chain from a given model back to roots.
+	ModelLineage(context.Context, *QueryModelLineageRequest) (*QueryModelLineageResponse, error)
+	// AugmentationBounty returns a single bounty by id.
+	AugmentationBounty(context.Context, *QueryAugmentationBountyRequest) (*QueryAugmentationBountyResponse, error)
+	// AugmentationBounties lists bounties with optional filters.
+	AugmentationBounties(context.Context, *QueryAugmentationBountiesRequest) (*QueryAugmentationBountiesResponse, error)
+	// AugmentationsByFact returns all augmentations of a given fact.
+	AugmentationsByFact(context.Context, *QueryAugmentationsByFactRequest) (*QueryAugmentationsByFactResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -1117,6 +1224,27 @@ func (UnimplementedQueryServer) StructuredCorpus(context.Context, *QueryStructur
 }
 func (UnimplementedQueryServer) DisputationCorpus(context.Context, *QueryDisputationCorpusRequest) (*QueryDisputationCorpusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DisputationCorpus not implemented")
+}
+func (UnimplementedQueryServer) TrainingAttestation(context.Context, *QueryTrainingAttestationRequest) (*QueryTrainingAttestationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TrainingAttestation not implemented")
+}
+func (UnimplementedQueryServer) ModelContributions(context.Context, *QueryModelContributionsRequest) (*QueryModelContributionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ModelContributions not implemented")
+}
+func (UnimplementedQueryServer) FactContributors(context.Context, *QueryFactContributorsRequest) (*QueryFactContributorsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method FactContributors not implemented")
+}
+func (UnimplementedQueryServer) ModelLineage(context.Context, *QueryModelLineageRequest) (*QueryModelLineageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ModelLineage not implemented")
+}
+func (UnimplementedQueryServer) AugmentationBounty(context.Context, *QueryAugmentationBountyRequest) (*QueryAugmentationBountyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AugmentationBounty not implemented")
+}
+func (UnimplementedQueryServer) AugmentationBounties(context.Context, *QueryAugmentationBountiesRequest) (*QueryAugmentationBountiesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AugmentationBounties not implemented")
+}
+func (UnimplementedQueryServer) AugmentationsByFact(context.Context, *QueryAugmentationsByFactRequest) (*QueryAugmentationsByFactResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AugmentationsByFact not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -1958,6 +2086,132 @@ func _Query_DisputationCorpus_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_TrainingAttestation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTrainingAttestationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TrainingAttestation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TrainingAttestation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TrainingAttestation(ctx, req.(*QueryTrainingAttestationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ModelContributions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryModelContributionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ModelContributions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ModelContributions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ModelContributions(ctx, req.(*QueryModelContributionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_FactContributors_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFactContributorsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).FactContributors(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_FactContributors_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).FactContributors(ctx, req.(*QueryFactContributorsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ModelLineage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryModelLineageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ModelLineage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ModelLineage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ModelLineage(ctx, req.(*QueryModelLineageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_AugmentationBounty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAugmentationBountyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).AugmentationBounty(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_AugmentationBounty_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).AugmentationBounty(ctx, req.(*QueryAugmentationBountyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_AugmentationBounties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAugmentationBountiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).AugmentationBounties(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_AugmentationBounties_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).AugmentationBounties(ctx, req.(*QueryAugmentationBountiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_AugmentationsByFact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryAugmentationsByFactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).AugmentationsByFact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_AugmentationsByFact_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).AugmentationsByFact(ctx, req.(*QueryAugmentationsByFactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -2406,6 +2660,34 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DisputationCorpus",
 			Handler:    _Query_DisputationCorpus_Handler,
+		},
+		{
+			MethodName: "TrainingAttestation",
+			Handler:    _Query_TrainingAttestation_Handler,
+		},
+		{
+			MethodName: "ModelContributions",
+			Handler:    _Query_ModelContributions_Handler,
+		},
+		{
+			MethodName: "FactContributors",
+			Handler:    _Query_FactContributors_Handler,
+		},
+		{
+			MethodName: "ModelLineage",
+			Handler:    _Query_ModelLineage_Handler,
+		},
+		{
+			MethodName: "AugmentationBounty",
+			Handler:    _Query_AugmentationBounty_Handler,
+		},
+		{
+			MethodName: "AugmentationBounties",
+			Handler:    _Query_AugmentationBounties_Handler,
+		},
+		{
+			MethodName: "AugmentationsByFact",
+			Handler:    _Query_AugmentationsByFact_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",

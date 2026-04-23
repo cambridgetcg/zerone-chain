@@ -252,6 +252,36 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/training/disputation_corpus";
   }
 
+  // ─── Route B Wave 3 queries ────────────────────────────────────────
+  // TrainingAttestation returns the training-completion attestation for a pipeline.
+  rpc TrainingAttestation(QueryTrainingAttestationRequest) returns (QueryTrainingAttestationResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/attestation/{pipeline_id}";
+  }
+  // ModelContributions returns the fact_ids attributed to a model.
+  rpc ModelContributions(QueryModelContributionsRequest) returns (QueryModelContributionsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/contributions/model/{model_id}";
+  }
+  // FactContributors returns the models that used a given fact in training.
+  rpc FactContributors(QueryFactContributorsRequest) returns (QueryFactContributorsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/contributions/fact/{fact_id}";
+  }
+  // ModelLineage walks the predecessor chain from a given model back to roots.
+  rpc ModelLineage(QueryModelLineageRequest) returns (QueryModelLineageResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/lineage/{model_id}";
+  }
+  // AugmentationBounty returns a single bounty by id.
+  rpc AugmentationBounty(QueryAugmentationBountyRequest) returns (QueryAugmentationBountyResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/augmentation_bounty/{id}";
+  }
+  // AugmentationBounties lists bounties with optional filters.
+  rpc AugmentationBounties(QueryAugmentationBountiesRequest) returns (QueryAugmentationBountiesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/augmentation_bounties";
+  }
+  // AugmentationsByFact returns all augmentations of a given fact.
+  rpc AugmentationsByFact(QueryAugmentationsByFactRequest) returns (QueryAugmentationsByFactResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/augmentations/fact/{fact_id}";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -1098,4 +1128,65 @@ message QueryRoleElasticityResponse {
   uint64 human_bonus_bps     = 7;
   uint64 agent_accuracy_bps  = 8;
   uint64 human_accuracy_bps  = 9;
+}
+
+// ─── Route B Wave 3 query messages ────────────────────────────────────────
+
+message QueryTrainingAttestationRequest {
+  string pipeline_id = 1;
+}
+message QueryTrainingAttestationResponse {
+  TrainingAttestation attestation = 1;
+  bool found = 2;
+}
+
+message QueryModelContributionsRequest {
+  string model_id = 1;
+}
+message QueryModelContributionsResponse {
+  ContributionRecord record = 1;
+  bool found = 2;
+}
+
+message QueryFactContributorsRequest {
+  string fact_id = 1;
+}
+message QueryFactContributorsResponse {
+  repeated string model_ids = 1;
+}
+
+message QueryModelLineageRequest {
+  string model_id = 1;
+  uint32 max_depth = 2;
+}
+message QueryModelLineageResponse {
+  // Oldest-first chain: root ancestor at [0], the queried model at the end.
+  repeated ModelCard ancestry = 1;
+  bool root_reached = 2;
+  bool truncated = 3;
+}
+
+message QueryAugmentationBountyRequest {
+  string id = 1;
+}
+message QueryAugmentationBountyResponse {
+  AugmentationBounty bounty = 1;
+  bool found = 2;
+}
+
+message QueryAugmentationBountiesRequest {
+  string sponsor_address = 1;  // optional
+  bool   active_only = 2;
+}
+message QueryAugmentationBountiesResponse {
+  repeated AugmentationBounty bounties = 1;
+  uint64 snapshot_block_height = 2;
+}
+
+message QueryAugmentationsByFactRequest {
+  string fact_id = 1;
+  bool   accepted_only = 2;
+}
+message QueryAugmentationsByFactResponse {
+  repeated Augmentation augmentations = 1;
 }

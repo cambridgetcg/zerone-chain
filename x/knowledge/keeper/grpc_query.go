@@ -1880,3 +1880,96 @@ func (q *queryServer) DomainCapacity(ctx context.Context, req *types.QueryDomain
 		TotalEnergy: stats.TotalEnergy,
 	}, nil
 }
+
+// ─── Route B Wave 3 queries ────────────────────────────────────────────────
+
+// TrainingAttestation returns the training-completion attestation for a pipeline.
+func (q *queryServer) TrainingAttestation(ctx context.Context, req *types.QueryTrainingAttestationRequest) (*types.QueryTrainingAttestationResponse, error) {
+	if req == nil || req.PipelineId == "" {
+		return nil, status.Error(codes.InvalidArgument, "pipeline_id is required")
+	}
+	a, found := q.keeper.GetTrainingAttestation(ctx, req.PipelineId)
+	return &types.QueryTrainingAttestationResponse{Attestation: a, Found: found}, nil
+}
+
+// ModelContributions returns the fact_ids attributed to a model.
+func (q *queryServer) ModelContributions(ctx context.Context, req *types.QueryModelContributionsRequest) (*types.QueryModelContributionsResponse, error) {
+	if req == nil || req.ModelId == "" {
+		return nil, status.Error(codes.InvalidArgument, "model_id is required")
+	}
+	r, found := q.keeper.GetContributionRecord(ctx, req.ModelId)
+	return &types.QueryModelContributionsResponse{Record: r, Found: found}, nil
+}
+
+// FactContributors returns the models that trained on a given fact.
+func (q *queryServer) FactContributors(ctx context.Context, req *types.QueryFactContributorsRequest) (*types.QueryFactContributorsResponse, error) {
+	if req == nil || req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id is required")
+	}
+	ids := q.keeper.GetModelsThatUsedFact(ctx, req.FactId)
+	return &types.QueryFactContributorsResponse{ModelIds: ids}, nil
+}
+
+// ModelLineage walks the predecessor chain for a model.
+func (q *queryServer) ModelLineage(ctx context.Context, req *types.QueryModelLineageRequest) (*types.QueryModelLineageResponse, error) {
+	if req == nil || req.ModelId == "" {
+		return nil, status.Error(codes.InvalidArgument, "model_id is required")
+	}
+	ancestry, rootReached, truncated := q.keeper.WalkModelAncestry(ctx, req.ModelId, req.MaxDepth)
+	return &types.QueryModelLineageResponse{
+		Ancestry:    ancestry,
+		RootReached: rootReached,
+		Truncated:   truncated,
+	}, nil
+}
+
+// AugmentationBounty returns a bounty by id.
+func (q *queryServer) AugmentationBounty(ctx context.Context, req *types.QueryAugmentationBountyRequest) (*types.QueryAugmentationBountyResponse, error) {
+	if req == nil || req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "id is required")
+	}
+	b, found := q.keeper.GetAugmentationBounty(ctx, req.Id)
+	return &types.QueryAugmentationBountyResponse{Bounty: b, Found: found}, nil
+}
+
+// AugmentationBounties lists bounties with optional filters.
+func (q *queryServer) AugmentationBounties(ctx context.Context, req *types.QueryAugmentationBountiesRequest) (*types.QueryAugmentationBountiesResponse, error) {
+	if req == nil {
+		req = &types.QueryAugmentationBountiesRequest{}
+	}
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	snapshotHeight := uint64(sdkCtx.BlockHeight())
+	var bounties []*types.AugmentationBounty
+	q.keeper.IterateAugmentationBounties(ctx, func(b *types.AugmentationBounty) bool {
+		if req.SponsorAddress != "" && b.SponsorAddress != req.SponsorAddress {
+			return false
+		}
+		if req.ActiveOnly && !b.Active {
+			return false
+		}
+		bounties = append(bounties, b)
+		return false
+	})
+	return &types.QueryAugmentationBountiesResponse{
+		Bounties:            bounties,
+		SnapshotBlockHeight: snapshotHeight,
+	}, nil
+}
+
+// AugmentationsByFact returns all augmentations (optionally only accepted) for a fact.
+func (q *queryServer) AugmentationsByFact(ctx context.Context, req *types.QueryAugmentationsByFactRequest) (*types.QueryAugmentationsByFactResponse, error) {
+	if req == nil || req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id is required")
+	}
+	augs := q.keeper.GetAugmentationsByFact(ctx, req.FactId)
+	if req.AcceptedOnly {
+		filtered := augs[:0]
+		for _, a := range augs {
+			if a.Accepted {
+				filtered = append(filtered, a)
+			}
+		}
+		augs = filtered
+	}
+	return &types.QueryAugmentationsByFactResponse{Augmentations: augs}, nil
+}

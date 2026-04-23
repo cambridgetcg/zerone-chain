@@ -1515,6 +1515,49 @@ New training pipeline declared on-chain (Route B Wave 2b). An operator has pinne
 Training pipeline status or completion amended by its operator (Route B Wave 2b).
 - `pipeline_id`, `operator`, `new_status`
 
+### zerone.knowledge.tokenizer_spec_amended
+Governance amended the on-chain tokenizer contract (Route B Wave 3a). The caller-supplied version field is ignored; the handler auto-assigns monotonic `new_version = current+1` and pins `ratified_at_block`.
+- `new_version` -- auto-assigned version (current+1)
+- `canonical_serialisation_version` -- canonical serialisation version of the new spec
+- `authority` -- governance authority address that submitted the amendment
+
+### zerone.knowledge.contributions_attributed
+Model owner posted the fact_ids consumed by training, creating the reverse fact→model index (Route B Wave 3b). `total_weight` sums per-fact (corroboration_count + 1) with an optional override.
+- `model_id` -- ModelCard being attributed
+- `attributed_by` -- owner (must equal ModelCard.owner_address)
+- `fact_count` -- deduplicated fact count actually recorded
+- `total_weight` -- sum of per-fact weights
+
+### zerone.knowledge.training_attestation_posted
+Pipeline operator attested training completion with off-chain telemetry (Route B Wave 3c).
+- `pipeline_id` -- TrainingPipeline id
+- `attester` -- operator address (must equal pipeline operator)
+- `flops_estimate` -- best-effort FLOPs count
+- `wallclock_seconds` -- wallclock training time
+- `eval_hash` -- sha256 of the evaluation bundle
+
+### zerone.knowledge.augmentation_bounty_created
+Sponsor opened a bounty for variant reformulations of a target fact (Route B Wave 3e). Up to `max_variants` accepted variants can be paid out.
+- `bounty_id` -- stable id
+- `sponsor` -- sponsor address
+- `target_fact_id` -- the fact whose variants are wanted
+- `reward_per_variant` -- payout per accepted variant (uzrn)
+- `max_variants` -- hard cap before the bounty auto-deactivates
+
+### zerone.knowledge.augmentation_submitted
+A variant was submitted against an augmentation bounty or as a volunteer (Route B Wave 3e). `bounty_id` is empty for volunteer variants.
+- `augmentation_id` -- stable id
+- `original_fact_id` -- the fact being reformulated
+- `bounty_id` -- bounty id (empty for volunteer)
+- `submitter` -- submitter address
+
+### zerone.knowledge.augmentation_accepted
+Variant accepted — by bounty sponsor if `bounty_id` is set, else by the original fact submitter (Route B Wave 3e). Increments the bounty's accepted count; bounty auto-deactivates on saturation.
+- `augmentation_id`
+- `original_fact_id`
+- `bounty_id` -- empty for volunteer acceptance
+- `acceptor` -- sponsor or original fact submitter
+
 
 ## liquiditypool
 

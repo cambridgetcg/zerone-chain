@@ -45,6 +45,12 @@ const (
 	Msg_RegisterModelCard_FullMethodName        = "/zerone.knowledge.v1.Msg/RegisterModelCard"
 	Msg_UpdateModelCard_FullMethodName          = "/zerone.knowledge.v1.Msg/UpdateModelCard"
 	Msg_RetireModelCard_FullMethodName          = "/zerone.knowledge.v1.Msg/RetireModelCard"
+	Msg_AmendTokenizerSpec_FullMethodName       = "/zerone.knowledge.v1.Msg/AmendTokenizerSpec"
+	Msg_AttributeContributions_FullMethodName   = "/zerone.knowledge.v1.Msg/AttributeContributions"
+	Msg_AttestTraining_FullMethodName           = "/zerone.knowledge.v1.Msg/AttestTraining"
+	Msg_CreateAugmentationBounty_FullMethodName = "/zerone.knowledge.v1.Msg/CreateAugmentationBounty"
+	Msg_SubmitAugmentation_FullMethodName       = "/zerone.knowledge.v1.Msg/SubmitAugmentation"
+	Msg_AcceptAugmentation_FullMethodName       = "/zerone.knowledge.v1.Msg/AcceptAugmentation"
 )
 
 // MsgClient is the client API for Msg service.
@@ -106,6 +112,19 @@ type MsgClient interface {
 	UpdateModelCard(ctx context.Context, in *MsgUpdateModelCard, opts ...grpc.CallOption) (*MsgUpdateModelCardResponse, error)
 	// RetireModelCard flips the card's active flag and records retirement (owner-auth).
 	RetireModelCard(ctx context.Context, in *MsgRetireModelCard, opts ...grpc.CallOption) (*MsgRetireModelCardResponse, error)
+	// ─── Route B Wave 3 ────────────────────────────────────────────────
+	// AmendTokenizerSpec bumps the on-chain tokenizer contract (authority-auth).
+	AmendTokenizerSpec(ctx context.Context, in *MsgAmendTokenizerSpec, opts ...grpc.CallOption) (*MsgAmendTokenizerSpecResponse, error)
+	// AttributeContributions declares which fact_ids a model was trained on.
+	AttributeContributions(ctx context.Context, in *MsgAttributeContributions, opts ...grpc.CallOption) (*MsgAttributeContributionsResponse, error)
+	// AttestTraining posts a training-completion attestation (operator-auth).
+	AttestTraining(ctx context.Context, in *MsgAttestTraining, opts ...grpc.CallOption) (*MsgAttestTrainingResponse, error)
+	// CreateAugmentationBounty opens a reward pool for variant formulations of a fact.
+	CreateAugmentationBounty(ctx context.Context, in *MsgCreateAugmentationBounty, opts ...grpc.CallOption) (*MsgCreateAugmentationBountyResponse, error)
+	// SubmitAugmentation submits a variant formulation of a fact.
+	SubmitAugmentation(ctx context.Context, in *MsgSubmitAugmentation, opts ...grpc.CallOption) (*MsgSubmitAugmentationResponse, error)
+	// AcceptAugmentation marks a variant accepted (sponsor-auth for bounty; fact submitter for volunteer).
+	AcceptAugmentation(ctx context.Context, in *MsgAcceptAugmentation, opts ...grpc.CallOption) (*MsgAcceptAugmentationResponse, error)
 }
 
 type msgClient struct {
@@ -376,6 +395,66 @@ func (c *msgClient) RetireModelCard(ctx context.Context, in *MsgRetireModelCard,
 	return out, nil
 }
 
+func (c *msgClient) AmendTokenizerSpec(ctx context.Context, in *MsgAmendTokenizerSpec, opts ...grpc.CallOption) (*MsgAmendTokenizerSpecResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAmendTokenizerSpecResponse)
+	err := c.cc.Invoke(ctx, Msg_AmendTokenizerSpec_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) AttributeContributions(ctx context.Context, in *MsgAttributeContributions, opts ...grpc.CallOption) (*MsgAttributeContributionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAttributeContributionsResponse)
+	err := c.cc.Invoke(ctx, Msg_AttributeContributions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) AttestTraining(ctx context.Context, in *MsgAttestTraining, opts ...grpc.CallOption) (*MsgAttestTrainingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAttestTrainingResponse)
+	err := c.cc.Invoke(ctx, Msg_AttestTraining_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) CreateAugmentationBounty(ctx context.Context, in *MsgCreateAugmentationBounty, opts ...grpc.CallOption) (*MsgCreateAugmentationBountyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgCreateAugmentationBountyResponse)
+	err := c.cc.Invoke(ctx, Msg_CreateAugmentationBounty_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) SubmitAugmentation(ctx context.Context, in *MsgSubmitAugmentation, opts ...grpc.CallOption) (*MsgSubmitAugmentationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgSubmitAugmentationResponse)
+	err := c.cc.Invoke(ctx, Msg_SubmitAugmentation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) AcceptAugmentation(ctx context.Context, in *MsgAcceptAugmentation, opts ...grpc.CallOption) (*MsgAcceptAugmentationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAcceptAugmentationResponse)
+	err := c.cc.Invoke(ctx, Msg_AcceptAugmentation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -435,6 +514,19 @@ type MsgServer interface {
 	UpdateModelCard(context.Context, *MsgUpdateModelCard) (*MsgUpdateModelCardResponse, error)
 	// RetireModelCard flips the card's active flag and records retirement (owner-auth).
 	RetireModelCard(context.Context, *MsgRetireModelCard) (*MsgRetireModelCardResponse, error)
+	// ─── Route B Wave 3 ────────────────────────────────────────────────
+	// AmendTokenizerSpec bumps the on-chain tokenizer contract (authority-auth).
+	AmendTokenizerSpec(context.Context, *MsgAmendTokenizerSpec) (*MsgAmendTokenizerSpecResponse, error)
+	// AttributeContributions declares which fact_ids a model was trained on.
+	AttributeContributions(context.Context, *MsgAttributeContributions) (*MsgAttributeContributionsResponse, error)
+	// AttestTraining posts a training-completion attestation (operator-auth).
+	AttestTraining(context.Context, *MsgAttestTraining) (*MsgAttestTrainingResponse, error)
+	// CreateAugmentationBounty opens a reward pool for variant formulations of a fact.
+	CreateAugmentationBounty(context.Context, *MsgCreateAugmentationBounty) (*MsgCreateAugmentationBountyResponse, error)
+	// SubmitAugmentation submits a variant formulation of a fact.
+	SubmitAugmentation(context.Context, *MsgSubmitAugmentation) (*MsgSubmitAugmentationResponse, error)
+	// AcceptAugmentation marks a variant accepted (sponsor-auth for bounty; fact submitter for volunteer).
+	AcceptAugmentation(context.Context, *MsgAcceptAugmentation) (*MsgAcceptAugmentationResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -522,6 +614,24 @@ func (UnimplementedMsgServer) UpdateModelCard(context.Context, *MsgUpdateModelCa
 }
 func (UnimplementedMsgServer) RetireModelCard(context.Context, *MsgRetireModelCard) (*MsgRetireModelCardResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RetireModelCard not implemented")
+}
+func (UnimplementedMsgServer) AmendTokenizerSpec(context.Context, *MsgAmendTokenizerSpec) (*MsgAmendTokenizerSpecResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AmendTokenizerSpec not implemented")
+}
+func (UnimplementedMsgServer) AttributeContributions(context.Context, *MsgAttributeContributions) (*MsgAttributeContributionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AttributeContributions not implemented")
+}
+func (UnimplementedMsgServer) AttestTraining(context.Context, *MsgAttestTraining) (*MsgAttestTrainingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AttestTraining not implemented")
+}
+func (UnimplementedMsgServer) CreateAugmentationBounty(context.Context, *MsgCreateAugmentationBounty) (*MsgCreateAugmentationBountyResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreateAugmentationBounty not implemented")
+}
+func (UnimplementedMsgServer) SubmitAugmentation(context.Context, *MsgSubmitAugmentation) (*MsgSubmitAugmentationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SubmitAugmentation not implemented")
+}
+func (UnimplementedMsgServer) AcceptAugmentation(context.Context, *MsgAcceptAugmentation) (*MsgAcceptAugmentationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AcceptAugmentation not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -1012,6 +1122,114 @@ func _Msg_RetireModelCard_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_AmendTokenizerSpec_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAmendTokenizerSpec)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AmendTokenizerSpec(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AmendTokenizerSpec_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AmendTokenizerSpec(ctx, req.(*MsgAmendTokenizerSpec))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_AttributeContributions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAttributeContributions)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AttributeContributions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AttributeContributions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AttributeContributions(ctx, req.(*MsgAttributeContributions))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_AttestTraining_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAttestTraining)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AttestTraining(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AttestTraining_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AttestTraining(ctx, req.(*MsgAttestTraining))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_CreateAugmentationBounty_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgCreateAugmentationBounty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).CreateAugmentationBounty(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_CreateAugmentationBounty_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).CreateAugmentationBounty(ctx, req.(*MsgCreateAugmentationBounty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_SubmitAugmentation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgSubmitAugmentation)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).SubmitAugmentation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_SubmitAugmentation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).SubmitAugmentation(ctx, req.(*MsgSubmitAugmentation))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_AcceptAugmentation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAcceptAugmentation)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AcceptAugmentation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AcceptAugmentation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AcceptAugmentation(ctx, req.(*MsgAcceptAugmentation))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1122,6 +1340,30 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RetireModelCard",
 			Handler:    _Msg_RetireModelCard_Handler,
+		},
+		{
+			MethodName: "AmendTokenizerSpec",
+			Handler:    _Msg_AmendTokenizerSpec_Handler,
+		},
+		{
+			MethodName: "AttributeContributions",
+			Handler:    _Msg_AttributeContributions_Handler,
+		},
+		{
+			MethodName: "AttestTraining",
+			Handler:    _Msg_AttestTraining_Handler,
+		},
+		{
+			MethodName: "CreateAugmentationBounty",
+			Handler:    _Msg_CreateAugmentationBounty_Handler,
+		},
+		{
+			MethodName: "SubmitAugmentation",
+			Handler:    _Msg_SubmitAugmentation_Handler,
+		},
+		{
+			MethodName: "AcceptAugmentation",
+			Handler:    _Msg_AcceptAugmentation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

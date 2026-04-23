@@ -105,6 +105,20 @@ service Msg {
   rpc UpdateModelCard(MsgUpdateModelCard) returns (MsgUpdateModelCardResponse);
   // RetireModelCard flips the card's active flag and records retirement (owner-auth).
   rpc RetireModelCard(MsgRetireModelCard) returns (MsgRetireModelCardResponse);
+
+  // ─── Route B Wave 3 ────────────────────────────────────────────────
+  // AmendTokenizerSpec bumps the on-chain tokenizer contract (authority-auth).
+  rpc AmendTokenizerSpec(MsgAmendTokenizerSpec) returns (MsgAmendTokenizerSpecResponse);
+  // AttributeContributions declares which fact_ids a model was trained on.
+  rpc AttributeContributions(MsgAttributeContributions) returns (MsgAttributeContributionsResponse);
+  // AttestTraining posts a training-completion attestation (operator-auth).
+  rpc AttestTraining(MsgAttestTraining) returns (MsgAttestTrainingResponse);
+  // CreateAugmentationBounty opens a reward pool for variant formulations of a fact.
+  rpc CreateAugmentationBounty(MsgCreateAugmentationBounty) returns (MsgCreateAugmentationBountyResponse);
+  // SubmitAugmentation submits a variant formulation of a fact.
+  rpc SubmitAugmentation(MsgSubmitAugmentation) returns (MsgSubmitAugmentationResponse);
+  // AcceptAugmentation marks a variant accepted (sponsor-auth for bounty; fact submitter for volunteer).
+  rpc AcceptAugmentation(MsgAcceptAugmentation) returns (MsgAcceptAugmentationResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -460,3 +474,74 @@ message MsgRetireModelCard {
   string reason = 3;
 }
 message MsgRetireModelCardResponse {}
+
+// ─── Route B Wave 3 messages ──────────────────────────────────────────────
+
+message MsgAmendTokenizerSpec {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority          = 1;
+  TokenizerSpec spec        = 2;  // new spec; version auto-assigned as current+1
+}
+message MsgAmendTokenizerSpecResponse {
+  uint64 new_version = 1;
+}
+
+message MsgAttributeContributions {
+  option (cosmos.msg.v1.signer) = "owner";
+
+  string owner             = 1;
+  string model_id          = 2;
+  repeated string fact_ids = 3;
+  uint64 total_weight      = 4;  // optional; 0 = sum of per-fact corroboration
+}
+message MsgAttributeContributionsResponse {
+  uint32 recorded = 1;
+}
+
+message MsgAttestTraining {
+  option (cosmos.msg.v1.signer) = "attester";
+
+  string attester         = 1;  // must match the pipeline's operator
+  string pipeline_id      = 2;
+  uint64 flops_estimate   = 3;
+  uint64 wallclock_seconds = 4;
+  string eval_hash        = 5;
+  string signature        = 6;
+  string notes            = 7;
+}
+message MsgAttestTrainingResponse {}
+
+message MsgCreateAugmentationBounty {
+  option (cosmos.msg.v1.signer) = "sponsor";
+
+  string sponsor            = 1;
+  string id                 = 2;
+  string target_fact_id     = 3;
+  uint64 reward_per_variant = 4;
+  uint32 max_variants       = 5;
+  uint64 expires_at_block   = 6;
+  string description        = 7;
+}
+message MsgCreateAugmentationBountyResponse {}
+
+message MsgSubmitAugmentation {
+  option (cosmos.msg.v1.signer) = "submitter";
+
+  string submitter               = 1;
+  string id                      = 2;
+  string bounty_id               = 3;  // optional — empty for volunteer submissions
+  string original_fact_id        = 4;
+  string variant_content         = 5;
+  string variant_reasoning_trace = 6;
+}
+message MsgSubmitAugmentationResponse {}
+
+message MsgAcceptAugmentation {
+  option (cosmos.msg.v1.signer) = "acceptor";
+
+  string acceptor        = 1;
+  string augmentation_id = 2;
+  string note            = 3;
+}
+message MsgAcceptAugmentationResponse {}

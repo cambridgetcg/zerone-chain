@@ -400,6 +400,69 @@ message ModelCard {
   bool   active                   = 14;  // False after retirement
   uint64 retired_at_block         = 15;
   string retired_reason           = 16;
+  // Predecessor in the model's version lineage (Route B Wave 3d). Empty
+  // means this is a root model. Must reference an existing ModelCard.
+  string predecessor_model_id     = 17;
+}
+
+// TrainingAttestation is a signed proof that a training run completed,
+// published by the pipeline operator. Captures the operational cost of a
+// model so consumers and auditors can cross-reference the pipeline and
+// ModelCard against real training work (Route B Wave 3c).
+message TrainingAttestation {
+  string pipeline_id        = 1;
+  string attester_address   = 2;  // must equal the pipeline's operator
+  uint64 flops_estimate     = 3;  // best-effort FLOPs count (off-chain telemetry)
+  uint64 wallclock_seconds  = 4;  // wallclock training time
+  uint64 completed_at_block = 5;  // height at which operator declares completion
+  string eval_hash          = 6;  // sha256 of a stated evaluation bundle
+  string signature          = 7;  // optional off-chain signature for external audit
+  string notes              = 8;
+}
+
+// ContributionRecord attributes the facts a training run consumed. Enables
+// contributor-share rewards, reproducibility audit, and analysis of whose
+// data disproportionately trained a given model (Route B Wave 3b).
+message ContributionRecord {
+  string model_id            = 1;
+  repeated string fact_ids   = 2;
+  string attributed_by       = 3;   // operator / owner posting the attribution
+  uint64 attributed_at_block = 4;
+  // total_weight sums per-fact weights (e.g. corroboration count) so a
+  // quick contributor-share calculation doesn't require re-iterating facts.
+  uint64 total_weight        = 5;
+}
+
+// AugmentationBounty is an open offer to produce variant formulations of a
+// target fact. Sponsors lock a reward; researchers submit variants. Chain
+// pays out as variants are accepted, up to max_variants (Route B Wave 3e).
+message AugmentationBounty {
+  string id                   = 1;
+  string sponsor_address      = 2;
+  string target_fact_id       = 3;
+  uint64 reward_per_variant   = 4;  // uzrn paid per accepted variant
+  uint32 max_variants         = 5;
+  uint32 accepted_variants    = 6;
+  uint64 created_at_block     = 7;
+  uint64 expires_at_block     = 8;
+  bool   active               = 9;
+  string description          = 10; // what kind of variant is wanted
+}
+
+// Augmentation is a variant formulation of an original fact. Variants
+// preserve semantic content but rephrase; they widen the training corpus
+// without compromising provenance (the original still anchors the claim).
+message Augmentation {
+  string id                     = 1;
+  string bounty_id              = 2;  // empty = volunteer (unpaid) augmentation
+  string original_fact_id       = 3;
+  string variant_content        = 4;
+  string variant_reasoning_trace = 5;  // optional; parallel to Fact.reasoning_trace
+  string submitter              = 6;
+  uint64 created_at_block       = 7;
+  bool   accepted               = 8;
+  uint64 accepted_at_block      = 9;
+  string acceptance_note        = 10; // optional acceptance comment
 }
 
 // AgentMethodStats tracks calibration for a single submitter within a single

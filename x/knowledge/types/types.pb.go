@@ -2021,8 +2021,11 @@ type ModelCard struct {
 	Active              bool   `protobuf:"varint,14,opt,name=active,proto3" json:"active,omitempty"` // False after retirement
 	RetiredAtBlock      uint64 `protobuf:"varint,15,opt,name=retired_at_block,json=retiredAtBlock,proto3" json:"retired_at_block,omitempty"`
 	RetiredReason       string `protobuf:"bytes,16,opt,name=retired_reason,json=retiredReason,proto3" json:"retired_reason,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Predecessor in the model's version lineage (Route B Wave 3d). Empty
+	// means this is a root model. Must reference an existing ModelCard.
+	PredecessorModelId string `protobuf:"bytes,17,opt,name=predecessor_model_id,json=predecessorModelId,proto3" json:"predecessor_model_id,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *ModelCard) Reset() {
@@ -2167,6 +2170,436 @@ func (x *ModelCard) GetRetiredReason() string {
 	return ""
 }
 
+func (x *ModelCard) GetPredecessorModelId() string {
+	if x != nil {
+		return x.PredecessorModelId
+	}
+	return ""
+}
+
+// TrainingAttestation is a signed proof that a training run completed,
+// published by the pipeline operator. Captures the operational cost of a
+// model so consumers and auditors can cross-reference the pipeline and
+// ModelCard against real training work (Route B Wave 3c).
+type TrainingAttestation struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	PipelineId       string                 `protobuf:"bytes,1,opt,name=pipeline_id,json=pipelineId,proto3" json:"pipeline_id,omitempty"`
+	AttesterAddress  string                 `protobuf:"bytes,2,opt,name=attester_address,json=attesterAddress,proto3" json:"attester_address,omitempty"`       // must equal the pipeline's operator
+	FlopsEstimate    uint64                 `protobuf:"varint,3,opt,name=flops_estimate,json=flopsEstimate,proto3" json:"flops_estimate,omitempty"`            // best-effort FLOPs count (off-chain telemetry)
+	WallclockSeconds uint64                 `protobuf:"varint,4,opt,name=wallclock_seconds,json=wallclockSeconds,proto3" json:"wallclock_seconds,omitempty"`   // wallclock training time
+	CompletedAtBlock uint64                 `protobuf:"varint,5,opt,name=completed_at_block,json=completedAtBlock,proto3" json:"completed_at_block,omitempty"` // height at which operator declares completion
+	EvalHash         string                 `protobuf:"bytes,6,opt,name=eval_hash,json=evalHash,proto3" json:"eval_hash,omitempty"`                            // sha256 of a stated evaluation bundle
+	Signature        string                 `protobuf:"bytes,7,opt,name=signature,proto3" json:"signature,omitempty"`                                          // optional off-chain signature for external audit
+	Notes            string                 `protobuf:"bytes,8,opt,name=notes,proto3" json:"notes,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *TrainingAttestation) Reset() {
+	*x = TrainingAttestation{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TrainingAttestation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TrainingAttestation) ProtoMessage() {}
+
+func (x *TrainingAttestation) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TrainingAttestation.ProtoReflect.Descriptor instead.
+func (*TrainingAttestation) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *TrainingAttestation) GetPipelineId() string {
+	if x != nil {
+		return x.PipelineId
+	}
+	return ""
+}
+
+func (x *TrainingAttestation) GetAttesterAddress() string {
+	if x != nil {
+		return x.AttesterAddress
+	}
+	return ""
+}
+
+func (x *TrainingAttestation) GetFlopsEstimate() uint64 {
+	if x != nil {
+		return x.FlopsEstimate
+	}
+	return 0
+}
+
+func (x *TrainingAttestation) GetWallclockSeconds() uint64 {
+	if x != nil {
+		return x.WallclockSeconds
+	}
+	return 0
+}
+
+func (x *TrainingAttestation) GetCompletedAtBlock() uint64 {
+	if x != nil {
+		return x.CompletedAtBlock
+	}
+	return 0
+}
+
+func (x *TrainingAttestation) GetEvalHash() string {
+	if x != nil {
+		return x.EvalHash
+	}
+	return ""
+}
+
+func (x *TrainingAttestation) GetSignature() string {
+	if x != nil {
+		return x.Signature
+	}
+	return ""
+}
+
+func (x *TrainingAttestation) GetNotes() string {
+	if x != nil {
+		return x.Notes
+	}
+	return ""
+}
+
+// ContributionRecord attributes the facts a training run consumed. Enables
+// contributor-share rewards, reproducibility audit, and analysis of whose
+// data disproportionately trained a given model (Route B Wave 3b).
+type ContributionRecord struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	ModelId           string                 `protobuf:"bytes,1,opt,name=model_id,json=modelId,proto3" json:"model_id,omitempty"`
+	FactIds           []string               `protobuf:"bytes,2,rep,name=fact_ids,json=factIds,proto3" json:"fact_ids,omitempty"`
+	AttributedBy      string                 `protobuf:"bytes,3,opt,name=attributed_by,json=attributedBy,proto3" json:"attributed_by,omitempty"` // operator / owner posting the attribution
+	AttributedAtBlock uint64                 `protobuf:"varint,4,opt,name=attributed_at_block,json=attributedAtBlock,proto3" json:"attributed_at_block,omitempty"`
+	// total_weight sums per-fact weights (e.g. corroboration count) so a
+	// quick contributor-share calculation doesn't require re-iterating facts.
+	TotalWeight   uint64 `protobuf:"varint,5,opt,name=total_weight,json=totalWeight,proto3" json:"total_weight,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContributionRecord) Reset() {
+	*x = ContributionRecord{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContributionRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContributionRecord) ProtoMessage() {}
+
+func (x *ContributionRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContributionRecord.ProtoReflect.Descriptor instead.
+func (*ContributionRecord) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ContributionRecord) GetModelId() string {
+	if x != nil {
+		return x.ModelId
+	}
+	return ""
+}
+
+func (x *ContributionRecord) GetFactIds() []string {
+	if x != nil {
+		return x.FactIds
+	}
+	return nil
+}
+
+func (x *ContributionRecord) GetAttributedBy() string {
+	if x != nil {
+		return x.AttributedBy
+	}
+	return ""
+}
+
+func (x *ContributionRecord) GetAttributedAtBlock() uint64 {
+	if x != nil {
+		return x.AttributedAtBlock
+	}
+	return 0
+}
+
+func (x *ContributionRecord) GetTotalWeight() uint64 {
+	if x != nil {
+		return x.TotalWeight
+	}
+	return 0
+}
+
+// AugmentationBounty is an open offer to produce variant formulations of a
+// target fact. Sponsors lock a reward; researchers submit variants. Chain
+// pays out as variants are accepted, up to max_variants (Route B Wave 3e).
+type AugmentationBounty struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	SponsorAddress   string                 `protobuf:"bytes,2,opt,name=sponsor_address,json=sponsorAddress,proto3" json:"sponsor_address,omitempty"`
+	TargetFactId     string                 `protobuf:"bytes,3,opt,name=target_fact_id,json=targetFactId,proto3" json:"target_fact_id,omitempty"`
+	RewardPerVariant uint64                 `protobuf:"varint,4,opt,name=reward_per_variant,json=rewardPerVariant,proto3" json:"reward_per_variant,omitempty"` // uzrn paid per accepted variant
+	MaxVariants      uint32                 `protobuf:"varint,5,opt,name=max_variants,json=maxVariants,proto3" json:"max_variants,omitempty"`
+	AcceptedVariants uint32                 `protobuf:"varint,6,opt,name=accepted_variants,json=acceptedVariants,proto3" json:"accepted_variants,omitempty"`
+	CreatedAtBlock   uint64                 `protobuf:"varint,7,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	ExpiresAtBlock   uint64                 `protobuf:"varint,8,opt,name=expires_at_block,json=expiresAtBlock,proto3" json:"expires_at_block,omitempty"`
+	Active           bool                   `protobuf:"varint,9,opt,name=active,proto3" json:"active,omitempty"`
+	Description      string                 `protobuf:"bytes,10,opt,name=description,proto3" json:"description,omitempty"` // what kind of variant is wanted
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *AugmentationBounty) Reset() {
+	*x = AugmentationBounty{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AugmentationBounty) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AugmentationBounty) ProtoMessage() {}
+
+func (x *AugmentationBounty) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AugmentationBounty.ProtoReflect.Descriptor instead.
+func (*AugmentationBounty) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *AugmentationBounty) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AugmentationBounty) GetSponsorAddress() string {
+	if x != nil {
+		return x.SponsorAddress
+	}
+	return ""
+}
+
+func (x *AugmentationBounty) GetTargetFactId() string {
+	if x != nil {
+		return x.TargetFactId
+	}
+	return ""
+}
+
+func (x *AugmentationBounty) GetRewardPerVariant() uint64 {
+	if x != nil {
+		return x.RewardPerVariant
+	}
+	return 0
+}
+
+func (x *AugmentationBounty) GetMaxVariants() uint32 {
+	if x != nil {
+		return x.MaxVariants
+	}
+	return 0
+}
+
+func (x *AugmentationBounty) GetAcceptedVariants() uint32 {
+	if x != nil {
+		return x.AcceptedVariants
+	}
+	return 0
+}
+
+func (x *AugmentationBounty) GetCreatedAtBlock() uint64 {
+	if x != nil {
+		return x.CreatedAtBlock
+	}
+	return 0
+}
+
+func (x *AugmentationBounty) GetExpiresAtBlock() uint64 {
+	if x != nil {
+		return x.ExpiresAtBlock
+	}
+	return 0
+}
+
+func (x *AugmentationBounty) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+func (x *AugmentationBounty) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+// Augmentation is a variant formulation of an original fact. Variants
+// preserve semantic content but rephrase; they widen the training corpus
+// without compromising provenance (the original still anchors the claim).
+type Augmentation struct {
+	state                 protoimpl.MessageState `protogen:"open.v1"`
+	Id                    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	BountyId              string                 `protobuf:"bytes,2,opt,name=bounty_id,json=bountyId,proto3" json:"bounty_id,omitempty"` // empty = volunteer (unpaid) augmentation
+	OriginalFactId        string                 `protobuf:"bytes,3,opt,name=original_fact_id,json=originalFactId,proto3" json:"original_fact_id,omitempty"`
+	VariantContent        string                 `protobuf:"bytes,4,opt,name=variant_content,json=variantContent,proto3" json:"variant_content,omitempty"`
+	VariantReasoningTrace string                 `protobuf:"bytes,5,opt,name=variant_reasoning_trace,json=variantReasoningTrace,proto3" json:"variant_reasoning_trace,omitempty"` // optional; parallel to Fact.reasoning_trace
+	Submitter             string                 `protobuf:"bytes,6,opt,name=submitter,proto3" json:"submitter,omitempty"`
+	CreatedAtBlock        uint64                 `protobuf:"varint,7,opt,name=created_at_block,json=createdAtBlock,proto3" json:"created_at_block,omitempty"`
+	Accepted              bool                   `protobuf:"varint,8,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	AcceptedAtBlock       uint64                 `protobuf:"varint,9,opt,name=accepted_at_block,json=acceptedAtBlock,proto3" json:"accepted_at_block,omitempty"`
+	AcceptanceNote        string                 `protobuf:"bytes,10,opt,name=acceptance_note,json=acceptanceNote,proto3" json:"acceptance_note,omitempty"` // optional acceptance comment
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *Augmentation) Reset() {
+	*x = Augmentation{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Augmentation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Augmentation) ProtoMessage() {}
+
+func (x *Augmentation) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Augmentation.ProtoReflect.Descriptor instead.
+func (*Augmentation) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *Augmentation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Augmentation) GetBountyId() string {
+	if x != nil {
+		return x.BountyId
+	}
+	return ""
+}
+
+func (x *Augmentation) GetOriginalFactId() string {
+	if x != nil {
+		return x.OriginalFactId
+	}
+	return ""
+}
+
+func (x *Augmentation) GetVariantContent() string {
+	if x != nil {
+		return x.VariantContent
+	}
+	return ""
+}
+
+func (x *Augmentation) GetVariantReasoningTrace() string {
+	if x != nil {
+		return x.VariantReasoningTrace
+	}
+	return ""
+}
+
+func (x *Augmentation) GetSubmitter() string {
+	if x != nil {
+		return x.Submitter
+	}
+	return ""
+}
+
+func (x *Augmentation) GetCreatedAtBlock() uint64 {
+	if x != nil {
+		return x.CreatedAtBlock
+	}
+	return 0
+}
+
+func (x *Augmentation) GetAccepted() bool {
+	if x != nil {
+		return x.Accepted
+	}
+	return false
+}
+
+func (x *Augmentation) GetAcceptedAtBlock() uint64 {
+	if x != nil {
+		return x.AcceptedAtBlock
+	}
+	return 0
+}
+
+func (x *Augmentation) GetAcceptanceNote() string {
+	if x != nil {
+		return x.AcceptanceNote
+	}
+	return ""
+}
+
 // AgentMethodStats tracks calibration for a single submitter within a single
 // methodology. Populated on round completion and challenge outcomes.
 type AgentMethodStats struct {
@@ -2182,7 +2615,7 @@ type AgentMethodStats struct {
 
 func (x *AgentMethodStats) Reset() {
 	*x = AgentMethodStats{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2194,7 +2627,7 @@ func (x *AgentMethodStats) String() string {
 func (*AgentMethodStats) ProtoMessage() {}
 
 func (x *AgentMethodStats) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[9]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2207,7 +2640,7 @@ func (x *AgentMethodStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentMethodStats.ProtoReflect.Descriptor instead.
 func (*AgentMethodStats) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{9}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AgentMethodStats) GetSubmissions() uint64 {
@@ -2279,7 +2712,7 @@ type AgentCalibration struct {
 
 func (x *AgentCalibration) Reset() {
 	*x = AgentCalibration{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2291,7 +2724,7 @@ func (x *AgentCalibration) String() string {
 func (*AgentCalibration) ProtoMessage() {}
 
 func (x *AgentCalibration) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[10]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2304,7 +2737,7 @@ func (x *AgentCalibration) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentCalibration.ProtoReflect.Descriptor instead.
 func (*AgentCalibration) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{10}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AgentCalibration) GetAddress() string {
@@ -2442,7 +2875,7 @@ type CommonKnowledgeEntry struct {
 
 func (x *CommonKnowledgeEntry) Reset() {
 	*x = CommonKnowledgeEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2454,7 +2887,7 @@ func (x *CommonKnowledgeEntry) String() string {
 func (*CommonKnowledgeEntry) ProtoMessage() {}
 
 func (x *CommonKnowledgeEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[11]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2467,7 +2900,7 @@ func (x *CommonKnowledgeEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommonKnowledgeEntry.ProtoReflect.Descriptor instead.
 func (*CommonKnowledgeEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{11}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *CommonKnowledgeEntry) GetId() string {
@@ -2556,7 +2989,7 @@ type Claim struct {
 
 func (x *Claim) Reset() {
 	*x = Claim{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2568,7 +3001,7 @@ func (x *Claim) String() string {
 func (*Claim) ProtoMessage() {}
 
 func (x *Claim) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[12]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2581,7 +3014,7 @@ func (x *Claim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Claim.ProtoReflect.Descriptor instead.
 func (*Claim) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{12}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *Claim) GetId() string {
@@ -2766,7 +3199,7 @@ type VerificationRound struct {
 
 func (x *VerificationRound) Reset() {
 	*x = VerificationRound{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2778,7 +3211,7 @@ func (x *VerificationRound) String() string {
 func (*VerificationRound) ProtoMessage() {}
 
 func (x *VerificationRound) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[13]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2791,7 +3224,7 @@ func (x *VerificationRound) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VerificationRound.ProtoReflect.Descriptor instead.
 func (*VerificationRound) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{13}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *VerificationRound) GetId() string {
@@ -2890,7 +3323,7 @@ type CommitEntry struct {
 
 func (x *CommitEntry) Reset() {
 	*x = CommitEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2902,7 +3335,7 @@ func (x *CommitEntry) String() string {
 func (*CommitEntry) ProtoMessage() {}
 
 func (x *CommitEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[14]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2915,7 +3348,7 @@ func (x *CommitEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitEntry.ProtoReflect.Descriptor instead.
 func (*CommitEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{14}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CommitEntry) GetVerifier() string {
@@ -2952,7 +3385,7 @@ type RevealEntry struct {
 
 func (x *RevealEntry) Reset() {
 	*x = RevealEntry{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2964,7 +3397,7 @@ func (x *RevealEntry) String() string {
 func (*RevealEntry) ProtoMessage() {}
 
 func (x *RevealEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[15]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2977,7 +3410,7 @@ func (x *RevealEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevealEntry.ProtoReflect.Descriptor instead.
 func (*RevealEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{15}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *RevealEntry) GetVerifier() string {
@@ -3021,7 +3454,7 @@ type VRFProof struct {
 
 func (x *VRFProof) Reset() {
 	*x = VRFProof{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3033,7 +3466,7 @@ func (x *VRFProof) String() string {
 func (*VRFProof) ProtoMessage() {}
 
 func (x *VRFProof) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[16]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3046,7 +3479,7 @@ func (x *VRFProof) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VRFProof.ProtoReflect.Descriptor instead.
 func (*VRFProof) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{16}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *VRFProof) GetProof() []byte {
@@ -3096,7 +3529,7 @@ type Domain struct {
 
 func (x *Domain) Reset() {
 	*x = Domain{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[17]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3108,7 +3541,7 @@ func (x *Domain) String() string {
 func (*Domain) ProtoMessage() {}
 
 func (x *Domain) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[17]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3121,7 +3554,7 @@ func (x *Domain) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Domain.ProtoReflect.Descriptor instead.
 func (*Domain) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{17}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *Domain) GetName() string {
@@ -3208,7 +3641,7 @@ type ValidatorInfo struct {
 
 func (x *ValidatorInfo) Reset() {
 	*x = ValidatorInfo{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[18]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3220,7 +3653,7 @@ func (x *ValidatorInfo) String() string {
 func (*ValidatorInfo) ProtoMessage() {}
 
 func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[18]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3233,7 +3666,7 @@ func (x *ValidatorInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ValidatorInfo.ProtoReflect.Descriptor instead.
 func (*ValidatorInfo) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{18}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *ValidatorInfo) GetAddress() string {
@@ -3298,7 +3731,7 @@ type ProvisionalChallenge struct {
 
 func (x *ProvisionalChallenge) Reset() {
 	*x = ProvisionalChallenge{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[19]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3310,7 +3743,7 @@ func (x *ProvisionalChallenge) String() string {
 func (*ProvisionalChallenge) ProtoMessage() {}
 
 func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[19]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3323,7 +3756,7 @@ func (x *ProvisionalChallenge) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProvisionalChallenge.ProtoReflect.Descriptor instead.
 func (*ProvisionalChallenge) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{19}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ProvisionalChallenge) GetId() string {
@@ -3448,7 +3881,7 @@ type DemandSignal struct {
 
 func (x *DemandSignal) Reset() {
 	*x = DemandSignal{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[20]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3460,7 +3893,7 @@ func (x *DemandSignal) String() string {
 func (*DemandSignal) ProtoMessage() {}
 
 func (x *DemandSignal) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[20]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3473,7 +3906,7 @@ func (x *DemandSignal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DemandSignal.ProtoReflect.Descriptor instead.
 func (*DemandSignal) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{20}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *DemandSignal) GetDomain() string {
@@ -3550,7 +3983,7 @@ type KnowledgeBounty struct {
 
 func (x *KnowledgeBounty) Reset() {
 	*x = KnowledgeBounty{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[21]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3562,7 +3995,7 @@ func (x *KnowledgeBounty) String() string {
 func (*KnowledgeBounty) ProtoMessage() {}
 
 func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[21]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3575,7 +4008,7 @@ func (x *KnowledgeBounty) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use KnowledgeBounty.ProtoReflect.Descriptor instead.
 func (*KnowledgeBounty) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{21}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *KnowledgeBounty) GetId() string {
@@ -3654,7 +4087,7 @@ type CompletedRoundMeta struct {
 
 func (x *CompletedRoundMeta) Reset() {
 	*x = CompletedRoundMeta{}
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[22]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -3666,7 +4099,7 @@ func (x *CompletedRoundMeta) String() string {
 func (*CompletedRoundMeta) ProtoMessage() {}
 
 func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[22]
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3679,7 +4112,7 @@ func (x *CompletedRoundMeta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CompletedRoundMeta.ProtoReflect.Descriptor instead.
 func (*CompletedRoundMeta) Descriptor() ([]byte, []int) {
-	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{22}
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *CompletedRoundMeta) GetDomain() string {
@@ -3859,7 +4292,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x11declared_at_block\x18\t \x01(\x04R\x0fdeclaredAtBlock\x12,\n" +
 	"\x12completed_at_block\x18\n" +
 	" \x01(\x04R\x10completedAtBlock\x12#\n" +
-	"\rcorpus_filter\x18\v \x01(\tR\fcorpusFilter\"\xeb\x04\n" +
+	"\rcorpus_filter\x18\v \x01(\tR\fcorpusFilter\"\x9d\x05\n" +
 	"\tModelCard\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1f\n" +
@@ -3879,7 +4312,48 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x15specialised_method_id\x18\r \x01(\tR\x13specialisedMethodId\x12\x16\n" +
 	"\x06active\x18\x0e \x01(\bR\x06active\x12(\n" +
 	"\x10retired_at_block\x18\x0f \x01(\x04R\x0eretiredAtBlock\x12%\n" +
-	"\x0eretired_reason\x18\x10 \x01(\tR\rretiredReason\"\xbf\x01\n" +
+	"\x0eretired_reason\x18\x10 \x01(\tR\rretiredReason\x120\n" +
+	"\x14predecessor_model_id\x18\x11 \x01(\tR\x12predecessorModelId\"\xb4\x02\n" +
+	"\x13TrainingAttestation\x12\x1f\n" +
+	"\vpipeline_id\x18\x01 \x01(\tR\n" +
+	"pipelineId\x12)\n" +
+	"\x10attester_address\x18\x02 \x01(\tR\x0fattesterAddress\x12%\n" +
+	"\x0eflops_estimate\x18\x03 \x01(\x04R\rflopsEstimate\x12+\n" +
+	"\x11wallclock_seconds\x18\x04 \x01(\x04R\x10wallclockSeconds\x12,\n" +
+	"\x12completed_at_block\x18\x05 \x01(\x04R\x10completedAtBlock\x12\x1b\n" +
+	"\teval_hash\x18\x06 \x01(\tR\bevalHash\x12\x1c\n" +
+	"\tsignature\x18\a \x01(\tR\tsignature\x12\x14\n" +
+	"\x05notes\x18\b \x01(\tR\x05notes\"\xc2\x01\n" +
+	"\x12ContributionRecord\x12\x19\n" +
+	"\bmodel_id\x18\x01 \x01(\tR\amodelId\x12\x19\n" +
+	"\bfact_ids\x18\x02 \x03(\tR\afactIds\x12#\n" +
+	"\rattributed_by\x18\x03 \x01(\tR\fattributedBy\x12.\n" +
+	"\x13attributed_at_block\x18\x04 \x01(\x04R\x11attributedAtBlock\x12!\n" +
+	"\ftotal_weight\x18\x05 \x01(\x04R\vtotalWeight\"\xff\x02\n" +
+	"\x12AugmentationBounty\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12'\n" +
+	"\x0fsponsor_address\x18\x02 \x01(\tR\x0esponsorAddress\x12$\n" +
+	"\x0etarget_fact_id\x18\x03 \x01(\tR\ftargetFactId\x12,\n" +
+	"\x12reward_per_variant\x18\x04 \x01(\x04R\x10rewardPerVariant\x12!\n" +
+	"\fmax_variants\x18\x05 \x01(\rR\vmaxVariants\x12+\n" +
+	"\x11accepted_variants\x18\x06 \x01(\rR\x10acceptedVariants\x12(\n" +
+	"\x10created_at_block\x18\a \x01(\x04R\x0ecreatedAtBlock\x12(\n" +
+	"\x10expires_at_block\x18\b \x01(\x04R\x0eexpiresAtBlock\x12\x16\n" +
+	"\x06active\x18\t \x01(\bR\x06active\x12 \n" +
+	"\vdescription\x18\n" +
+	" \x01(\tR\vdescription\"\xff\x02\n" +
+	"\fAugmentation\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
+	"\tbounty_id\x18\x02 \x01(\tR\bbountyId\x12(\n" +
+	"\x10original_fact_id\x18\x03 \x01(\tR\x0eoriginalFactId\x12'\n" +
+	"\x0fvariant_content\x18\x04 \x01(\tR\x0evariantContent\x126\n" +
+	"\x17variant_reasoning_trace\x18\x05 \x01(\tR\x15variantReasoningTrace\x12\x1c\n" +
+	"\tsubmitter\x18\x06 \x01(\tR\tsubmitter\x12(\n" +
+	"\x10created_at_block\x18\a \x01(\x04R\x0ecreatedAtBlock\x12\x1a\n" +
+	"\baccepted\x18\b \x01(\bR\baccepted\x12*\n" +
+	"\x11accepted_at_block\x18\t \x01(\x04R\x0facceptedAtBlock\x12'\n" +
+	"\x0facceptance_note\x18\n" +
+	" \x01(\tR\x0eacceptanceNote\"\xbf\x01\n" +
 	"\x10AgentMethodStats\x12 \n" +
 	"\vsubmissions\x18\x01 \x01(\x04R\vsubmissions\x12\x1a\n" +
 	"\baccepted\x18\x02 \x01(\x04R\baccepted\x12\x1a\n" +
@@ -4135,7 +4609,7 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 9)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 25)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),              // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),             // 1: zerone.knowledge.v1.ClaimStatus
@@ -4155,45 +4629,49 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(*TokenizerSpec)(nil),        // 15: zerone.knowledge.v1.TokenizerSpec
 	(*TrainingPipeline)(nil),     // 16: zerone.knowledge.v1.TrainingPipeline
 	(*ModelCard)(nil),            // 17: zerone.knowledge.v1.ModelCard
-	(*AgentMethodStats)(nil),     // 18: zerone.knowledge.v1.AgentMethodStats
-	(*AgentCalibration)(nil),     // 19: zerone.knowledge.v1.AgentCalibration
-	(*CommonKnowledgeEntry)(nil), // 20: zerone.knowledge.v1.CommonKnowledgeEntry
-	(*Claim)(nil),                // 21: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),    // 22: zerone.knowledge.v1.VerificationRound
-	(*CommitEntry)(nil),          // 23: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),          // 24: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),             // 25: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),               // 26: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),        // 27: zerone.knowledge.v1.ValidatorInfo
-	(*ProvisionalChallenge)(nil), // 28: zerone.knowledge.v1.ProvisionalChallenge
-	(*DemandSignal)(nil),         // 29: zerone.knowledge.v1.DemandSignal
-	(*KnowledgeBounty)(nil),      // 30: zerone.knowledge.v1.KnowledgeBounty
-	(*CompletedRoundMeta)(nil),   // 31: zerone.knowledge.v1.CompletedRoundMeta
-	nil,                          // 32: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
-	nil,                          // 33: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	(*TrainingAttestation)(nil),  // 18: zerone.knowledge.v1.TrainingAttestation
+	(*ContributionRecord)(nil),   // 19: zerone.knowledge.v1.ContributionRecord
+	(*AugmentationBounty)(nil),   // 20: zerone.knowledge.v1.AugmentationBounty
+	(*Augmentation)(nil),         // 21: zerone.knowledge.v1.Augmentation
+	(*AgentMethodStats)(nil),     // 22: zerone.knowledge.v1.AgentMethodStats
+	(*AgentCalibration)(nil),     // 23: zerone.knowledge.v1.AgentCalibration
+	(*CommonKnowledgeEntry)(nil), // 24: zerone.knowledge.v1.CommonKnowledgeEntry
+	(*Claim)(nil),                // 25: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),    // 26: zerone.knowledge.v1.VerificationRound
+	(*CommitEntry)(nil),          // 27: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),          // 28: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),             // 29: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),               // 30: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),        // 31: zerone.knowledge.v1.ValidatorInfo
+	(*ProvisionalChallenge)(nil), // 32: zerone.knowledge.v1.ProvisionalChallenge
+	(*DemandSignal)(nil),         // 33: zerone.knowledge.v1.DemandSignal
+	(*KnowledgeBounty)(nil),      // 34: zerone.knowledge.v1.KnowledgeBounty
+	(*CompletedRoundMeta)(nil),   // 35: zerone.knowledge.v1.CompletedRoundMeta
+	nil,                          // 36: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	nil,                          // 37: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 1: zerone.knowledge.v1.FactRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
 	5,  // 2: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 3: zerone.knowledge.v1.ClaimRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
-	32, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	36, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
 	0,  // 5: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
 	4,  // 6: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
 	9,  // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
 	9,  // 8: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
 	13, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
-	33, // 10: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	37, // 10: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 	1,  // 11: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
 	4,  // 12: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
 	10, // 13: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
 	13, // 14: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
 	2,  // 15: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	23, // 16: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	24, // 17: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	27, // 16: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	28, // 17: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
 	3,  // 18: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
 	7,  // 19: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
-	18, // 20: zerone.knowledge.v1.AgentCalibration.PerMethodEntry.value:type_name -> zerone.knowledge.v1.AgentMethodStats
+	22, // 20: zerone.knowledge.v1.AgentCalibration.PerMethodEntry.value:type_name -> zerone.knowledge.v1.AgentMethodStats
 	21, // [21:21] is the sub-list for method output_type
 	21, // [21:21] is the sub-list for method input_type
 	21, // [21:21] is the sub-list for extension type_name
@@ -4212,7 +4690,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
 			NumEnums:      9,
-			NumMessages:   25,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
