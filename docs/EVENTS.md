@@ -1609,6 +1609,12 @@ Post-hoc, calibration-gated training-fund reward paid to a pipeline operator (Ro
 - `vesting` -- uzrn held in escrow
 - `vesting_end_block` -- height at which vesting completes
 
+### zerone.knowledge.trace_schema_amended
+Governance amended the MethodologyApplicationTrace serialisation contract (Route B Wave 5). Version auto-increments; caller-supplied version is ignored. The JSON Schema hash is computed by the handler when absent.
+- `new_version` -- auto-assigned (current+1)
+- `json_schema_hash` -- SHA-256 of the canonical JSON Schema bytes
+- `authority` -- governance authority address
+
 
 ## liquiditypool
 

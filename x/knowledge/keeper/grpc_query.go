@@ -2167,3 +2167,147 @@ func sdkmath_zero() sdkmath.Int {
 func sdkmath_new_int_from_string(s string) (sdkmath.Int, bool) {
 	return sdkmath.NewIntFromString(s)
 }
+
+// ─── Route B Wave 5 queries ──────────────────────────────────────────────
+
+// MethodologyApplicationTrace returns the unified training row for a fact.
+func (q *queryServer) MethodologyApplicationTrace(ctx context.Context, req *types.QueryMethodologyApplicationTraceRequest) (*types.QueryMethodologyApplicationTraceResponse, error) {
+	if req == nil || req.FactId == "" {
+		return nil, status.Error(codes.InvalidArgument, "fact_id is required")
+	}
+	trace, found := q.keeper.BuildMethodologyApplicationTrace(ctx, req.FactId)
+	return &types.QueryMethodologyApplicationTraceResponse{Trace: trace, Found: found}, nil
+}
+
+// MethodologyApplicationTraces streams traces filtered by method / tier /
+// corroboration. Mirrors StructuredCorpus filters for pipeline parity.
+func (q *queryServer) MethodologyApplicationTraces(ctx context.Context, req *types.QueryMethodologyApplicationTracesRequest) (*types.QueryMethodologyApplicationTracesResponse, error) {
+	if req == nil {
+		req = &types.QueryMethodologyApplicationTracesRequest{}
+	}
+	limit := req.Limit
+	if limit == 0 || limit > 1000 {
+		limit = 100
+	}
+	offset := req.Offset
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	snapshotHeight := uint64(sdkCtx.BlockHeight())
+	var schemaVersion uint64
+	if s, ok := q.keeper.GetTraceSchema(ctx); ok && s != nil {
+		schemaVersion = s.Version
+	}
+
+	var out []*types.MethodologyApplicationTrace
+	var total uint32
+	var seen uint32
+	q.keeper.IterateFacts(ctx, func(f *types.Fact) bool {
+		if f == nil {
+			return false
+		}
+		if req.MethodId != "" && f.MethodId != req.MethodId {
+			return false
+		}
+		if f.CorroborationCount < req.MinCorroboration {
+			return false
+		}
+		if !req.IncludeDisproven && f.Status == types.FactStatus_FACT_STATUS_DISPROVEN {
+			return false
+		}
+		// Tier filter.
+		quality := q.keeper.classifyQualityTier(ctx, f)
+		if req.MinTier != types.TrainingQualityTier_TRAINING_QUALITY_TIER_UNSPECIFIED &&
+			qualityRank(quality) < qualityRank(req.MinTier) {
+			return false
+		}
+		total++
+		if seen < offset {
+			seen++
+			return false
+		}
+		if uint32(len(out)) >= limit {
+			return false
+		}
+		trace, found := q.keeper.BuildMethodologyApplicationTrace(ctx, f.Id)
+		if !found {
+			return false
+		}
+		out = append(out, trace)
+		seen++
+		return false
+	})
+	return &types.QueryMethodologyApplicationTracesResponse{
+		Traces:              out,
+		Total:               total,
+		SnapshotBlockHeight: snapshotHeight,
+		TraceSchemaVersion:  schemaVersion,
+	}, nil
+}
+
+// ContrastivePairs enumerates the four kinds of (positive, negative) tuples.
+func (q *queryServer) ContrastivePairs(ctx context.Context, req *types.QueryContrastivePairsRequest) (*types.QueryContrastivePairsResponse, error) {
+	if req == nil {
+		req = &types.QueryContrastivePairsRequest{}
+	}
+	limit := req.Limit
+	if limit == 0 || limit > 1000 {
+		limit = 100
+	}
+	offset := req.Offset
+	var out []*types.ContrastivePair
+	var seen uint32
+	var total uint32
+	q.keeper.IterateContrastivePairs(ctx, func(p *types.ContrastivePair) bool {
+		if req.PairType != types.ContrastivePairType_CONTRASTIVE_PAIR_UNSPECIFIED && p.PairType != req.PairType {
+			return false
+		}
+		if req.MethodId != "" && p.MethodId != req.MethodId {
+			return false
+		}
+		total++
+		if seen < offset {
+			seen++
+			return false
+		}
+		if uint32(len(out)) >= limit {
+			return false
+		}
+		out = append(out, p)
+		seen++
+		return false
+	})
+	return &types.QueryContrastivePairsResponse{
+		Pairs:               out,
+		Total:               total,
+		SnapshotBlockHeight: uint64(sdk.UnwrapSDKContext(ctx).BlockHeight()),
+	}, nil
+}
+
+// TraceSchema returns the current governance-ratified serialisation contract.
+func (q *queryServer) TraceSchema(ctx context.Context, _ *types.QueryTraceSchemaRequest) (*types.QueryTraceSchemaResponse, error) {
+	s, found := q.keeper.GetTraceSchema(ctx)
+	return &types.QueryTraceSchemaResponse{Schema: s, Found: found}, nil
+}
+
+// TraceSchemaAtVersion returns a historical trace schema.
+func (q *queryServer) TraceSchemaAtVersion(ctx context.Context, req *types.QueryTraceSchemaAtVersionRequest) (*types.QueryTraceSchemaAtVersionResponse, error) {
+	if req == nil || req.Version == 0 {
+		return nil, status.Error(codes.InvalidArgument, "version is required")
+	}
+	s, found := q.keeper.GetTraceSchemaAtVersion(ctx, req.Version)
+	return &types.QueryTraceSchemaAtVersionResponse{Schema: s, Found: found}, nil
+}
+
+func qualityRank(t types.TrainingQualityTier) int {
+	switch t {
+	case types.TrainingQualityTier_TRAINING_QUALITY_TIER_GOLD:
+		return 4
+	case types.TrainingQualityTier_TRAINING_QUALITY_TIER_SILVER:
+		return 3
+	case types.TrainingQualityTier_TRAINING_QUALITY_TIER_BRONZE:
+		return 2
+	case types.TrainingQualityTier_TRAINING_QUALITY_TIER_NEGATIVE:
+		return 1
+	default:
+		return 0
+	}
+}

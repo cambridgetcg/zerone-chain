@@ -171,6 +171,10 @@ var (
 	TrainingFundDisbursementByModelPrefix   = []byte{0x6A} // 0x6A | model_id | disbursement_id → 1
 	TrainingFundEscrowLockedKeyPrefix       = []byte{0x6B} // 0x6B | bounty_id → uzrn string (redundant bookkeeping for fast totals)
 	TrainingFundVestingKeyPrefix            = []byte{0x6C} // 0x6C | disbursement_id → uzrn string (redundant)
+
+	// ─── Route B Wave 5: unified training data format ─────────────────
+	TraceSchemaKey                = []byte{0x6D} // singleton: current TraceSchema
+	TraceSchemaHistoryKeyPrefix   = []byte{0x6E} // 0x6E | be64(version) → TraceSchema (historical)
 )
 
 // MethodologyKey returns the store key for a methodology by ID.
@@ -599,4 +603,13 @@ func TrainingFundEscrowLockedKey(bountyID string) []byte {
 // TrainingFundVestingKey returns the bookkeeping key for a vesting amount.
 func TrainingFundVestingKey(disbursementID string) []byte {
 	return append(append([]byte{}, TrainingFundVestingKeyPrefix...), []byte(disbursementID)...)
+}
+
+// TraceSchemaHistoryKey returns the store key for a historical trace schema.
+func TraceSchemaHistoryKey(version uint64) []byte {
+	key := make([]byte, 0, 1+8)
+	key = append(key, TraceSchemaHistoryKeyPrefix...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, version)
+	return append(key, buf...)
 }

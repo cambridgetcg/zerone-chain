@@ -19,78 +19,83 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Params_FullMethodName                     = "/zerone.knowledge.v1.Query/Params"
-	Query_Fact_FullMethodName                       = "/zerone.knowledge.v1.Query/Fact"
-	Query_Facts_FullMethodName                      = "/zerone.knowledge.v1.Query/Facts"
-	Query_FactsByDomain_FullMethodName              = "/zerone.knowledge.v1.Query/FactsByDomain"
-	Query_FactsBySubmitter_FullMethodName           = "/zerone.knowledge.v1.Query/FactsBySubmitter"
-	Query_Claim_FullMethodName                      = "/zerone.knowledge.v1.Query/Claim"
-	Query_PendingClaims_FullMethodName              = "/zerone.knowledge.v1.Query/PendingClaims"
-	Query_VerificationRound_FullMethodName          = "/zerone.knowledge.v1.Query/VerificationRound"
-	Query_Domain_FullMethodName                     = "/zerone.knowledge.v1.Query/Domain"
-	Query_Domains_FullMethodName                    = "/zerone.knowledge.v1.Query/Domains"
-	Query_FactConfidence_FullMethodName             = "/zerone.knowledge.v1.Query/FactConfidence"
-	Query_FactCitationCount_FullMethodName          = "/zerone.knowledge.v1.Query/FactCitationCount"
-	Query_FactRelations_FullMethodName              = "/zerone.knowledge.v1.Query/FactRelations"
-	Query_FactsBySubject_FullMethodName             = "/zerone.knowledge.v1.Query/FactsBySubject"
-	Query_FactsByTag_FullMethodName                 = "/zerone.knowledge.v1.Query/FactsByTag"
-	Query_FactByCanonical_FullMethodName            = "/zerone.knowledge.v1.Query/FactByCanonical"
-	Query_FactsByFitness_FullMethodName             = "/zerone.knowledge.v1.Query/FactsByFitness"
-	Query_BootstrapFundStatus_FullMethodName        = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
-	Query_FactsAtRisk_FullMethodName                = "/zerone.knowledge.v1.Query/FactsAtRisk"
-	Query_FactLineage_FullMethodName                = "/zerone.knowledge.v1.Query/FactLineage"
-	Query_FactProgeny_FullMethodName                = "/zerone.knowledge.v1.Query/FactProgeny"
-	Query_ProofTree_FullMethodName                  = "/zerone.knowledge.v1.Query/ProofTree"
-	Query_DescendantTree_FullMethodName             = "/zerone.knowledge.v1.Query/DescendantTree"
-	Query_TrustProfile_FullMethodName               = "/zerone.knowledge.v1.Query/TrustProfile"
-	Query_Methodologies_FullMethodName              = "/zerone.knowledge.v1.Query/Methodologies"
-	Query_Methodology_FullMethodName                = "/zerone.knowledge.v1.Query/Methodology"
-	Query_NormativeCommitments_FullMethodName       = "/zerone.knowledge.v1.Query/NormativeCommitments"
-	Query_NormativeCommitment_FullMethodName        = "/zerone.knowledge.v1.Query/NormativeCommitment"
-	Query_MethodCorpus_FullMethodName               = "/zerone.knowledge.v1.Query/MethodCorpus"
-	Query_DisprovenCorpus_FullMethodName            = "/zerone.knowledge.v1.Query/DisprovenCorpus"
-	Query_VindicationCorpus_FullMethodName          = "/zerone.knowledge.v1.Query/VindicationCorpus"
-	Query_TrainingQuality_FullMethodName            = "/zerone.knowledge.v1.Query/TrainingQuality"
-	Query_AgentCalibration_FullMethodName           = "/zerone.knowledge.v1.Query/AgentCalibration"
-	Query_AgentLeaderboard_FullMethodName           = "/zerone.knowledge.v1.Query/AgentLeaderboard"
-	Query_TokenizerSpec_FullMethodName              = "/zerone.knowledge.v1.Query/TokenizerSpec"
-	Query_TokenizerSpecAtVersion_FullMethodName     = "/zerone.knowledge.v1.Query/TokenizerSpecAtVersion"
-	Query_TrainingPipelines_FullMethodName          = "/zerone.knowledge.v1.Query/TrainingPipelines"
-	Query_TrainingPipeline_FullMethodName           = "/zerone.knowledge.v1.Query/TrainingPipeline"
-	Query_ModelCards_FullMethodName                 = "/zerone.knowledge.v1.Query/ModelCards"
-	Query_ModelCard_FullMethodName                  = "/zerone.knowledge.v1.Query/ModelCard"
-	Query_ModelCardByDeployment_FullMethodName      = "/zerone.knowledge.v1.Query/ModelCardByDeployment"
-	Query_StructuredCorpus_FullMethodName           = "/zerone.knowledge.v1.Query/StructuredCorpus"
-	Query_DisputationCorpus_FullMethodName          = "/zerone.knowledge.v1.Query/DisputationCorpus"
-	Query_TrainingAttestation_FullMethodName        = "/zerone.knowledge.v1.Query/TrainingAttestation"
-	Query_ModelContributions_FullMethodName         = "/zerone.knowledge.v1.Query/ModelContributions"
-	Query_FactContributors_FullMethodName           = "/zerone.knowledge.v1.Query/FactContributors"
-	Query_ModelLineage_FullMethodName               = "/zerone.knowledge.v1.Query/ModelLineage"
-	Query_AugmentationBounty_FullMethodName         = "/zerone.knowledge.v1.Query/AugmentationBounty"
-	Query_AugmentationBounties_FullMethodName       = "/zerone.knowledge.v1.Query/AugmentationBounties"
-	Query_AugmentationsByFact_FullMethodName        = "/zerone.knowledge.v1.Query/AugmentationsByFact"
-	Query_TrainingValueWeight_FullMethodName        = "/zerone.knowledge.v1.Query/TrainingValueWeight"
-	Query_ContributionChallenge_FullMethodName      = "/zerone.knowledge.v1.Query/ContributionChallenge"
-	Query_OpenContributionChallenges_FullMethodName = "/zerone.knowledge.v1.Query/OpenContributionChallenges"
-	Query_TrainingFundDisbursement_FullMethodName   = "/zerone.knowledge.v1.Query/TrainingFundDisbursement"
-	Query_TrainingFundBalance_FullMethodName        = "/zerone.knowledge.v1.Query/TrainingFundBalance"
-	Query_NormativeCorpus_FullMethodName            = "/zerone.knowledge.v1.Query/NormativeCorpus"
-	Query_DriftCorpus_FullMethodName                = "/zerone.knowledge.v1.Query/DriftCorpus"
-	Query_CommonKnowledge_FullMethodName            = "/zerone.knowledge.v1.Query/CommonKnowledge"
-	Query_CheckNovelty_FullMethodName               = "/zerone.knowledge.v1.Query/CheckNovelty"
-	Query_ActiveBounties_FullMethodName             = "/zerone.knowledge.v1.Query/ActiveBounties"
-	Query_DemandSignals_FullMethodName              = "/zerone.knowledge.v1.Query/DemandSignals"
-	Query_TopDemandGaps_FullMethodName              = "/zerone.knowledge.v1.Query/TopDemandGaps"
-	Query_NicheInfo_FullMethodName                  = "/zerone.knowledge.v1.Query/NicheInfo"
-	Query_NichesByDomain_FullMethodName             = "/zerone.knowledge.v1.Query/NichesByDomain"
-	Query_DomainDiversity_FullMethodName            = "/zerone.knowledge.v1.Query/DomainDiversity"
-	Query_DomainDiversityHistory_FullMethodName     = "/zerone.knowledge.v1.Query/DomainDiversityHistory"
-	Query_ValidatorIndependence_FullMethodName      = "/zerone.knowledge.v1.Query/ValidatorIndependence"
-	Query_ConformityAlerts_FullMethodName           = "/zerone.knowledge.v1.Query/ConformityAlerts"
-	Query_MetabolismStatus_FullMethodName           = "/zerone.knowledge.v1.Query/MetabolismStatus"
-	Query_DomainCapacity_FullMethodName             = "/zerone.knowledge.v1.Query/DomainCapacity"
-	Query_EpistemicTemperature_FullMethodName       = "/zerone.knowledge.v1.Query/EpistemicTemperature"
-	Query_RoleElasticity_FullMethodName             = "/zerone.knowledge.v1.Query/RoleElasticity"
+	Query_Params_FullMethodName                       = "/zerone.knowledge.v1.Query/Params"
+	Query_Fact_FullMethodName                         = "/zerone.knowledge.v1.Query/Fact"
+	Query_Facts_FullMethodName                        = "/zerone.knowledge.v1.Query/Facts"
+	Query_FactsByDomain_FullMethodName                = "/zerone.knowledge.v1.Query/FactsByDomain"
+	Query_FactsBySubmitter_FullMethodName             = "/zerone.knowledge.v1.Query/FactsBySubmitter"
+	Query_Claim_FullMethodName                        = "/zerone.knowledge.v1.Query/Claim"
+	Query_PendingClaims_FullMethodName                = "/zerone.knowledge.v1.Query/PendingClaims"
+	Query_VerificationRound_FullMethodName            = "/zerone.knowledge.v1.Query/VerificationRound"
+	Query_Domain_FullMethodName                       = "/zerone.knowledge.v1.Query/Domain"
+	Query_Domains_FullMethodName                      = "/zerone.knowledge.v1.Query/Domains"
+	Query_FactConfidence_FullMethodName               = "/zerone.knowledge.v1.Query/FactConfidence"
+	Query_FactCitationCount_FullMethodName            = "/zerone.knowledge.v1.Query/FactCitationCount"
+	Query_FactRelations_FullMethodName                = "/zerone.knowledge.v1.Query/FactRelations"
+	Query_FactsBySubject_FullMethodName               = "/zerone.knowledge.v1.Query/FactsBySubject"
+	Query_FactsByTag_FullMethodName                   = "/zerone.knowledge.v1.Query/FactsByTag"
+	Query_FactByCanonical_FullMethodName              = "/zerone.knowledge.v1.Query/FactByCanonical"
+	Query_FactsByFitness_FullMethodName               = "/zerone.knowledge.v1.Query/FactsByFitness"
+	Query_BootstrapFundStatus_FullMethodName          = "/zerone.knowledge.v1.Query/BootstrapFundStatus"
+	Query_FactsAtRisk_FullMethodName                  = "/zerone.knowledge.v1.Query/FactsAtRisk"
+	Query_FactLineage_FullMethodName                  = "/zerone.knowledge.v1.Query/FactLineage"
+	Query_FactProgeny_FullMethodName                  = "/zerone.knowledge.v1.Query/FactProgeny"
+	Query_ProofTree_FullMethodName                    = "/zerone.knowledge.v1.Query/ProofTree"
+	Query_DescendantTree_FullMethodName               = "/zerone.knowledge.v1.Query/DescendantTree"
+	Query_TrustProfile_FullMethodName                 = "/zerone.knowledge.v1.Query/TrustProfile"
+	Query_Methodologies_FullMethodName                = "/zerone.knowledge.v1.Query/Methodologies"
+	Query_Methodology_FullMethodName                  = "/zerone.knowledge.v1.Query/Methodology"
+	Query_NormativeCommitments_FullMethodName         = "/zerone.knowledge.v1.Query/NormativeCommitments"
+	Query_NormativeCommitment_FullMethodName          = "/zerone.knowledge.v1.Query/NormativeCommitment"
+	Query_MethodCorpus_FullMethodName                 = "/zerone.knowledge.v1.Query/MethodCorpus"
+	Query_DisprovenCorpus_FullMethodName              = "/zerone.knowledge.v1.Query/DisprovenCorpus"
+	Query_VindicationCorpus_FullMethodName            = "/zerone.knowledge.v1.Query/VindicationCorpus"
+	Query_TrainingQuality_FullMethodName              = "/zerone.knowledge.v1.Query/TrainingQuality"
+	Query_AgentCalibration_FullMethodName             = "/zerone.knowledge.v1.Query/AgentCalibration"
+	Query_AgentLeaderboard_FullMethodName             = "/zerone.knowledge.v1.Query/AgentLeaderboard"
+	Query_TokenizerSpec_FullMethodName                = "/zerone.knowledge.v1.Query/TokenizerSpec"
+	Query_TokenizerSpecAtVersion_FullMethodName       = "/zerone.knowledge.v1.Query/TokenizerSpecAtVersion"
+	Query_TrainingPipelines_FullMethodName            = "/zerone.knowledge.v1.Query/TrainingPipelines"
+	Query_TrainingPipeline_FullMethodName             = "/zerone.knowledge.v1.Query/TrainingPipeline"
+	Query_ModelCards_FullMethodName                   = "/zerone.knowledge.v1.Query/ModelCards"
+	Query_ModelCard_FullMethodName                    = "/zerone.knowledge.v1.Query/ModelCard"
+	Query_ModelCardByDeployment_FullMethodName        = "/zerone.knowledge.v1.Query/ModelCardByDeployment"
+	Query_StructuredCorpus_FullMethodName             = "/zerone.knowledge.v1.Query/StructuredCorpus"
+	Query_DisputationCorpus_FullMethodName            = "/zerone.knowledge.v1.Query/DisputationCorpus"
+	Query_TrainingAttestation_FullMethodName          = "/zerone.knowledge.v1.Query/TrainingAttestation"
+	Query_ModelContributions_FullMethodName           = "/zerone.knowledge.v1.Query/ModelContributions"
+	Query_FactContributors_FullMethodName             = "/zerone.knowledge.v1.Query/FactContributors"
+	Query_ModelLineage_FullMethodName                 = "/zerone.knowledge.v1.Query/ModelLineage"
+	Query_AugmentationBounty_FullMethodName           = "/zerone.knowledge.v1.Query/AugmentationBounty"
+	Query_AugmentationBounties_FullMethodName         = "/zerone.knowledge.v1.Query/AugmentationBounties"
+	Query_AugmentationsByFact_FullMethodName          = "/zerone.knowledge.v1.Query/AugmentationsByFact"
+	Query_TrainingValueWeight_FullMethodName          = "/zerone.knowledge.v1.Query/TrainingValueWeight"
+	Query_ContributionChallenge_FullMethodName        = "/zerone.knowledge.v1.Query/ContributionChallenge"
+	Query_OpenContributionChallenges_FullMethodName   = "/zerone.knowledge.v1.Query/OpenContributionChallenges"
+	Query_TrainingFundDisbursement_FullMethodName     = "/zerone.knowledge.v1.Query/TrainingFundDisbursement"
+	Query_TrainingFundBalance_FullMethodName          = "/zerone.knowledge.v1.Query/TrainingFundBalance"
+	Query_NormativeCorpus_FullMethodName              = "/zerone.knowledge.v1.Query/NormativeCorpus"
+	Query_DriftCorpus_FullMethodName                  = "/zerone.knowledge.v1.Query/DriftCorpus"
+	Query_MethodologyApplicationTrace_FullMethodName  = "/zerone.knowledge.v1.Query/MethodologyApplicationTrace"
+	Query_MethodologyApplicationTraces_FullMethodName = "/zerone.knowledge.v1.Query/MethodologyApplicationTraces"
+	Query_ContrastivePairs_FullMethodName             = "/zerone.knowledge.v1.Query/ContrastivePairs"
+	Query_TraceSchema_FullMethodName                  = "/zerone.knowledge.v1.Query/TraceSchema"
+	Query_TraceSchemaAtVersion_FullMethodName         = "/zerone.knowledge.v1.Query/TraceSchemaAtVersion"
+	Query_CommonKnowledge_FullMethodName              = "/zerone.knowledge.v1.Query/CommonKnowledge"
+	Query_CheckNovelty_FullMethodName                 = "/zerone.knowledge.v1.Query/CheckNovelty"
+	Query_ActiveBounties_FullMethodName               = "/zerone.knowledge.v1.Query/ActiveBounties"
+	Query_DemandSignals_FullMethodName                = "/zerone.knowledge.v1.Query/DemandSignals"
+	Query_TopDemandGaps_FullMethodName                = "/zerone.knowledge.v1.Query/TopDemandGaps"
+	Query_NicheInfo_FullMethodName                    = "/zerone.knowledge.v1.Query/NicheInfo"
+	Query_NichesByDomain_FullMethodName               = "/zerone.knowledge.v1.Query/NichesByDomain"
+	Query_DomainDiversity_FullMethodName              = "/zerone.knowledge.v1.Query/DomainDiversity"
+	Query_DomainDiversityHistory_FullMethodName       = "/zerone.knowledge.v1.Query/DomainDiversityHistory"
+	Query_ValidatorIndependence_FullMethodName        = "/zerone.knowledge.v1.Query/ValidatorIndependence"
+	Query_ConformityAlerts_FullMethodName             = "/zerone.knowledge.v1.Query/ConformityAlerts"
+	Query_MetabolismStatus_FullMethodName             = "/zerone.knowledge.v1.Query/MetabolismStatus"
+	Query_DomainCapacity_FullMethodName               = "/zerone.knowledge.v1.Query/DomainCapacity"
+	Query_EpistemicTemperature_FullMethodName         = "/zerone.knowledge.v1.Query/EpistemicTemperature"
+	Query_RoleElasticity_FullMethodName               = "/zerone.knowledge.v1.Query/RoleElasticity"
 )
 
 // QueryClient is the client API for Query service.
@@ -253,6 +258,18 @@ type QueryClient interface {
 	// DriftCorpus returns failed (DRIFT-verdict) reformulations as negative
 	// training signal for meaning-preservation learning.
 	DriftCorpus(ctx context.Context, in *QueryDriftCorpusRequest, opts ...grpc.CallOption) (*QueryDriftCorpusResponse, error)
+	// ─── Route B Wave 5: unified training format ─────────────────────────
+	// MethodologyApplicationTrace returns the unified training row for a fact.
+	MethodologyApplicationTrace(ctx context.Context, in *QueryMethodologyApplicationTraceRequest, opts ...grpc.CallOption) (*QueryMethodologyApplicationTraceResponse, error)
+	// MethodologyApplicationTraces streams traces with the same filters as
+	// StructuredCorpus.
+	MethodologyApplicationTraces(ctx context.Context, in *QueryMethodologyApplicationTracesRequest, opts ...grpc.CallOption) (*QueryMethodologyApplicationTracesResponse, error)
+	// ContrastivePairs returns (positive, negative, verdict) training tuples.
+	ContrastivePairs(ctx context.Context, in *QueryContrastivePairsRequest, opts ...grpc.CallOption) (*QueryContrastivePairsResponse, error)
+	// TraceSchema returns the current canonical trace serialisation contract.
+	TraceSchema(ctx context.Context, in *QueryTraceSchemaRequest, opts ...grpc.CallOption) (*QueryTraceSchemaResponse, error)
+	// TraceSchemaAtVersion returns a historical trace schema by version.
+	TraceSchemaAtVersion(ctx context.Context, in *QueryTraceSchemaAtVersionRequest, opts ...grpc.CallOption) (*QueryTraceSchemaAtVersionResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -862,6 +879,56 @@ func (c *queryClient) DriftCorpus(ctx context.Context, in *QueryDriftCorpusReque
 	return out, nil
 }
 
+func (c *queryClient) MethodologyApplicationTrace(ctx context.Context, in *QueryMethodologyApplicationTraceRequest, opts ...grpc.CallOption) (*QueryMethodologyApplicationTraceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMethodologyApplicationTraceResponse)
+	err := c.cc.Invoke(ctx, Query_MethodologyApplicationTrace_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) MethodologyApplicationTraces(ctx context.Context, in *QueryMethodologyApplicationTracesRequest, opts ...grpc.CallOption) (*QueryMethodologyApplicationTracesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryMethodologyApplicationTracesResponse)
+	err := c.cc.Invoke(ctx, Query_MethodologyApplicationTraces_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) ContrastivePairs(ctx context.Context, in *QueryContrastivePairsRequest, opts ...grpc.CallOption) (*QueryContrastivePairsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryContrastivePairsResponse)
+	err := c.cc.Invoke(ctx, Query_ContrastivePairs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TraceSchema(ctx context.Context, in *QueryTraceSchemaRequest, opts ...grpc.CallOption) (*QueryTraceSchemaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTraceSchemaResponse)
+	err := c.cc.Invoke(ctx, Query_TraceSchema_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) TraceSchemaAtVersion(ctx context.Context, in *QueryTraceSchemaAtVersionRequest, opts ...grpc.CallOption) (*QueryTraceSchemaAtVersionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryTraceSchemaAtVersionResponse)
+	err := c.cc.Invoke(ctx, Query_TraceSchemaAtVersion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -1172,6 +1239,18 @@ type QueryServer interface {
 	// DriftCorpus returns failed (DRIFT-verdict) reformulations as negative
 	// training signal for meaning-preservation learning.
 	DriftCorpus(context.Context, *QueryDriftCorpusRequest) (*QueryDriftCorpusResponse, error)
+	// ─── Route B Wave 5: unified training format ─────────────────────────
+	// MethodologyApplicationTrace returns the unified training row for a fact.
+	MethodologyApplicationTrace(context.Context, *QueryMethodologyApplicationTraceRequest) (*QueryMethodologyApplicationTraceResponse, error)
+	// MethodologyApplicationTraces streams traces with the same filters as
+	// StructuredCorpus.
+	MethodologyApplicationTraces(context.Context, *QueryMethodologyApplicationTracesRequest) (*QueryMethodologyApplicationTracesResponse, error)
+	// ContrastivePairs returns (positive, negative, verdict) training tuples.
+	ContrastivePairs(context.Context, *QueryContrastivePairsRequest) (*QueryContrastivePairsResponse, error)
+	// TraceSchema returns the current canonical trace serialisation contract.
+	TraceSchema(context.Context, *QueryTraceSchemaRequest) (*QueryTraceSchemaResponse, error)
+	// TraceSchemaAtVersion returns a historical trace schema by version.
+	TraceSchemaAtVersion(context.Context, *QueryTraceSchemaAtVersionRequest) (*QueryTraceSchemaAtVersionResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -1381,6 +1460,21 @@ func (UnimplementedQueryServer) NormativeCorpus(context.Context, *QueryNormative
 }
 func (UnimplementedQueryServer) DriftCorpus(context.Context, *QueryDriftCorpusRequest) (*QueryDriftCorpusResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method DriftCorpus not implemented")
+}
+func (UnimplementedQueryServer) MethodologyApplicationTrace(context.Context, *QueryMethodologyApplicationTraceRequest) (*QueryMethodologyApplicationTraceResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MethodologyApplicationTrace not implemented")
+}
+func (UnimplementedQueryServer) MethodologyApplicationTraces(context.Context, *QueryMethodologyApplicationTracesRequest) (*QueryMethodologyApplicationTracesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method MethodologyApplicationTraces not implemented")
+}
+func (UnimplementedQueryServer) ContrastivePairs(context.Context, *QueryContrastivePairsRequest) (*QueryContrastivePairsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ContrastivePairs not implemented")
+}
+func (UnimplementedQueryServer) TraceSchema(context.Context, *QueryTraceSchemaRequest) (*QueryTraceSchemaResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TraceSchema not implemented")
+}
+func (UnimplementedQueryServer) TraceSchemaAtVersion(context.Context, *QueryTraceSchemaAtVersionRequest) (*QueryTraceSchemaAtVersionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method TraceSchemaAtVersion not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -2474,6 +2568,96 @@ func _Query_DriftCorpus_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_MethodologyApplicationTrace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMethodologyApplicationTraceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).MethodologyApplicationTrace(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_MethodologyApplicationTrace_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).MethodologyApplicationTrace(ctx, req.(*QueryMethodologyApplicationTraceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_MethodologyApplicationTraces_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryMethodologyApplicationTracesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).MethodologyApplicationTraces(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_MethodologyApplicationTraces_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).MethodologyApplicationTraces(ctx, req.(*QueryMethodologyApplicationTracesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_ContrastivePairs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryContrastivePairsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).ContrastivePairs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_ContrastivePairs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).ContrastivePairs(ctx, req.(*QueryContrastivePairsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TraceSchema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTraceSchemaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TraceSchema(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TraceSchema_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TraceSchema(ctx, req.(*QueryTraceSchemaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_TraceSchemaAtVersion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryTraceSchemaAtVersionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).TraceSchemaAtVersion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_TraceSchemaAtVersion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).TraceSchemaAtVersion(ctx, req.(*QueryTraceSchemaAtVersionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -2978,6 +3162,26 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DriftCorpus",
 			Handler:    _Query_DriftCorpus_Handler,
+		},
+		{
+			MethodName: "MethodologyApplicationTrace",
+			Handler:    _Query_MethodologyApplicationTrace_Handler,
+		},
+		{
+			MethodName: "MethodologyApplicationTraces",
+			Handler:    _Query_MethodologyApplicationTraces_Handler,
+		},
+		{
+			MethodName: "ContrastivePairs",
+			Handler:    _Query_ContrastivePairs_Handler,
+		},
+		{
+			MethodName: "TraceSchema",
+			Handler:    _Query_TraceSchema_Handler,
+		},
+		{
+			MethodName: "TraceSchemaAtVersion",
+			Handler:    _Query_TraceSchemaAtVersion_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",

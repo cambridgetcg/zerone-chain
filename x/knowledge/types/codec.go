@@ -47,6 +47,8 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgChallengeContribution{}, "zerone_knowledge/ChallengeContribution", nil)
 	cdc.RegisterConcrete(&MsgResolveContributionChallenge{}, "zerone_knowledge/ResolveContributionChallenge", nil)
 	cdc.RegisterConcrete(&MsgClaimTrainingFundDisbursement{}, "zerone_knowledge/ClaimTrainingFundDisbursement", nil)
+	// Route B Wave 5
+	cdc.RegisterConcrete(&MsgAmendTraceSchema{}, "zerone_knowledge/AmendTraceSchema", nil)
 }
 
 // RegisterInterfaces registers the knowledge module's interface implementations.
@@ -92,6 +94,8 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgChallengeContribution{},
 		&MsgResolveContributionChallenge{},
 		&MsgClaimTrainingFundDisbursement{},
+		// Route B Wave 5
+		&MsgAmendTraceSchema{},
 	)
 }
 

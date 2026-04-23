@@ -2252,6 +2252,175 @@ func local_request_Query_DriftCorpus_0(ctx context.Context, marshaler runtime.Ma
 	return msg, metadata, err
 }
 
+func request_Query_MethodologyApplicationTrace_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryMethodologyApplicationTraceRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["fact_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "fact_id")
+	}
+	protoReq.FactId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "fact_id", err)
+	}
+	msg, err := client.MethodologyApplicationTrace(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Query_MethodologyApplicationTrace_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryMethodologyApplicationTraceRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["fact_id"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "fact_id")
+	}
+	protoReq.FactId, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "fact_id", err)
+	}
+	msg, err := server.MethodologyApplicationTrace(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_Query_MethodologyApplicationTraces_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_Query_MethodologyApplicationTraces_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryMethodologyApplicationTracesRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Query_MethodologyApplicationTraces_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.MethodologyApplicationTraces(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Query_MethodologyApplicationTraces_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryMethodologyApplicationTracesRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Query_MethodologyApplicationTraces_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.MethodologyApplicationTraces(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+var filter_Query_ContrastivePairs_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+
+func request_Query_ContrastivePairs_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryContrastivePairsRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Query_ContrastivePairs_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := client.ContrastivePairs(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Query_ContrastivePairs_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryContrastivePairsRequest
+		metadata runtime.ServerMetadata
+	)
+	if err := req.ParseForm(); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_Query_ContrastivePairs_0); err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+	msg, err := server.ContrastivePairs(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Query_TraceSchema_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryTraceSchemaRequest
+		metadata runtime.ServerMetadata
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	msg, err := client.TraceSchema(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Query_TraceSchema_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryTraceSchemaRequest
+		metadata runtime.ServerMetadata
+	)
+	msg, err := server.TraceSchema(ctx, &protoReq)
+	return msg, metadata, err
+}
+
+func request_Query_TraceSchemaAtVersion_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryTraceSchemaAtVersionRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	if req.Body != nil {
+		_, _ = io.Copy(io.Discard, req.Body)
+	}
+	val, ok := pathParams["version"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "version")
+	}
+	protoReq.Version, err = runtime.Uint64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "version", err)
+	}
+	msg, err := client.TraceSchemaAtVersion(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+}
+
+func local_request_Query_TraceSchemaAtVersion_0(ctx context.Context, marshaler runtime.Marshaler, server QueryServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var (
+		protoReq QueryTraceSchemaAtVersionRequest
+		metadata runtime.ServerMetadata
+		err      error
+	)
+	val, ok := pathParams["version"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "version")
+	}
+	protoReq.Version, err = runtime.Uint64(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "version", err)
+	}
+	msg, err := server.TraceSchemaAtVersion(ctx, &protoReq)
+	return msg, metadata, err
+}
+
 var filter_Query_CommonKnowledge_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 
 func request_Query_CommonKnowledge_0(ctx context.Context, marshaler runtime.Marshaler, client QueryClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
@@ -3941,6 +4110,106 @@ func RegisterQueryHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 		}
 		forward_Query_DriftCorpus_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_Query_MethodologyApplicationTrace_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/zerone.knowledge.v1.Query/MethodologyApplicationTrace", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/trace/{fact_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Query_MethodologyApplicationTrace_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_MethodologyApplicationTrace_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Query_MethodologyApplicationTraces_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/zerone.knowledge.v1.Query/MethodologyApplicationTraces", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/traces"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Query_MethodologyApplicationTraces_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_MethodologyApplicationTraces_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Query_ContrastivePairs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/zerone.knowledge.v1.Query/ContrastivePairs", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/contrastive_pairs"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Query_ContrastivePairs_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_ContrastivePairs_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Query_TraceSchema_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/zerone.knowledge.v1.Query/TraceSchema", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/trace_schema"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Query_TraceSchema_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_TraceSchema_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Query_TraceSchemaAtVersion_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/zerone.knowledge.v1.Query/TraceSchemaAtVersion", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/trace_schema/{version}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_Query_TraceSchemaAtVersion_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_TraceSchemaAtVersion_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_Query_CommonKnowledge_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -5250,6 +5519,91 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 		}
 		forward_Query_DriftCorpus_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
+	mux.Handle(http.MethodGet, pattern_Query_MethodologyApplicationTrace_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/zerone.knowledge.v1.Query/MethodologyApplicationTrace", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/trace/{fact_id}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Query_MethodologyApplicationTrace_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_MethodologyApplicationTrace_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Query_MethodologyApplicationTraces_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/zerone.knowledge.v1.Query/MethodologyApplicationTraces", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/traces"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Query_MethodologyApplicationTraces_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_MethodologyApplicationTraces_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Query_ContrastivePairs_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/zerone.knowledge.v1.Query/ContrastivePairs", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/contrastive_pairs"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Query_ContrastivePairs_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_ContrastivePairs_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Query_TraceSchema_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/zerone.knowledge.v1.Query/TraceSchema", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/trace_schema"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Query_TraceSchema_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_TraceSchema_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
+	mux.Handle(http.MethodGet, pattern_Query_TraceSchemaAtVersion_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/zerone.knowledge.v1.Query/TraceSchemaAtVersion", runtime.WithHTTPPathPattern("/zerone/knowledge/v1/training/trace_schema/{version}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_Query_TraceSchemaAtVersion_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		forward_Query_TraceSchemaAtVersion_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+	})
 	mux.Handle(http.MethodGet, pattern_Query_CommonKnowledge_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -5509,151 +5863,161 @@ func RegisterQueryHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 }
 
 var (
-	pattern_Query_Params_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "params"}, ""))
-	pattern_Query_Fact_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "facts", "id"}, ""))
-	pattern_Query_Facts_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "facts"}, ""))
-	pattern_Query_FactsByDomain_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "facts", "domain"}, ""))
-	pattern_Query_FactsBySubmitter_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "facts", "submitter"}, ""))
-	pattern_Query_Claim_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "claims", "id"}, ""))
-	pattern_Query_PendingClaims_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "claims", "pending"}, ""))
-	pattern_Query_VerificationRound_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "rounds", "id"}, ""))
-	pattern_Query_Domain_0                     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "domains", "name"}, ""))
-	pattern_Query_Domains_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "domains"}, ""))
-	pattern_Query_FactConfidence_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "facts", "id", "confidence"}, ""))
-	pattern_Query_FactCitationCount_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "facts", "id", "citations"}, ""))
-	pattern_Query_FactRelations_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "facts", "fact_id", "relations"}, ""))
-	pattern_Query_FactsBySubject_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "facts_by_subject", "domain", "subject"}, ""))
-	pattern_Query_FactsByTag_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "facts_by_tag", "tag"}, ""))
-	pattern_Query_FactByCanonical_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "fact_by_canonical", "canonical_hash"}, ""))
-	pattern_Query_FactsByFitness_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "facts_by_fitness"}, ""))
-	pattern_Query_BootstrapFundStatus_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "bootstrap_fund"}, ""))
-	pattern_Query_FactsAtRisk_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "facts_at_risk"}, ""))
-	pattern_Query_FactLineage_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "lineage"}, ""))
-	pattern_Query_FactProgeny_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "progeny"}, ""))
-	pattern_Query_ProofTree_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "proof_tree"}, ""))
-	pattern_Query_DescendantTree_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "descendant_tree"}, ""))
-	pattern_Query_TrustProfile_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "trust_profile"}, ""))
-	pattern_Query_Methodologies_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "methodologies"}, ""))
-	pattern_Query_Methodology_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "methodology", "id"}, ""))
-	pattern_Query_NormativeCommitments_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "commitments"}, ""))
-	pattern_Query_NormativeCommitment_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "commitment", "id"}, ""))
-	pattern_Query_MethodCorpus_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "method_corpus"}, ""))
-	pattern_Query_DisprovenCorpus_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "disproven_corpus"}, ""))
-	pattern_Query_VindicationCorpus_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "vindication_corpus"}, ""))
-	pattern_Query_TrainingQuality_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "quality", "fact_id"}, ""))
-	pattern_Query_AgentCalibration_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "agent", "address", "calibration"}, ""))
-	pattern_Query_AgentLeaderboard_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "agent", "leaderboard"}, ""))
-	pattern_Query_TokenizerSpec_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "tokenizer_spec"}, ""))
-	pattern_Query_TokenizerSpecAtVersion_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "tokenizer_spec", "version"}, ""))
-	pattern_Query_TrainingPipelines_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "pipelines"}, ""))
-	pattern_Query_TrainingPipeline_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "pipeline", "id"}, ""))
-	pattern_Query_ModelCards_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "model_cards"}, ""))
-	pattern_Query_ModelCard_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "model_card", "id"}, ""))
-	pattern_Query_ModelCardByDeployment_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"zerone", "knowledge", "v1", "training", "model_card", "deployment", "address"}, ""))
-	pattern_Query_StructuredCorpus_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "structured_corpus"}, ""))
-	pattern_Query_DisputationCorpus_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "disputation_corpus"}, ""))
-	pattern_Query_TrainingAttestation_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "attestation", "pipeline_id"}, ""))
-	pattern_Query_ModelContributions_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"zerone", "knowledge", "v1", "training", "contributions", "model", "model_id"}, ""))
-	pattern_Query_FactContributors_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"zerone", "knowledge", "v1", "training", "contributions", "fact", "fact_id"}, ""))
-	pattern_Query_ModelLineage_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "lineage", "model_id"}, ""))
-	pattern_Query_AugmentationBounty_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "augmentation_bounty", "id"}, ""))
-	pattern_Query_AugmentationBounties_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "augmentation_bounties"}, ""))
-	pattern_Query_AugmentationsByFact_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"zerone", "knowledge", "v1", "training", "augmentations", "fact", "fact_id"}, ""))
-	pattern_Query_TrainingValueWeight_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "tvw", "fact_id"}, ""))
-	pattern_Query_ContributionChallenge_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "challenge", "id"}, ""))
-	pattern_Query_OpenContributionChallenges_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "training", "challenges", "open"}, ""))
-	pattern_Query_TrainingFundDisbursement_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "disbursement", "id"}, ""))
-	pattern_Query_TrainingFundBalance_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "fund_balance"}, ""))
-	pattern_Query_NormativeCorpus_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "normative_corpus"}, ""))
-	pattern_Query_DriftCorpus_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "drift_corpus"}, ""))
-	pattern_Query_CommonKnowledge_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "common_knowledge"}, ""))
-	pattern_Query_CheckNovelty_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "check_novelty"}, ""))
-	pattern_Query_ActiveBounties_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "bounties"}, ""))
-	pattern_Query_DemandSignals_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "demand"}, ""))
-	pattern_Query_TopDemandGaps_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "demand_gaps"}, ""))
-	pattern_Query_NicheInfo_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "niche", "niche_key"}, ""))
-	pattern_Query_NichesByDomain_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "niches", "domain"}, ""))
-	pattern_Query_DomainDiversity_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "diversity", "domain"}, ""))
-	pattern_Query_DomainDiversityHistory_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "diversity", "domain", "history"}, ""))
-	pattern_Query_ValidatorIndependence_0      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "diversity", "validator"}, ""))
-	pattern_Query_ConformityAlerts_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "diversity", "conformity_alerts"}, ""))
-	pattern_Query_MetabolismStatus_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "metabolism", "status"}, ""))
-	pattern_Query_DomainCapacity_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "domains", "domain", "capacity"}, ""))
-	pattern_Query_EpistemicTemperature_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "epistemic_temperature", "domain"}, ""))
-	pattern_Query_RoleElasticity_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "role_elasticity", "domain"}, ""))
+	pattern_Query_Params_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "params"}, ""))
+	pattern_Query_Fact_0                         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "facts", "id"}, ""))
+	pattern_Query_Facts_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "facts"}, ""))
+	pattern_Query_FactsByDomain_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "facts", "domain"}, ""))
+	pattern_Query_FactsBySubmitter_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "facts", "submitter"}, ""))
+	pattern_Query_Claim_0                        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "claims", "id"}, ""))
+	pattern_Query_PendingClaims_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "claims", "pending"}, ""))
+	pattern_Query_VerificationRound_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "rounds", "id"}, ""))
+	pattern_Query_Domain_0                       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "domains", "name"}, ""))
+	pattern_Query_Domains_0                      = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "domains"}, ""))
+	pattern_Query_FactConfidence_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "facts", "id", "confidence"}, ""))
+	pattern_Query_FactCitationCount_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "facts", "id", "citations"}, ""))
+	pattern_Query_FactRelations_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "facts", "fact_id", "relations"}, ""))
+	pattern_Query_FactsBySubject_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "facts_by_subject", "domain", "subject"}, ""))
+	pattern_Query_FactsByTag_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "facts_by_tag", "tag"}, ""))
+	pattern_Query_FactByCanonical_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "fact_by_canonical", "canonical_hash"}, ""))
+	pattern_Query_FactsByFitness_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "facts_by_fitness"}, ""))
+	pattern_Query_BootstrapFundStatus_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "bootstrap_fund"}, ""))
+	pattern_Query_FactsAtRisk_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "facts_at_risk"}, ""))
+	pattern_Query_FactLineage_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "lineage"}, ""))
+	pattern_Query_FactProgeny_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "progeny"}, ""))
+	pattern_Query_ProofTree_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "proof_tree"}, ""))
+	pattern_Query_DescendantTree_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "descendant_tree"}, ""))
+	pattern_Query_TrustProfile_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "fact", "fact_id", "trust_profile"}, ""))
+	pattern_Query_Methodologies_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "methodologies"}, ""))
+	pattern_Query_Methodology_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "methodology", "id"}, ""))
+	pattern_Query_NormativeCommitments_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "commitments"}, ""))
+	pattern_Query_NormativeCommitment_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "commitment", "id"}, ""))
+	pattern_Query_MethodCorpus_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "method_corpus"}, ""))
+	pattern_Query_DisprovenCorpus_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "disproven_corpus"}, ""))
+	pattern_Query_VindicationCorpus_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "vindication_corpus"}, ""))
+	pattern_Query_TrainingQuality_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "quality", "fact_id"}, ""))
+	pattern_Query_AgentCalibration_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "agent", "address", "calibration"}, ""))
+	pattern_Query_AgentLeaderboard_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "agent", "leaderboard"}, ""))
+	pattern_Query_TokenizerSpec_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "tokenizer_spec"}, ""))
+	pattern_Query_TokenizerSpecAtVersion_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "tokenizer_spec", "version"}, ""))
+	pattern_Query_TrainingPipelines_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "pipelines"}, ""))
+	pattern_Query_TrainingPipeline_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "pipeline", "id"}, ""))
+	pattern_Query_ModelCards_0                   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "model_cards"}, ""))
+	pattern_Query_ModelCard_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "model_card", "id"}, ""))
+	pattern_Query_ModelCardByDeployment_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"zerone", "knowledge", "v1", "training", "model_card", "deployment", "address"}, ""))
+	pattern_Query_StructuredCorpus_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "structured_corpus"}, ""))
+	pattern_Query_DisputationCorpus_0            = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "disputation_corpus"}, ""))
+	pattern_Query_TrainingAttestation_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "attestation", "pipeline_id"}, ""))
+	pattern_Query_ModelContributions_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"zerone", "knowledge", "v1", "training", "contributions", "model", "model_id"}, ""))
+	pattern_Query_FactContributors_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"zerone", "knowledge", "v1", "training", "contributions", "fact", "fact_id"}, ""))
+	pattern_Query_ModelLineage_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "lineage", "model_id"}, ""))
+	pattern_Query_AugmentationBounty_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "augmentation_bounty", "id"}, ""))
+	pattern_Query_AugmentationBounties_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "augmentation_bounties"}, ""))
+	pattern_Query_AugmentationsByFact_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5, 1, 0, 4, 1, 5, 6}, []string{"zerone", "knowledge", "v1", "training", "augmentations", "fact", "fact_id"}, ""))
+	pattern_Query_TrainingValueWeight_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "tvw", "fact_id"}, ""))
+	pattern_Query_ContributionChallenge_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "challenge", "id"}, ""))
+	pattern_Query_OpenContributionChallenges_0   = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "training", "challenges", "open"}, ""))
+	pattern_Query_TrainingFundDisbursement_0     = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "disbursement", "id"}, ""))
+	pattern_Query_TrainingFundBalance_0          = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "fund_balance"}, ""))
+	pattern_Query_NormativeCorpus_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "normative_corpus"}, ""))
+	pattern_Query_DriftCorpus_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "drift_corpus"}, ""))
+	pattern_Query_MethodologyApplicationTrace_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "trace", "fact_id"}, ""))
+	pattern_Query_MethodologyApplicationTraces_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "traces"}, ""))
+	pattern_Query_ContrastivePairs_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "contrastive_pairs"}, ""))
+	pattern_Query_TraceSchema_0                  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "training", "trace_schema"}, ""))
+	pattern_Query_TraceSchemaAtVersion_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 5}, []string{"zerone", "knowledge", "v1", "training", "trace_schema", "version"}, ""))
+	pattern_Query_CommonKnowledge_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "common_knowledge"}, ""))
+	pattern_Query_CheckNovelty_0                 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "check_novelty"}, ""))
+	pattern_Query_ActiveBounties_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "bounties"}, ""))
+	pattern_Query_DemandSignals_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "demand"}, ""))
+	pattern_Query_TopDemandGaps_0                = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"zerone", "knowledge", "v1", "demand_gaps"}, ""))
+	pattern_Query_NicheInfo_0                    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "niche", "niche_key"}, ""))
+	pattern_Query_NichesByDomain_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "niches", "domain"}, ""))
+	pattern_Query_DomainDiversity_0              = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "diversity", "domain"}, ""))
+	pattern_Query_DomainDiversityHistory_0       = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "diversity", "domain", "history"}, ""))
+	pattern_Query_ValidatorIndependence_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "diversity", "validator"}, ""))
+	pattern_Query_ConformityAlerts_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "diversity", "conformity_alerts"}, ""))
+	pattern_Query_MetabolismStatus_0             = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 2, 4}, []string{"zerone", "knowledge", "v1", "metabolism", "status"}, ""))
+	pattern_Query_DomainCapacity_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 2, 5}, []string{"zerone", "knowledge", "v1", "domains", "domain", "capacity"}, ""))
+	pattern_Query_EpistemicTemperature_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "epistemic_temperature", "domain"}, ""))
+	pattern_Query_RoleElasticity_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"zerone", "knowledge", "v1", "role_elasticity", "domain"}, ""))
 )
 
 var (
-	forward_Query_Params_0                     = runtime.ForwardResponseMessage
-	forward_Query_Fact_0                       = runtime.ForwardResponseMessage
-	forward_Query_Facts_0                      = runtime.ForwardResponseMessage
-	forward_Query_FactsByDomain_0              = runtime.ForwardResponseMessage
-	forward_Query_FactsBySubmitter_0           = runtime.ForwardResponseMessage
-	forward_Query_Claim_0                      = runtime.ForwardResponseMessage
-	forward_Query_PendingClaims_0              = runtime.ForwardResponseMessage
-	forward_Query_VerificationRound_0          = runtime.ForwardResponseMessage
-	forward_Query_Domain_0                     = runtime.ForwardResponseMessage
-	forward_Query_Domains_0                    = runtime.ForwardResponseMessage
-	forward_Query_FactConfidence_0             = runtime.ForwardResponseMessage
-	forward_Query_FactCitationCount_0          = runtime.ForwardResponseMessage
-	forward_Query_FactRelations_0              = runtime.ForwardResponseMessage
-	forward_Query_FactsBySubject_0             = runtime.ForwardResponseMessage
-	forward_Query_FactsByTag_0                 = runtime.ForwardResponseMessage
-	forward_Query_FactByCanonical_0            = runtime.ForwardResponseMessage
-	forward_Query_FactsByFitness_0             = runtime.ForwardResponseMessage
-	forward_Query_BootstrapFundStatus_0        = runtime.ForwardResponseMessage
-	forward_Query_FactsAtRisk_0                = runtime.ForwardResponseMessage
-	forward_Query_FactLineage_0                = runtime.ForwardResponseMessage
-	forward_Query_FactProgeny_0                = runtime.ForwardResponseMessage
-	forward_Query_ProofTree_0                  = runtime.ForwardResponseMessage
-	forward_Query_DescendantTree_0             = runtime.ForwardResponseMessage
-	forward_Query_TrustProfile_0               = runtime.ForwardResponseMessage
-	forward_Query_Methodologies_0              = runtime.ForwardResponseMessage
-	forward_Query_Methodology_0                = runtime.ForwardResponseMessage
-	forward_Query_NormativeCommitments_0       = runtime.ForwardResponseMessage
-	forward_Query_NormativeCommitment_0        = runtime.ForwardResponseMessage
-	forward_Query_MethodCorpus_0               = runtime.ForwardResponseMessage
-	forward_Query_DisprovenCorpus_0            = runtime.ForwardResponseMessage
-	forward_Query_VindicationCorpus_0          = runtime.ForwardResponseMessage
-	forward_Query_TrainingQuality_0            = runtime.ForwardResponseMessage
-	forward_Query_AgentCalibration_0           = runtime.ForwardResponseMessage
-	forward_Query_AgentLeaderboard_0           = runtime.ForwardResponseMessage
-	forward_Query_TokenizerSpec_0              = runtime.ForwardResponseMessage
-	forward_Query_TokenizerSpecAtVersion_0     = runtime.ForwardResponseMessage
-	forward_Query_TrainingPipelines_0          = runtime.ForwardResponseMessage
-	forward_Query_TrainingPipeline_0           = runtime.ForwardResponseMessage
-	forward_Query_ModelCards_0                 = runtime.ForwardResponseMessage
-	forward_Query_ModelCard_0                  = runtime.ForwardResponseMessage
-	forward_Query_ModelCardByDeployment_0      = runtime.ForwardResponseMessage
-	forward_Query_StructuredCorpus_0           = runtime.ForwardResponseMessage
-	forward_Query_DisputationCorpus_0          = runtime.ForwardResponseMessage
-	forward_Query_TrainingAttestation_0        = runtime.ForwardResponseMessage
-	forward_Query_ModelContributions_0         = runtime.ForwardResponseMessage
-	forward_Query_FactContributors_0           = runtime.ForwardResponseMessage
-	forward_Query_ModelLineage_0               = runtime.ForwardResponseMessage
-	forward_Query_AugmentationBounty_0         = runtime.ForwardResponseMessage
-	forward_Query_AugmentationBounties_0       = runtime.ForwardResponseMessage
-	forward_Query_AugmentationsByFact_0        = runtime.ForwardResponseMessage
-	forward_Query_TrainingValueWeight_0        = runtime.ForwardResponseMessage
-	forward_Query_ContributionChallenge_0      = runtime.ForwardResponseMessage
-	forward_Query_OpenContributionChallenges_0 = runtime.ForwardResponseMessage
-	forward_Query_TrainingFundDisbursement_0   = runtime.ForwardResponseMessage
-	forward_Query_TrainingFundBalance_0        = runtime.ForwardResponseMessage
-	forward_Query_NormativeCorpus_0            = runtime.ForwardResponseMessage
-	forward_Query_DriftCorpus_0                = runtime.ForwardResponseMessage
-	forward_Query_CommonKnowledge_0            = runtime.ForwardResponseMessage
-	forward_Query_CheckNovelty_0               = runtime.ForwardResponseMessage
-	forward_Query_ActiveBounties_0             = runtime.ForwardResponseMessage
-	forward_Query_DemandSignals_0              = runtime.ForwardResponseMessage
-	forward_Query_TopDemandGaps_0              = runtime.ForwardResponseMessage
-	forward_Query_NicheInfo_0                  = runtime.ForwardResponseMessage
-	forward_Query_NichesByDomain_0             = runtime.ForwardResponseMessage
-	forward_Query_DomainDiversity_0            = runtime.ForwardResponseMessage
-	forward_Query_DomainDiversityHistory_0     = runtime.ForwardResponseMessage
-	forward_Query_ValidatorIndependence_0      = runtime.ForwardResponseMessage
-	forward_Query_ConformityAlerts_0           = runtime.ForwardResponseMessage
-	forward_Query_MetabolismStatus_0           = runtime.ForwardResponseMessage
-	forward_Query_DomainCapacity_0             = runtime.ForwardResponseMessage
-	forward_Query_EpistemicTemperature_0       = runtime.ForwardResponseMessage
-	forward_Query_RoleElasticity_0             = runtime.ForwardResponseMessage
+	forward_Query_Params_0                       = runtime.ForwardResponseMessage
+	forward_Query_Fact_0                         = runtime.ForwardResponseMessage
+	forward_Query_Facts_0                        = runtime.ForwardResponseMessage
+	forward_Query_FactsByDomain_0                = runtime.ForwardResponseMessage
+	forward_Query_FactsBySubmitter_0             = runtime.ForwardResponseMessage
+	forward_Query_Claim_0                        = runtime.ForwardResponseMessage
+	forward_Query_PendingClaims_0                = runtime.ForwardResponseMessage
+	forward_Query_VerificationRound_0            = runtime.ForwardResponseMessage
+	forward_Query_Domain_0                       = runtime.ForwardResponseMessage
+	forward_Query_Domains_0                      = runtime.ForwardResponseMessage
+	forward_Query_FactConfidence_0               = runtime.ForwardResponseMessage
+	forward_Query_FactCitationCount_0            = runtime.ForwardResponseMessage
+	forward_Query_FactRelations_0                = runtime.ForwardResponseMessage
+	forward_Query_FactsBySubject_0               = runtime.ForwardResponseMessage
+	forward_Query_FactsByTag_0                   = runtime.ForwardResponseMessage
+	forward_Query_FactByCanonical_0              = runtime.ForwardResponseMessage
+	forward_Query_FactsByFitness_0               = runtime.ForwardResponseMessage
+	forward_Query_BootstrapFundStatus_0          = runtime.ForwardResponseMessage
+	forward_Query_FactsAtRisk_0                  = runtime.ForwardResponseMessage
+	forward_Query_FactLineage_0                  = runtime.ForwardResponseMessage
+	forward_Query_FactProgeny_0                  = runtime.ForwardResponseMessage
+	forward_Query_ProofTree_0                    = runtime.ForwardResponseMessage
+	forward_Query_DescendantTree_0               = runtime.ForwardResponseMessage
+	forward_Query_TrustProfile_0                 = runtime.ForwardResponseMessage
+	forward_Query_Methodologies_0                = runtime.ForwardResponseMessage
+	forward_Query_Methodology_0                  = runtime.ForwardResponseMessage
+	forward_Query_NormativeCommitments_0         = runtime.ForwardResponseMessage
+	forward_Query_NormativeCommitment_0          = runtime.ForwardResponseMessage
+	forward_Query_MethodCorpus_0                 = runtime.ForwardResponseMessage
+	forward_Query_DisprovenCorpus_0              = runtime.ForwardResponseMessage
+	forward_Query_VindicationCorpus_0            = runtime.ForwardResponseMessage
+	forward_Query_TrainingQuality_0              = runtime.ForwardResponseMessage
+	forward_Query_AgentCalibration_0             = runtime.ForwardResponseMessage
+	forward_Query_AgentLeaderboard_0             = runtime.ForwardResponseMessage
+	forward_Query_TokenizerSpec_0                = runtime.ForwardResponseMessage
+	forward_Query_TokenizerSpecAtVersion_0       = runtime.ForwardResponseMessage
+	forward_Query_TrainingPipelines_0            = runtime.ForwardResponseMessage
+	forward_Query_TrainingPipeline_0             = runtime.ForwardResponseMessage
+	forward_Query_ModelCards_0                   = runtime.ForwardResponseMessage
+	forward_Query_ModelCard_0                    = runtime.ForwardResponseMessage
+	forward_Query_ModelCardByDeployment_0        = runtime.ForwardResponseMessage
+	forward_Query_StructuredCorpus_0             = runtime.ForwardResponseMessage
+	forward_Query_DisputationCorpus_0            = runtime.ForwardResponseMessage
+	forward_Query_TrainingAttestation_0          = runtime.ForwardResponseMessage
+	forward_Query_ModelContributions_0           = runtime.ForwardResponseMessage
+	forward_Query_FactContributors_0             = runtime.ForwardResponseMessage
+	forward_Query_ModelLineage_0                 = runtime.ForwardResponseMessage
+	forward_Query_AugmentationBounty_0           = runtime.ForwardResponseMessage
+	forward_Query_AugmentationBounties_0         = runtime.ForwardResponseMessage
+	forward_Query_AugmentationsByFact_0          = runtime.ForwardResponseMessage
+	forward_Query_TrainingValueWeight_0          = runtime.ForwardResponseMessage
+	forward_Query_ContributionChallenge_0        = runtime.ForwardResponseMessage
+	forward_Query_OpenContributionChallenges_0   = runtime.ForwardResponseMessage
+	forward_Query_TrainingFundDisbursement_0     = runtime.ForwardResponseMessage
+	forward_Query_TrainingFundBalance_0          = runtime.ForwardResponseMessage
+	forward_Query_NormativeCorpus_0              = runtime.ForwardResponseMessage
+	forward_Query_DriftCorpus_0                  = runtime.ForwardResponseMessage
+	forward_Query_MethodologyApplicationTrace_0  = runtime.ForwardResponseMessage
+	forward_Query_MethodologyApplicationTraces_0 = runtime.ForwardResponseMessage
+	forward_Query_ContrastivePairs_0             = runtime.ForwardResponseMessage
+	forward_Query_TraceSchema_0                  = runtime.ForwardResponseMessage
+	forward_Query_TraceSchemaAtVersion_0         = runtime.ForwardResponseMessage
+	forward_Query_CommonKnowledge_0              = runtime.ForwardResponseMessage
+	forward_Query_CheckNovelty_0                 = runtime.ForwardResponseMessage
+	forward_Query_ActiveBounties_0               = runtime.ForwardResponseMessage
+	forward_Query_DemandSignals_0                = runtime.ForwardResponseMessage
+	forward_Query_TopDemandGaps_0                = runtime.ForwardResponseMessage
+	forward_Query_NicheInfo_0                    = runtime.ForwardResponseMessage
+	forward_Query_NichesByDomain_0               = runtime.ForwardResponseMessage
+	forward_Query_DomainDiversity_0              = runtime.ForwardResponseMessage
+	forward_Query_DomainDiversityHistory_0       = runtime.ForwardResponseMessage
+	forward_Query_ValidatorIndependence_0        = runtime.ForwardResponseMessage
+	forward_Query_ConformityAlerts_0             = runtime.ForwardResponseMessage
+	forward_Query_MetabolismStatus_0             = runtime.ForwardResponseMessage
+	forward_Query_DomainCapacity_0               = runtime.ForwardResponseMessage
+	forward_Query_EpistemicTemperature_0         = runtime.ForwardResponseMessage
+	forward_Query_RoleElasticity_0               = runtime.ForwardResponseMessage
 )

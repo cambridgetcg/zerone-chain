@@ -56,6 +56,7 @@ const (
 	Msg_ChallengeContribution_FullMethodName         = "/zerone.knowledge.v1.Msg/ChallengeContribution"
 	Msg_ResolveContributionChallenge_FullMethodName  = "/zerone.knowledge.v1.Msg/ResolveContributionChallenge"
 	Msg_ClaimTrainingFundDisbursement_FullMethodName = "/zerone.knowledge.v1.Msg/ClaimTrainingFundDisbursement"
+	Msg_AmendTraceSchema_FullMethodName              = "/zerone.knowledge.v1.Msg/AmendTraceSchema"
 )
 
 // MsgClient is the client API for Msg service.
@@ -149,6 +150,10 @@ type MsgClient interface {
 	// once the ModelCard has accumulated live calibration. Gated on calibration
 	// floor + reproducibility proof; 50/50 immediate/vesting split.
 	ClaimTrainingFundDisbursement(ctx context.Context, in *MsgClaimTrainingFundDisbursement, opts ...grpc.CallOption) (*MsgClaimTrainingFundDisbursementResponse, error)
+	// ─── Route B Wave 5: training data format ─────────────────────────────
+	// AmendTraceSchema governance-amends the MethodologyApplicationTrace
+	// serialisation contract; version auto-increments like TokenizerSpec.
+	AmendTraceSchema(ctx context.Context, in *MsgAmendTraceSchema, opts ...grpc.CallOption) (*MsgAmendTraceSchemaResponse, error)
 }
 
 type msgClient struct {
@@ -529,6 +534,16 @@ func (c *msgClient) ClaimTrainingFundDisbursement(ctx context.Context, in *MsgCl
 	return out, nil
 }
 
+func (c *msgClient) AmendTraceSchema(ctx context.Context, in *MsgAmendTraceSchema, opts ...grpc.CallOption) (*MsgAmendTraceSchemaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgAmendTraceSchemaResponse)
+	err := c.cc.Invoke(ctx, Msg_AmendTraceSchema_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -620,6 +635,10 @@ type MsgServer interface {
 	// once the ModelCard has accumulated live calibration. Gated on calibration
 	// floor + reproducibility proof; 50/50 immediate/vesting split.
 	ClaimTrainingFundDisbursement(context.Context, *MsgClaimTrainingFundDisbursement) (*MsgClaimTrainingFundDisbursementResponse, error)
+	// ─── Route B Wave 5: training data format ─────────────────────────────
+	// AmendTraceSchema governance-amends the MethodologyApplicationTrace
+	// serialisation contract; version auto-increments like TokenizerSpec.
+	AmendTraceSchema(context.Context, *MsgAmendTraceSchema) (*MsgAmendTraceSchemaResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -740,6 +759,9 @@ func (UnimplementedMsgServer) ResolveContributionChallenge(context.Context, *Msg
 }
 func (UnimplementedMsgServer) ClaimTrainingFundDisbursement(context.Context, *MsgClaimTrainingFundDisbursement) (*MsgClaimTrainingFundDisbursementResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ClaimTrainingFundDisbursement not implemented")
+}
+func (UnimplementedMsgServer) AmendTraceSchema(context.Context, *MsgAmendTraceSchema) (*MsgAmendTraceSchemaResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method AmendTraceSchema not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -1428,6 +1450,24 @@ func _Msg_ClaimTrainingFundDisbursement_Handler(srv interface{}, ctx context.Con
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_AmendTraceSchema_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgAmendTraceSchema)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).AmendTraceSchema(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_AmendTraceSchema_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).AmendTraceSchema(ctx, req.(*MsgAmendTraceSchema))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1582,6 +1622,10 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClaimTrainingFundDisbursement",
 			Handler:    _Msg_ClaimTrainingFundDisbursement_Handler,
+		},
+		{
+			MethodName: "AmendTraceSchema",
+			Handler:    _Msg_AmendTraceSchema_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -326,6 +326,16 @@ message Fact {
   uint64 revenue_clawback_block = 73;
 }
 
+// CurriculumTier orders training examples by difficulty and foundational depth.
+// Relocated here in Wave 5 so MethodologyApplicationTrace can reference it.
+enum CurriculumTier {
+  CURRICULUM_TIER_UNSPECIFIED  = 0;
+  CURRICULUM_TIER_FOUNDATION   = 1;  // axiom_distance ≤ 1, high corroboration, simple methods
+  CURRICULUM_TIER_INTERMEDIATE = 2;
+  CURRICULUM_TIER_ADVANCED     = 3;  // deep derivation chains
+  CURRICULUM_TIER_SPECIALISED  = 4;  // niche methodologies (phenomenological, ecological, practice)
+}
+
 // TrainingQualityTier segments facts by suitability as training examples.
 // Computed on demand from corroboration, methodology, and status.
 enum TrainingQualityTier {
@@ -789,4 +799,176 @@ message CompletedRoundMeta {
     string domain          = 1;
     bool   has_dissent     = 2;  // true if any verifier dissented from majority
     uint64 duration_blocks = 3;  // verdict_block - started_at_block
+}
+
+// ─── Route B Wave 5: unified training data format ─────────────────────────
+//
+// MethodologyApplicationTrace is the canonical per-fact training row: one
+// self-contained record bundling the claim, the methodology under which it
+// was adjudicated, the reasoning trace, the derivation graph position, the
+// dialectical history, the temporal truth signals, and contrastive
+// companions. Consumers don't need to do post-load joins.
+//
+// Alignment principle: every field below encodes a ToK truth-seeking
+// signal. A model trained on these records learns truth-seeking *behavior*:
+// declare method, show work, accept falsification, cite provenance,
+// distinguish fact from commitment.
+
+message MethodologyApplicationTrace {
+  // ─── Provenance pin (Route B Wave 1) ────────────────────────────────
+  string trace_id                       = 1;
+  string fact_id                        = 2;
+  uint64 snapshot_block_height          = 3;
+  uint64 tokenizer_version              = 4;
+  uint64 canonical_serialisation_version = 5;
+  uint64 trace_schema_version           = 6;  // Wave 5 TraceSchema contract version
+
+  // ─── Claim ────────────────────────────────────────────────────────────
+  string content        = 10;
+  string domain         = 11;
+  string subject        = 12;
+  string canonical_form = 13;
+
+  // ─── Methodology (TRUTH as process, not statement) ─────────────────────
+  string methodology_id         = 20;
+  string methodology_rubric     = 21;  // the methodology's own evaluation rubric
+  string reasoning_trace        = 22;  // structured steps (JSON-encoded)
+  uint32 axiom_distance         = 23;
+  uint64 dependency_confidence_floor_bps = 24;
+
+  // ─── Derivation graph (TRUTH as rooted) ────────────────────────────────
+  repeated FactRelation predecessor_edges = 30;
+  repeated FactRelation descendant_edges  = 31;
+  uint64 grounded_score_bps               = 32;
+
+  // ─── Adjudication (TRUTH as verified) ──────────────────────────────────
+  uint64 own_confidence_bps             = 40;
+  uint32 verifier_panel_size            = 41;
+  repeated string dissenting_verifiers  = 42;
+  uint64 verified_at_block              = 43;
+
+  // ─── Dialectical history (TRUTH as stress-tested) ──────────────────────
+  repeated TraceChallenge challenges = 50;
+  uint64 corroboration_count         = 51;   // survived falsifications
+  uint64 last_corroborated_block     = 52;
+
+  // ─── Temporal truth signals ────────────────────────────────────────────
+  FactStatus status                    = 60;
+  TraceVindication vindication         = 61;  // populated if minority was right
+  TraceDisproval   disproval           = 62;  // populated if fact went DISPROVEN
+  repeated string  supersession_chain  = 63;  // SUPERSEDES / REFINES descendants
+
+  // ─── Contrastive companions (ZERONE's unique differentiator) ──────────
+  repeated TraceReformulation reformulations = 70;   // accepted variants
+  repeated TraceDrift         drift_examples  = 71;   // DRIFT/INFERIOR variants
+  repeated string             contradicting_fact_ids = 72;
+
+  // ─── Provenance + weighting ────────────────────────────────────────────
+  string submitter                               = 80;
+  uint64 submitter_calibration_at_submission_bps = 81;
+  string partnership_id                          = 82;
+  uint64 submitted_at_block                      = 83;
+  uint64 training_value_weight_bps               = 84;  // Popper-weighted (Wave 4)
+  CurriculumTier       curriculum_tier           = 85;
+  TrainingQualityTier  quality_tier              = 86;
+
+  // ─── Is-ought marker ───────────────────────────────────────────────────
+  // Always false on facts; true only in the parallel NormativeCorpus stream.
+  bool is_normative = 90;
+}
+
+message TraceChallenge {
+  string challenger          = 1;
+  string argument_text       = 2;
+  string challenge_method_id = 3;
+  string rebuttal_text       = 4;
+  // "survived" — challenge rejected, fact corroborated
+  // "disproven" — challenge accepted, fact disproven
+  // "pending" — round still open
+  string outcome             = 5;
+  uint64 resolved_block      = 6;
+}
+
+message TraceVindication {
+  repeated string verifiers          = 1;  // minority voters who were vindicated
+  string          refund_total       = 2;  // uzrn
+  uint64          vindicated_at_block = 3;
+  string          disproven_by_fact_id = 4;  // the fact that vindicated the minority
+}
+
+message TraceDisproval {
+  string disproven_by_fact_id = 1;
+  string disproven_by_claim_id = 2;
+  string method_id             = 3;  // method under which the challenge succeeded
+  uint64 disproven_at_block    = 4;
+  string disproof_argument     = 5;  // the winning challenge argument
+}
+
+message TraceReformulation {
+  string augmentation_id       = 1;
+  string variant_content       = 2;
+  AugmentationVerdict verdict  = 3;  // EQUIVALENT or SUPERIOR
+  uint32 verifier_count        = 4;
+  uint64 verdict_block         = 5;
+  string methodology_id        = 6;  // should match parent trace's method
+}
+
+message TraceDrift {
+  string augmentation_id       = 1;
+  string variant_content       = 2;
+  AugmentationVerdict verdict  = 3;  // DRIFT or INFERIOR
+  repeated string drift_voters = 4;  // verifier panel (for attribution training)
+  uint64 verdict_block         = 5;
+}
+
+// ─── Contrastive pairs (preference-training format) ──────────────────────
+
+// ContrastivePairType enumerates the epistemic relationship between the two
+// members of a contrastive pair. The (type, method_id, distinguishing
+// argument) triple tells a trainer WHY the positive beat the negative.
+enum ContrastivePairType {
+  CONTRASTIVE_PAIR_UNSPECIFIED         = 0;
+  CONTRASTIVE_PAIR_SURVIVED_VS_DISPROVEN = 1;  // fact survived; a contradictory claim was disproven
+  CONTRASTIVE_PAIR_EQUIVALENT_VS_DRIFT   = 2;  // winning reformulation vs DRIFT variant on same original
+  CONTRASTIVE_PAIR_EQUIVALENT_VS_INFERIOR = 3; // winning reformulation vs INFERIOR variant
+  CONTRASTIVE_PAIR_VINDICATED_MINORITY   = 4;  // the vindicated minority vote vs the (disproven) majority
+}
+
+// ContrastivePair is a (positive, negative, verdict) training row for
+// preference learning. ZERONE's unique lever: web crawl only has survivors;
+// this format ships the LOSING side with the adjudication that beat it.
+message ContrastivePair {
+  string pair_id                      = 1;
+  ContrastivePairType pair_type       = 2;
+  // Positive (survivor) side.
+  string positive_fact_id             = 3;
+  string positive_content             = 4;
+  // Negative (loser) side — one of fact_id or augmentation_id is set
+  // depending on pair_type.
+  string negative_fact_id             = 5;
+  string negative_augmentation_id     = 6;
+  string negative_content             = 7;
+  // Adjudication context.
+  string method_id                    = 8;
+  string distinguishing_argument      = 9;  // the challenge/drift rationale
+  uint64 resolved_at_block            = 10;
+  // Pin for reproducibility.
+  uint64 snapshot_block_height        = 11;
+  uint64 trace_schema_version         = 12;
+}
+
+// ─── TraceSchema: governance-ratified serialisation contract ─────────────
+
+// TraceSchema names the canonical JSON Schema for MethodologyApplicationTrace.
+// Versioned and governance-amendable like TokenizerSpec: any training run
+// can pin to a specific schema version and reconstruct the deterministic
+// serialisation years later.
+message TraceSchema {
+  uint64 version             = 1;
+  uint64 ratified_at_block   = 2;
+  string json_schema_hash    = 3;  // SHA-256 of json_schema bytes
+  string json_schema         = 4;  // canonical JSON Schema (inlined)
+  repeated string required_fields   = 5;
+  repeated string deprecated_fields = 6;
+  string notes               = 7;
 }

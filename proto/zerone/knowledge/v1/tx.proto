@@ -139,6 +139,11 @@ service Msg {
   // once the ModelCard has accumulated live calibration. Gated on calibration
   // floor + reproducibility proof; 50/50 immediate/vesting split.
   rpc ClaimTrainingFundDisbursement(MsgClaimTrainingFundDisbursement) returns (MsgClaimTrainingFundDisbursementResponse);
+
+  // ─── Route B Wave 5: training data format ─────────────────────────────
+  // AmendTraceSchema governance-amends the MethodologyApplicationTrace
+  // serialisation contract; version auto-increments like TokenizerSpec.
+  rpc AmendTraceSchema(MsgAmendTraceSchema) returns (MsgAmendTraceSchemaResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -631,3 +636,14 @@ message MsgClaimTrainingFundDisbursementResponse {
   uint64 vesting_end_block = 4;
 }
 
+
+// ─── Route B Wave 5: trace schema amendment ───────────────────────────────
+message MsgAmendTraceSchema {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority = 1;
+  TraceSchema schema = 2;  // new schema; version auto-assigned as current+1
+}
+message MsgAmendTraceSchemaResponse {
+  uint64 new_version = 1;
+}

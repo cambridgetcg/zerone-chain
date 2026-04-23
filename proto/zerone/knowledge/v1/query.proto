@@ -316,6 +316,29 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/training/drift_corpus";
   }
 
+  // ─── Route B Wave 5: unified training format ─────────────────────────
+  // MethodologyApplicationTrace returns the unified training row for a fact.
+  rpc MethodologyApplicationTrace(QueryMethodologyApplicationTraceRequest) returns (QueryMethodologyApplicationTraceResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/trace/{fact_id}";
+  }
+  // MethodologyApplicationTraces streams traces with the same filters as
+  // StructuredCorpus.
+  rpc MethodologyApplicationTraces(QueryMethodologyApplicationTracesRequest) returns (QueryMethodologyApplicationTracesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/traces";
+  }
+  // ContrastivePairs returns (positive, negative, verdict) training tuples.
+  rpc ContrastivePairs(QueryContrastivePairsRequest) returns (QueryContrastivePairsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/contrastive_pairs";
+  }
+  // TraceSchema returns the current canonical trace serialisation contract.
+  rpc TraceSchema(QueryTraceSchemaRequest) returns (QueryTraceSchemaResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/trace_schema";
+  }
+  // TraceSchemaAtVersion returns a historical trace schema by version.
+  rpc TraceSchemaAtVersion(QueryTraceSchemaAtVersionRequest) returns (QueryTraceSchemaAtVersionResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/training/trace_schema/{version}";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -925,14 +948,8 @@ message StructuredCorpusEntry {
   uint64 submitter_calibration_score_bps = 16;  // denormalised for training weighting
 }
 
-// CurriculumTier orders training examples by difficulty and foundational depth.
-enum CurriculumTier {
-  CURRICULUM_TIER_UNSPECIFIED = 0;
-  CURRICULUM_TIER_FOUNDATION  = 1;  // axiom_distance ≤ 1, high corroboration, simple methods
-  CURRICULUM_TIER_INTERMEDIATE = 2;
-  CURRICULUM_TIER_ADVANCED    = 3;  // deep derivation chains
-  CURRICULUM_TIER_SPECIALISED = 4;  // niche methodologies (phenomenological, ecological, practice)
-}
+// CurriculumTier is now defined in types.proto so that MethodologyApplicationTrace
+// (Wave 5) can reference it alongside TrainingQualityTier.
 
 message QueryStructuredCorpusResponse {
   repeated StructuredCorpusEntry entries = 1;
@@ -1305,4 +1322,55 @@ message QueryDriftCorpusResponse {
   repeated DriftCorpusEntry entries = 1;
   uint32 total                      = 2;
   uint64 snapshot_block_height      = 3;
+}
+
+// ─── Route B Wave 5: unified training format queries ──────────────────────
+
+message QueryMethodologyApplicationTraceRequest {
+  string fact_id = 1;
+}
+message QueryMethodologyApplicationTraceResponse {
+  MethodologyApplicationTrace trace = 1;
+  bool found = 2;
+}
+
+message QueryMethodologyApplicationTracesRequest {
+  string method_id        = 1;    // optional filter
+  uint64 min_corroboration = 2;
+  TrainingQualityTier min_tier = 3;
+  uint32 limit            = 4;
+  uint32 offset           = 5;
+  bool include_disproven  = 6;    // include NEGATIVE-tier traces (status=DISPROVEN)
+}
+message QueryMethodologyApplicationTracesResponse {
+  repeated MethodologyApplicationTrace traces = 1;
+  uint32 total                                = 2;
+  uint64 snapshot_block_height                = 3;
+  uint64 trace_schema_version                 = 4;
+}
+
+message QueryContrastivePairsRequest {
+  ContrastivePairType pair_type = 1;   // UNSPECIFIED = all
+  string method_id              = 2;   // optional
+  uint32 limit                  = 3;
+  uint32 offset                 = 4;
+}
+message QueryContrastivePairsResponse {
+  repeated ContrastivePair pairs = 1;
+  uint32 total                   = 2;
+  uint64 snapshot_block_height   = 3;
+}
+
+message QueryTraceSchemaRequest {}
+message QueryTraceSchemaResponse {
+  TraceSchema schema = 1;
+  bool found = 2;
+}
+
+message QueryTraceSchemaAtVersionRequest {
+  uint64 version = 1;
+}
+message QueryTraceSchemaAtVersionResponse {
+  TraceSchema schema = 1;
+  bool found = 2;
 }
