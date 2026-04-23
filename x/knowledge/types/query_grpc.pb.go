@@ -88,6 +88,7 @@ const (
 	Query_Incident_FullMethodName                     = "/zerone.knowledge.v1.Query/Incident"
 	Query_Incidents_FullMethodName                    = "/zerone.knowledge.v1.Query/Incidents"
 	Query_OpenIncidents_FullMethodName                = "/zerone.knowledge.v1.Query/OpenIncidents"
+	Query_PausedModules_FullMethodName                = "/zerone.knowledge.v1.Query/PausedModules"
 	Query_CommonKnowledge_FullMethodName              = "/zerone.knowledge.v1.Query/CommonKnowledge"
 	Query_CheckNovelty_FullMethodName                 = "/zerone.knowledge.v1.Query/CheckNovelty"
 	Query_ActiveBounties_FullMethodName               = "/zerone.knowledge.v1.Query/ActiveBounties"
@@ -298,6 +299,11 @@ type QueryClient interface {
 	// OpenIncidents lists only OPEN + MITIGATING incidents — the operator's
 	// "live dashboard" query.
 	OpenIncidents(ctx context.Context, in *QueryOpenIncidentsRequest, opts ...grpc.CallOption) (*QueryOpenIncidentsResponse, error)
+	// ─── Route B Wave 12: circuit breakers ───────────────────────────────
+	// PausedModules returns every module currently in paused state. The
+	// operator dashboard query; any handler can self-check via keeper's
+	// IsModulePaused helper.
+	PausedModules(ctx context.Context, in *QueryPausedModulesRequest, opts ...grpc.CallOption) (*QueryPausedModulesResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -1027,6 +1033,16 @@ func (c *queryClient) OpenIncidents(ctx context.Context, in *QueryOpenIncidentsR
 	return out, nil
 }
 
+func (c *queryClient) PausedModules(ctx context.Context, in *QueryPausedModulesRequest, opts ...grpc.CallOption) (*QueryPausedModulesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryPausedModulesResponse)
+	err := c.cc.Invoke(ctx, Query_PausedModules_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -1370,6 +1386,11 @@ type QueryServer interface {
 	// OpenIncidents lists only OPEN + MITIGATING incidents — the operator's
 	// "live dashboard" query.
 	OpenIncidents(context.Context, *QueryOpenIncidentsRequest) (*QueryOpenIncidentsResponse, error)
+	// ─── Route B Wave 12: circuit breakers ───────────────────────────────
+	// PausedModules returns every module currently in paused state. The
+	// operator dashboard query; any handler can self-check via keeper's
+	// IsModulePaused helper.
+	PausedModules(context.Context, *QueryPausedModulesRequest) (*QueryPausedModulesResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -1615,6 +1636,9 @@ func (UnimplementedQueryServer) Incidents(context.Context, *QueryIncidentsReques
 }
 func (UnimplementedQueryServer) OpenIncidents(context.Context, *QueryOpenIncidentsRequest) (*QueryOpenIncidentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method OpenIncidents not implemented")
+}
+func (UnimplementedQueryServer) PausedModules(context.Context, *QueryPausedModulesRequest) (*QueryPausedModulesResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PausedModules not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -2924,6 +2948,24 @@ func _Query_OpenIncidents_Handler(srv interface{}, ctx context.Context, dec func
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_PausedModules_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryPausedModulesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).PausedModules(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_PausedModules_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).PausedModules(ctx, req.(*QueryPausedModulesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -3476,6 +3518,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OpenIncidents",
 			Handler:    _Query_OpenIncidents_Handler,
+		},
+		{
+			MethodName: "PausedModules",
+			Handler:    _Query_PausedModules_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",

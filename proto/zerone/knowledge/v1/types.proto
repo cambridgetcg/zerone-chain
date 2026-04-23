@@ -1420,3 +1420,36 @@ message IncidentRecord {
   // cannot alter the measured SLA.
   uint64 sla_target_block              = 13;
 }
+
+// ─── Wave 12: chain-wide module circuit breakers (resilience) ────────────
+//
+// A ModulePause marks that a named module's write-path is currently gated.
+// Handlers throughout the chain check k.IsModulePaused(ctx, moduleName) as
+// their first action; if true, they return an error without touching state.
+// This is the "localize damage" primitive — when a bug is discovered in
+// module X, X can be paused immediately while the fix is being deployed,
+// without halting the whole chain.
+//
+// Design: simple set of paused module names. One binding per module; the
+// record exists iff the module is currently paused. Unpause deletes the
+// record. The set is governance-amendable (authority-gated) and queryable.
+//
+// Coupling with incidents: the typical flow is
+//   Open P0/P1 incident → Pause affected module → Apply fix → Unpause →
+//   Resolve incident. The incident record's remediation lineage includes
+//   the PauseModule + UnpauseModule reference (via STATE_CORRECTION type)
+//   so the audit trail names the pause ceremony alongside the fix.
+
+message ModulePause {
+  string module_name           = 1;  // e.g. "knowledge", "liquiditypool"
+  string reason                = 2;  // free-form; ideally references an incident_id
+  uint64 paused_at_block       = 3;
+  string paused_by             = 4;  // authority address that issued the pause
+  // Optional auto-unpause height. 0 means "no auto-unpause; stays paused
+  // until an explicit MsgUnpauseModule fires". Set when the pause is a
+  // pre-planned maintenance window.
+  uint64 auto_unpause_at_block = 5;
+  // If non-empty, references the incident this pause is associated with.
+  // Breaks when closed without the incident being resolved → audit signal.
+  string incident_id           = 6;
+}

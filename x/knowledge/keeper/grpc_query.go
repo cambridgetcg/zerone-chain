@@ -2449,3 +2449,18 @@ func (q *queryServer) OpenIncidents(ctx context.Context, req *types.QueryOpenInc
 		SnapshotBlockHeight: uint64(sdk.UnwrapSDKContext(ctx).BlockHeight()),
 	}, nil
 }
+
+// ─── Wave 12: circuit breaker query ──────────────────────────────────────
+
+// PausedModules lists every currently-paused module.
+func (q *queryServer) PausedModules(ctx context.Context, _ *types.QueryPausedModulesRequest) (*types.QueryPausedModulesResponse, error) {
+	var out []*types.ModulePause
+	q.keeper.IteratePausedModules(ctx, func(p *types.ModulePause) bool {
+		out = append(out, p)
+		return false
+	})
+	return &types.QueryPausedModulesResponse{
+		Paused:              out,
+		SnapshotBlockHeight: uint64(sdk.UnwrapSDKContext(ctx).BlockHeight()),
+	}, nil
+}

@@ -1680,6 +1680,18 @@ An incident transitions MITIGATING → RESOLVED (Route B Wave 11). Requires ≥1
 A RESOLVED incident is permanently archived (Route B Wave 11). Terminal state; drops out of the operator dashboard but remains queryable by id.
 - `incident_id`
 
+### zerone.knowledge.module_paused
+A named module's circuit breaker engaged (Route B Wave 12). Write-path handlers in that module reject until the breaker is cleared. Read-path queries remain available. Authority-gated; typically bound to an incident_id.
+- `module_name`
+- `reason` -- free-form; references incident_id when applicable
+- `incident_id` -- empty when the pause isn't incident-driven
+- `auto_unpause_at_block` -- 0 means manual unpause only
+
+### zerone.knowledge.module_unpaused
+The circuit breaker for a named module cleared (Route B Wave 12). Writes resume. Authority-gated.
+- `module_name`
+- `note` -- free-form; typically references completion of the fix
+
 
 ## liquiditypool
 

@@ -7819,6 +7819,95 @@ func (x *IncidentRecord) GetSlaTargetBlock() uint64 {
 	return 0
 }
 
+type ModulePause struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ModuleName    string                 `protobuf:"bytes,1,opt,name=module_name,json=moduleName,proto3" json:"module_name,omitempty"` // e.g. "knowledge", "liquiditypool"
+	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`                           // free-form; ideally references an incident_id
+	PausedAtBlock uint64                 `protobuf:"varint,3,opt,name=paused_at_block,json=pausedAtBlock,proto3" json:"paused_at_block,omitempty"`
+	PausedBy      string                 `protobuf:"bytes,4,opt,name=paused_by,json=pausedBy,proto3" json:"paused_by,omitempty"` // authority address that issued the pause
+	// Optional auto-unpause height. 0 means "no auto-unpause; stays paused
+	// until an explicit MsgUnpauseModule fires". Set when the pause is a
+	// pre-planned maintenance window.
+	AutoUnpauseAtBlock uint64 `protobuf:"varint,5,opt,name=auto_unpause_at_block,json=autoUnpauseAtBlock,proto3" json:"auto_unpause_at_block,omitempty"`
+	// If non-empty, references the incident this pause is associated with.
+	// Breaks when closed without the incident being resolved → audit signal.
+	IncidentId    string `protobuf:"bytes,6,opt,name=incident_id,json=incidentId,proto3" json:"incident_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ModulePause) Reset() {
+	*x = ModulePause{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ModulePause) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ModulePause) ProtoMessage() {}
+
+func (x *ModulePause) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ModulePause.ProtoReflect.Descriptor instead.
+func (*ModulePause) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *ModulePause) GetModuleName() string {
+	if x != nil {
+		return x.ModuleName
+	}
+	return ""
+}
+
+func (x *ModulePause) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *ModulePause) GetPausedAtBlock() uint64 {
+	if x != nil {
+		return x.PausedAtBlock
+	}
+	return 0
+}
+
+func (x *ModulePause) GetPausedBy() string {
+	if x != nil {
+		return x.PausedBy
+	}
+	return ""
+}
+
+func (x *ModulePause) GetAutoUnpauseAtBlock() uint64 {
+	if x != nil {
+		return x.AutoUnpauseAtBlock
+	}
+	return 0
+}
+
+func (x *ModulePause) GetIncidentId() string {
+	if x != nil {
+		return x.IncidentId
+	}
+	return ""
+}
+
 var File_zerone_knowledge_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
@@ -8494,7 +8583,16 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	" \x03(\v2 .zerone.knowledge.v1.RemediationR\fremediations\x12)\n" +
 	"\x10affected_modules\x18\v \x03(\tR\x0faffectedModules\x12&\n" +
 	"\x0fpost_mortem_uri\x18\f \x01(\tR\rpostMortemUri\x12(\n" +
-	"\x10sla_target_block\x18\r \x01(\x04R\x0eslaTargetBlock*\xe2\x02\n" +
+	"\x10sla_target_block\x18\r \x01(\x04R\x0eslaTargetBlock\"\xdf\x01\n" +
+	"\vModulePause\x12\x1f\n" +
+	"\vmodule_name\x18\x01 \x01(\tR\n" +
+	"moduleName\x12\x16\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12&\n" +
+	"\x0fpaused_at_block\x18\x03 \x01(\x04R\rpausedAtBlock\x12\x1b\n" +
+	"\tpaused_by\x18\x04 \x01(\tR\bpausedBy\x121\n" +
+	"\x15auto_unpause_at_block\x18\x05 \x01(\x04R\x12autoUnpauseAtBlock\x12\x1f\n" +
+	"\vincident_id\x18\x06 \x01(\tR\n" +
+	"incidentId*\xe2\x02\n" +
 	"\n" +
 	"FactStatus\x12\x1b\n" +
 	"\x17FACT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -8690,7 +8788,7 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 21)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 50)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),                     // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),                    // 1: zerone.knowledge.v1.ClaimStatus
@@ -8761,15 +8859,16 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(*RouteBCapabilities)(nil),          // 66: zerone.knowledge.v1.RouteBCapabilities
 	(*Remediation)(nil),                 // 67: zerone.knowledge.v1.Remediation
 	(*IncidentRecord)(nil),              // 68: zerone.knowledge.v1.IncidentRecord
-	nil,                                 // 69: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
-	nil,                                 // 70: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	(*ModulePause)(nil),                 // 69: zerone.knowledge.v1.ModulePause
+	nil,                                 // 70: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	nil,                                 // 71: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 1: zerone.knowledge.v1.FactRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
 	5,  // 2: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 3: zerone.knowledge.v1.ClaimRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
-	69, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	70, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
 	0,  // 5: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
 	4,  // 6: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
 	21, // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
@@ -8777,7 +8876,7 @@ var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	25, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
 	10, // 10: zerone.knowledge.v1.Augmentation.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
 	10, // 11: zerone.knowledge.v1.Augmentation.verdict_votes:type_name -> zerone.knowledge.v1.AugmentationVerdict
-	70, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	71, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 	1,  // 13: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
 	4,  // 14: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
 	22, // 15: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
@@ -8843,7 +8942,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
 			NumEnums:      21,
-			NumMessages:   50,
+			NumMessages:   51,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

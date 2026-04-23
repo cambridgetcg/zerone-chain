@@ -376,6 +376,14 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/incidents/open";
   }
 
+  // ─── Route B Wave 12: circuit breakers ───────────────────────────────
+  // PausedModules returns every module currently in paused state. The
+  // operator dashboard query; any handler can self-check via keeper's
+  // IsModulePaused helper.
+  rpc PausedModules(QueryPausedModulesRequest) returns (QueryPausedModulesResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/resilience/paused_modules";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -1486,4 +1494,12 @@ message QueryOpenIncidentsRequest {
 message QueryOpenIncidentsResponse {
   repeated IncidentRecord incidents = 1;
   uint64 snapshot_block_height      = 2;
+}
+
+// ─── Route B Wave 12: resilience queries ─────────────────────────────────
+
+message QueryPausedModulesRequest {}
+message QueryPausedModulesResponse {
+  repeated ModulePause paused = 1;
+  uint64 snapshot_block_height = 2;
 }

@@ -20,6 +20,11 @@ import (
 // all five included-ID sets, and stamps every version pin. Merkle root
 // is NOT yet locked — only Finalize commits the root.
 func (m *msgServer) CreateTrainingManifest(ctx context.Context, msg *types.MsgCreateTrainingManifest) (*types.MsgCreateTrainingManifestResponse, error) {
+	// Wave 12: circuit breaker. When knowledge is paused, write-path
+	// handlers reject immediately. Read-path queries remain available.
+	if err := m.keeper.RequireNotPaused(ctx, types.ModuleName); err != nil {
+		return nil, err
+	}
 	if msg == nil || msg.Id == "" {
 		return nil, fmt.Errorf("manifest id required")
 	}

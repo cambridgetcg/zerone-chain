@@ -172,6 +172,14 @@ service Msg {
   // CloseIncident permanently archives an incident after the monitoring
   // window and post-mortem publication.
   rpc CloseIncident(MsgCloseIncident) returns (MsgCloseIncidentResponse);
+
+  // ─── Route B Wave 12: module circuit breakers ──────────────────────
+  // PauseModule marks a module's write-path as gated. All handlers across
+  // that module check IsModulePaused before proceeding; writes reject
+  // while the pause is active. Contains damage while a fix is deployed.
+  rpc PauseModule(MsgPauseModule) returns (MsgPauseModuleResponse);
+  // UnpauseModule lifts the gate; writes resume.
+  rpc UnpauseModule(MsgUnpauseModule) returns (MsgUnpauseModuleResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -766,3 +774,26 @@ message MsgCloseIncident {
   string incident_id     = 2;
 }
 message MsgCloseIncidentResponse {}
+
+// ─── Route B Wave 12: module circuit breakers ────────────────────────────
+message MsgPauseModule {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority             = 1;
+  string module_name           = 2;
+  string reason                = 3;
+  uint64 auto_unpause_at_block = 4;  // 0 = no auto-unpause
+  string incident_id           = 5;  // optional incident binding
+}
+message MsgPauseModuleResponse {
+  uint64 paused_at_block = 1;
+}
+
+message MsgUnpauseModule {
+  option (cosmos.msg.v1.signer) = "authority";
+
+  string authority   = 1;
+  string module_name = 2;
+  string note        = 3;
+}
+message MsgUnpauseModuleResponse {}

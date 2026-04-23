@@ -58,6 +58,9 @@ func RegisterCodec(cdc *codec.LegacyAmino) {
 	cdc.RegisterConcrete(&MsgRecordRemediation{}, "zerone_knowledge/RecordRemediation", nil)
 	cdc.RegisterConcrete(&MsgResolveIncident{}, "zerone_knowledge/ResolveIncident", nil)
 	cdc.RegisterConcrete(&MsgCloseIncident{}, "zerone_knowledge/CloseIncident", nil)
+	// Route B Wave 12
+	cdc.RegisterConcrete(&MsgPauseModule{}, "zerone_knowledge/PauseModule", nil)
+	cdc.RegisterConcrete(&MsgUnpauseModule{}, "zerone_knowledge/UnpauseModule", nil)
 }
 
 // RegisterInterfaces registers the knowledge module's interface implementations.
@@ -114,6 +117,9 @@ func RegisterInterfaces(registry cdctypes.InterfaceRegistry) {
 		&MsgRecordRemediation{},
 		&MsgResolveIncident{},
 		&MsgCloseIncident{},
+		// Route B Wave 12
+		&MsgPauseModule{},
+		&MsgUnpauseModule{},
 	)
 }
 

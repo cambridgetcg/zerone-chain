@@ -64,6 +64,8 @@ const (
 	Msg_RecordRemediation_FullMethodName             = "/zerone.knowledge.v1.Msg/RecordRemediation"
 	Msg_ResolveIncident_FullMethodName               = "/zerone.knowledge.v1.Msg/ResolveIncident"
 	Msg_CloseIncident_FullMethodName                 = "/zerone.knowledge.v1.Msg/CloseIncident"
+	Msg_PauseModule_FullMethodName                   = "/zerone.knowledge.v1.Msg/PauseModule"
+	Msg_UnpauseModule_FullMethodName                 = "/zerone.knowledge.v1.Msg/UnpauseModule"
 )
 
 // MsgClient is the client API for Msg service.
@@ -187,6 +189,13 @@ type MsgClient interface {
 	// CloseIncident permanently archives an incident after the monitoring
 	// window and post-mortem publication.
 	CloseIncident(ctx context.Context, in *MsgCloseIncident, opts ...grpc.CallOption) (*MsgCloseIncidentResponse, error)
+	// ─── Route B Wave 12: module circuit breakers ──────────────────────
+	// PauseModule marks a module's write-path as gated. All handlers across
+	// that module check IsModulePaused before proceeding; writes reject
+	// while the pause is active. Contains damage while a fix is deployed.
+	PauseModule(ctx context.Context, in *MsgPauseModule, opts ...grpc.CallOption) (*MsgPauseModuleResponse, error)
+	// UnpauseModule lifts the gate; writes resume.
+	UnpauseModule(ctx context.Context, in *MsgUnpauseModule, opts ...grpc.CallOption) (*MsgUnpauseModuleResponse, error)
 }
 
 type msgClient struct {
@@ -647,6 +656,26 @@ func (c *msgClient) CloseIncident(ctx context.Context, in *MsgCloseIncident, opt
 	return out, nil
 }
 
+func (c *msgClient) PauseModule(ctx context.Context, in *MsgPauseModule, opts ...grpc.CallOption) (*MsgPauseModuleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgPauseModuleResponse)
+	err := c.cc.Invoke(ctx, Msg_PauseModule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *msgClient) UnpauseModule(ctx context.Context, in *MsgUnpauseModule, opts ...grpc.CallOption) (*MsgUnpauseModuleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgUnpauseModuleResponse)
+	err := c.cc.Invoke(ctx, Msg_UnpauseModule_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -768,6 +797,13 @@ type MsgServer interface {
 	// CloseIncident permanently archives an incident after the monitoring
 	// window and post-mortem publication.
 	CloseIncident(context.Context, *MsgCloseIncident) (*MsgCloseIncidentResponse, error)
+	// ─── Route B Wave 12: module circuit breakers ──────────────────────
+	// PauseModule marks a module's write-path as gated. All handlers across
+	// that module check IsModulePaused before proceeding; writes reject
+	// while the pause is active. Contains damage while a fix is deployed.
+	PauseModule(context.Context, *MsgPauseModule) (*MsgPauseModuleResponse, error)
+	// UnpauseModule lifts the gate; writes resume.
+	UnpauseModule(context.Context, *MsgUnpauseModule) (*MsgUnpauseModuleResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -912,6 +948,12 @@ func (UnimplementedMsgServer) ResolveIncident(context.Context, *MsgResolveIncide
 }
 func (UnimplementedMsgServer) CloseIncident(context.Context, *MsgCloseIncident) (*MsgCloseIncidentResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CloseIncident not implemented")
+}
+func (UnimplementedMsgServer) PauseModule(context.Context, *MsgPauseModule) (*MsgPauseModuleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PauseModule not implemented")
+}
+func (UnimplementedMsgServer) UnpauseModule(context.Context, *MsgUnpauseModule) (*MsgUnpauseModuleResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UnpauseModule not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -1744,6 +1786,42 @@ func _Msg_CloseIncident_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_PauseModule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgPauseModule)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).PauseModule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_PauseModule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).PauseModule(ctx, req.(*MsgPauseModule))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Msg_UnpauseModule_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgUnpauseModule)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).UnpauseModule(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_UnpauseModule_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).UnpauseModule(ctx, req.(*MsgUnpauseModule))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1930,6 +2008,14 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CloseIncident",
 			Handler:    _Msg_CloseIncident_Handler,
+		},
+		{
+			MethodName: "PauseModule",
+			Handler:    _Msg_PauseModule_Handler,
+		},
+		{
+			MethodName: "UnpauseModule",
+			Handler:    _Msg_UnpauseModule_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

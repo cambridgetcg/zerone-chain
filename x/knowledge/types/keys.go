@@ -187,6 +187,9 @@ var (
 	IncidentBySeverityKeyPrefix     = []byte{0x74} // 0x74 | be8(severity) | incident_id → 1
 	IncidentByStatusKeyPrefix       = []byte{0x75} // 0x75 | be8(status) | incident_id → 1
 	OpenIncidentKeyPrefix           = []byte{0x76} // 0x76 | incident_id → 1 (open-only set)
+
+	// ─── Route B Wave 12: circuit breakers ───────────────────────────
+	ModulePauseKeyPrefix            = []byte{0x77} // 0x77 | module_name → ModulePause
 )
 
 // MethodologyKey returns the store key for a methodology by ID.
@@ -694,4 +697,12 @@ func IncidentByStatusKey(status byte, incidentID string) []byte {
 // OpenIncidentKey returns the set key marking an incident as live (OPEN or MITIGATING).
 func OpenIncidentKey(id string) []byte {
 	return append(append([]byte{}, OpenIncidentKeyPrefix...), []byte(id)...)
+}
+
+// ─── Route B Wave 12: module circuit breaker key ─────────────────────────
+
+// ModulePauseKey returns the store key for a module's pause marker.
+// Absence of the record == module is not paused.
+func ModulePauseKey(moduleName string) []byte {
+	return append(append([]byte{}, ModulePauseKeyPrefix...), []byte(moduleName)...)
 }
