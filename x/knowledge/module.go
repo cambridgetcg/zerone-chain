@@ -108,6 +108,12 @@ func (am AppModule) RegisterServices(cfg module.Configurator) {
 	if err := cfg.RegisterMigration(types.ModuleName, 2, migrator.Migrate2to3); err != nil {
 		panic(fmt.Sprintf("failed to register %s migration v2→v3: %v", types.ModuleName, err))
 	}
+	// Wave 10: v3→v4 reference migration. Backfills TraceSchema if missing;
+	// writes a verifiable "migration_v4_complete" marker. See
+	// docs/UPGRADE_PROTOCOL.md for the canonical pattern.
+	if err := cfg.RegisterMigration(types.ModuleName, 3, migrator.Migrate3to4); err != nil {
+		panic(fmt.Sprintf("failed to register %s migration v3→v4: %v", types.ModuleName, err))
+	}
 }
 
 // RegisterInvariants is a no-op for now; invariants are added in R2-2.
@@ -134,4 +140,6 @@ func (am AppModule) BeginBlock(ctx context.Context) error {
 }
 
 // ConsensusVersion returns the module's consensus version.
-func (AppModule) ConsensusVersion() uint64 { return 3 }
+// Lineage: v1 (initial) → v2 (marker) → v3 (R29 param backfill) → v4 (Wave 10:
+// TraceSchema backfill + marker). Bump this when you add a new migration.
+func (AppModule) ConsensusVersion() uint64 { return 4 }

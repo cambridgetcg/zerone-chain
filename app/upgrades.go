@@ -7,14 +7,12 @@ import (
 	storetypes "cosmossdk.io/store/types"
 	upgradetypes "cosmossdk.io/x/upgrade/types"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/module"
-
-	zeroneknowledgetypes "github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
 const UpgradeNameTestnet = "v1.0.0-testnet"
 const UpgradeNameTestnetV2 = "v1.0.1-testnet"
+const UpgradeNameTestnetV3 = "v1.0.2-testnet"
 
 // RegisterUpgradeHandlers registers upgrade handlers for each named software upgrade.
 // When a governance upgrade proposal passes, the corresponding handler here runs
@@ -45,10 +43,36 @@ func (app *ZeroneApp) RegisterUpgradeHandlers() {
 				return nil, err
 			}
 
-			// Write a handler-level marker to prove the upgrade handler executed.
-			sdkCtx := sdk.UnwrapSDKContext(ctx)
-			store := sdkCtx.KVStore(app.keys[zeroneknowledgetypes.StoreKey])
-			store.Set([]byte("upgrade_marker_v1.0.1"), []byte("migrated"))
+			// Handler-level marker (via the knowledge keeper's marker API)
+			// to prove this named upgrade handler executed. Tests read it
+			// via ReadMigrationMarker.
+			if err := app.KnowledgeKeeper.WriteMigrationMarker(ctx, "upgrade_marker_v1.0.1", "migrated"); err != nil {
+				return nil, err
+			}
+
+			return toVM, nil
+		},
+	)
+
+	// v1.0.2-testnet — Wave 10 reference upgrade exercising the v3→v4
+	// knowledge migration (TraceSchema backfill + v4 marker). Also used by
+	// the end-to-end upgrade test to verify the full pipeline works.
+	app.UpgradeKeeper.SetUpgradeHandler(
+		UpgradeNameTestnetV3,
+		func(ctx context.Context, plan upgradetypes.Plan, fromVM module.VersionMap) (module.VersionMap, error) {
+			app.Logger().Info(fmt.Sprintf("applying upgrade %q at height %d", plan.Name, plan.Height))
+
+			toVM, err := app.ModuleManager.RunMigrations(ctx, app.configurator, fromVM)
+			if err != nil {
+				return nil, err
+			}
+
+			// Handler-level marker — tests assert both the per-module v4
+			// marker (written by the migrator) AND this handler-level marker
+			// were recorded, proving both layers ran.
+			if err := app.KnowledgeKeeper.WriteMigrationMarker(ctx, "upgrade_marker_v1.0.2", "migrated"); err != nil {
+				return nil, err
+			}
 
 			return toVM, nil
 		},
@@ -75,6 +99,12 @@ func (app *ZeroneApp) RegisterStoreUpgrades() {
 
 	case UpgradeNameTestnetV2:
 		// No new store keys for v1.0.1-testnet — migration-only upgrade.
+		storeUpgrades := storetypes.StoreUpgrades{}
+		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
+
+	case UpgradeNameTestnetV3:
+		// v1.0.2-testnet — Wave 10 reference upgrade. No new store keys;
+		// knowledge v3→v4 migration only touches existing prefixes.
 		storeUpgrades := storetypes.StoreUpgrades{}
 		app.SetStoreLoader(upgradetypes.UpgradeStoreLoader(upgradeInfo.Height, &storeUpgrades))
 	}
