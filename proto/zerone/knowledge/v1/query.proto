@@ -393,6 +393,12 @@ service Query {
     option (google.api.http).get = "/zerone/knowledge/v1/incidents/sla_breached";
   }
 
+  // PrivilegedActions — the audit log of every authority-gated call.
+  // The chain-wide "what has authority done recently?" query.
+  rpc PrivilegedActions(QueryPrivilegedActionsRequest) returns (QueryPrivilegedActionsResponse) {
+    option (google.api.http).get = "/zerone/knowledge/v1/resilience/privileged_actions";
+  }
+
   // ─── Novelty detection ─────────────────────────────────────────────────
 
   // CommonKnowledge queries the common knowledge registry.
@@ -1520,4 +1526,19 @@ message QuerySlaBreachedIncidentsResponse {
   repeated IncidentRecord incidents = 1;
   uint64 snapshot_block_height      = 2;
   uint64 current_block_height       = 3;
+}
+
+// ─── Wave 14: privileged-action audit log ────────────────────────────────
+
+message QueryPrivilegedActionsRequest {
+  PrivilegedActionType type = 1;  // UNSPECIFIED = all
+  uint32 limit              = 2;
+  uint32 offset             = 3;
+  // If non-zero, return only actions invoked at or after this block.
+  uint64 since_block        = 4;
+}
+message QueryPrivilegedActionsResponse {
+  repeated PrivilegedAction actions = 1;
+  uint32 total                      = 2;
+  uint64 snapshot_block_height      = 3;
 }

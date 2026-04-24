@@ -234,8 +234,15 @@ type Params struct {
 	// Sponsor-veto forfeiture: if a sponsor vetoes a passing verdict, they
 	// forfeit this fraction of the variant payout to the research fund.
 	SponsorVetoForfeitBps uint64 `protobuf:"varint,150,opt,name=sponsor_veto_forfeit_bps,json=sponsorVetoForfeitBps,proto3" json:"sponsor_veto_forfeit_bps,omitempty"` // default: 1,000,000 (100% — full forfeiture)
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// ─── Wave 14: internal-hack resilience ───────────────────────────────
+	// Upper bound on any single module pause window. Even if authority
+	// sets auto_unpause_at_block=0 (intending indefinite), the handler
+	// caps it to this many blocks from pause-time. Forces compromised
+	// authority's DoS to self-resolve within a governance-configured
+	// window rather than persisting indefinitely.
+	MaxPauseDurationBlocks uint64 `protobuf:"varint,151,opt,name=max_pause_duration_blocks,json=maxPauseDurationBlocks,proto3" json:"max_pause_duration_blocks,omitempty"` // default: 28,800 (~40h at 5s blocks)
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1318,6 +1325,13 @@ func (x *Params) GetSponsorVetoForfeitBps() uint64 {
 	return 0
 }
 
+func (x *Params) GetMaxPauseDurationBlocks() uint64 {
+	if x != nil {
+		return x.MaxPauseDurationBlocks
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                     protoimpl.MessageState      `protogen:"open.v1"`
@@ -1555,7 +1569,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xc8J\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\x84K\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1707,7 +1721,8 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x19training_fund_base_reward\x18\x93\x01 \x01(\tR\x16trainingFundBaseReward\x12?\n" +
 	"\x1bcontribution_challenge_bond\x18\x94\x01 \x01(\tR\x19contributionChallengeBond\x12_\n" +
 	",contribution_challenge_reward_multiplier_bps\x18\x95\x01 \x01(\x04R(contributionChallengeRewardMultiplierBps\x128\n" +
-	"\x18sponsor_veto_forfeit_bps\x18\x96\x01 \x01(\x04R\x15sponsorVetoForfeitBps\x1aN\n" +
+	"\x18sponsor_veto_forfeit_bps\x18\x96\x01 \x01(\x04R\x15sponsorVetoForfeitBps\x12:\n" +
+	"\x19max_pause_duration_blocks\x18\x97\x01 \x01(\x04R\x16maxPauseDurationBlocks\x1aN\n" +
 	" MethodologyNormalizationBpsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x04R\x05value:\x028\x01\"\xe5\x0e\n" +

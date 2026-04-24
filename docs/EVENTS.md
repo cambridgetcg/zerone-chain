@@ -1701,6 +1701,14 @@ An authority-gated surgical correction recomputed and rewrote a finalized manife
 - `was_corrupted` -- bool: `prior_root != recomputed_root`. `false` means no-op.
 - `authority` -- governance address that applied the correction
 
+### zerone.knowledge.privileged_action_recorded
+An authority-gated handler wrote an entry to the privileged-action audit log (Route B Wave 14). Fired in parallel with the action's own domain event. External monitors poll the `PrivilegedActions` query to detect anomalous bursts or unexpected invokers.
+- `seq` -- monotonic sequence number
+- `type` -- one of MODULE_PAUSE / MODULE_UNPAUSE / MANIFEST_CORRECT / INCIDENT_OPEN / INCIDENT_RESOLVE / INCIDENT_CLOSE / SCHEMA_AMEND_TOKENIZER / SCHEMA_AMEND_TRACE
+- `invoker` -- authority address that issued the call
+- `target` -- module_name, manifest_id, incident_id, or schema@version
+- `incident_id` -- audit binding when applicable (empty otherwise)
+
 
 ## liquiditypool
 

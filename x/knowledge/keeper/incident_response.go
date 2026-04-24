@@ -202,6 +202,9 @@ func (m *msgServer) OpenIncident(ctx context.Context, msg *types.MsgOpenIncident
 		return nil, err
 	}
 
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_INCIDENT_OPEN,
+		msg.Authority, rec.Id, rec.Id, msg.Title)
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.incident_opened",
 		sdk.NewAttribute("incident_id", rec.Id),
@@ -288,6 +291,9 @@ func (m *msgServer) ResolveIncident(ctx context.Context, msg *types.MsgResolveIn
 		return nil, err
 	}
 
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_INCIDENT_RESOLVE,
+		msg.Authority, rec.Id, rec.Id, msg.PostMortemUri)
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.incident_resolved",
 		sdk.NewAttribute("incident_id", rec.Id),
@@ -321,6 +327,9 @@ func (m *msgServer) CloseIncident(ctx context.Context, msg *types.MsgCloseIncide
 		return nil, err
 	}
 
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_INCIDENT_CLOSE,
+		msg.Authority, rec.Id, rec.Id, "")
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.incident_closed",
 		sdk.NewAttribute("incident_id", rec.Id),

@@ -1105,6 +1105,9 @@ func (m *msgServer) AmendTraceSchema(ctx context.Context, msg *types.MsgAmendTra
 	if err := m.keeper.SetTraceSchema(ctx, newSchema); err != nil {
 		return nil, err
 	}
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TRACE,
+		msg.Authority, fmt.Sprintf("TraceSchema@v%d", newSchema.Version), "", "")
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.trace_schema_amended",
 		sdk.NewAttribute("new_version", fmt.Sprintf("%d", newSchema.Version)),

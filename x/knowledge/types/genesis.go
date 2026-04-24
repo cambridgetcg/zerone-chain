@@ -231,6 +231,9 @@ func DefaultParams() Params {
 		ContributionChallengeBond:              "5000000",     // 5 ZRN
 		ContributionChallengeRewardMultiplierBps: 2_000_000, // 2×
 		SponsorVetoForfeitBps:                  1_000_000, // 100% forfeit on veto
+
+		// ─── Wave 14: internal-hack resilience ────────────────────────
+		MaxPauseDurationBlocks: 28_800, // ~40h at 5s blocks — ample hotfix window; caps DoS impact.
 	}
 }
 

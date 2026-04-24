@@ -1453,3 +1453,33 @@ message ModulePause {
   // Breaks when closed without the incident being resolved → audit signal.
   string incident_id           = 6;
 }
+
+// ─── Wave 14: privileged-action audit log ────────────────────────────────
+//
+// Every authority-gated action writes a PrivilegedAction record. The log
+// is queryable, bounded (ring-buffered via governance-capped count), and
+// structurally consistent across every privileged call site. The log is
+// the answer to "what has authority done recently?" — detection becomes
+// a simple query rather than a trawl through block history.
+
+enum PrivilegedActionType {
+  PRIVILEGED_ACTION_TYPE_UNSPECIFIED       = 0;
+  PRIVILEGED_ACTION_TYPE_MODULE_PAUSE      = 1;
+  PRIVILEGED_ACTION_TYPE_MODULE_UNPAUSE    = 2;
+  PRIVILEGED_ACTION_TYPE_MANIFEST_CORRECT  = 3;
+  PRIVILEGED_ACTION_TYPE_INCIDENT_OPEN     = 4;
+  PRIVILEGED_ACTION_TYPE_INCIDENT_RESOLVE  = 5;
+  PRIVILEGED_ACTION_TYPE_INCIDENT_CLOSE    = 6;
+  PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TOKENIZER = 7;
+  PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TRACE     = 8;
+}
+
+message PrivilegedAction {
+  uint64 seq             = 1;    // monotonic sequence number
+  PrivilegedActionType type = 2;
+  string invoker         = 3;    // authority address
+  uint64 invoked_at_block = 4;
+  string target          = 5;    // module_name, manifest_id, incident_id, schema_name…
+  string incident_id     = 6;    // if the action cites an open incident
+  string note            = 7;    // free-form; mirrors the handler's reason/note field
+}

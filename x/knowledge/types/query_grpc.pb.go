@@ -90,6 +90,7 @@ const (
 	Query_OpenIncidents_FullMethodName                = "/zerone.knowledge.v1.Query/OpenIncidents"
 	Query_PausedModules_FullMethodName                = "/zerone.knowledge.v1.Query/PausedModules"
 	Query_SlaBreachedIncidents_FullMethodName         = "/zerone.knowledge.v1.Query/SlaBreachedIncidents"
+	Query_PrivilegedActions_FullMethodName            = "/zerone.knowledge.v1.Query/PrivilegedActions"
 	Query_CommonKnowledge_FullMethodName              = "/zerone.knowledge.v1.Query/CommonKnowledge"
 	Query_CheckNovelty_FullMethodName                 = "/zerone.knowledge.v1.Query/CheckNovelty"
 	Query_ActiveBounties_FullMethodName               = "/zerone.knowledge.v1.Query/ActiveBounties"
@@ -311,6 +312,9 @@ type QueryClient interface {
 	// operator's paging-worthy query — wire it to alerting so the response
 	// team is notified when a tier-appropriate recovery window is missed.
 	SlaBreachedIncidents(ctx context.Context, in *QuerySlaBreachedIncidentsRequest, opts ...grpc.CallOption) (*QuerySlaBreachedIncidentsResponse, error)
+	// PrivilegedActions — the audit log of every authority-gated call.
+	// The chain-wide "what has authority done recently?" query.
+	PrivilegedActions(ctx context.Context, in *QueryPrivilegedActionsRequest, opts ...grpc.CallOption) (*QueryPrivilegedActionsResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -1060,6 +1064,16 @@ func (c *queryClient) SlaBreachedIncidents(ctx context.Context, in *QuerySlaBrea
 	return out, nil
 }
 
+func (c *queryClient) PrivilegedActions(ctx context.Context, in *QueryPrivilegedActionsRequest, opts ...grpc.CallOption) (*QueryPrivilegedActionsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryPrivilegedActionsResponse)
+	err := c.cc.Invoke(ctx, Query_PrivilegedActions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *queryClient) CommonKnowledge(ctx context.Context, in *QueryCommonKnowledgeRequest, opts ...grpc.CallOption) (*QueryCommonKnowledgeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(QueryCommonKnowledgeResponse)
@@ -1414,6 +1428,9 @@ type QueryServer interface {
 	// operator's paging-worthy query — wire it to alerting so the response
 	// team is notified when a tier-appropriate recovery window is missed.
 	SlaBreachedIncidents(context.Context, *QuerySlaBreachedIncidentsRequest) (*QuerySlaBreachedIncidentsResponse, error)
+	// PrivilegedActions — the audit log of every authority-gated call.
+	// The chain-wide "what has authority done recently?" query.
+	PrivilegedActions(context.Context, *QueryPrivilegedActionsRequest) (*QueryPrivilegedActionsResponse, error)
 	// CommonKnowledge queries the common knowledge registry.
 	CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error)
 	// CheckNovelty previews the novelty score a claim would receive before submission.
@@ -1665,6 +1682,9 @@ func (UnimplementedQueryServer) PausedModules(context.Context, *QueryPausedModul
 }
 func (UnimplementedQueryServer) SlaBreachedIncidents(context.Context, *QuerySlaBreachedIncidentsRequest) (*QuerySlaBreachedIncidentsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SlaBreachedIncidents not implemented")
+}
+func (UnimplementedQueryServer) PrivilegedActions(context.Context, *QueryPrivilegedActionsRequest) (*QueryPrivilegedActionsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method PrivilegedActions not implemented")
 }
 func (UnimplementedQueryServer) CommonKnowledge(context.Context, *QueryCommonKnowledgeRequest) (*QueryCommonKnowledgeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CommonKnowledge not implemented")
@@ -3010,6 +3030,24 @@ func _Query_SlaBreachedIncidents_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_PrivilegedActions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryPrivilegedActionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).PrivilegedActions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_PrivilegedActions_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).PrivilegedActions(ctx, req.(*QueryPrivilegedActionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Query_CommonKnowledge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(QueryCommonKnowledgeRequest)
 	if err := dec(in); err != nil {
@@ -3570,6 +3608,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SlaBreachedIncidents",
 			Handler:    _Query_SlaBreachedIncidents_Handler,
+		},
+		{
+			MethodName: "PrivilegedActions",
+			Handler:    _Query_PrivilegedActions_Handler,
 		},
 		{
 			MethodName: "CommonKnowledge",

@@ -248,6 +248,14 @@ message Params {
   // Sponsor-veto forfeiture: if a sponsor vetoes a passing verdict, they
   // forfeit this fraction of the variant payout to the research fund.
   uint64 sponsor_veto_forfeit_bps = 150; // default: 1,000,000 (100% — full forfeiture)
+
+  // ─── Wave 14: internal-hack resilience ───────────────────────────────
+  // Upper bound on any single module pause window. Even if authority
+  // sets auto_unpause_at_block=0 (intending indefinite), the handler
+  // caps it to this many blocks from pause-time. Forces compromised
+  // authority's DoS to self-resolve within a governance-configured
+  // window rather than persisting indefinitely.
+  uint64 max_pause_duration_blocks = 151; // default: 28,800 (~40h at 5s blocks)
 }
 
 // GenesisState is the genesis state of the knowledge module.

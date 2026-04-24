@@ -142,6 +142,13 @@ func (k Keeper) RequireNotPaused(ctx context.Context, moduleName string) error {
 // ─── Msg handlers ────────────────────────────────────────────────────────
 
 // PauseModule opens the circuit breaker for a named module. Authority-gated.
+//
+// Wave 14 hardening: every pause is capped at MaxPauseDurationBlocks.
+// A caller-supplied auto_unpause_at_block=0 (intending indefinite) is
+// rewritten to now+cap; a caller-supplied window beyond the cap is
+// truncated. This bounds the damage any compromised authority can do
+// via the circuit-breaker mechanism. Governance can amend
+// MaxPauseDurationBlocks via MsgUpdateParams.
 func (m *msgServer) PauseModule(ctx context.Context, msg *types.MsgPauseModule) (*types.MsgPauseModuleResponse, error) {
 	if msg == nil || msg.ModuleName == "" {
 		return nil, fmt.Errorf("module_name required")
@@ -152,17 +159,34 @@ func (m *msgServer) PauseModule(ctx context.Context, msg *types.MsgPauseModule) 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	height := uint64(sdkCtx.BlockHeight())
 
+	// Wave 14 cap: force every pause to self-expire within the governance
+	// window. Prevents indefinite-pause DoS by a compromised authority.
+	params, _ := m.keeper.GetParams(ctx)
+	maxCap := params.MaxPauseDurationBlocks
+	if maxCap == 0 {
+		maxCap = 28_800 // fallback when param unset (legacy genesis)
+	}
+	maxAllowed := height + maxCap
+	requestedAutoUnpause := msg.AutoUnpauseAtBlock
+	effectiveAutoUnpause := requestedAutoUnpause
+	if effectiveAutoUnpause == 0 || effectiveAutoUnpause > maxAllowed {
+		effectiveAutoUnpause = maxAllowed
+	}
+
 	p := &types.ModulePause{
 		ModuleName:         msg.ModuleName,
 		Reason:             msg.Reason,
 		PausedAtBlock:      height,
 		PausedBy:           msg.Authority,
-		AutoUnpauseAtBlock: msg.AutoUnpauseAtBlock,
+		AutoUnpauseAtBlock: effectiveAutoUnpause,
 		IncidentId:         msg.IncidentId,
 	}
 	if err := m.keeper.SetModulePause(ctx, p); err != nil {
 		return nil, err
 	}
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_MODULE_PAUSE,
+		msg.Authority, msg.ModuleName, msg.IncidentId, msg.Reason)
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.module_paused",
 		sdk.NewAttribute("module_name", p.ModuleName),
@@ -187,6 +211,9 @@ func (m *msgServer) UnpauseModule(ctx context.Context, msg *types.MsgUnpauseModu
 	if err := m.keeper.ClearModulePause(ctx, msg.ModuleName); err != nil {
 		return nil, err
 	}
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_MODULE_UNPAUSE,
+		msg.Authority, msg.ModuleName, "", msg.Note)
 	sdk.UnwrapSDKContext(ctx).EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.module_unpaused",
 		sdk.NewAttribute("module_name", msg.ModuleName),

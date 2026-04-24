@@ -34,6 +34,9 @@ func (m *msgServer) AmendTokenizerSpec(ctx context.Context, msg *types.MsgAmendT
 	if err := m.keeper.SetTokenizerSpec(ctx, newSpec); err != nil {
 		return nil, err
 	}
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TOKENIZER,
+		msg.Authority, fmt.Sprintf("TokenizerSpec@v%d", newSpec.Version), "", "")
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.tokenizer_spec_amended",
 		sdk.NewAttribute("new_version", fmt.Sprintf("%d", newSpec.Version)),

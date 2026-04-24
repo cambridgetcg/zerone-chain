@@ -190,6 +190,10 @@ var (
 
 	// ─── Route B Wave 12: circuit breakers ───────────────────────────
 	ModulePauseKeyPrefix            = []byte{0x77} // 0x77 | module_name → ModulePause
+
+	// ─── Wave 14: privileged-action audit log ────────────────────────
+	PrivilegedActionKeyPrefix       = []byte{0x78} // 0x78 | be64(seq) → PrivilegedAction
+	PrivilegedActionSeqKey          = []byte{0x79} // singleton: next-seq counter (uvarint)
 )
 
 // MethodologyKey returns the store key for a methodology by ID.
@@ -705,4 +709,15 @@ func OpenIncidentKey(id string) []byte {
 // Absence of the record == module is not paused.
 func ModulePauseKey(moduleName string) []byte {
 	return append(append([]byte{}, ModulePauseKeyPrefix...), []byte(moduleName)...)
+}
+
+// ─── Wave 14: privileged action audit log key ───────────────────────────
+
+// PrivilegedActionKey returns the store key for a PrivilegedAction by seq.
+func PrivilegedActionKey(seq uint64) []byte {
+	key := make([]byte, 0, 1+8)
+	key = append(key, PrivilegedActionKeyPrefix...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, seq)
+	return append(key, buf...)
 }

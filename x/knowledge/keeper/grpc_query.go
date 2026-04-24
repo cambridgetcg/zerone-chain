@@ -2485,3 +2485,45 @@ func (q *queryServer) SlaBreachedIncidents(ctx context.Context, _ *types.QuerySl
 		CurrentBlockHeight:  height,
 	}, nil
 }
+
+// ─── Wave 14: privileged-action audit-log query ──────────────────────────
+
+// PrivilegedActions returns the audit log of authority-gated calls. Filter
+// by type, optionally by since-block; pagination via limit/offset.
+func (q *queryServer) PrivilegedActions(ctx context.Context, req *types.QueryPrivilegedActionsRequest) (*types.QueryPrivilegedActionsResponse, error) {
+	if req == nil {
+		req = &types.QueryPrivilegedActionsRequest{}
+	}
+	limit := req.Limit
+	if limit == 0 || limit > 500 {
+		limit = 100
+	}
+	offset := req.Offset
+	var out []*types.PrivilegedAction
+	var total uint32
+	var seen uint32
+	q.keeper.IteratePrivilegedActions(ctx, func(r *types.PrivilegedAction) bool {
+		if req.Type != types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_UNSPECIFIED && r.Type != req.Type {
+			return false
+		}
+		if req.SinceBlock > 0 && r.InvokedAtBlock < req.SinceBlock {
+			return false
+		}
+		total++
+		if seen < offset {
+			seen++
+			return false
+		}
+		if uint32(len(out)) >= limit {
+			return false
+		}
+		out = append(out, r)
+		seen++
+		return false
+	})
+	return &types.QueryPrivilegedActionsResponse{
+		Actions:             out,
+		Total:               total,
+		SnapshotBlockHeight: uint64(sdk.UnwrapSDKContext(ctx).BlockHeight()),
+	}, nil
+}

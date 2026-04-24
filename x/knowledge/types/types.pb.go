@@ -1353,6 +1353,73 @@ func (RemediationType) EnumDescriptor() ([]byte, []int) {
 	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{20}
 }
 
+type PrivilegedActionType int32
+
+const (
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_UNSPECIFIED            PrivilegedActionType = 0
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_MODULE_PAUSE           PrivilegedActionType = 1
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_MODULE_UNPAUSE         PrivilegedActionType = 2
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_MANIFEST_CORRECT       PrivilegedActionType = 3
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_INCIDENT_OPEN          PrivilegedActionType = 4
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_INCIDENT_RESOLVE       PrivilegedActionType = 5
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_INCIDENT_CLOSE         PrivilegedActionType = 6
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TOKENIZER PrivilegedActionType = 7
+	PrivilegedActionType_PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TRACE     PrivilegedActionType = 8
+)
+
+// Enum value maps for PrivilegedActionType.
+var (
+	PrivilegedActionType_name = map[int32]string{
+		0: "PRIVILEGED_ACTION_TYPE_UNSPECIFIED",
+		1: "PRIVILEGED_ACTION_TYPE_MODULE_PAUSE",
+		2: "PRIVILEGED_ACTION_TYPE_MODULE_UNPAUSE",
+		3: "PRIVILEGED_ACTION_TYPE_MANIFEST_CORRECT",
+		4: "PRIVILEGED_ACTION_TYPE_INCIDENT_OPEN",
+		5: "PRIVILEGED_ACTION_TYPE_INCIDENT_RESOLVE",
+		6: "PRIVILEGED_ACTION_TYPE_INCIDENT_CLOSE",
+		7: "PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TOKENIZER",
+		8: "PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TRACE",
+	}
+	PrivilegedActionType_value = map[string]int32{
+		"PRIVILEGED_ACTION_TYPE_UNSPECIFIED":            0,
+		"PRIVILEGED_ACTION_TYPE_MODULE_PAUSE":           1,
+		"PRIVILEGED_ACTION_TYPE_MODULE_UNPAUSE":         2,
+		"PRIVILEGED_ACTION_TYPE_MANIFEST_CORRECT":       3,
+		"PRIVILEGED_ACTION_TYPE_INCIDENT_OPEN":          4,
+		"PRIVILEGED_ACTION_TYPE_INCIDENT_RESOLVE":       5,
+		"PRIVILEGED_ACTION_TYPE_INCIDENT_CLOSE":         6,
+		"PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TOKENIZER": 7,
+		"PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TRACE":     8,
+	}
+)
+
+func (x PrivilegedActionType) Enum() *PrivilegedActionType {
+	p := new(PrivilegedActionType)
+	*p = x
+	return p
+}
+
+func (x PrivilegedActionType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (PrivilegedActionType) Descriptor() protoreflect.EnumDescriptor {
+	return file_zerone_knowledge_v1_types_proto_enumTypes[21].Descriptor()
+}
+
+func (PrivilegedActionType) Type() protoreflect.EnumType {
+	return &file_zerone_knowledge_v1_types_proto_enumTypes[21]
+}
+
+func (x PrivilegedActionType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use PrivilegedActionType.Descriptor instead.
+func (PrivilegedActionType) EnumDescriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{21}
+}
+
 // FactRelation is a typed, directional edge in the knowledge graph.
 type FactRelation struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
@@ -7908,6 +7975,98 @@ func (x *ModulePause) GetIncidentId() string {
 	return ""
 }
 
+type PrivilegedAction struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Seq            uint64                 `protobuf:"varint,1,opt,name=seq,proto3" json:"seq,omitempty"` // monotonic sequence number
+	Type           PrivilegedActionType   `protobuf:"varint,2,opt,name=type,proto3,enum=zerone.knowledge.v1.PrivilegedActionType" json:"type,omitempty"`
+	Invoker        string                 `protobuf:"bytes,3,opt,name=invoker,proto3" json:"invoker,omitempty"` // authority address
+	InvokedAtBlock uint64                 `protobuf:"varint,4,opt,name=invoked_at_block,json=invokedAtBlock,proto3" json:"invoked_at_block,omitempty"`
+	Target         string                 `protobuf:"bytes,5,opt,name=target,proto3" json:"target,omitempty"`                           // module_name, manifest_id, incident_id, schema_name…
+	IncidentId     string                 `protobuf:"bytes,6,opt,name=incident_id,json=incidentId,proto3" json:"incident_id,omitempty"` // if the action cites an open incident
+	Note           string                 `protobuf:"bytes,7,opt,name=note,proto3" json:"note,omitempty"`                               // free-form; mirrors the handler's reason/note field
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *PrivilegedAction) Reset() {
+	*x = PrivilegedAction{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PrivilegedAction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PrivilegedAction) ProtoMessage() {}
+
+func (x *PrivilegedAction) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PrivilegedAction.ProtoReflect.Descriptor instead.
+func (*PrivilegedAction) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *PrivilegedAction) GetSeq() uint64 {
+	if x != nil {
+		return x.Seq
+	}
+	return 0
+}
+
+func (x *PrivilegedAction) GetType() PrivilegedActionType {
+	if x != nil {
+		return x.Type
+	}
+	return PrivilegedActionType_PRIVILEGED_ACTION_TYPE_UNSPECIFIED
+}
+
+func (x *PrivilegedAction) GetInvoker() string {
+	if x != nil {
+		return x.Invoker
+	}
+	return ""
+}
+
+func (x *PrivilegedAction) GetInvokedAtBlock() uint64 {
+	if x != nil {
+		return x.InvokedAtBlock
+	}
+	return 0
+}
+
+func (x *PrivilegedAction) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *PrivilegedAction) GetIncidentId() string {
+	if x != nil {
+		return x.IncidentId
+	}
+	return ""
+}
+
+func (x *PrivilegedAction) GetNote() string {
+	if x != nil {
+		return x.Note
+	}
+	return ""
+}
+
 var File_zerone_knowledge_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
@@ -8592,7 +8751,16 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\tpaused_by\x18\x04 \x01(\tR\bpausedBy\x121\n" +
 	"\x15auto_unpause_at_block\x18\x05 \x01(\x04R\x12autoUnpauseAtBlock\x12\x1f\n" +
 	"\vincident_id\x18\x06 \x01(\tR\n" +
-	"incidentId*\xe2\x02\n" +
+	"incidentId\"\xf4\x01\n" +
+	"\x10PrivilegedAction\x12\x10\n" +
+	"\x03seq\x18\x01 \x01(\x04R\x03seq\x12=\n" +
+	"\x04type\x18\x02 \x01(\x0e2).zerone.knowledge.v1.PrivilegedActionTypeR\x04type\x12\x18\n" +
+	"\ainvoker\x18\x03 \x01(\tR\ainvoker\x12(\n" +
+	"\x10invoked_at_block\x18\x04 \x01(\x04R\x0einvokedAtBlock\x12\x16\n" +
+	"\x06target\x18\x05 \x01(\tR\x06target\x12\x1f\n" +
+	"\vincident_id\x18\x06 \x01(\tR\n" +
+	"incidentId\x12\x12\n" +
+	"\x04note\x18\a \x01(\tR\x04note*\xe2\x02\n" +
 	"\n" +
 	"FactStatus\x12\x1b\n" +
 	"\x17FACT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -8773,7 +8941,17 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"!REMEDIATION_TYPE_EMERGENCY_RESUME\x10\x04\x12%\n" +
 	"!REMEDIATION_TYPE_STATE_CORRECTION\x10\x05\x12%\n" +
 	"!REMEDIATION_TYPE_SCHEMA_AMENDMENT\x10\x06\x12\"\n" +
-	"\x1eREMEDIATION_TYPE_DOCUMENTATION\x10\aB2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
+	"\x1eREMEDIATION_TYPE_DOCUMENTATION\x10\a*\xa3\x03\n" +
+	"\x14PrivilegedActionType\x12&\n" +
+	"\"PRIVILEGED_ACTION_TYPE_UNSPECIFIED\x10\x00\x12'\n" +
+	"#PRIVILEGED_ACTION_TYPE_MODULE_PAUSE\x10\x01\x12)\n" +
+	"%PRIVILEGED_ACTION_TYPE_MODULE_UNPAUSE\x10\x02\x12+\n" +
+	"'PRIVILEGED_ACTION_TYPE_MANIFEST_CORRECT\x10\x03\x12(\n" +
+	"$PRIVILEGED_ACTION_TYPE_INCIDENT_OPEN\x10\x04\x12+\n" +
+	"'PRIVILEGED_ACTION_TYPE_INCIDENT_RESOLVE\x10\x05\x12)\n" +
+	"%PRIVILEGED_ACTION_TYPE_INCIDENT_CLOSE\x10\x06\x121\n" +
+	"-PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TOKENIZER\x10\a\x12-\n" +
+	")PRIVILEGED_ACTION_TYPE_SCHEMA_AMEND_TRACE\x10\bB2Z0github.com/zerone-chain/zerone/x/knowledge/typesb\x06proto3"
 
 var (
 	file_zerone_knowledge_v1_types_proto_rawDescOnce sync.Once
@@ -8787,8 +8965,8 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_knowledge_v1_types_proto_rawDescData
 }
 
-var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 21)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 51)
+var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 22)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),                     // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),                    // 1: zerone.knowledge.v1.ClaimStatus
@@ -8811,124 +8989,127 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(IncidentSeverity)(0),               // 18: zerone.knowledge.v1.IncidentSeverity
 	(IncidentStatus)(0),                 // 19: zerone.knowledge.v1.IncidentStatus
 	(RemediationType)(0),                // 20: zerone.knowledge.v1.RemediationType
-	(*FactRelation)(nil),                // 21: zerone.knowledge.v1.FactRelation
-	(*ClaimRelation)(nil),               // 22: zerone.knowledge.v1.ClaimRelation
-	(*NormativeCommitment)(nil),         // 23: zerone.knowledge.v1.NormativeCommitment
-	(*Methodology)(nil),                 // 24: zerone.knowledge.v1.Methodology
-	(*ClaimStructure)(nil),              // 25: zerone.knowledge.v1.ClaimStructure
-	(*Fact)(nil),                        // 26: zerone.knowledge.v1.Fact
-	(*TokenizerSpec)(nil),               // 27: zerone.knowledge.v1.TokenizerSpec
-	(*TrainingPipeline)(nil),            // 28: zerone.knowledge.v1.TrainingPipeline
-	(*ModelCard)(nil),                   // 29: zerone.knowledge.v1.ModelCard
-	(*TrainingAttestation)(nil),         // 30: zerone.knowledge.v1.TrainingAttestation
-	(*ContributionRecord)(nil),          // 31: zerone.knowledge.v1.ContributionRecord
-	(*AugmentationBounty)(nil),          // 32: zerone.knowledge.v1.AugmentationBounty
-	(*Augmentation)(nil),                // 33: zerone.knowledge.v1.Augmentation
-	(*ContributionChallenge)(nil),       // 34: zerone.knowledge.v1.ContributionChallenge
-	(*TrainingFundDisbursement)(nil),    // 35: zerone.knowledge.v1.TrainingFundDisbursement
-	(*AgentMethodStats)(nil),            // 36: zerone.knowledge.v1.AgentMethodStats
-	(*AgentCalibration)(nil),            // 37: zerone.knowledge.v1.AgentCalibration
-	(*CommonKnowledgeEntry)(nil),        // 38: zerone.knowledge.v1.CommonKnowledgeEntry
-	(*Claim)(nil),                       // 39: zerone.knowledge.v1.Claim
-	(*VerificationRound)(nil),           // 40: zerone.knowledge.v1.VerificationRound
-	(*CommitEntry)(nil),                 // 41: zerone.knowledge.v1.CommitEntry
-	(*RevealEntry)(nil),                 // 42: zerone.knowledge.v1.RevealEntry
-	(*VRFProof)(nil),                    // 43: zerone.knowledge.v1.VRFProof
-	(*Domain)(nil),                      // 44: zerone.knowledge.v1.Domain
-	(*ValidatorInfo)(nil),               // 45: zerone.knowledge.v1.ValidatorInfo
-	(*ProvisionalChallenge)(nil),        // 46: zerone.knowledge.v1.ProvisionalChallenge
-	(*DemandSignal)(nil),                // 47: zerone.knowledge.v1.DemandSignal
-	(*KnowledgeBounty)(nil),             // 48: zerone.knowledge.v1.KnowledgeBounty
-	(*CompletedRoundMeta)(nil),          // 49: zerone.knowledge.v1.CompletedRoundMeta
-	(*MethodologyApplicationTrace)(nil), // 50: zerone.knowledge.v1.MethodologyApplicationTrace
-	(*TraceChallenge)(nil),              // 51: zerone.knowledge.v1.TraceChallenge
-	(*ReasoningStep)(nil),               // 52: zerone.knowledge.v1.ReasoningStep
-	(*DriftDiagnosis)(nil),              // 53: zerone.knowledge.v1.DriftDiagnosis
-	(*MethodologyChoice)(nil),           // 54: zerone.knowledge.v1.MethodologyChoice
-	(*BeliefRevision)(nil),              // 55: zerone.knowledge.v1.BeliefRevision
-	(*DialecticNode)(nil),               // 56: zerone.knowledge.v1.DialecticNode
-	(*TraceVindication)(nil),            // 57: zerone.knowledge.v1.TraceVindication
-	(*TraceDisproval)(nil),              // 58: zerone.knowledge.v1.TraceDisproval
-	(*TraceReformulation)(nil),          // 59: zerone.knowledge.v1.TraceReformulation
-	(*TraceDrift)(nil),                  // 60: zerone.knowledge.v1.TraceDrift
-	(*ContrastivePair)(nil),             // 61: zerone.knowledge.v1.ContrastivePair
-	(*TraceSchema)(nil),                 // 62: zerone.knowledge.v1.TraceSchema
-	(*CorpusSelector)(nil),              // 63: zerone.knowledge.v1.CorpusSelector
-	(*TrainingManifest)(nil),            // 64: zerone.knowledge.v1.TrainingManifest
-	(*SeedStatus)(nil),                  // 65: zerone.knowledge.v1.SeedStatus
-	(*RouteBCapabilities)(nil),          // 66: zerone.knowledge.v1.RouteBCapabilities
-	(*Remediation)(nil),                 // 67: zerone.knowledge.v1.Remediation
-	(*IncidentRecord)(nil),              // 68: zerone.knowledge.v1.IncidentRecord
-	(*ModulePause)(nil),                 // 69: zerone.knowledge.v1.ModulePause
-	nil,                                 // 70: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
-	nil,                                 // 71: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	(PrivilegedActionType)(0),           // 21: zerone.knowledge.v1.PrivilegedActionType
+	(*FactRelation)(nil),                // 22: zerone.knowledge.v1.FactRelation
+	(*ClaimRelation)(nil),               // 23: zerone.knowledge.v1.ClaimRelation
+	(*NormativeCommitment)(nil),         // 24: zerone.knowledge.v1.NormativeCommitment
+	(*Methodology)(nil),                 // 25: zerone.knowledge.v1.Methodology
+	(*ClaimStructure)(nil),              // 26: zerone.knowledge.v1.ClaimStructure
+	(*Fact)(nil),                        // 27: zerone.knowledge.v1.Fact
+	(*TokenizerSpec)(nil),               // 28: zerone.knowledge.v1.TokenizerSpec
+	(*TrainingPipeline)(nil),            // 29: zerone.knowledge.v1.TrainingPipeline
+	(*ModelCard)(nil),                   // 30: zerone.knowledge.v1.ModelCard
+	(*TrainingAttestation)(nil),         // 31: zerone.knowledge.v1.TrainingAttestation
+	(*ContributionRecord)(nil),          // 32: zerone.knowledge.v1.ContributionRecord
+	(*AugmentationBounty)(nil),          // 33: zerone.knowledge.v1.AugmentationBounty
+	(*Augmentation)(nil),                // 34: zerone.knowledge.v1.Augmentation
+	(*ContributionChallenge)(nil),       // 35: zerone.knowledge.v1.ContributionChallenge
+	(*TrainingFundDisbursement)(nil),    // 36: zerone.knowledge.v1.TrainingFundDisbursement
+	(*AgentMethodStats)(nil),            // 37: zerone.knowledge.v1.AgentMethodStats
+	(*AgentCalibration)(nil),            // 38: zerone.knowledge.v1.AgentCalibration
+	(*CommonKnowledgeEntry)(nil),        // 39: zerone.knowledge.v1.CommonKnowledgeEntry
+	(*Claim)(nil),                       // 40: zerone.knowledge.v1.Claim
+	(*VerificationRound)(nil),           // 41: zerone.knowledge.v1.VerificationRound
+	(*CommitEntry)(nil),                 // 42: zerone.knowledge.v1.CommitEntry
+	(*RevealEntry)(nil),                 // 43: zerone.knowledge.v1.RevealEntry
+	(*VRFProof)(nil),                    // 44: zerone.knowledge.v1.VRFProof
+	(*Domain)(nil),                      // 45: zerone.knowledge.v1.Domain
+	(*ValidatorInfo)(nil),               // 46: zerone.knowledge.v1.ValidatorInfo
+	(*ProvisionalChallenge)(nil),        // 47: zerone.knowledge.v1.ProvisionalChallenge
+	(*DemandSignal)(nil),                // 48: zerone.knowledge.v1.DemandSignal
+	(*KnowledgeBounty)(nil),             // 49: zerone.knowledge.v1.KnowledgeBounty
+	(*CompletedRoundMeta)(nil),          // 50: zerone.knowledge.v1.CompletedRoundMeta
+	(*MethodologyApplicationTrace)(nil), // 51: zerone.knowledge.v1.MethodologyApplicationTrace
+	(*TraceChallenge)(nil),              // 52: zerone.knowledge.v1.TraceChallenge
+	(*ReasoningStep)(nil),               // 53: zerone.knowledge.v1.ReasoningStep
+	(*DriftDiagnosis)(nil),              // 54: zerone.knowledge.v1.DriftDiagnosis
+	(*MethodologyChoice)(nil),           // 55: zerone.knowledge.v1.MethodologyChoice
+	(*BeliefRevision)(nil),              // 56: zerone.knowledge.v1.BeliefRevision
+	(*DialecticNode)(nil),               // 57: zerone.knowledge.v1.DialecticNode
+	(*TraceVindication)(nil),            // 58: zerone.knowledge.v1.TraceVindication
+	(*TraceDisproval)(nil),              // 59: zerone.knowledge.v1.TraceDisproval
+	(*TraceReformulation)(nil),          // 60: zerone.knowledge.v1.TraceReformulation
+	(*TraceDrift)(nil),                  // 61: zerone.knowledge.v1.TraceDrift
+	(*ContrastivePair)(nil),             // 62: zerone.knowledge.v1.ContrastivePair
+	(*TraceSchema)(nil),                 // 63: zerone.knowledge.v1.TraceSchema
+	(*CorpusSelector)(nil),              // 64: zerone.knowledge.v1.CorpusSelector
+	(*TrainingManifest)(nil),            // 65: zerone.knowledge.v1.TrainingManifest
+	(*SeedStatus)(nil),                  // 66: zerone.knowledge.v1.SeedStatus
+	(*RouteBCapabilities)(nil),          // 67: zerone.knowledge.v1.RouteBCapabilities
+	(*Remediation)(nil),                 // 68: zerone.knowledge.v1.Remediation
+	(*IncidentRecord)(nil),              // 69: zerone.knowledge.v1.IncidentRecord
+	(*ModulePause)(nil),                 // 70: zerone.knowledge.v1.ModulePause
+	(*PrivilegedAction)(nil),            // 71: zerone.knowledge.v1.PrivilegedAction
+	nil,                                 // 72: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	nil,                                 // 73: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 1: zerone.knowledge.v1.FactRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
 	5,  // 2: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 3: zerone.knowledge.v1.ClaimRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
-	70, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	72, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
 	0,  // 5: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
 	4,  // 6: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	21, // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
-	21, // 8: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
-	25, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	22, // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
+	22, // 8: zerone.knowledge.v1.Fact.incoming_relations:type_name -> zerone.knowledge.v1.FactRelation
+	26, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
 	10, // 10: zerone.knowledge.v1.Augmentation.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
 	10, // 11: zerone.knowledge.v1.Augmentation.verdict_votes:type_name -> zerone.knowledge.v1.AugmentationVerdict
-	71, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	73, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 	1,  // 13: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
 	4,  // 14: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
-	22, // 15: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
-	25, // 16: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
+	23, // 15: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
+	26, // 16: zerone.knowledge.v1.Claim.structure:type_name -> zerone.knowledge.v1.ClaimStructure
 	2,  // 17: zerone.knowledge.v1.VerificationRound.phase:type_name -> zerone.knowledge.v1.VerificationPhase
-	41, // 18: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
-	42, // 19: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
+	42, // 18: zerone.knowledge.v1.VerificationRound.commits:type_name -> zerone.knowledge.v1.CommitEntry
+	43, // 19: zerone.knowledge.v1.VerificationRound.reveals:type_name -> zerone.knowledge.v1.RevealEntry
 	3,  // 20: zerone.knowledge.v1.VerificationRound.verdict:type_name -> zerone.knowledge.v1.Verdict
 	7,  // 21: zerone.knowledge.v1.Domain.status:type_name -> zerone.knowledge.v1.DomainStatus
-	21, // 22: zerone.knowledge.v1.MethodologyApplicationTrace.predecessor_edges:type_name -> zerone.knowledge.v1.FactRelation
-	21, // 23: zerone.knowledge.v1.MethodologyApplicationTrace.descendant_edges:type_name -> zerone.knowledge.v1.FactRelation
-	51, // 24: zerone.knowledge.v1.MethodologyApplicationTrace.challenges:type_name -> zerone.knowledge.v1.TraceChallenge
+	22, // 22: zerone.knowledge.v1.MethodologyApplicationTrace.predecessor_edges:type_name -> zerone.knowledge.v1.FactRelation
+	22, // 23: zerone.knowledge.v1.MethodologyApplicationTrace.descendant_edges:type_name -> zerone.knowledge.v1.FactRelation
+	52, // 24: zerone.knowledge.v1.MethodologyApplicationTrace.challenges:type_name -> zerone.knowledge.v1.TraceChallenge
 	0,  // 25: zerone.knowledge.v1.MethodologyApplicationTrace.status:type_name -> zerone.knowledge.v1.FactStatus
-	57, // 26: zerone.knowledge.v1.MethodologyApplicationTrace.vindication:type_name -> zerone.knowledge.v1.TraceVindication
-	58, // 27: zerone.knowledge.v1.MethodologyApplicationTrace.disproval:type_name -> zerone.knowledge.v1.TraceDisproval
-	59, // 28: zerone.knowledge.v1.MethodologyApplicationTrace.reformulations:type_name -> zerone.knowledge.v1.TraceReformulation
-	60, // 29: zerone.knowledge.v1.MethodologyApplicationTrace.drift_examples:type_name -> zerone.knowledge.v1.TraceDrift
+	58, // 26: zerone.knowledge.v1.MethodologyApplicationTrace.vindication:type_name -> zerone.knowledge.v1.TraceVindication
+	59, // 27: zerone.knowledge.v1.MethodologyApplicationTrace.disproval:type_name -> zerone.knowledge.v1.TraceDisproval
+	60, // 28: zerone.knowledge.v1.MethodologyApplicationTrace.reformulations:type_name -> zerone.knowledge.v1.TraceReformulation
+	61, // 29: zerone.knowledge.v1.MethodologyApplicationTrace.drift_examples:type_name -> zerone.knowledge.v1.TraceDrift
 	8,  // 30: zerone.knowledge.v1.MethodologyApplicationTrace.curriculum_tier:type_name -> zerone.knowledge.v1.CurriculumTier
 	9,  // 31: zerone.knowledge.v1.MethodologyApplicationTrace.quality_tier:type_name -> zerone.knowledge.v1.TrainingQualityTier
-	52, // 32: zerone.knowledge.v1.MethodologyApplicationTrace.reasoning_steps:type_name -> zerone.knowledge.v1.ReasoningStep
-	54, // 33: zerone.knowledge.v1.MethodologyApplicationTrace.methodology_choice:type_name -> zerone.knowledge.v1.MethodologyChoice
-	55, // 34: zerone.knowledge.v1.MethodologyApplicationTrace.belief_revisions:type_name -> zerone.knowledge.v1.BeliefRevision
-	56, // 35: zerone.knowledge.v1.MethodologyApplicationTrace.dialectic_tree:type_name -> zerone.knowledge.v1.DialecticNode
-	56, // 36: zerone.knowledge.v1.TraceChallenge.children:type_name -> zerone.knowledge.v1.DialecticNode
+	53, // 32: zerone.knowledge.v1.MethodologyApplicationTrace.reasoning_steps:type_name -> zerone.knowledge.v1.ReasoningStep
+	55, // 33: zerone.knowledge.v1.MethodologyApplicationTrace.methodology_choice:type_name -> zerone.knowledge.v1.MethodologyChoice
+	56, // 34: zerone.knowledge.v1.MethodologyApplicationTrace.belief_revisions:type_name -> zerone.knowledge.v1.BeliefRevision
+	57, // 35: zerone.knowledge.v1.MethodologyApplicationTrace.dialectic_tree:type_name -> zerone.knowledge.v1.DialecticNode
+	57, // 36: zerone.knowledge.v1.TraceChallenge.children:type_name -> zerone.knowledge.v1.DialecticNode
 	11, // 37: zerone.knowledge.v1.ReasoningStep.step_inference:type_name -> zerone.knowledge.v1.StepInference
 	12, // 38: zerone.knowledge.v1.ReasoningStep.verdict:type_name -> zerone.knowledge.v1.StepVerdict
 	13, // 39: zerone.knowledge.v1.DriftDiagnosis.drift_kind:type_name -> zerone.knowledge.v1.DriftKind
 	14, // 40: zerone.knowledge.v1.BeliefRevision.reason:type_name -> zerone.knowledge.v1.RevisionReason
 	15, // 41: zerone.knowledge.v1.DialecticNode.role:type_name -> zerone.knowledge.v1.DialecticRole
-	56, // 42: zerone.knowledge.v1.DialecticNode.children:type_name -> zerone.knowledge.v1.DialecticNode
+	57, // 42: zerone.knowledge.v1.DialecticNode.children:type_name -> zerone.knowledge.v1.DialecticNode
 	12, // 43: zerone.knowledge.v1.DialecticNode.node_verdict:type_name -> zerone.knowledge.v1.StepVerdict
 	10, // 44: zerone.knowledge.v1.TraceReformulation.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
 	10, // 45: zerone.knowledge.v1.TraceDrift.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
-	53, // 46: zerone.knowledge.v1.TraceDrift.diagnosis:type_name -> zerone.knowledge.v1.DriftDiagnosis
-	52, // 47: zerone.knowledge.v1.TraceDrift.drifter_steps:type_name -> zerone.knowledge.v1.ReasoningStep
+	54, // 46: zerone.knowledge.v1.TraceDrift.diagnosis:type_name -> zerone.knowledge.v1.DriftDiagnosis
+	53, // 47: zerone.knowledge.v1.TraceDrift.drifter_steps:type_name -> zerone.knowledge.v1.ReasoningStep
 	16, // 48: zerone.knowledge.v1.ContrastivePair.pair_type:type_name -> zerone.knowledge.v1.ContrastivePairType
 	9,  // 49: zerone.knowledge.v1.CorpusSelector.min_quality_tier:type_name -> zerone.knowledge.v1.TrainingQualityTier
 	8,  // 50: zerone.knowledge.v1.CorpusSelector.min_curriculum_tier:type_name -> zerone.knowledge.v1.CurriculumTier
 	16, // 51: zerone.knowledge.v1.CorpusSelector.pair_type_filter:type_name -> zerone.knowledge.v1.ContrastivePairType
-	63, // 52: zerone.knowledge.v1.TrainingManifest.corpus_selector:type_name -> zerone.knowledge.v1.CorpusSelector
+	64, // 52: zerone.knowledge.v1.TrainingManifest.corpus_selector:type_name -> zerone.knowledge.v1.CorpusSelector
 	17, // 53: zerone.knowledge.v1.TrainingManifest.status:type_name -> zerone.knowledge.v1.ManifestStatus
-	65, // 54: zerone.knowledge.v1.RouteBCapabilities.seed_status:type_name -> zerone.knowledge.v1.SeedStatus
+	66, // 54: zerone.knowledge.v1.RouteBCapabilities.seed_status:type_name -> zerone.knowledge.v1.SeedStatus
 	20, // 55: zerone.knowledge.v1.Remediation.type:type_name -> zerone.knowledge.v1.RemediationType
 	18, // 56: zerone.knowledge.v1.IncidentRecord.severity:type_name -> zerone.knowledge.v1.IncidentSeverity
 	19, // 57: zerone.knowledge.v1.IncidentRecord.status:type_name -> zerone.knowledge.v1.IncidentStatus
-	67, // 58: zerone.knowledge.v1.IncidentRecord.remediations:type_name -> zerone.knowledge.v1.Remediation
-	36, // 59: zerone.knowledge.v1.AgentCalibration.PerMethodEntry.value:type_name -> zerone.knowledge.v1.AgentMethodStats
-	60, // [60:60] is the sub-list for method output_type
-	60, // [60:60] is the sub-list for method input_type
-	60, // [60:60] is the sub-list for extension type_name
-	60, // [60:60] is the sub-list for extension extendee
-	0,  // [0:60] is the sub-list for field type_name
+	68, // 58: zerone.knowledge.v1.IncidentRecord.remediations:type_name -> zerone.knowledge.v1.Remediation
+	21, // 59: zerone.knowledge.v1.PrivilegedAction.type:type_name -> zerone.knowledge.v1.PrivilegedActionType
+	37, // 60: zerone.knowledge.v1.AgentCalibration.PerMethodEntry.value:type_name -> zerone.knowledge.v1.AgentMethodStats
+	61, // [61:61] is the sub-list for method output_type
+	61, // [61:61] is the sub-list for method input_type
+	61, // [61:61] is the sub-list for extension type_name
+	61, // [61:61] is the sub-list for extension extendee
+	0,  // [0:61] is the sub-list for field type_name
 }
 
 func init() { file_zerone_knowledge_v1_types_proto_init() }
@@ -8941,8 +9122,8 @@ func file_zerone_knowledge_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
-			NumEnums:      21,
-			NumMessages:   51,
+			NumEnums:      22,
+			NumMessages:   52,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

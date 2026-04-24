@@ -104,6 +104,9 @@ func (m *msgServer) CorrectManifestMerkleRoot(ctx context.Context, msg *types.Ms
 	}
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_MANIFEST_CORRECT,
+		msg.Authority, manifest.ManifestId, msg.IncidentId, msg.Note)
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.manifest_merkle_corrected",
 		sdk.NewAttribute("manifest_id", manifest.ManifestId),
