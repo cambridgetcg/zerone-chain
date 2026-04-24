@@ -567,16 +567,44 @@ func (k Keeper) RecordAugmentationVote(ctx context.Context, augID, verifier stri
 		}
 	}
 
-	// Snapshot the verifier's calibration at vote time (Wave 15
-	// reputation-weighted fix). A verifier with strong stake but weak
-	// track record should not outvote a verifier with moderate stake
-	// and strong calibration — epistemic skill matters, not just bond.
-	// Missing calibration defaults to the neutral PanelCalibrationFloorBps
-	// so the panel remains livable in the early chain state before
-	// anyone has built up a record.
+	// Snapshot the verifier's skill signal at vote time. Wave 15c: when
+	// the target fact has a domain, use DOMAIN-SPECIFIC qualification as
+	// the primary panel weight — a physics-domain augmentation should
+	// be adjudicated by physics-qualified voters, and cross-domain
+	// credentials earn no credit regardless of how strong they are
+	// globally. Voters unqualified in the target domain are floored at
+	// the tally's panelCalibrationFloorBps, preserving liveness (they
+	// still vote, still carry some weight, but cannot dominate).
+	//
+	// Global calibration is used only as a fallback when:
+	//   - the target fact has no domain (legacy / migration records), OR
+	//   - no DomainQualificationKeeper is wired (genesis / early bootstrap).
 	var calibrationAtVote uint64
-	if cal, ok := k.GetAgentCalibration(ctx, verifier); ok && cal != nil {
-		calibrationAtVote = cal.CalibrationScoreBps
+	domain := ""
+	if aug.OriginalFactId != "" {
+		if origFact, ok := k.GetFact(ctx, aug.OriginalFactId); ok && origFact != nil {
+			domain = origFact.Domain
+		}
+	}
+	if domain != "" && k.domainQualificationKeeper != nil {
+		// Domain path: ONLY domain qualification counts. Unqualified
+		// voters get weight 0, which the tally floors to 20%.
+		if w, err := k.domainQualificationKeeper.GetQualificationWeight(ctx, verifier, domain); err == nil && w > 0 {
+			// x/qualification reports weight in the 1..100 range; scale
+			// to BPS (0..1_000_000). Cap at BPS in case governance ever
+			// raises the qualification scale past 100.
+			scaled := w * 10_000
+			if scaled > bps {
+				scaled = bps
+			}
+			calibrationAtVote = scaled
+		}
+	} else {
+		// Fallback path: no domain on target fact, or no qualification
+		// adapter wired. Use global calibration.
+		if cal, ok := k.GetAgentCalibration(ctx, verifier); ok && cal != nil {
+			calibrationAtVote = cal.CalibrationScoreBps
+		}
 	}
 
 	aug.VerdictVoters = append(aug.VerdictVoters, verifier)

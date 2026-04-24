@@ -787,28 +787,22 @@ func TestMoat_PanelWeightedByStakeTimesCalibration(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Rich-but-uncalibrated verifier. Stake: 100M, calibration: explicitly
-	// zero via an AgentCalibration record with score=0 (floored to 20%
-	// internally, so effective weight = 100M × 0.2 = 20M).
+	// Rich-but-unqualified verifier. Stake: 100M, NO qualification in
+	// sciences. The tally floors them to 20%, so effective = 100M × 0.2 = 20M.
 	rich := testAddr("moat_panel_rich_uncal").String()
 	h.BondTestValidator(rich, 100_000_000)
-	require.NoError(t, h.KnowledgeKeeper.SetAgentCalibration(h.Ctx, &knowledgetypes.AgentCalibration{
-		Address: rich, CalibrationScoreBps: 0, Accepted: 0, TotalSubmissions: 0,
-	}))
 
-	// Three modest-but-calibrated verifiers. Stake: 20M each × cal 0.9 =
-	// 18M effective each, total 54M. Versus rich's 100M × 0.2 = 20M.
-	// Under raw stake: rich would dominate. Under reputation weighting:
-	// 54M / (54M + 20M) = 73% — clears the 66.6% consensus threshold.
+	// Three modest-but-domain-qualified verifiers. Stake: 20M each;
+	// qualification weight 90 (scaled to 900_000 BPS), so effective =
+	// 20M × 0.9 = 18M each, total 54M. Versus rich's 20M. Under pure
+	// stake: rich dominates (100M vs 60M). Under domain-weighted panel:
+	// 54M / (54M + 20M) = 73% clears the 66.6% consensus threshold.
 	cal1 := testAddr("moat_panel_cal1").String()
 	cal2 := testAddr("moat_panel_cal2").String()
 	cal3 := testAddr("moat_panel_cal3").String()
 	for _, v := range []string{cal1, cal2, cal3} {
 		h.BondTestValidator(v, 20_000_000)
-		require.NoError(t, h.KnowledgeKeeper.SetAgentCalibration(h.Ctx, &knowledgetypes.AgentCalibration{
-			Address: v, CalibrationScoreBps: 900_000,
-			Accepted: 90, TotalSubmissions: 100,
-		}))
+		h.SetDomainQualification(v, "sciences", 90)
 	}
 
 	// Rich uncalibrated votes DRIFT; calibrated ones vote EQUIVALENT.
@@ -827,11 +821,13 @@ func TestMoat_PanelWeightedByStakeTimesCalibration(t *testing.T) {
 
 	aug, _ := h.KnowledgeKeeper.GetAugmentation(h.Ctx, "aug-panel-rep")
 	require.Equal(t, knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT, aug.Verdict,
-		"calibrated minority in raw stake out-votes rich uncalibrated: skill × bond, not bond alone")
+		"domain-qualified minority in raw stake out-votes rich unqualified: skill × bond, not bond alone")
 
-	// Calibration snapshots are preserved on the record.
+	// Calibration snapshots are preserved on the record — rich is
+	// unqualified in the target's domain, so recorded as 0 (tally
+	// floors to 20%). The others carry their domain weight × 10_000.
 	require.Len(t, aug.VerdictVoteCalibrationBps, 4)
-	require.Equal(t, uint64(0), aug.VerdictVoteCalibrationBps[0], "rich uncalibrated recorded as 0")
+	require.Equal(t, uint64(0), aug.VerdictVoteCalibrationBps[0], "rich unqualified in sciences → 0 recorded")
 	for i := 1; i < 4; i++ {
 		require.Equal(t, uint64(900_000), aug.VerdictVoteCalibrationBps[i])
 	}

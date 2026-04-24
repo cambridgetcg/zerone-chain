@@ -47,6 +47,8 @@ import (
 	zeronegovkeeper "github.com/zerone-chain/zerone/x/gov/keeper"
 	zeronecdkeeper "github.com/zerone-chain/zerone/x/capture_defense/keeper"
 	zeronecckeeper "github.com/zerone-chain/zerone/x/capture_challenge/keeper"
+	zeronequalificationkeeper "github.com/zerone-chain/zerone/x/qualification/keeper"
+	qualificationtypes "github.com/zerone-chain/zerone/x/qualification/types"
 	zeronepartnershipskeeper "github.com/zerone-chain/zerone/x/partnerships/keeper"
 	zeronediscoverykeeper "github.com/zerone-chain/zerone/x/discovery/keeper"
 )
@@ -86,6 +88,7 @@ type TestHarness struct {
 	// R28/R29 keepers
 	CaptureDefenseKeeper   zeronecdkeeper.Keeper
 	CaptureChallengeKeeper zeronecckeeper.Keeper
+	QualificationKeeper    zeronequalificationkeeper.Keeper
 	PartnershipsKeeper     zeronepartnershipskeeper.Keeper
 	DiscoveryKeeper        zeronediscoverykeeper.Keeper
 
@@ -249,6 +252,7 @@ func NewTestHarness(t *testing.T) *TestHarness {
 		// R28/R29 keepers
 		CaptureDefenseKeeper:   app.CaptureDefenseKeeper,
 		CaptureChallengeKeeper: app.CaptureChallengeKeeper,
+		QualificationKeeper:    app.QualificationKeeper,
 		PartnershipsKeeper:     app.PartnershipsKeeper,
 		DiscoveryKeeper:        app.DiscoveryKeeper,
 
@@ -347,6 +351,21 @@ func (h *TestHarness) AdvanceBlocks(n int) {
 // GetBalance returns the balance of a specific denom for an address.
 func (h *TestHarness) GetBalance(addr sdk.AccAddress, denom string) sdk.Coin {
 	return h.App.BankKeeper.GetBalance(h.Ctx, addr, denom)
+}
+
+// SetDomainQualification grants the given validator an ACTIVE
+// qualification in the named domain with the provided weight (1..100,
+// mapped to BPS by x/knowledge). Used by tests that exercise the
+// per-domain panel weighting (Wave 15c).
+func (h *TestHarness) SetDomainQualification(addr, domain string, weight uint32) {
+	q := &qualificationtypes.DomainQualification{
+		Validator: addr,
+		Domain:    domain,
+		Status:    qualificationtypes.QualificationStatus_QUALIFICATION_STATUS_ACTIVE,
+		Weight:    weight,
+		Pathway:   qualificationtypes.QualificationPathway_QUALIFICATION_PATHWAY_STAKE,
+	}
+	h.QualificationKeeper.SetQualification(h.Ctx, q)
 }
 
 // BondTestValidator creates a bonded Scholar-tier validator record for
