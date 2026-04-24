@@ -39,7 +39,7 @@ Q_FLAGS="${NODE_FLAG} --output json"
 
 # State file for cross-step data
 STATE_FILE="/tmp/knowledge-lifecycle-state.env"
-REPORT_FILE="${PROJECT_ROOT}/docs/knowledge-lifecycle-report.md"
+REPORT_FILE="${PROJECT_ROOT}/docs/reports/knowledge-lifecycle-report.md"
 
 # Results tracking
 PASSED=0
