@@ -188,6 +188,14 @@ func TestRouteB_Wave4cd_AugmentationEscrowAndVerdict(t *testing.T) {
 	// Fund sponsor.
 	require.NoError(t, h.FundAccount(sponsorAddr, sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewInt(100_000_000)))))
 
+	// Wave 10 Sybil fix: the augmentation panel is now stake-weighted.
+	// Bond each verifier with a modest self-delegation so their votes
+	// carry non-zero weight in the consensus tally. Without this, the
+	// panel would wait forever for stake-bearing voters.
+	for _, v := range []string{verifier1, verifier2, verifier3} {
+		h.BondTestValidator(v, 10_000_000)
+	}
+
 	targetFact := &knowledgetypes.Fact{
 		Id: "FACT-4cd-TARGET", Content: "the original", Domain: "sciences",
 		Confidence: 900_000, Status: knowledgetypes.FactStatus_FACT_STATUS_ACTIVE,

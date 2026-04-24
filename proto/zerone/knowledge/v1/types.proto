@@ -535,6 +535,11 @@ message Augmentation {
   // Amount actually paid out for this variant (0 if not paid). Captures the
   // SUPERIOR bonus too.
   string payout_amount               = 16;
+  // Per-verifier stake weights recorded at vote time (Wave 10 Sybil fix).
+  // Parallel to verdict_voters / verdict_votes. Freezing the stake at vote
+  // time prevents a validator from bond/unbonding between vote and tally to
+  // manipulate the consensus result. Non-validator voters have zero weight.
+  repeated uint64 verdict_vote_stakes = 17;
 }
 
 // ─── Wave 4: contribution attribution challenges ─────────────────────────

@@ -2,6 +2,7 @@ package cross_stack_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	dbm "github.com/cosmos/cosmos-db"
@@ -30,6 +31,7 @@ import (
 	zeroneauthkeeper "github.com/zerone-chain/zerone/x/auth/keeper"
 	zeroneauthtypes "github.com/zerone-chain/zerone/x/auth/types"
 	zeronestakingkeeper "github.com/zerone-chain/zerone/x/staking/keeper"
+	zeronestakingtypes "github.com/zerone-chain/zerone/x/staking/types"
 
 	// R7 module keepers
 	zeroneapkeeper "github.com/zerone-chain/zerone/x/autopoiesis/keeper"
@@ -342,6 +344,37 @@ func (h *TestHarness) AdvanceBlocks(n int) {
 // GetBalance returns the balance of a specific denom for an address.
 func (h *TestHarness) GetBalance(addr sdk.AccAddress, denom string) sdk.Coin {
 	return h.App.BankKeeper.GetBalance(h.Ctx, addr, denom)
+}
+
+// BondTestValidator creates a bonded Scholar-tier validator record for
+// the given address and self-delegation amount (in uzrn). Used by tests
+// that need stake-weighted voting on the augmentation verifier panel
+// (Wave 10+ Sybil fix). Scholar tier uses REAL total stake for effective
+// selection weight (apprentice tiers use a virtual-stake constant), so
+// this addr has exactly `selfDel` weight on the stake-weighted tally.
+func (h *TestHarness) BondTestValidator(addr string, selfDel uint64) {
+	selfDelStr := fmt.Sprintf("%d", selfDel)
+	val := &zeronestakingtypes.Validator{
+		OperatorAddress: addr,
+		ConsensusPubkey: "pk_" + addr[:min(8, len(addr))],
+		Did:             "did:zrn:test:" + addr[:min(8, len(addr))],
+		Moniker:         "val_" + addr[:min(8, len(addr))],
+		Tier:            zeronestakingtypes.TierScholar,
+		SelfDelegation:  selfDelStr,
+		DelegatedStake:  "0",
+		TotalStake:      selfDelStr,
+		ReputationScore: 500_000,
+		IsActive:        true,
+	}
+	sdkCtx := sdk.UnwrapSDKContext(h.Ctx)
+	h.StakingKeeper.SetValidator(sdkCtx, val)
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // Height returns the current block height.

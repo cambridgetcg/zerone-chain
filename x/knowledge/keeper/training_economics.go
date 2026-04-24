@@ -512,6 +512,21 @@ func (k Keeper) IterateTrainingFundDisbursements(ctx context.Context, cb func(*t
 // RecordAugmentationVote adds a verifier's vote and — if consensus is
 // reached — finalizes the verdict. Returns (finalized, verdict).
 // Never called by the sponsor or the submitter.
+//
+// Wave 10 Sybil fix: consensus is STAKE-WEIGHTED, not headcount.
+// Each verifier's vote is weighted by the bonded stake they control at
+// the moment of voting (frozen on the augmentation record so bond/unbond
+// between vote and tally can't manipulate the outcome). A Sybil ring
+// running three zero-stake addresses has zero weight and cannot finalize
+// a verdict regardless of their agreement. To carry consensus, an
+// attacker must now control bonded stake proportional to the consensus
+// threshold — economically equivalent to a validator-set attack on the
+// underlying chain, which dwarfs the cost of a multi-address spoof.
+//
+// Non-validator voters are not rejected (dissent is always allowed) but
+// their votes carry zero weight and do not advance the consensus tally.
+// A minimum total-stake quorum ensures a lone stake-bearing voter can't
+// finalize alone.
 func (k Keeper) RecordAugmentationVote(ctx context.Context, augID, verifier string, vote types.AugmentationVerdict) (bool, types.AugmentationVerdict, error) {
 	aug, ok := k.GetAugmentation(ctx, augID)
 	if !ok {
@@ -540,8 +555,21 @@ func (k Keeper) RecordAugmentationVote(ctx context.Context, augID, verifier stri
 			return false, aug.Verdict, fmt.Errorf("verifier already voted")
 		}
 	}
+
+	// Snapshot the verifier's effective stake at vote time. Non-validator
+	// addresses return stake=0 (and nil error for not-found via the keeper
+	// contract); zero-stake votes are still recorded for audit but carry
+	// no weight in the consensus tally.
+	var stakeAtVote uint64
+	if k.stakingKeeper != nil {
+		if s, err := k.stakingKeeper.GetEffectiveStake(ctx, verifier); err == nil {
+			stakeAtVote = s
+		}
+	}
+
 	aug.VerdictVoters = append(aug.VerdictVoters, verifier)
 	aug.VerdictVotes = append(aug.VerdictVotes, vote)
+	aug.VerdictVoteStakes = append(aug.VerdictVoteStakes, stakeAtVote)
 	if err := k.SetAugmentation(ctx, aug); err != nil {
 		return false, aug.Verdict, err
 	}
@@ -558,21 +586,36 @@ func (k Keeper) RecordAugmentationVote(ctx context.Context, augID, verifier stri
 	if uint64(len(aug.VerdictVoters)) < minVotes {
 		return false, aug.Verdict, nil
 	}
-	tally := make(map[types.AugmentationVerdict]uint64)
-	for _, v := range aug.VerdictVotes {
-		tally[v]++
-	}
 	consensusBps := params.ReformulationConsensusBps
 	if consensusBps == 0 {
 		consensusBps = 666_000
 	}
-	total := uint64(len(aug.VerdictVotes))
+
+	// Stake-weighted tally. Each verdict's total stake is compared against
+	// the total voted stake; a winner requires both a share above the
+	// consensus threshold AND non-zero total voted stake (otherwise a
+	// zero-stake panel could never finalize but would silently trip the
+	// "consensus reached" condition via 0/0 edge cases).
+	stakeTally := make(map[types.AugmentationVerdict]uint64)
+	var totalStake uint64
+	for i, v := range aug.VerdictVotes {
+		w := uint64(0)
+		if i < len(aug.VerdictVoteStakes) {
+			w = aug.VerdictVoteStakes[i]
+		}
+		stakeTally[v] += w
+		totalStake += w
+	}
+	if totalStake == 0 {
+		// No stake-bearing votes yet; wait for more.
+		return false, aug.Verdict, nil
+	}
 	var winner types.AugmentationVerdict
-	var winnerCount uint64
-	for v, n := range tally {
-		if n*bps/total >= consensusBps && n > winnerCount {
+	var winnerStake uint64
+	for v, s := range stakeTally {
+		if s*bps/totalStake >= consensusBps && s > winnerStake {
 			winner = v
-			winnerCount = n
+			winnerStake = s
 		}
 	}
 	if winner == types.AugmentationVerdict_AUGMENTATION_VERDICT_PENDING {

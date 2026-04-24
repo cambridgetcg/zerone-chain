@@ -364,13 +364,16 @@ func TestRouteB_Adversarial_SponsorSelfFinalizeBlocked(t *testing.T) {
 	require.Contains(t, err.Error(), "verifier-panel")
 }
 
-// ─── ATTACK 9: Verifier Sybil on augmentation panel — KNOWN GAP ────────
+// ─── ATTACK 9: Verifier Sybil on augmentation panel — CLOSED ──────────
 //
-// DEMONSTRATION of a known gap: a single actor controlling three
-// addresses can push a DRIFT variant as EQUIVALENT. Current panel is
-// vote-count-based, not stake-weighted. Wave 10+ stake-weighting will
-// close this. Documented explicitly so the gap cannot silently regress.
-func TestRouteB_Adversarial_VerifierSybilKnownGap(t *testing.T) {
+// The Wave 9 audit documented this as a known gap: a single actor
+// controlling three zero-stake addresses could push DRIFT as EQUIVALENT
+// because consensus was raw headcount. Wave 10 closed it by making
+// consensus stake-weighted. Sybil addresses with no bonded stake now
+// carry zero weight and cannot finalize a verdict regardless of how
+// many of them agree. This test confirms the gap stays closed —
+// three zero-stake votes do NOT reach consensus.
+func TestRouteB_Adversarial_ZeroStakeSybilCannotFinalize(t *testing.T) {
 	h := NewTestHarness(t)
 	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
 	require.NoError(t, err)
@@ -397,19 +400,28 @@ func TestRouteB_Adversarial_VerifierSybilKnownGap(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	// Three zero-stake Sybil addresses each cast a vote. The chain
+	// records the votes (dissent is always allowed) but they carry zero
+	// weight in the stake-weighted tally, so no verdict finalizes.
 	for _, v := range []string{"adv_sybil_v1", "adv_sybil_v2", "adv_sybil_v3"} {
-		_, err := ms.VoteOnAugmentation(h.Ctx, &knowledgetypes.MsgVoteOnAugmentation{
+		resp, err := ms.VoteOnAugmentation(h.Ctx, &knowledgetypes.MsgVoteOnAugmentation{
 			Verifier: testAddr(v).String(), AugmentationId: "aug-sybil",
 			Vote: knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT,
 		})
-		require.NoError(t, err, "verifier %s can vote: no Sybil defence yet", v)
+		require.NoError(t, err, "the vote is recorded even though it carries no weight")
+		require.False(t, resp.VerdictFinalized,
+			"zero-stake Sybil votes must not finalize a verdict")
 	}
 
 	aug, found := h.KnowledgeKeeper.GetAugmentation(h.Ctx, "aug-sybil")
 	require.True(t, found)
-	require.Equal(t, knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT, aug.Verdict,
-		"Sybil successfully pushed a verdict — documented gap, Wave 10 must stake-weight")
-	require.True(t, aug.Accepted, "payout fires under Sybil — gap confirmed")
+	require.Equal(t, knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_PENDING, aug.Verdict,
+		"verdict must stay PENDING — Sybil carries no stake, no consensus")
+	require.False(t, aug.Accepted, "payout does not fire without stake-weighted consensus")
+	require.Len(t, aug.VerdictVoteStakes, 3, "each vote recorded with its zero stake at vote time")
+	for _, w := range aug.VerdictVoteStakes {
+		require.Equal(t, uint64(0), w, "zero-stake Sybil addresses weigh zero")
+	}
 }
 
 // ─── ATTACK 10: Heartbeat withstands many expiring bounties ─────────────

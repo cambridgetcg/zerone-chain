@@ -491,6 +491,86 @@ func TestMoat_FailedProbesEarnParticipationReward(t *testing.T) {
 		"participation reward must be non-zero so probing is never pure loss")
 }
 
+// Stake-weighted augmentation consensus (Wave 10 Sybil fix). The panel
+// must require proportional STAKE, not proportional ADDRESSES, before
+// finalizing a verdict. Without this, every downstream economic lever
+// (probe amplification, hardening multiplier, paradigm-shift bonus) is
+// farmable from the other direction — a Sybil ring running a captive
+// panel could approve their own collusive probes and harvest the
+// amplified rewards.
+func TestMoat_AugmentationPanelStakeWeighted(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	sponsor := testAddr("moat_panel_sponsor")
+	require.NoError(t, h.FundAccount(sponsor, sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewInt(100_000_000)))))
+	submitter := testAddr("moat_panel_sub").String()
+
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, &knowledgetypes.Fact{
+		Id: "F-PANEL", Content: "target", Domain: "sciences",
+		Status: knowledgetypes.FactStatus_FACT_STATUS_ACTIVE, Submitter: sponsor.String(),
+		MethodId: knowledgetypes.MethodologyEmpirical, Confidence: 900_000,
+	}))
+	_, err = ms.CreateAugmentationBounty(h.Ctx, &knowledgetypes.MsgCreateAugmentationBounty{
+		Sponsor: sponsor.String(), Id: "b-panel", TargetFactId: "F-PANEL",
+		RewardPerVariant: 1_000_000, MaxVariants: 1,
+	})
+	require.NoError(t, err)
+	_, err = ms.SubmitAugmentation(h.Ctx, &knowledgetypes.MsgSubmitAugmentation{
+		Submitter: submitter, Id: "aug-panel", BountyId: "b-panel",
+		OriginalFactId: "F-PANEL", VariantContent: "variant under test",
+	})
+	require.NoError(t, err)
+
+	// Three Sybil zero-stake votes: no consensus, verdict stays PENDING.
+	for _, v := range []string{"moat_sybil_1", "moat_sybil_2", "moat_sybil_3"} {
+		resp, err := ms.VoteOnAugmentation(h.Ctx, &knowledgetypes.MsgVoteOnAugmentation{
+			Verifier: testAddr(v).String(), AugmentationId: "aug-panel",
+			Vote: knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT,
+		})
+		require.NoError(t, err)
+		require.False(t, resp.VerdictFinalized, "zero-stake votes must never finalize")
+	}
+	aug, _ := h.KnowledgeKeeper.GetAugmentation(h.Ctx, "aug-panel")
+	require.Equal(t, knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_PENDING, aug.Verdict,
+		"after 3 zero-stake votes the panel must remain PENDING")
+
+	// Now a single stake-bearing validator votes EQUIVALENT. The total
+	// voted stake is now 10_000_000, all on EQUIVALENT — 100% share,
+	// easily past the 66.6% consensus threshold. With MinPanelVotes=3
+	// already satisfied by the earlier Sybils, the verdict finalizes on
+	// this validator's vote alone.
+	realVal := testAddr("moat_real_v1").String()
+	h.BondTestValidator(realVal, 10_000_000)
+	resp, err := ms.VoteOnAugmentation(h.Ctx, &knowledgetypes.MsgVoteOnAugmentation{
+		Verifier: realVal, AugmentationId: "aug-panel",
+		Vote: knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT,
+	})
+	require.NoError(t, err)
+	require.True(t, resp.VerdictFinalized,
+		"a stake-bearing vote tips the consensus; Sybil headcount did not")
+	require.Equal(t, knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT, resp.FinalizedVerdict)
+
+	aug, _ = h.KnowledgeKeeper.GetAugmentation(h.Ctx, "aug-panel")
+	require.Equal(t, knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT, aug.Verdict)
+
+	// The vote record preserves all four voters with their stakes frozen
+	// at vote time — three zeros + one 10_000_000.
+	require.Len(t, aug.VerdictVoteStakes, 4)
+	var zeroCount, stakedCount int
+	for _, w := range aug.VerdictVoteStakes {
+		if w == 0 {
+			zeroCount++
+		} else if w == 10_000_000 {
+			stakedCount++
+		}
+	}
+	require.Equal(t, 3, zeroCount, "three zero-stake Sybil voters recorded for audit")
+	require.Equal(t, 1, stakedCount, "one stake-bearing voter recorded")
+}
+
 // MsgAddFact bypasses the verifier-panel trust chain by design (genesis
 // seeding and authority-gated corrections need it). Every call must emit
 // a PrivilegedAction log entry so compromised-authority abuse is

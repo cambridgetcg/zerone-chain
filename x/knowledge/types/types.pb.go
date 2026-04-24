@@ -3427,9 +3427,14 @@ type Augmentation struct {
 	SponsorVetoed bool `protobuf:"varint,15,opt,name=sponsor_vetoed,json=sponsorVetoed,proto3" json:"sponsor_vetoed,omitempty"`
 	// Amount actually paid out for this variant (0 if not paid). Captures the
 	// SUPERIOR bonus too.
-	PayoutAmount  string `protobuf:"bytes,16,opt,name=payout_amount,json=payoutAmount,proto3" json:"payout_amount,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	PayoutAmount string `protobuf:"bytes,16,opt,name=payout_amount,json=payoutAmount,proto3" json:"payout_amount,omitempty"`
+	// Per-verifier stake weights recorded at vote time (Wave 10 Sybil fix).
+	// Parallel to verdict_voters / verdict_votes. Freezing the stake at vote
+	// time prevents a validator from bond/unbonding between vote and tally to
+	// manipulate the consensus result. Non-validator voters have zero weight.
+	VerdictVoteStakes []uint64 `protobuf:"varint,17,rep,packed,name=verdict_vote_stakes,json=verdictVoteStakes,proto3" json:"verdict_vote_stakes,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *Augmentation) Reset() {
@@ -3572,6 +3577,13 @@ func (x *Augmentation) GetPayoutAmount() string {
 		return x.PayoutAmount
 	}
 	return ""
+}
+
+func (x *Augmentation) GetVerdictVoteStakes() []uint64 {
+	if x != nil {
+		return x.VerdictVoteStakes
+	}
+	return nil
 }
 
 // ContributionChallenge is a bonded dispute over whether a model's declared
@@ -8284,7 +8296,7 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\vdescription\x18\n" +
 	" \x01(\tR\vdescription\x12#\n" +
 	"\rescrow_locked\x18\v \x01(\tR\fescrowLocked\x12%\n" +
-	"\x0emethodology_id\x18\f \x01(\tR\rmethodologyId\"\xaa\x05\n" +
+	"\x0emethodology_id\x18\f \x01(\tR\rmethodologyId\"\xda\x05\n" +
 	"\fAugmentation\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\tbounty_id\x18\x02 \x01(\tR\bbountyId\x12(\n" +
@@ -8302,7 +8314,8 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x0everdict_voters\x18\r \x03(\tR\rverdictVoters\x12M\n" +
 	"\rverdict_votes\x18\x0e \x03(\x0e2(.zerone.knowledge.v1.AugmentationVerdictR\fverdictVotes\x12%\n" +
 	"\x0esponsor_vetoed\x18\x0f \x01(\bR\rsponsorVetoed\x12#\n" +
-	"\rpayout_amount\x18\x10 \x01(\tR\fpayoutAmount\"\x92\x03\n" +
+	"\rpayout_amount\x18\x10 \x01(\tR\fpayoutAmount\x12.\n" +
+	"\x13verdict_vote_stakes\x18\x11 \x03(\x04R\x11verdictVoteStakes\"\x92\x03\n" +
 	"\x15ContributionChallenge\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bmodel_id\x18\x02 \x01(\tR\amodelId\x12\x1e\n" +
