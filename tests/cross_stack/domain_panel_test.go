@@ -118,6 +118,94 @@ func TestDomainPanel_DomainQualifiedVotersDominateGloballyCalibrated(t *testing.
 	require.Equal(t, uint64(900_000), aug.VerdictVoteCalibrationBps[2])
 }
 
+// Feedback loop: augmentation verdicts must update x/qualification
+// metrics. Without this, the panel is set-and-forget — a voter who
+// got qualified once never has their record updated by how they vote.
+// With it, the per-domain panel has a training signal: consistent
+// correct voters grow in weight; persistent dissenters against
+// consensus see their accuracy erode.
+func TestDomainPanel_VerdictFeedbackLoopUpdatesQualification(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	sponsor := testAddr("domain_fbk_sponsor")
+	require.NoError(t, h.FundAccount(sponsor, sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewInt(100_000_000)))))
+	submitter := testAddr("domain_fbk_sub").String()
+
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, &knowledgetypes.Fact{
+		Id: "F-FBK", Domain: "mathematics",
+		Status:     knowledgetypes.FactStatus_FACT_STATUS_ACTIVE,
+		Submitter:  sponsor.String(),
+		MethodId:   knowledgetypes.MethodologyFormal,
+		Confidence: 900_000,
+		Content:    "feedback target",
+	}))
+	_, err = ms.CreateAugmentationBounty(h.Ctx, &knowledgetypes.MsgCreateAugmentationBounty{
+		Sponsor: sponsor.String(), Id: "b-fbk", TargetFactId: "F-FBK",
+		RewardPerVariant: 1_000_000, MaxVariants: 1,
+	})
+	require.NoError(t, err)
+	_, err = ms.SubmitAugmentation(h.Ctx, &knowledgetypes.MsgSubmitAugmentation{
+		Submitter: submitter, Id: "aug-fbk", BountyId: "b-fbk",
+		OriginalFactId: "F-FBK", VariantContent: "variant for feedback test",
+	})
+	require.NoError(t, err)
+
+	// One dissenter + two majority = 3 voters (MinPanelVotes default).
+	// Dissenter votes first (so they don't see "already final"); the
+	// consensus check fires on the 3rd vote (2nd majority vote), where
+	// 32M EQUIVALENT / 48M total = 66.7% just clears the 66.6% bar.
+	majority := []string{
+		testAddr("domain_fbk_ok1").String(),
+		testAddr("domain_fbk_ok2").String(),
+	}
+	dissenter := testAddr("domain_fbk_no").String()
+
+	for _, v := range majority {
+		h.BondTestValidator(v, 20_000_000)
+		h.SetDomainQualification(v, "mathematics", 80)
+	}
+	h.BondTestValidator(dissenter, 20_000_000)
+	h.SetDomainQualification(dissenter, "mathematics", 80)
+
+	// Dissenter votes FIRST (DRIFT), then majority votes EQUIVALENT.
+	// Otherwise the 3 majority votes hit consensus and finalize before
+	// the dissenter gets a chance to weigh in.
+	_, err = ms.VoteOnAugmentation(h.Ctx, &knowledgetypes.MsgVoteOnAugmentation{
+		Verifier: dissenter, AugmentationId: "aug-fbk",
+		Vote: knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_DRIFT,
+	})
+	require.NoError(t, err)
+	for _, v := range majority {
+		_, err := ms.VoteOnAugmentation(h.Ctx, &knowledgetypes.MsgVoteOnAugmentation{
+			Verifier: v, AugmentationId: "aug-fbk",
+			Vote: knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT,
+		})
+		require.NoError(t, err)
+	}
+
+	// Majority voters should show TotalVerifications=1, CorrectVerifications=1.
+	// Dissenter should show TotalVerifications=1, CorrectVerifications=0.
+	for _, v := range majority {
+		q, found := h.QualificationKeeper.GetQualification(h.Ctx, v, "mathematics")
+		require.True(t, found, "majority voter %s should still have qualification", v)
+		require.NotNil(t, q.Metrics)
+		require.Equal(t, uint64(1), q.Metrics.TotalVerifications,
+			"majority voter %s should have 1 recorded verification", v)
+		require.Equal(t, uint64(1), q.Metrics.CorrectVerifications,
+			"majority voter %s should have 1 correct verification", v)
+	}
+	dq, found := h.QualificationKeeper.GetQualification(h.Ctx, dissenter, "mathematics")
+	require.True(t, found)
+	require.NotNil(t, dq.Metrics)
+	require.Equal(t, uint64(1), dq.Metrics.TotalVerifications,
+		"dissenter still participated and should be recorded")
+	require.Equal(t, uint64(0), dq.Metrics.CorrectVerifications,
+		"dissenter voted against consensus — 0 correct")
+}
+
 // Negative path: a validator qualified in the RIGHT domain but with
 // very low qualification weight (e.g., on probation or new) still gets
 // recorded at the qualification level, not falsely boosted by global

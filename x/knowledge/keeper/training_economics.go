@@ -752,6 +752,30 @@ func (k Keeper) ApplyFinalizedAugmentationVerdict(ctx context.Context, augID str
 		return err
 	}
 
+	// Wave 15c: close the skill feedback loop. Each voter who voted
+	// with the winning verdict gets a correct-verification outcome in
+	// x/qualification for this augmentation's domain; dissenters get
+	// an incorrect outcome. Over time this means domain-qualified
+	// voters who vote well see their qualification weight grow, and
+	// those who consistently vote against consensus have it decay.
+	// Without this hook the per-domain panel has no training signal —
+	// qualifications would be set-and-forget rather than earned by
+	// track record.
+	if k.domainQualificationKeeper != nil && aug.OriginalFactId != "" {
+		if origFact, ok := k.GetFact(ctx, aug.OriginalFactId); ok && origFact != nil && origFact.Domain != "" {
+			for i, v := range aug.VerdictVoters {
+				if i >= len(aug.VerdictVotes) {
+					break
+				}
+				correct := aug.VerdictVotes[i] == verdict
+				if err := k.domainQualificationKeeper.RecordVerificationOutcome(ctx, v, origFact.Domain, correct); err != nil {
+					k.Logger(ctx).Debug("qualification outcome record failed",
+						"voter", v, "domain", origFact.Domain, "correct", correct, "err", err)
+				}
+			}
+		}
+	}
+
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.augmentation_verdict_finalized",
 		sdk.NewAttribute("augmentation_id", aug.Id),
