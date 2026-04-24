@@ -248,6 +248,10 @@ func DefaultParams() Params {
 		// throttles naturally once the chain has enough auditing budget.
 		ProbeBountyMintPerBlock: "1000000",        // 1 ZRN/block
 		ProbeBountyMaxPoolSize:  "1000000000000",  // 1,000,000 ZRN cap
+
+		// ─── Wave 15b: invitation bonuses ──────────────────────────────
+		// Flat reward for probers answering a chain-issued invitation.
+		InvitationBonusAmount: "500000", // 0.5 ZRN per answered invitation
 	}
 }
 

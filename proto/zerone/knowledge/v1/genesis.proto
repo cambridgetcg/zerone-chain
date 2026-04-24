@@ -280,6 +280,16 @@ message Params {
   // if the pool is empty, fall back to protocol treasury.
   string probe_bounty_mint_per_block = 156; // uzrn minted per block (default "1000000" = 1 ZRN)
   string probe_bounty_max_pool_size  = 157; // cap on pool balance (default "1000000000000" = 1,000,000 ZRN)
+
+  // ─── Wave 15b: invitation bonuses ──────────────────────────────────────
+  // When a prober acts on a fact the chain has explicitly invited for
+  // stress-testing, pay them a flat bonus from the probe bounty pool
+  // regardless of outcome. Converts invitations from demand signals
+  // into standing offers — the chain isn't just saying "please probe
+  // this", it's saying "here's uzrn waiting for whoever does."
+  // Paid in addition to stake refund, participation reward, and
+  // success amplification.
+  string invitation_bonus_amount = 158; // default "500000" = 0.5 ZRN per answered invitation
 }
 
 // GenesisState is the genesis state of the knowledge module.

@@ -837,6 +837,73 @@ func TestMoat_PanelWeightedByStakeTimesCalibration(t *testing.T) {
 	}
 }
 
+// Invitation bonus (Wave 15b). When a prober answers a chain-issued
+// stress-test invitation, the pool pays them a flat bonus regardless
+// of outcome. Converts the invitation from a demand signal into a
+// standing offer: the chain doesn't just say "please probe this fact"
+// — it says "here's uzrn waiting for whoever does." The bonus fires
+// even when the probe fails because the audit activity itself is
+// what the chain is paying for.
+func TestMoat_InvitationBonusPaidToAnswerer(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	// Shorten invitation threshold + fund the pool before probing.
+	params, err := h.KnowledgeKeeper.GetParams(h.Ctx)
+	require.NoError(t, err)
+	params.ProbeInvitationIdleThresholdBlocks = 50
+	params.ProbeInvitationBatchSize = 10
+	params.InvitationBonusAmount = "500000" // 0.5 ZRN
+	require.NoError(t, h.KnowledgeKeeper.SetParams(h.Ctx, params))
+
+	// Seed an invited target fact.
+	submitter := testAddr("moat_inv_sub").String()
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, &knowledgetypes.Fact{
+		Id: "F-INVITED", Content: "idle high-conf target",
+		Domain: "sciences", Category: "empirical",
+		Status: knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+		Submitter: submitter,
+		MethodId: knowledgetypes.MethodologyEmpirical,
+		Confidence: 900_000, VerifiedAtBlock: 1,
+	}))
+
+	// Advance past the idle threshold so the heartbeat invites the fact
+	// AND the pool accumulates enough to pay the bonus.
+	h.AdvanceBlocks(100)
+	fact, _ := h.KnowledgeKeeper.GetFact(h.Ctx, "F-INVITED")
+	require.Greater(t, fact.ProbeInvitedAtBlock, uint64(0), "heartbeat must invite the fact")
+
+	// Fund the challenger and submit a probe.
+	challenger := testAddr("moat_inv_prober")
+	require.NoError(t, h.FundAccount(challenger, sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewInt(50_000_000)))))
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	stake := knowledgekeeper.EffectiveMinChallengeStake(params, fact.Confidence)
+	resp, err := ms.ChallengeFact(h.Ctx, &knowledgetypes.MsgChallengeFact{
+		Challenger: challenger.String(), FactId: fact.Id,
+		Stake: stake.String(), Reason: "answering invitation",
+	})
+	require.NoError(t, err)
+
+	preSettle := h.GetBalance(challenger, "uzrn").Amount.Int64()
+	round, _ := h.KnowledgeKeeper.GetVerificationRound(h.Ctx, resp.RoundId)
+
+	// Force the challenge to FAIL — the fact survives. The invitation
+	// bonus should fire anyway because the challenger showed up.
+	require.NoError(t, h.KnowledgeKeeper.CompleteRound(h.Ctx, round, &knowledgekeeper.VerificationResult{
+		Verdict: knowledgetypes.Verdict_VERDICT_REJECT, Confidence: 900_000, RejectCount: 3,
+	}))
+
+	postSettle := h.GetBalance(challenger, "uzrn").Amount.Int64()
+	delta := postSettle - preSettle
+
+	// Delta = participation refund (15% of stake) + invitation bonus (500_000).
+	participation := int64(stake.Uint64()) * 150_000 / 1_000_000
+	require.GreaterOrEqual(t, delta, participation+500_000,
+		"even on failure, answerer receives invitation bonus on top of participation refund")
+}
+
 // MsgAddFact bypasses the verifier-panel trust chain by design (genesis
 // seeding and authority-gated corrections need it). Every call must emit
 // a PrivilegedAction log entry so compromised-authority abuse is

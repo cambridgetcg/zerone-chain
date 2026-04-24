@@ -1481,6 +1481,13 @@ Popperian survival counter incremented: a fact withstood a falsification attempt
 - `new_count` -- corroboration_count after increment
 - `block_height` -- height at which the challenge was resolved
 
+### zerone.knowledge.invitation_bonus_paid
+Emitted when the probe bounty pool pays the flat `InvitationBonusAmount` to a prober who answered a chain-issued stress-test invitation. Fires on any verdict — the chain pays for showing up, not only for winning. Invitation was "current" (fact's `ProbeInvitedAtBlock > 0` and `LastCorroboratedBlock ≤ ProbeInvitedAtBlock`). Converts invitations from demand signals into standing offers.
+- `claim_id` -- the challenge claim that answered the invitation
+- `challenger` -- challenger address (bonus recipient)
+- `fact_id` -- target fact whose invitation was answered
+- `amount` -- uzrn paid from the pool (may be less than `InvitationBonusAmount` if the pool is underfunded)
+
 ### zerone.knowledge.probe_bounty_minted
 Emitted each block that the Wave 15 BeginBlocker mints uzrn into the dedicated probe bounty pool (`knowledge_probe_bounty_pool` module account). The pool funds successful-probe bonuses via `PayProbeBountyFromPool` — decoupling epistemic-auditing budget from general governance. Minting throttles when the pool reaches `ProbeBountyMaxPoolSize`; the event carries the actual minted amount (may be less than `ProbeBountyMintPerBlock` when the cap clamps issuance).
 - `amount` -- uzrn minted this block

@@ -263,8 +263,17 @@ type Params struct {
 	// if the pool is empty, fall back to protocol treasury.
 	ProbeBountyMintPerBlock string `protobuf:"bytes,156,opt,name=probe_bounty_mint_per_block,json=probeBountyMintPerBlock,proto3" json:"probe_bounty_mint_per_block,omitempty"` // uzrn minted per block (default "1000000" = 1 ZRN)
 	ProbeBountyMaxPoolSize  string `protobuf:"bytes,157,opt,name=probe_bounty_max_pool_size,json=probeBountyMaxPoolSize,proto3" json:"probe_bounty_max_pool_size,omitempty"`    // cap on pool balance (default "1000000000000" = 1,000,000 ZRN)
-	unknownFields           protoimpl.UnknownFields
-	sizeCache               protoimpl.SizeCache
+	// ─── Wave 15b: invitation bonuses ──────────────────────────────────────
+	// When a prober acts on a fact the chain has explicitly invited for
+	// stress-testing, pay them a flat bonus from the probe bounty pool
+	// regardless of outcome. Converts invitations from demand signals
+	// into standing offers — the chain isn't just saying "please probe
+	// this", it's saying "here's uzrn waiting for whoever does."
+	// Paid in addition to stake refund, participation reward, and
+	// success amplification.
+	InvitationBonusAmount string `protobuf:"bytes,158,opt,name=invitation_bonus_amount,json=invitationBonusAmount,proto3" json:"invitation_bonus_amount,omitempty"` // default "500000" = 0.5 ZRN per answered invitation
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1396,6 +1405,13 @@ func (x *Params) GetProbeBountyMaxPoolSize() string {
 	return ""
 }
 
+func (x *Params) GetInvitationBonusAmount() string {
+	if x != nil {
+		return x.InvitationBonusAmount
+	}
+	return ""
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                     protoimpl.MessageState      `protogen:"open.v1"`
@@ -1633,7 +1649,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xb2N\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xebN\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1792,7 +1808,8 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\x1bprobe_invitation_batch_size\x18\x9a\x01 \x01(\rR\x18probeInvitationBatchSize\x12L\n" +
 	"\"probe_invitation_reinvite_cooldown\x18\x9b\x01 \x01(\x04R\x1fprobeInvitationReinviteCooldown\x12=\n" +
 	"\x1bprobe_bounty_mint_per_block\x18\x9c\x01 \x01(\tR\x17probeBountyMintPerBlock\x12;\n" +
-	"\x1aprobe_bounty_max_pool_size\x18\x9d\x01 \x01(\tR\x16probeBountyMaxPoolSize\x1aN\n" +
+	"\x1aprobe_bounty_max_pool_size\x18\x9d\x01 \x01(\tR\x16probeBountyMaxPoolSize\x127\n" +
+	"\x17invitation_bonus_amount\x18\x9e\x01 \x01(\tR\x15invitationBonusAmount\x1aN\n" +
 	" MethodologyNormalizationBpsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x04R\x05value:\x028\x01\"\xe5\x0e\n" +

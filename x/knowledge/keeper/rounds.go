@@ -68,6 +68,16 @@ func (k Keeper) CompleteRound(ctx context.Context, round *types.VerificationRoun
 	round.VerdictBlock = height
 	round.Phase = types.VerificationPhase_VERIFICATION_PHASE_COMPLETE
 
+	// Wave 15b: pay the invitation bonus BEFORE any verdict-specific side
+	// effects consume the invitation state. handleChallengeSurvival will
+	// bump LastCorroboratedBlock on REJECT, which makes the invitation
+	// look stale retroactively. Check here, while the state still
+	// reflects what the challenger saw when they submitted.
+	if claim.ProvisionalFactId != "" {
+		paramsEarly, _ := k.GetParams(ctx)
+		k.payInvitationBonus(ctx, claim, paramsEarly)
+	}
+
 	// Record submitter calibration (Phase 5 — feedback loop). Every round
 	// outcome updates the submitter's track record. Challenge claims are
 	// handled below with their own challenger-side recording.
@@ -1004,4 +1014,54 @@ func roundHasDissent(round *types.VerificationRound) bool {
 		}
 	}
 	return false
+}
+
+// payInvitationBonus pays a flat invitation bonus from the probe bounty
+// pool when the prober answered a chain-issued invitation on the target
+// fact. The invitation is current if the fact's ProbeInvitedAtBlock is
+// set AND hasn't been superseded by a corroboration. Fires regardless
+// of verdict — the chain pays for participation in answering its
+// audit calls, not just for winning.
+//
+// Emits zerone.knowledge.invitation_bonus_paid on success.
+func (k Keeper) payInvitationBonus(ctx context.Context, claim *types.Claim, params *types.Params) {
+	if params == nil || claim == nil || claim.ProvisionalFactId == "" {
+		return
+	}
+	amountStr := params.InvitationBonusAmount
+	if amountStr == "" || amountStr == "0" {
+		return
+	}
+	amount, ok := new(big.Int).SetString(amountStr, 10)
+	if !ok || amount.Sign() <= 0 {
+		return
+	}
+	fact, found := k.GetFact(ctx, claim.ProvisionalFactId)
+	if !found || fact == nil {
+		return
+	}
+	// Invitation must be current: stamped and not already superseded
+	// by a corroboration (which resets the audit clock).
+	if fact.ProbeInvitedAtBlock == 0 {
+		return
+	}
+	if fact.LastCorroboratedBlock > fact.ProbeInvitedAtBlock {
+		return
+	}
+	challengerAddr, err := sdk.AccAddressFromBech32(claim.Submitter)
+	if err != nil {
+		return
+	}
+	paid := k.PayProbeBountyFromPool(ctx, challengerAddr, amount)
+	if paid.Sign() <= 0 {
+		return
+	}
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.invitation_bonus_paid",
+		sdk.NewAttribute("claim_id", claim.Id),
+		sdk.NewAttribute("challenger", claim.Submitter),
+		sdk.NewAttribute("fact_id", claim.ProvisionalFactId),
+		sdk.NewAttribute("amount", paid.String()),
+	))
 }
