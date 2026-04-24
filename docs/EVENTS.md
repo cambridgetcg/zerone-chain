@@ -1482,13 +1482,17 @@ Popperian survival counter incremented: a fact withstood a falsification attempt
 - `block_height` -- height at which the challenge was resolved
 
 ### zerone.knowledge.challenge_settled
-Emitted when a challenge claim's stake is settled after the verification round completes (Wave 14b moat-integrity audit). The verifier reward pool (55%) is distributed separately via `verifier_reward`; this event covers the remaining 45% of the challenger's stake. Successful challenges refund the remainder and pay `SuccessfulChallengeRewardBps` as a bonus from the protocol treasury; failed challenges route the remainder to the protocol treasury.
+Emitted when a challenge claim's stake is settled after the verification round completes. The verifier reward pool (55%) is distributed separately via `verifier_reward`; this event covers the remaining 45% of the challenger's stake.
+
+Wave 14c inverted the challenge economics to stress-test truth instead of shielding it. Wave 14d added a probe-participation reward so even failed probes earn something — encouraging continuous audit of high-confidence claims.
+
 - `claim_id` -- the challenge claim id
 - `challenger` -- challenger address
 - `outcome` -- "accepted" (challenge succeeded, fact disproven) or "rejected" (challenge failed)
 - `refund` -- uzrn returned to the challenger (accepted path only)
-- `reward_bps` -- successful-challenge bonus rate at settlement (accepted path only)
-- `slashed` -- uzrn routed to protocol treasury (rejected path only)
+- `reward_bps` -- amplified success bonus; scales with the disproven fact's confidence, peaking at (base + 200%) for max-confidence disproofs (accepted path only)
+- `participation_refund` -- 15% of the stake returned to the challenger on failed probes; the chain thanks every audit attempt, not only successful disproofs (rejected path only)
+- `to_treasury` -- remainder routed to protocol treasury on failed probes (rejected path only)
 
 ### zerone.knowledge.agent_calibration_updated
 Submitter's track record changed — Phase 5 feedback loop. Emitted after round outcomes, corroborations earned, and disprovals. Closes the loop between training-pipeline output and on-chain evaluation.

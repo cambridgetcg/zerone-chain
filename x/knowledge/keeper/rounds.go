@@ -917,17 +917,54 @@ func (k Keeper) settleChallengeStake(ctx context.Context, claim *types.Claim, ve
 		))
 
 	case types.Verdict_VERDICT_REJECT:
-		coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(remainder)))
-		if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, protocolTreasuryModule, coins); err != nil {
-			k.Logger(ctx).Error("failed-challenge stake → treasury failed", "claim", claim.Id, "err", err)
-			return
+		// Probe participation reward: even a failed probe is an audit of
+		// the fact. Return 15% of the original stake to the challenger to
+		// encourage stress-testing — the chain thanks you for trying, even
+		// when the fact holds. The remaining 30% of the original stake
+		// flows to protocol treasury (the 55% verifier pool already paid
+		// out in distributeVerifierRewardsFromPool).
+		//
+		//   Before: 55% verifiers,  0% challenger, 45% treasury
+		//   After:  55% verifiers, 15% challenger, 30% treasury
+		//
+		// This turns the economic shape from "gamble that confiscates
+		// stake on loss" to "participation-rewarded audit," which under
+		// the inverted challenge pricing makes probing high-confidence
+		// facts EV-positive for any challenger with even weak doubt.
+		const probeParticipationBps uint64 = 150_000
+		participation := new(big.Int).Mul(stakeAmt, new(big.Int).SetUint64(probeParticipationBps))
+		participation.Div(participation, new(big.Int).SetUint64(1_000_000))
+		toTreasury := new(big.Int).Sub(remainder, participation)
+
+		if participation.Sign() > 0 {
+			challengerAddr, err := sdk.AccAddressFromBech32(claim.Submitter)
+			if err == nil {
+				coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(participation)))
+				if err := k.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, challengerAddr, coins); err != nil {
+					k.Logger(ctx).Error("probe participation refund failed", "claim", claim.Id, "err", err)
+					// Fall through to treasury-route the full remainder if refund fails.
+					toTreasury = remainder
+				}
+			} else {
+				toTreasury = remainder
+			}
 		}
+
+		if toTreasury.Sign() > 0 {
+			coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(toTreasury)))
+			if err := k.bankKeeper.SendCoinsFromModuleToModule(ctx, types.ModuleName, protocolTreasuryModule, coins); err != nil {
+				k.Logger(ctx).Error("failed-challenge stake → treasury failed", "claim", claim.Id, "err", err)
+				return
+			}
+		}
+
 		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 			"zerone.knowledge.challenge_settled",
 			sdk.NewAttribute("claim_id", claim.Id),
 			sdk.NewAttribute("challenger", claim.Submitter),
 			sdk.NewAttribute("outcome", "rejected"),
-			sdk.NewAttribute("slashed", remainder.String()),
+			sdk.NewAttribute("participation_refund", participation.String()),
+			sdk.NewAttribute("to_treasury", toTreasury.String()),
 		))
 	}
 }

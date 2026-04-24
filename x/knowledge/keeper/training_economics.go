@@ -34,11 +34,30 @@ type TrainingValueWeightBreakdown struct {
 	VindicationMultiplier  uint64 // BPS (>= bps when vindicated, else bps)
 	SubmitterCalibration   uint64 // BPS snapshot at submission
 	AxiomProximity         uint64 // BPS (closer to axiom → higher)
+	HardeningMultiplier    uint64 // BPS — accelerating return on survived attacks
 	Disproven              bool
 	BlockedByIsOught       bool
 	StatusIneligible       bool   // true if fact status bars training-value accrual
 	Final                  uint64 // composed TVW
 }
+
+// Hardening parameters: each rate-limited corroboration bumps the
+// multiplier by a fixed step, up to a cap. Pairs with the
+// CorroborationCount-based BaseWeight to make the reward schedule
+// accelerate with survived attacks — Popper's insight that a claim
+// which has passed 100 tests is not 100× as credible as one which
+// passed 1, it's exponentially more.
+//
+//	BaseWeight × HardeningMultiplier total contribution from corroboration:
+//	   0 attacks   →  1  ×  1.0   =   1
+//	  10 attacks   → 11  ×  1.5   =  16.5
+//	  20 attacks   → 21  ×  2.0   =  42
+//	  40 attacks   → 41  ×  3.0   = 123     (cap)
+//	 100 attacks   → 101 ×  3.0   = 303     (cap)
+const (
+	hardeningPerCorroboration uint64 = 50_000    // +5% per survived attack
+	hardeningMaxBps           uint64 = 3_000_000 // 3× cap
+)
 
 // ComputeTrainingValueWeight returns the composed Popper-weighted TVW for a
 // fact. Disproven facts and ids resolving to NormativeCommitments return
@@ -112,12 +131,24 @@ func (k Keeper) ComputeTrainingValueWeight(ctx context.Context, factID string) T
 	// linear decay 1.0× at depth 0 → 0.5× at depth 10+.
 	out.AxiomProximity = axiomProximityBps(fact.AxiomDistance)
 
-	// Compose: final = base × meth × vind × cal × proximity (each ÷ BPS).
+	// Hardening: accelerating return on corroboration. BaseWeight already
+	// scales linearly (each survived attack adds 1); hardening adds a
+	// multiplicative bonus that tops out at the cap. The combination
+	// rewards facts that have run a long gauntlet exponentially more
+	// than facts that have barely been tested, encouraging submitters to
+	// welcome stress-testing of their own claims.
+	out.HardeningMultiplier = bps + fact.CorroborationCount*hardeningPerCorroboration
+	if out.HardeningMultiplier > hardeningMaxBps {
+		out.HardeningMultiplier = hardeningMaxBps
+	}
+
+	// Compose: final = base × meth × vind × cal × proximity × hardening.
 	final := uint64(out.BaseWeight) * bps
 	final = safeMulDivTVW(final, out.MethodologyMultiplier, bps)
 	final = safeMulDivTVW(final, out.VindicationMultiplier, bps)
 	final = safeMulDivTVW(final, out.SubmitterCalibration, bps)
 	final = safeMulDivTVW(final, out.AxiomProximity, bps)
+	final = safeMulDivTVW(final, out.HardeningMultiplier, bps)
 	out.Final = final
 	return out
 }

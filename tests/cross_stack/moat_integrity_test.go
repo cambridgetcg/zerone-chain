@@ -376,6 +376,121 @@ func TestMoat_SuccessfulChallengeRewardScalesWithTargetConfidence(t *testing.T) 
 		lowReward.String(), highReward.String())
 }
 
+// TVW must compound with survived attacks, not merely scale linearly.
+// Popper: a theory that has passed 100 tests is not 100× as credible as
+// one that passed 1 — it's exponentially more. The HardeningMultiplier
+// enforces that shape on top of the already-linear BaseWeight, so every
+// additional survived attack is worth more than the one before, up to
+// the 3× cap.
+func TestMoat_TVWHardensWithSurvivedAttacks(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	submitter := testAddr("moat_hardening_sub").String()
+	mkFact := func(id string, corroboration uint64) {
+		require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, &knowledgetypes.Fact{
+			Id:         id,
+			Content:    "hardened truth candidate",
+			Domain:     "sciences",
+			Status:     knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+			Submitter:  submitter,
+			MethodId:   knowledgetypes.MethodologyEmpirical,
+			Confidence: 900_000,
+			CorroborationCount:              corroboration,
+			SubmitterCalibrationSnapshotBps: 800_000,
+			AxiomDistance:                   2,
+		}))
+	}
+	mkFact("F-HARD-0", 0)
+	mkFact("F-HARD-10", 10)
+	mkFact("F-HARD-40", 40)
+	mkFact("F-HARD-100", 100)
+
+	qs := knowledgekeeper.NewQueryServerImpl(h.KnowledgeKeeper)
+	q := func(id string) uint64 {
+		r, err := qs.TrainingValueWeight(h.Ctx, &knowledgetypes.QueryTrainingValueWeightRequest{FactId: id})
+		require.NoError(t, err)
+		return r.TvwBps
+	}
+	zero := q("F-HARD-0")
+	ten := q("F-HARD-10")
+	forty := q("F-HARD-40")
+	hundred := q("F-HARD-100")
+
+	// Monotonic: more survived attacks → strictly more TVW.
+	require.Greater(t, ten, zero, "10 survived attacks must out-earn 0")
+	require.Greater(t, forty, ten, "40 survived attacks must out-earn 10")
+
+	// Accelerating return shape: the jump from 10→40 corroborations must
+	// exceed 4× the jump from 0→10 (BaseWeight alone would give 4×; the
+	// hardening multiplier pushes it past that).
+	jump0to10 := ten - zero
+	jump10to40 := forty - ten
+	require.Greater(t, jump10to40, jump0to10*4,
+		"hardening must accelerate returns, not merely linearize them")
+
+	// Cap is asymptotic — going from 40 to 100 corroborations continues
+	// to add value (BaseWeight grows linearly) but the multiplier plateaus.
+	require.Greater(t, hundred, forty, "TVW still grows past the cap via BaseWeight")
+}
+
+// Failed probes earn a participation reward so stress-testing remains
+// rational even when the fact stands firm. Without this, the only
+// profitable strategy is to probe facts you're almost certain are
+// wrong, and the substrate's epistemic audit loop starves. With this,
+// any challenger with even weak doubt about a high-confidence claim
+// has positive expected value for attempting a probe.
+func TestMoat_FailedProbesEarnParticipationReward(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	challenger := testAddr("moat_probe_participation")
+	require.NoError(t, h.FundAccount(challenger,
+		sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewInt(50_000_000)))))
+
+	surviving := &knowledgetypes.Fact{
+		Id: "F-MOAT-SURVIVOR", Content: "a fact that will survive the probe",
+		Domain: "sciences", Category: "empirical",
+		Status: knowledgetypes.FactStatus_FACT_STATUS_VERIFIED,
+		Submitter: testAddr("moat_probe_sub").String(),
+		MethodId: knowledgetypes.MethodologyEmpirical,
+		Confidence: 900_000,
+	}
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, surviving))
+
+	params, err := h.KnowledgeKeeper.GetParams(h.Ctx)
+	require.NoError(t, err)
+	stake := knowledgekeeper.EffectiveMinChallengeStake(params, surviving.Confidence)
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	resp, err := ms.ChallengeFact(h.Ctx, &knowledgetypes.MsgChallengeFact{
+		Challenger: challenger.String(), FactId: surviving.Id,
+		Stake: stake.String(), Reason: "participation-reward test",
+	})
+	require.NoError(t, err)
+
+	balAfterLock := h.GetBalance(challenger, "uzrn")
+	round, ok := h.KnowledgeKeeper.GetVerificationRound(h.Ctx, resp.RoundId)
+	require.True(t, ok)
+
+	// Force the challenge to FAIL (fact survives).
+	require.NoError(t, h.KnowledgeKeeper.CompleteRound(h.Ctx, round, &knowledgekeeper.VerificationResult{
+		Verdict: knowledgetypes.Verdict_VERDICT_REJECT, Confidence: 900_000, RejectCount: 3,
+	}))
+
+	balAfterSettle := h.GetBalance(challenger, "uzrn")
+
+	// Participation reward = 15% of stake.
+	expected := stake.Uint64() * 150_000 / 1_000_000
+	gained := balAfterSettle.Amount.Sub(balAfterLock.Amount).Uint64()
+	require.Equal(t, expected, gained,
+		"failed challenger must receive 15%% of stake as probe participation reward")
+	require.Greater(t, gained, uint64(0),
+		"participation reward must be non-zero so probing is never pure loss")
+}
+
 // MsgAddFact bypasses the verifier-panel trust chain by design (genesis
 // seeding and authority-gated corrections need it). Every call must emit
 // a PrivilegedAction log entry so compromised-authority abuse is
