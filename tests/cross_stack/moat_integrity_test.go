@@ -755,6 +755,88 @@ func TestMoat_ProbeBountyPoolRespectsCap(t *testing.T) {
 		"pool should still be near the cap — issuance throttles but doesn't stop mid-block")
 }
 
+// Panel weight = stake × calibration (Wave 15). The Wave 10 fix made
+// zero-stake Sybil addresses unable to carry consensus; this test pins
+// the further refinement: a HIGH-STAKE verifier with low calibration
+// cannot dominate either. Rich-but-unreliable voters are weighted down
+// by their track record. The bar to capture the panel becomes BOTH
+// stake AND skill — two independent rare resources.
+func TestMoat_PanelWeightedByStakeTimesCalibration(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	sponsor := testAddr("moat_panel_rep_sponsor")
+	require.NoError(t, h.FundAccount(sponsor, sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewInt(100_000_000)))))
+	submitter := testAddr("moat_panel_rep_sub").String()
+
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, &knowledgetypes.Fact{
+		Id: "F-PANEL-REP", Content: "target", Domain: "sciences",
+		Status: knowledgetypes.FactStatus_FACT_STATUS_ACTIVE, Submitter: sponsor.String(),
+		MethodId: knowledgetypes.MethodologyEmpirical, Confidence: 900_000,
+	}))
+	_, err = ms.CreateAugmentationBounty(h.Ctx, &knowledgetypes.MsgCreateAugmentationBounty{
+		Sponsor: sponsor.String(), Id: "b-panel-rep", TargetFactId: "F-PANEL-REP",
+		RewardPerVariant: 1_000_000, MaxVariants: 1,
+	})
+	require.NoError(t, err)
+	_, err = ms.SubmitAugmentation(h.Ctx, &knowledgetypes.MsgSubmitAugmentation{
+		Submitter: submitter, Id: "aug-panel-rep", BountyId: "b-panel-rep",
+		OriginalFactId: "F-PANEL-REP", VariantContent: "the variant under test",
+	})
+	require.NoError(t, err)
+
+	// Rich-but-uncalibrated verifier. Stake: 100M, calibration: explicitly
+	// zero via an AgentCalibration record with score=0 (floored to 20%
+	// internally, so effective weight = 100M × 0.2 = 20M).
+	rich := testAddr("moat_panel_rich_uncal").String()
+	h.BondTestValidator(rich, 100_000_000)
+	require.NoError(t, h.KnowledgeKeeper.SetAgentCalibration(h.Ctx, &knowledgetypes.AgentCalibration{
+		Address: rich, CalibrationScoreBps: 0, Accepted: 0, TotalSubmissions: 0,
+	}))
+
+	// Three modest-but-calibrated verifiers. Stake: 20M each × cal 0.9 =
+	// 18M effective each, total 54M. Versus rich's 100M × 0.2 = 20M.
+	// Under raw stake: rich would dominate. Under reputation weighting:
+	// 54M / (54M + 20M) = 73% — clears the 66.6% consensus threshold.
+	cal1 := testAddr("moat_panel_cal1").String()
+	cal2 := testAddr("moat_panel_cal2").String()
+	cal3 := testAddr("moat_panel_cal3").String()
+	for _, v := range []string{cal1, cal2, cal3} {
+		h.BondTestValidator(v, 20_000_000)
+		require.NoError(t, h.KnowledgeKeeper.SetAgentCalibration(h.Ctx, &knowledgetypes.AgentCalibration{
+			Address: v, CalibrationScoreBps: 900_000,
+			Accepted: 90, TotalSubmissions: 100,
+		}))
+	}
+
+	// Rich uncalibrated votes DRIFT; calibrated ones vote EQUIVALENT.
+	_, err = ms.VoteOnAugmentation(h.Ctx, &knowledgetypes.MsgVoteOnAugmentation{
+		Verifier: rich, AugmentationId: "aug-panel-rep",
+		Vote: knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_DRIFT,
+	})
+	require.NoError(t, err)
+	for _, v := range []string{cal1, cal2, cal3} {
+		_, err := ms.VoteOnAugmentation(h.Ctx, &knowledgetypes.MsgVoteOnAugmentation{
+			Verifier: v, AugmentationId: "aug-panel-rep",
+			Vote: knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT,
+		})
+		require.NoError(t, err)
+	}
+
+	aug, _ := h.KnowledgeKeeper.GetAugmentation(h.Ctx, "aug-panel-rep")
+	require.Equal(t, knowledgetypes.AugmentationVerdict_AUGMENTATION_VERDICT_EQUIVALENT, aug.Verdict,
+		"calibrated minority in raw stake out-votes rich uncalibrated: skill × bond, not bond alone")
+
+	// Calibration snapshots are preserved on the record.
+	require.Len(t, aug.VerdictVoteCalibrationBps, 4)
+	require.Equal(t, uint64(0), aug.VerdictVoteCalibrationBps[0], "rich uncalibrated recorded as 0")
+	for i := 1; i < 4; i++ {
+		require.Equal(t, uint64(900_000), aug.VerdictVoteCalibrationBps[i])
+	}
+}
+
 // MsgAddFact bypasses the verifier-panel trust chain by design (genesis
 // seeding and authority-gated corrections need it). Every call must emit
 // a PrivilegedAction log entry so compromised-authority abuse is

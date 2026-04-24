@@ -567,9 +567,22 @@ func (k Keeper) RecordAugmentationVote(ctx context.Context, augID, verifier stri
 		}
 	}
 
+	// Snapshot the verifier's calibration at vote time (Wave 15
+	// reputation-weighted fix). A verifier with strong stake but weak
+	// track record should not outvote a verifier with moderate stake
+	// and strong calibration — epistemic skill matters, not just bond.
+	// Missing calibration defaults to the neutral PanelCalibrationFloorBps
+	// so the panel remains livable in the early chain state before
+	// anyone has built up a record.
+	var calibrationAtVote uint64
+	if cal, ok := k.GetAgentCalibration(ctx, verifier); ok && cal != nil {
+		calibrationAtVote = cal.CalibrationScoreBps
+	}
+
 	aug.VerdictVoters = append(aug.VerdictVoters, verifier)
 	aug.VerdictVotes = append(aug.VerdictVotes, vote)
 	aug.VerdictVoteStakes = append(aug.VerdictVoteStakes, stakeAtVote)
+	aug.VerdictVoteCalibrationBps = append(aug.VerdictVoteCalibrationBps, calibrationAtVote)
 	if err := k.SetAugmentation(ctx, aug); err != nil {
 		return false, aug.Verdict, err
 	}
@@ -591,20 +604,33 @@ func (k Keeper) RecordAugmentationVote(ctx context.Context, augID, verifier stri
 		consensusBps = 666_000
 	}
 
-	// Stake-weighted tally. Each verdict's total stake is compared against
-	// the total voted stake; a winner requires both a share above the
-	// consensus threshold AND non-zero total voted stake (otherwise a
-	// zero-stake panel could never finalize but would silently trip the
-	// "consensus reached" condition via 0/0 edge cases).
+	// Reputation-weighted tally (Wave 15). Each voter's effective panel
+	// weight is stake × max(floor, calibration) / BPS. Stake alone isn't
+	// enough to dominate — a verifier who has shown they can't tell
+	// truth from falsehood carries reduced weight regardless of bond.
+	// The calibration floor prevents lockup in the early chain state
+	// before anyone has built up a record; it also means NO stake-
+	// bearing verifier ever drops to zero weight (stake × floor > 0).
+	const panelCalibrationFloorBps uint64 = 200_000 // 20% — bare minimum signal credibility
 	stakeTally := make(map[types.AugmentationVerdict]uint64)
 	var totalStake uint64
 	for i, v := range aug.VerdictVotes {
-		w := uint64(0)
+		stake := uint64(0)
 		if i < len(aug.VerdictVoteStakes) {
-			w = aug.VerdictVoteStakes[i]
+			stake = aug.VerdictVoteStakes[i]
 		}
-		stakeTally[v] += w
-		totalStake += w
+		cal := uint64(0)
+		if i < len(aug.VerdictVoteCalibrationBps) {
+			cal = aug.VerdictVoteCalibrationBps[i]
+		}
+		if cal < panelCalibrationFloorBps {
+			cal = panelCalibrationFloorBps
+		}
+		// Effective weight = stake × calibration / BPS. A 100M stake at
+		// 50% calibration weighs the same as a 50M stake at 100%.
+		effectiveWeight := safeMulDiv(stake, cal, bps)
+		stakeTally[v] += effectiveWeight
+		totalStake += effectiveWeight
 	}
 	if totalStake == 0 {
 		// No stake-bearing votes yet; wait for more.

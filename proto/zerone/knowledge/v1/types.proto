@@ -551,6 +551,13 @@ message Augmentation {
   // time prevents a validator from bond/unbonding between vote and tally to
   // manipulate the consensus result. Non-validator voters have zero weight.
   repeated uint64 verdict_vote_stakes = 17;
+  // Per-verifier calibration at vote time (Wave 15 reputation-weighted
+  // fix). Parallel to verdict_vote_stakes. The effective panel weight
+  // for each voter is stake × max(floor, calibration) / BPS — a high-
+  // stake verifier who has not shown they can tell truth from falsehood
+  // still cannot dominate the panel. Freeze at vote time so verifiers
+  // can't farm calibration after voting to retroactively change weight.
+  repeated uint64 verdict_vote_calibration_bps = 18;
 }
 
 // ─── Wave 4: contribution attribution challenges ─────────────────────────
