@@ -42,7 +42,7 @@ func (m msgServer) SubmitChallenge(goCtx context.Context, msg *types.MsgSubmitCh
 	minStake := new(big.Int)
 	minStake.SetString(params.MinChallengeStake, 10)
 	if stakeAmt.Cmp(minStake) < 0 {
-		return nil, fmt.Errorf("%w: need %s, got %s", types.ErrInsufficientStake, params.MinChallengeStake, msg.Stake)
+		return nil, fmt.Errorf("%w: need %s, got %s (commitment 9: cartel accusations cost something — the cost is the commitment to the claim, not the deterrent against making it)", types.ErrInsufficientStake, params.MinChallengeStake, msg.Stake)
 	}
 
 	// Check if domain is paused

@@ -45,7 +45,7 @@ func (k msgServer) ProposeHalt(goCtx context.Context, msg *types.MsgProposeHalt)
 		guardianStake := k.GetGuardianStake(goCtx)
 		minStake, ok := new(big.Int).SetString(params.MinGuardianStake, 10)
 		if ok && guardianStake.Cmp(minStake) < 0 {
-			return nil, fmt.Errorf("%w: total guardian stake %s < minimum %s", types.ErrInsufficientGuardians, guardianStake.String(), params.MinGuardianStake)
+			return nil, fmt.Errorf("%w: total guardian stake %s < minimum %s (commitment 10: emergency machinery requires plural backing — a single guardian cannot halt the chain, the audit trail demands witnesses)", types.ErrInsufficientGuardians, guardianStake.String(), params.MinGuardianStake)
 		}
 	}
 

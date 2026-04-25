@@ -533,7 +533,7 @@ func (m *msgServer) VetoFactInjection(ctx context.Context, msg *types.MsgVetoFac
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 	height := uint64(sdkCtx.BlockHeight())
 	if height >= pending.ExecuteAtBlock {
-		return nil, fmt.Errorf("veto window closed: pending %s materializes at block %d (now %d)",
+		return nil, fmt.Errorf("veto window closed: pending %s materializes at block %d (now %d) (commitment 6: the veto window is the chain's promise that authority injection is reviewable; once closed the promise has run its course)",
 			msg.PendingId, pending.ExecuteAtBlock, height)
 	}
 	if err := m.keeper.DeletePendingFactInjection(ctx, msg.PendingId); err != nil {
@@ -616,7 +616,7 @@ func (m *msgServer) ChallengeFact(ctx context.Context, msg *types.MsgChallengeFa
 	// Fact must be in a challengeable state
 	if fact.Status != types.FactStatus_FACT_STATUS_VERIFIED &&
 		fact.Status != types.FactStatus_FACT_STATUS_ACTIVE {
-		return nil, fmt.Errorf("fact %s is not in a challengeable state (status: %s)", msg.FactId, fact.Status)
+		return nil, fmt.Errorf("fact %s is not in a challengeable state (status: %s) (commitment 4: only verified or active facts accept probes; degraded facts are already moving)", msg.FactId, fact.Status)
 	}
 
 	// Risk-scaled stake check (T12): higher-confidence facts require more stake
@@ -631,7 +631,7 @@ func (m *msgServer) ChallengeFact(ctx context.Context, msg *types.MsgChallengeFa
 	}
 	effectiveMinStake := EffectiveMinChallengeStake(params, fact.Confidence)
 	if stakeAmt.Cmp(effectiveMinStake) < 0 {
-		return nil, fmt.Errorf("challenge stake %s below effective minimum %s (fact confidence %d)",
+		return nil, fmt.Errorf("challenge stake %s below effective minimum %s (fact confidence %d) (commitment 4: probe cost scales with confidence — high-confidence facts must be the cheapest to test relative to what is at stake)",
 			msg.Stake, effectiveMinStake.String(), fact.Confidence)
 	}
 

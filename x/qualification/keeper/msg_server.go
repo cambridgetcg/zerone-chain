@@ -70,7 +70,7 @@ func (k msgServer) EndorseQualification(goCtx context.Context, msg *types.MsgEnd
 	// Check max endorsements.
 	params := k.GetParams(goCtx)
 	if q.EndorsementCount >= params.MaxEndorsements {
-		return nil, fmt.Errorf("%w: %d", types.ErrMaxEndorsements, params.MaxEndorsements)
+		return nil, fmt.Errorf("%w: %d (commitment 8: past this threshold endorsements add noise, not signal — qualification is a current statement of skill, capped against signal collapse)", types.ErrMaxEndorsements, params.MaxEndorsements)
 	}
 
 	// Endorsement-diversity guard (L3): reject endorsements from validators whose
@@ -96,7 +96,7 @@ func (k msgServer) EndorseQualification(goCtx context.Context, msg *types.MsgEnd
 			}
 			overlapBps := shared * 1_000_000 / smaller
 			if overlapBps > params.EndorsementMaxOverlapBps {
-				return nil, fmt.Errorf("endorsement rejected: domain overlap %d bps exceeds max %d bps (anti-ring guard)",
+				return nil, fmt.Errorf("endorsement rejected: domain overlap %d bps exceeds max %d bps (anti-ring guard) (commitment 8: endorsements from a tightly-clustered ring amplify each other without external signal — skill must be confirmed by validators outside the cluster)",
 					overlapBps, params.EndorsementMaxOverlapBps)
 			}
 		}

@@ -116,7 +116,7 @@ func (k Keeper) QualifyByTrackRecord(ctx context.Context, validator string, doma
 	}
 
 	if totalVerifications < params.MinVerifications {
-		return fmt.Errorf("%w: need %d, got %d", types.ErrInsufficientTrackRecord, params.MinVerifications, totalVerifications)
+		return fmt.Errorf("%w: need %d, got %d (commitment 7: skill is current, not historical — the chain demands a demonstrated track record, not a one-time test)", types.ErrInsufficientTrackRecord, params.MinVerifications, totalVerifications)
 	}
 
 	accuracyBps := uint64(0)
@@ -124,7 +124,7 @@ func (k Keeper) QualifyByTrackRecord(ctx context.Context, validator string, doma
 		accuracyBps = (correctVerifications * 1000000) / totalVerifications
 	}
 	if accuracyBps < params.MinAccuracyBps {
-		return fmt.Errorf("%w: need %d bps, got %d bps", types.ErrInsufficientAccuracy, params.MinAccuracyBps, accuracyBps)
+		return fmt.Errorf("%w: need %d bps, got %d bps (commitment 7: skill is current — accuracy is the demonstration's reading and the bar is meaningfully high)", types.ErrInsufficientAccuracy, params.MinAccuracyBps, accuracyBps)
 	}
 
 	// Calculate weight based on accuracy: base 40 + up to 60 based on accuracy above minimum.

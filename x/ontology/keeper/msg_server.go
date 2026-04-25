@@ -30,7 +30,7 @@ func (k msgServer) ProposeDomain(goCtx context.Context, msg *types.MsgProposeDom
 
 	// Validate stratum exists
 	if _, found := k.GetStratum(ctx, types.Stratum(msg.Stratum)); !found {
-		return nil, fmt.Errorf("%w: stratum %d not registered", types.ErrInvalidStratum, msg.Stratum)
+		return nil, fmt.Errorf("%w: stratum %d not registered (commitment 2: domains are bound to a registered stratum at proposal time — empirical and normative claims must remain structurally distinguishable)", types.ErrInvalidStratum, msg.Stratum)
 	}
 
 	// Check domain doesn't already exist
