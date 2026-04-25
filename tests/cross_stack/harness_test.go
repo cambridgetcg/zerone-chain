@@ -50,6 +50,7 @@ import (
 	zeronequalificationkeeper "github.com/zerone-chain/zerone/x/qualification/keeper"
 	qualificationtypes "github.com/zerone-chain/zerone/x/qualification/types"
 	zeroneprovenancekeeper "github.com/zerone-chain/zerone/x/training_provenance/keeper"
+	zeronetrustscorekeeper "github.com/zerone-chain/zerone/x/trust_score/keeper"
 	zeronepartnershipskeeper "github.com/zerone-chain/zerone/x/partnerships/keeper"
 	zeronediscoverykeeper "github.com/zerone-chain/zerone/x/discovery/keeper"
 )
@@ -93,6 +94,7 @@ type TestHarness struct {
 	PartnershipsKeeper       zeronepartnershipskeeper.Keeper
 	DiscoveryKeeper          zeronediscoverykeeper.Keeper
 	TrainingProvenanceKeeper zeroneprovenancekeeper.Keeper
+	TrustScoreKeeper         zeronetrustscorekeeper.Keeper
 
 	// Standard Cosmos SDK keepers
 	BankKeeper    bankkeeper.Keeper
@@ -258,6 +260,7 @@ func NewTestHarness(t *testing.T) *TestHarness {
 		PartnershipsKeeper:       app.PartnershipsKeeper,
 		DiscoveryKeeper:          app.DiscoveryKeeper,
 		TrainingProvenanceKeeper: app.TrainingProvenanceKeeper,
+		TrustScoreKeeper:         app.TrustScoreKeeper,
 
 		// R7 keepers
 		AutopoiesisKeeper:    app.AutopoiesisKeeper,

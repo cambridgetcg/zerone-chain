@@ -1,0 +1,24 @@
+syntax = "proto3";
+package zerone.trust_score.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/trust_score/types";
+
+import "google/api/annotations.proto";
+import "zerone/trust_score/v1/types.proto";
+
+service Query {
+  // TrustScore returns the per-address synthesised trustworthiness
+  // signal. Computed live from x/knowledge (calibration), x/qualification
+  // (metrics, penalties, status), and x/capture_challenge (strike count).
+  rpc TrustScore(QueryTrustScoreRequest) returns (QueryTrustScoreResponse) {
+    option (google.api.http).get = "/zerone/trust_score/v1/score/{address}";
+  }
+}
+
+message QueryTrustScoreRequest {
+  string address = 1;
+}
+
+message QueryTrustScoreResponse {
+  TrustScore score = 1;
+}

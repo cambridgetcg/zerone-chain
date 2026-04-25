@@ -1,0 +1,8 @@
+syntax = "proto3";
+package zerone.trust_score.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/trust_score/types";
+
+// GenesisState is intentionally empty: no state is owned. Same shape
+// as x/training_provenance — a pure read-only synthesizer.
+message GenesisState {}
