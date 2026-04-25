@@ -8,6 +8,8 @@ interaction backed by cryptographic truth.
 
 **Status:** Testnet (`zerone-testnet-1`) — pre-launch
 
+> **Read first:** [docs/TRUTH_SEEKING.md](docs/TRUTH_SEEKING.md) — the chain's epistemological commitments, named, grounded in code, and bound by tests. Truth-seeking is the substrate, not a feature. We speak through intentions.
+
 ---
 
 ## Token
