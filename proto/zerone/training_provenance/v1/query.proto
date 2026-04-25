@@ -1,0 +1,24 @@
+syntax = "proto3";
+package zerone.training_provenance.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/training_provenance/types";
+
+import "google/api/annotations.proto";
+import "zerone/training_provenance/v1/types.proto";
+
+// Query exposes a single synthesised view: the ProvenanceCertificate
+// for a given manifest. The module owns no state of its own; the cert
+// is computed live from x/knowledge + x/qualification + x/capture_challenge.
+service Query {
+  rpc ProvenanceCertificate(QueryProvenanceCertificateRequest) returns (QueryProvenanceCertificateResponse) {
+    option (google.api.http).get = "/zerone/training_provenance/v1/certificate/{manifest_id}";
+  }
+}
+
+message QueryProvenanceCertificateRequest {
+  string manifest_id = 1;
+}
+
+message QueryProvenanceCertificateResponse {
+  ProvenanceCertificate certificate = 1;
+}

@@ -1,0 +1,62 @@
+syntax = "proto3";
+package zerone.training_provenance.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/training_provenance/types";
+
+// ProvenanceCertificate bundles every signal the chain knows about a
+// training manifest into a single queryable shape. Pure synthesis: this
+// module owns no state — it reads from x/knowledge (manifest, augmentation,
+// privileged-action log, incidents), x/qualification (verifier metrics),
+// and x/capture_challenge (cartel resolutions touching the manifest's
+// domains). The certificate is what a downstream model trainer publishes
+// to claim verifiable provenance.
+//
+// Trust grade is computed from the underlying signals — not stored. A
+// re-query at a later height yields a possibly-different grade if more
+// incidents have landed. The certificate is a current statement, not a
+// historical artefact.
+message ProvenanceCertificate {
+  // ── Manifest identity ──────────────────────────────────────────────
+  string manifest_id            = 1;
+  string pipeline_id            = 2;
+  string merkle_root            = 3;
+  uint64 fact_count             = 4;
+  uint64 finalized_at_block     = 5;
+  string status                 = 6; // FINALIZED / ATTESTED / SUPERSEDED / etc.
+
+  // ── Domain coverage ────────────────────────────────────────────────
+  // One entry per domain represented in the manifest's selected fact set.
+  repeated DomainCoverage domains = 7;
+
+  // ── Audit history (signals the chain has accumulated) ───────────────
+  // Privileged-action records that touched any domain in the manifest's
+  // coverage. High counts are a yellow flag — many authority interventions
+  // suggest the corpus has been curated, not just verified.
+  uint32 privileged_action_count = 8;
+  // Incident records (P0–P3) opened that affected this manifest's
+  // pipeline or any of its domains.
+  uint32 incident_count          = 9;
+  // Capture-challenge resolutions (UPHELD only) targeting any of the
+  // manifest's coverage domains.
+  uint32 cartel_resolution_count = 10;
+
+  // ── Synthesised grade ──────────────────────────────────────────────
+  // Letter grade based on the signals above. Scoring rubric is fixed in
+  // code (deterministic) but the inputs evolve with chain state, so the
+  // grade is current, not historical. See keeper.go for thresholds.
+  string trust_grade            = 11;
+  string trust_explanation      = 12;
+  uint64 computed_at_block      = 13;
+}
+
+// DomainCoverage summarises one domain's contribution to a manifest.
+message DomainCoverage {
+  string domain                = 1;
+  uint64 fact_count            = 2;
+  // Average qualification weight across all currently-ACTIVE qualified
+  // validators in this domain. Composes with the per-domain panel
+  // weighting that adjudicated the manifest's facts.
+  uint64 avg_qualified_weight  = 3;
+  // Number of validators with ACTIVE qualifications in this domain.
+  uint32 active_voter_count    = 4;
+}

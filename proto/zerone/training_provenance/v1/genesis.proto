@@ -1,0 +1,9 @@
+syntax = "proto3";
+package zerone.training_provenance.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/training_provenance/types";
+
+// GenesisState is intentionally empty: this module owns no state. It is
+// a pure read-only synthesizer over other modules' state. Genesis exists
+// only to satisfy the Cosmos SDK's module-manager contract.
+message GenesisState {}

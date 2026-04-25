@@ -189,6 +189,9 @@ import (
 	zeroneresearch "github.com/zerone-chain/zerone/x/research"
 	zeroneresearchkeeper "github.com/zerone-chain/zerone/x/research/keeper"
 	zeroneresearchtypes "github.com/zerone-chain/zerone/x/research/types"
+	zeroneprovenance "github.com/zerone-chain/zerone/x/training_provenance"
+	zeroneprovenancekeeper "github.com/zerone-chain/zerone/x/training_provenance/keeper"
+	zeroneprovenancetypes "github.com/zerone-chain/zerone/x/training_provenance/types"
 	zeroneautopoiesis "github.com/zerone-chain/zerone/x/autopoiesis"
 	zeroneapkeeper "github.com/zerone-chain/zerone/x/autopoiesis/keeper"
 	zeroneaptypes "github.com/zerone-chain/zerone/x/autopoiesis/types"
@@ -468,6 +471,7 @@ type ZeroneApp struct {
 	IBCRateLimitKeeper  zeroneibcrlkeeper.Keeper
 	ICAAuthKeeper       zeroneicaauthkeeper.Keeper
 	ResearchKeeper          zeroneresearchkeeper.Keeper
+	TrainingProvenanceKeeper zeroneprovenancekeeper.Keeper
 	AlignmentKeeper         zeronealignmentkeeper.Keeper
 	AutopoiesisKeeper       zeroneapkeeper.Keeper // R7-1: autopoiesis
 	EvidenceMgmtKeeper      zeroneemkeeper.Keeper
@@ -991,6 +995,17 @@ func NewZeroneApp(
 	// capture_challenge → knowledge (increase threshold on upheld challenge)
 	app.CaptureChallengeKeeper.SetKnowledgeKeeper(app.KnowledgeKeeper)
 
+	// training_provenance reads from knowledge, qualification, and
+	// capture_challenge to synthesize ProvenanceCertificates. Pure
+	// consumer; no producers writing to it. The module is "a bundle
+	// of edges, named" — it owns no state beyond the wiring.
+	app.TrainingProvenanceKeeper = zeroneprovenancekeeper.NewKeeper(appCodec)
+	app.TrainingProvenanceKeeper.SetKnowledgeKeeper(app.KnowledgeKeeper)
+	app.TrainingProvenanceKeeper.SetQualificationKeeper(app.QualificationKeeper)
+	app.TrainingProvenanceKeeper.SetCaptureChallengeKeeper(
+		zeronecckeeper.NewTrainingProvenanceAdapter(app.CaptureChallengeKeeper),
+	)
+
 	// knowledge → capture_defense (feed verification history + reputation)
 	app.KnowledgeKeeper.SetCaptureDefenseKeeper(
 		zeronecdkeeper.NewKnowledgeCaptureDefenseAdapter(app.CaptureDefenseKeeper),
@@ -1238,6 +1253,7 @@ func NewZeroneApp(
 		zeroneibcratelimit.NewAppModule(appCodec, app.IBCRateLimitKeeper),
 		zeroneicaauth.NewAppModule(appCodec, app.ICAAuthKeeper),
 		zeroneresearch.NewAppModule(appCodec, app.ResearchKeeper),
+		zeroneprovenance.NewAppModule(appCodec, app.TrainingProvenanceKeeper),
 		zeronealignment.NewAppModule(appCodec, app.AlignmentKeeper),
 		zeroneautopoiesis.NewAppModule(appCodec, app.AutopoiesisKeeper),
 		zeroneevidencemgmt.NewAppModule(appCodec, app.EvidenceMgmtKeeper),
@@ -1287,6 +1303,7 @@ func NewZeroneApp(
 		zeronecdtypes.ModuleName,                    // capture_defense: decay + auto-analysis (before challenge)
 		zeronecctypes.ModuleName,                    // capture_challenge: phase advancement, risk analysis
 		zeroneresearchtypes.ModuleName,              // research: bounty expiry
+		zeroneprovenancetypes.ModuleName,            // training_provenance: no-op in BeginBlock (pure synthesizer)
 		zeronealignmenttypes.ModuleName,             // alignment: no-op in BeginBlock
 		zeroneaptypes.ModuleName,                    // autopoiesis: no-op in BeginBlock
 		zeroneibcrltypes.ModuleName,                 // ibcratelimit: reset expired windows
@@ -1337,6 +1354,7 @@ func NewZeroneApp(
 		zeronecdtypes.ModuleName,                    // EndBlocker: no-op
 		zeronecctypes.ModuleName,                    // EndBlocker: no-op
 		zeroneresearchtypes.ModuleName,              // EndBlocker: no-op
+		zeroneprovenancetypes.ModuleName,            // EndBlocker: no-op
 		zeronealignmenttypes.ModuleName,             // EndBlocker: observation→scoring→corrections at interval
 		zeroneibcrltypes.ModuleName,                 // EndBlocker: no-op
 		zeroneicaauthtypes.ModuleName,               // EndBlocker: no-op
@@ -1387,6 +1405,7 @@ func NewZeroneApp(
 		zeronecdtypes.ModuleName,                    // Genesis: after knowledge + staking
 		zeronecctypes.ModuleName,                    // Genesis: after capture_defense
 		zeroneresearchtypes.ModuleName,              // Genesis: after knowledge + bank (needs both)
+		zeroneprovenancetypes.ModuleName,            // Genesis: after knowledge + qualification + capture_challenge (pure read consumer)
 		zeronealignmenttypes.ModuleName,             // Genesis: after emergency + staking + knowledge (needs all)
 		zeronepartnershipstypes.ModuleName,          // Genesis: after home (needs home for partnership links)
 		zeroneibcrltypes.ModuleName,                 // Genesis: after IBC
