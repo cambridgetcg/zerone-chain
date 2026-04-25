@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	Query_SystemHealth_FullMethodName = "/zerone.governance_synthesis.v1.Query/SystemHealth"
+	Query_Frontier_FullMethodName     = "/zerone.governance_synthesis.v1.Query/Frontier"
 )
 
 // QueryClient is the client API for Query service.
@@ -30,6 +31,11 @@ type QueryClient interface {
 	// from incidents, pauses, pending injections, privileged-action
 	// log, cartel allegations, and alignment pacing.
 	SystemHealth(ctx context.Context, in *QuerySystemHealthRequest, opts ...grpc.CallOption) (*QuerySystemHealthResponse, error)
+	// Frontier synthesises the chain's per-domain sparsity map —
+	// domains ranked by how under-mapped they are. Consumers (model
+	// trainers, alignment researchers, inquiry askers) see the same
+	// frontier the chain itself publishes.
+	Frontier(ctx context.Context, in *QueryFrontierRequest, opts ...grpc.CallOption) (*QueryFrontierResponse, error)
 }
 
 type queryClient struct {
@@ -50,6 +56,16 @@ func (c *queryClient) SystemHealth(ctx context.Context, in *QuerySystemHealthReq
 	return out, nil
 }
 
+func (c *queryClient) Frontier(ctx context.Context, in *QueryFrontierRequest, opts ...grpc.CallOption) (*QueryFrontierResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryFrontierResponse)
+	err := c.cc.Invoke(ctx, Query_Frontier_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -58,6 +74,11 @@ type QueryServer interface {
 	// from incidents, pauses, pending injections, privileged-action
 	// log, cartel allegations, and alignment pacing.
 	SystemHealth(context.Context, *QuerySystemHealthRequest) (*QuerySystemHealthResponse, error)
+	// Frontier synthesises the chain's per-domain sparsity map —
+	// domains ranked by how under-mapped they are. Consumers (model
+	// trainers, alignment researchers, inquiry askers) see the same
+	// frontier the chain itself publishes.
+	Frontier(context.Context, *QueryFrontierRequest) (*QueryFrontierResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -70,6 +91,9 @@ type UnimplementedQueryServer struct{}
 
 func (UnimplementedQueryServer) SystemHealth(context.Context, *QuerySystemHealthRequest) (*QuerySystemHealthResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method SystemHealth not implemented")
+}
+func (UnimplementedQueryServer) Frontier(context.Context, *QueryFrontierRequest) (*QueryFrontierResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method Frontier not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -110,6 +134,24 @@ func _Query_SystemHealth_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_Frontier_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryFrontierRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).Frontier(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_Frontier_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).Frontier(ctx, req.(*QueryFrontierRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -120,6 +162,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SystemHealth",
 			Handler:    _Query_SystemHealth_Handler,
+		},
+		{
+			MethodName: "Frontier",
+			Handler:    _Query_Frontier_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

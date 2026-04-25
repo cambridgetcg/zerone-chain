@@ -13,10 +13,28 @@ service Query {
   rpc SystemHealth(QuerySystemHealthRequest) returns (QuerySystemHealthResponse) {
     option (google.api.http).get = "/zerone/governance_synthesis/v1/system_health";
   }
+
+  // Frontier synthesises the chain's per-domain sparsity map —
+  // domains ranked by how under-mapped they are. Consumers (model
+  // trainers, alignment researchers, inquiry askers) see the same
+  // frontier the chain itself publishes.
+  rpc Frontier(QueryFrontierRequest) returns (QueryFrontierResponse) {
+    option (google.api.http).get = "/zerone/governance_synthesis/v1/frontier";
+  }
 }
 
 message QuerySystemHealthRequest {}
 
 message QuerySystemHealthResponse {
   SystemHealth health = 1;
+}
+
+message QueryFrontierRequest {
+  // Maximum domains to return. 0 = all. Capped at synthesizer's
+  // internal limit (default 100).
+  uint32 limit = 1;
+}
+
+message QueryFrontierResponse {
+  Frontier frontier = 1;
 }

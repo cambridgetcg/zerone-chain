@@ -56,3 +56,43 @@ message SystemHealth {
   string explanation             = 12;
   uint64 computed_at_block       = 13;
 }
+
+// DomainFrontier is one row of the chain's "where is the corpus
+// sparse?" map. Rolls up the per-domain signals the chain already
+// publishes in other modules; the synthesizer adds no new state.
+//
+// Sparser domains are higher-priority targets for inquiry, since
+// the corpus is least-mapped there. Composing this on-chain rather
+// than in a dashboard means external consumers — model trainers,
+// regulators, alignment researchers — see the same frontier the
+// chain itself is committing to.
+message DomainFrontier {
+  string domain                       = 1;
+  // Total verified or active facts in this domain.
+  uint64 verified_facts               = 2;
+  // Inquiries currently OPEN or ANSWERED in this domain — open
+  // questions the chain has paid for but does not yet have a
+  // verified answer to.
+  uint64 open_inquiries               = 3;
+  // Total counterexamples authored against facts in this domain.
+  uint64 counterexamples_authored     = 4;
+  // VALIDATED counterexamples specifically — the alignment-by-
+  // structure coverage signal (commitment 15).
+  uint64 counterexamples_validated    = 5;
+  // Counterexample coverage in BPS: validated / verified_facts × 1M.
+  // Values < 1M indicate alignment-by-structure under-coverage.
+  uint64 counterexample_coverage_bps  = 6;
+  // Sparsity score in BPS, 0..1,000,000. Higher = sparser =
+  // higher-priority for new inquiries. Formula composes inverse
+  // fact density, open inquiry pressure, and inverse counterexample
+  // coverage. See the synthesizer for the exact computation.
+  uint64 sparsity_score_bps           = 7;
+}
+
+// Frontier is the chain's published "where is understanding sparse?"
+// map. Returned ordered descending by sparsity_score_bps so consumers
+// see the most under-mapped territory first.
+message Frontier {
+  repeated DomainFrontier domains = 1;
+  uint64 computed_at_block        = 2;
+}

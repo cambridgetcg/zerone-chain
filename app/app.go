@@ -207,6 +207,9 @@ import (
 	zeroneinquiry "github.com/zerone-chain/zerone/x/inquiry"
 	zeroneinquirykeeper "github.com/zerone-chain/zerone/x/inquiry/keeper"
 	zeroneinquirytypes "github.com/zerone-chain/zerone/x/inquiry/types"
+	zeroneagentu "github.com/zerone-chain/zerone/x/agent_understanding"
+	zeroneagentukeeper "github.com/zerone-chain/zerone/x/agent_understanding/keeper"
+	zeroneagentutypes "github.com/zerone-chain/zerone/x/agent_understanding/types"
 	zeroneautopoiesis "github.com/zerone-chain/zerone/x/autopoiesis"
 	zeroneapkeeper "github.com/zerone-chain/zerone/x/autopoiesis/keeper"
 	zeroneaptypes "github.com/zerone-chain/zerone/x/autopoiesis/types"
@@ -310,6 +313,7 @@ var (
 		zeroneprivatecorpus.AppModuleBasic{}, // x/private_corpus: off-chain vault references
 		zeronecounterex.AppModuleBasic{},     // x/counterexamples: alignment-by-structure
 		zeroneinquiry.AppModuleBasic{},       // x/inquiry: open-question market for unmapped territory
+		zeroneagentu.AppModuleBasic{},        // x/agent_understanding: per-agent topic profile synthesizer
 	)
 
 	// Module account permissions.
@@ -501,6 +505,7 @@ type ZeroneApp struct {
 	PrivateCorpusKeeper     zeroneprivatecorpuskeeper.Keeper // x/private_corpus: off-chain vault references
 	CounterexamplesKeeper   zeronecounterexkeeper.Keeper     // x/counterexamples: alignment-by-structure (commitment 15)
 	InquiryKeeper           zeroneinquirykeeper.Keeper       // x/inquiry: open-question market (commitment 16)
+	AgentUnderstandingKeeper zeroneagentukeeper.Keeper       // x/agent_understanding: per-agent profile synthesizer (extends commitment 11)
 
 	// ABCI++ vote extension config (nil until validator is configured)
 	VoteExtConfig *VoteExtensionConfig
@@ -620,6 +625,7 @@ func NewZeroneApp(
 		zeroneprivatecorpustypes.StoreKey,
 		zeronecounterextypes.StoreKey,
 		zeroneinquirytypes.StoreKey,
+		zeroneagentutypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -1053,6 +1059,11 @@ func NewZeroneApp(
 		zeronecckeeper.NewGovernanceSynthesisAdapter(app.CaptureChallengeKeeper),
 	)
 	app.GovernanceSynthesisKeeper.SetAlignmentKeeper(&app.AlignmentKeeper)
+	// Frontier-query upstreams. Optional; absence degrades Frontier
+	// to an empty list rather than failing. Wired AFTER
+	// inquiry+counterexample keepers exist (their setters are below
+	// the gov-synth construction; we re-apply the frontier setters
+	// after those modules are constructed).
 
 	// x/private_corpus: hash-anchor for off-chain vaults. The keeper is
 	// stateful (vaults, manifests, access records) but does NOT read
@@ -1096,6 +1107,44 @@ func NewZeroneApp(
 	// a linked claim has produced an accepted fact.
 	app.InquiryKeeper.SetKnowledgeKeeper(
 		zeroneknowledgekeeper.NewInquiryKnowledgeAdapter(app.KnowledgeKeeper),
+	)
+
+	// x/agent_understanding: pure read-only synthesizer composing
+	// per-agent, per-domain understanding profiles. Wires adapters
+	// from each upstream module that holds agent activity data.
+	app.AgentUnderstandingKeeper = zeroneagentukeeper.NewKeeper(
+		sdkruntime.NewKVStoreService(keys[zeroneagentutypes.StoreKey]),
+		appCodec,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+	app.AgentUnderstandingKeeper.SetKnowledgeKeeper(
+		zeroneknowledgekeeper.NewAgentUnderstandingKnowledgeAdapter(app.KnowledgeKeeper),
+	)
+	app.AgentUnderstandingKeeper.SetQualificationKeeper(
+		zeronequalificationkeeper.NewAgentUnderstandingQualificationAdapter(app.QualificationKeeper),
+	)
+	app.AgentUnderstandingKeeper.SetCounterexamplesKeeper(
+		zeronecounterexkeeper.NewAgentUnderstandingAdapter(app.CounterexamplesKeeper),
+	)
+	app.AgentUnderstandingKeeper.SetInquiryKeeper(
+		zeroneinquirykeeper.NewAgentUnderstandingAdapter(app.InquiryKeeper),
+	)
+
+	// Frontier-query wiring: now that inquiry, counterexamples, and
+	// ontology keepers all exist, register the adapters with
+	// governance_synthesis so its Frontier query can compose
+	// per-domain sparsity from real chain state.
+	app.GovernanceSynthesisKeeper.SetOntologyKeeper(
+		zeroneontologykeeper.NewGovernanceSynthesisAdapter(app.ZeroneOntologyKeeper),
+	)
+	app.GovernanceSynthesisKeeper.SetFrontierKnowledgeKeeper(
+		zeroneknowledgekeeper.NewGovernanceSynthesisFrontierAdapter(app.KnowledgeKeeper),
+	)
+	app.GovernanceSynthesisKeeper.SetFrontierInquiryKeeper(
+		zeroneinquirykeeper.NewGovernanceSynthesisAdapter(app.InquiryKeeper),
+	)
+	app.GovernanceSynthesisKeeper.SetFrontierCounterexamplesKeeper(
+		zeronecounterexkeeper.NewGovernanceSynthesisAdapter(app.CounterexamplesKeeper),
 	)
 
 	// knowledge → capture_defense (feed verification history + reputation)
@@ -1359,6 +1408,7 @@ func NewZeroneApp(
 		zeroneprivatecorpus.NewAppModule(appCodec, app.PrivateCorpusKeeper),
 		zeronecounterex.NewAppModule(appCodec, app.CounterexamplesKeeper),
 		zeroneinquiry.NewAppModule(appCodec, app.InquiryKeeper),
+		zeroneagentu.NewAppModule(appCodec, app.AgentUnderstandingKeeper),
 	)
 
 	app.ModuleManager.SetOrderBeginBlockers(
@@ -1415,6 +1465,7 @@ func NewZeroneApp(
 		zeroneprivatecorpustypes.ModuleName,         // private_corpus: no-op BeginBlock (operator-driven)
 		zeronecounterextypes.ModuleName,             // counterexamples: no-op BeginBlock (proposal-driven)
 		zeroneinquirytypes.ModuleName,               // inquiry: scan OPEN/ANSWERED inquiries for resolution + expiry
+		zeroneagentutypes.ModuleName,                // agent_understanding: no-op BeginBlock (pure synthesizer)
 	)
 
 	app.ModuleManager.SetOrderEndBlockers(
@@ -1470,6 +1521,7 @@ func NewZeroneApp(
 		zeroneprivatecorpustypes.ModuleName,         // EndBlocker: no-op
 		zeronecounterextypes.ModuleName,             // EndBlocker: no-op
 		zeroneinquirytypes.ModuleName,               // EndBlocker: no-op
+		zeroneagentutypes.ModuleName,                // EndBlocker: no-op
 	)
 
 	genesisOrder := []string{
@@ -1526,6 +1578,7 @@ func NewZeroneApp(
 		zeroneprivatecorpustypes.ModuleName,         // Genesis: standalone, no cross-module deps
 		zeronecounterextypes.ModuleName,             // Genesis: after knowledge (uses fact-existence adapter)
 		zeroneinquirytypes.ModuleName,               // Genesis: after knowledge (auto-resolver reads facts)
+		zeroneagentutypes.ModuleName,                // Genesis: after all upstream modules (pure synthesizer)
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisOrder...)

@@ -1,0 +1,40 @@
+syntax = "proto3";
+package zerone.agent_understanding.v1;
+option go_package = "github.com/zerone-chain/zerone/x/agent_understanding/types";
+
+import "google/api/annotations.proto";
+import "zerone/agent_understanding/v1/types.proto";
+import "zerone/agent_understanding/v1/genesis.proto";
+
+service Query {
+  // AgentProfile composes the full per-agent UnderstandingProfile.
+  rpc AgentProfile(QueryAgentProfileRequest) returns (QueryAgentProfileResponse) {
+    option (google.api.http).get = "/zerone/agent_understanding/v1/agent/{agent}";
+  }
+  // AgentDomainProfile returns just one (agent, domain) pair —
+  // cheaper than the full profile when only one domain is needed.
+  rpc AgentDomainProfile(QueryAgentDomainProfileRequest) returns (QueryAgentDomainProfileResponse) {
+    option (google.api.http).get = "/zerone/agent_understanding/v1/agent/{agent}/domain/{domain}";
+  }
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/agent_understanding/v1/params";
+  }
+}
+
+message QueryAgentProfileRequest {
+  string agent = 1; // bech32
+}
+message QueryAgentProfileResponse {
+  UnderstandingProfile profile = 1;
+}
+
+message QueryAgentDomainProfileRequest {
+  string agent = 1;
+  string domain = 2;
+}
+message QueryAgentDomainProfileResponse {
+  DomainProfile profile = 1;
+}
+
+message QueryParamsRequest {}
+message QueryParamsResponse { Params params = 1; }

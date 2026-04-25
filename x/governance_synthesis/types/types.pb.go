@@ -192,6 +192,175 @@ func (x *SystemHealth) GetComputedAtBlock() uint64 {
 	return 0
 }
 
+// DomainFrontier is one row of the chain's "where is the corpus
+// sparse?" map. Rolls up the per-domain signals the chain already
+// publishes in other modules; the synthesizer adds no new state.
+//
+// Sparser domains are higher-priority targets for inquiry, since
+// the corpus is least-mapped there. Composing this on-chain rather
+// than in a dashboard means external consumers — model trainers,
+// regulators, alignment researchers — see the same frontier the
+// chain itself is committing to.
+type DomainFrontier struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Domain string                 `protobuf:"bytes,1,opt,name=domain,proto3" json:"domain,omitempty"`
+	// Total verified or active facts in this domain.
+	VerifiedFacts uint64 `protobuf:"varint,2,opt,name=verified_facts,json=verifiedFacts,proto3" json:"verified_facts,omitempty"`
+	// Inquiries currently OPEN or ANSWERED in this domain — open
+	// questions the chain has paid for but does not yet have a
+	// verified answer to.
+	OpenInquiries uint64 `protobuf:"varint,3,opt,name=open_inquiries,json=openInquiries,proto3" json:"open_inquiries,omitempty"`
+	// Total counterexamples authored against facts in this domain.
+	CounterexamplesAuthored uint64 `protobuf:"varint,4,opt,name=counterexamples_authored,json=counterexamplesAuthored,proto3" json:"counterexamples_authored,omitempty"`
+	// VALIDATED counterexamples specifically — the alignment-by-
+	// structure coverage signal (commitment 15).
+	CounterexamplesValidated uint64 `protobuf:"varint,5,opt,name=counterexamples_validated,json=counterexamplesValidated,proto3" json:"counterexamples_validated,omitempty"`
+	// Counterexample coverage in BPS: validated / verified_facts × 1M.
+	// Values < 1M indicate alignment-by-structure under-coverage.
+	CounterexampleCoverageBps uint64 `protobuf:"varint,6,opt,name=counterexample_coverage_bps,json=counterexampleCoverageBps,proto3" json:"counterexample_coverage_bps,omitempty"`
+	// Sparsity score in BPS, 0..1,000,000. Higher = sparser =
+	// higher-priority for new inquiries. Formula composes inverse
+	// fact density, open inquiry pressure, and inverse counterexample
+	// coverage. See the synthesizer for the exact computation.
+	SparsityScoreBps uint64 `protobuf:"varint,7,opt,name=sparsity_score_bps,json=sparsityScoreBps,proto3" json:"sparsity_score_bps,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *DomainFrontier) Reset() {
+	*x = DomainFrontier{}
+	mi := &file_zerone_governance_synthesis_v1_types_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DomainFrontier) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DomainFrontier) ProtoMessage() {}
+
+func (x *DomainFrontier) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_governance_synthesis_v1_types_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DomainFrontier.ProtoReflect.Descriptor instead.
+func (*DomainFrontier) Descriptor() ([]byte, []int) {
+	return file_zerone_governance_synthesis_v1_types_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *DomainFrontier) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *DomainFrontier) GetVerifiedFacts() uint64 {
+	if x != nil {
+		return x.VerifiedFacts
+	}
+	return 0
+}
+
+func (x *DomainFrontier) GetOpenInquiries() uint64 {
+	if x != nil {
+		return x.OpenInquiries
+	}
+	return 0
+}
+
+func (x *DomainFrontier) GetCounterexamplesAuthored() uint64 {
+	if x != nil {
+		return x.CounterexamplesAuthored
+	}
+	return 0
+}
+
+func (x *DomainFrontier) GetCounterexamplesValidated() uint64 {
+	if x != nil {
+		return x.CounterexamplesValidated
+	}
+	return 0
+}
+
+func (x *DomainFrontier) GetCounterexampleCoverageBps() uint64 {
+	if x != nil {
+		return x.CounterexampleCoverageBps
+	}
+	return 0
+}
+
+func (x *DomainFrontier) GetSparsityScoreBps() uint64 {
+	if x != nil {
+		return x.SparsityScoreBps
+	}
+	return 0
+}
+
+// Frontier is the chain's published "where is understanding sparse?"
+// map. Returned ordered descending by sparsity_score_bps so consumers
+// see the most under-mapped territory first.
+type Frontier struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Domains         []*DomainFrontier      `protobuf:"bytes,1,rep,name=domains,proto3" json:"domains,omitempty"`
+	ComputedAtBlock uint64                 `protobuf:"varint,2,opt,name=computed_at_block,json=computedAtBlock,proto3" json:"computed_at_block,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *Frontier) Reset() {
+	*x = Frontier{}
+	mi := &file_zerone_governance_synthesis_v1_types_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Frontier) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Frontier) ProtoMessage() {}
+
+func (x *Frontier) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_governance_synthesis_v1_types_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Frontier.ProtoReflect.Descriptor instead.
+func (*Frontier) Descriptor() ([]byte, []int) {
+	return file_zerone_governance_synthesis_v1_types_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *Frontier) GetDomains() []*DomainFrontier {
+	if x != nil {
+		return x.Domains
+	}
+	return nil
+}
+
+func (x *Frontier) GetComputedAtBlock() uint64 {
+	if x != nil {
+		return x.ComputedAtBlock
+	}
+	return 0
+}
+
 var File_zerone_governance_synthesis_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_governance_synthesis_v1_types_proto_rawDesc = "" +
@@ -211,7 +380,18 @@ const file_zerone_governance_synthesis_v1_types_proto_rawDesc = "" +
 	" \x01(\x04R\x11analysisPacingBps\x12!\n" +
 	"\fstress_level\x18\v \x01(\tR\vstressLevel\x12 \n" +
 	"\vexplanation\x18\f \x01(\tR\vexplanation\x12*\n" +
-	"\x11computed_at_block\x18\r \x01(\x04R\x0fcomputedAtBlockB=Z;github.com/zerone-chain/zerone/x/governance_synthesis/typesb\x06proto3"
+	"\x11computed_at_block\x18\r \x01(\x04R\x0fcomputedAtBlock\"\xdc\x02\n" +
+	"\x0eDomainFrontier\x12\x16\n" +
+	"\x06domain\x18\x01 \x01(\tR\x06domain\x12%\n" +
+	"\x0everified_facts\x18\x02 \x01(\x04R\rverifiedFacts\x12%\n" +
+	"\x0eopen_inquiries\x18\x03 \x01(\x04R\ropenInquiries\x129\n" +
+	"\x18counterexamples_authored\x18\x04 \x01(\x04R\x17counterexamplesAuthored\x12;\n" +
+	"\x19counterexamples_validated\x18\x05 \x01(\x04R\x18counterexamplesValidated\x12>\n" +
+	"\x1bcounterexample_coverage_bps\x18\x06 \x01(\x04R\x19counterexampleCoverageBps\x12,\n" +
+	"\x12sparsity_score_bps\x18\a \x01(\x04R\x10sparsityScoreBps\"\x80\x01\n" +
+	"\bFrontier\x12H\n" +
+	"\adomains\x18\x01 \x03(\v2..zerone.governance_synthesis.v1.DomainFrontierR\adomains\x12*\n" +
+	"\x11computed_at_block\x18\x02 \x01(\x04R\x0fcomputedAtBlockB=Z;github.com/zerone-chain/zerone/x/governance_synthesis/typesb\x06proto3"
 
 var (
 	file_zerone_governance_synthesis_v1_types_proto_rawDescOnce sync.Once
@@ -225,16 +405,19 @@ func file_zerone_governance_synthesis_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_governance_synthesis_v1_types_proto_rawDescData
 }
 
-var file_zerone_governance_synthesis_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_zerone_governance_synthesis_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_zerone_governance_synthesis_v1_types_proto_goTypes = []any{
-	(*SystemHealth)(nil), // 0: zerone.governance_synthesis.v1.SystemHealth
+	(*SystemHealth)(nil),   // 0: zerone.governance_synthesis.v1.SystemHealth
+	(*DomainFrontier)(nil), // 1: zerone.governance_synthesis.v1.DomainFrontier
+	(*Frontier)(nil),       // 2: zerone.governance_synthesis.v1.Frontier
 }
 var file_zerone_governance_synthesis_v1_types_proto_depIdxs = []int32{
-	0, // [0:0] is the sub-list for method output_type
-	0, // [0:0] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	1, // 0: zerone.governance_synthesis.v1.Frontier.domains:type_name -> zerone.governance_synthesis.v1.DomainFrontier
+	1, // [1:1] is the sub-list for method output_type
+	1, // [1:1] is the sub-list for method input_type
+	1, // [1:1] is the sub-list for extension type_name
+	1, // [1:1] is the sub-list for extension extendee
+	0, // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_zerone_governance_synthesis_v1_types_proto_init() }
@@ -248,7 +431,7 @@ func file_zerone_governance_synthesis_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_governance_synthesis_v1_types_proto_rawDesc), len(file_zerone_governance_synthesis_v1_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

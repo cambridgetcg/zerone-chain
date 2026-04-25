@@ -1,0 +1,21 @@
+syntax = "proto3";
+package zerone.agent_understanding.v1;
+option go_package = "github.com/zerone-chain/zerone/x/agent_understanding/types";
+
+// GenesisState is intentionally minimal — agent_understanding is a
+// pure synthesizer, no state to persist.
+message GenesisState {
+  Params params = 1;
+}
+
+message Params {
+  // Threshold below which a domain is considered "sparse" for the
+  // purpose of computing frontier_reach_bps. Sparse domains are
+  // those whose total verified-fact count is below this value.
+  // Default: 50.
+  uint64 sparse_domain_fact_threshold = 1;
+
+  // Maximum number of domain profiles returned in one query response.
+  // Bounds query response size. Default: 100.
+  uint32 max_domains_per_query = 2;
+}

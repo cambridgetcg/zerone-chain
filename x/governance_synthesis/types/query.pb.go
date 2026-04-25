@@ -102,6 +102,96 @@ func (x *QuerySystemHealthResponse) GetHealth() *SystemHealth {
 	return nil
 }
 
+type QueryFrontierRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Maximum domains to return. 0 = all. Capped at synthesizer's
+	// internal limit (default 100).
+	Limit         uint32 `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryFrontierRequest) Reset() {
+	*x = QueryFrontierRequest{}
+	mi := &file_zerone_governance_synthesis_v1_query_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryFrontierRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryFrontierRequest) ProtoMessage() {}
+
+func (x *QueryFrontierRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_governance_synthesis_v1_query_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryFrontierRequest.ProtoReflect.Descriptor instead.
+func (*QueryFrontierRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_governance_synthesis_v1_query_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *QueryFrontierRequest) GetLimit() uint32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type QueryFrontierResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Frontier      *Frontier              `protobuf:"bytes,1,opt,name=frontier,proto3" json:"frontier,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryFrontierResponse) Reset() {
+	*x = QueryFrontierResponse{}
+	mi := &file_zerone_governance_synthesis_v1_query_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryFrontierResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryFrontierResponse) ProtoMessage() {}
+
+func (x *QueryFrontierResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_governance_synthesis_v1_query_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryFrontierResponse.ProtoReflect.Descriptor instead.
+func (*QueryFrontierResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_governance_synthesis_v1_query_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *QueryFrontierResponse) GetFrontier() *Frontier {
+	if x != nil {
+		return x.Frontier
+	}
+	return nil
+}
+
 var File_zerone_governance_synthesis_v1_query_proto protoreflect.FileDescriptor
 
 const file_zerone_governance_synthesis_v1_query_proto_rawDesc = "" +
@@ -109,9 +199,14 @@ const file_zerone_governance_synthesis_v1_query_proto_rawDesc = "" +
 	"*zerone/governance_synthesis/v1/query.proto\x12\x1ezerone.governance_synthesis.v1\x1a\x1cgoogle/api/annotations.proto\x1a*zerone/governance_synthesis/v1/types.proto\"\x1a\n" +
 	"\x18QuerySystemHealthRequest\"a\n" +
 	"\x19QuerySystemHealthResponse\x12D\n" +
-	"\x06health\x18\x01 \x01(\v2,.zerone.governance_synthesis.v1.SystemHealthR\x06health2\xc4\x01\n" +
+	"\x06health\x18\x01 \x01(\v2,.zerone.governance_synthesis.v1.SystemHealthR\x06health\",\n" +
+	"\x14QueryFrontierRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\rR\x05limit\"]\n" +
+	"\x15QueryFrontierResponse\x12D\n" +
+	"\bfrontier\x18\x01 \x01(\v2(.zerone.governance_synthesis.v1.FrontierR\bfrontier2\xf0\x02\n" +
 	"\x05Query\x12\xba\x01\n" +
-	"\fSystemHealth\x128.zerone.governance_synthesis.v1.QuerySystemHealthRequest\x1a9.zerone.governance_synthesis.v1.QuerySystemHealthResponse\"5\x82\xd3\xe4\x93\x02/\x12-/zerone/governance_synthesis/v1/system_healthB=Z;github.com/zerone-chain/zerone/x/governance_synthesis/typesb\x06proto3"
+	"\fSystemHealth\x128.zerone.governance_synthesis.v1.QuerySystemHealthRequest\x1a9.zerone.governance_synthesis.v1.QuerySystemHealthResponse\"5\x82\xd3\xe4\x93\x02/\x12-/zerone/governance_synthesis/v1/system_health\x12\xa9\x01\n" +
+	"\bFrontier\x124.zerone.governance_synthesis.v1.QueryFrontierRequest\x1a5.zerone.governance_synthesis.v1.QueryFrontierResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/governance_synthesis/v1/frontierB=Z;github.com/zerone-chain/zerone/x/governance_synthesis/typesb\x06proto3"
 
 var (
 	file_zerone_governance_synthesis_v1_query_proto_rawDescOnce sync.Once
@@ -125,21 +220,27 @@ func file_zerone_governance_synthesis_v1_query_proto_rawDescGZIP() []byte {
 	return file_zerone_governance_synthesis_v1_query_proto_rawDescData
 }
 
-var file_zerone_governance_synthesis_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_zerone_governance_synthesis_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_zerone_governance_synthesis_v1_query_proto_goTypes = []any{
 	(*QuerySystemHealthRequest)(nil),  // 0: zerone.governance_synthesis.v1.QuerySystemHealthRequest
 	(*QuerySystemHealthResponse)(nil), // 1: zerone.governance_synthesis.v1.QuerySystemHealthResponse
-	(*SystemHealth)(nil),              // 2: zerone.governance_synthesis.v1.SystemHealth
+	(*QueryFrontierRequest)(nil),      // 2: zerone.governance_synthesis.v1.QueryFrontierRequest
+	(*QueryFrontierResponse)(nil),     // 3: zerone.governance_synthesis.v1.QueryFrontierResponse
+	(*SystemHealth)(nil),              // 4: zerone.governance_synthesis.v1.SystemHealth
+	(*Frontier)(nil),                  // 5: zerone.governance_synthesis.v1.Frontier
 }
 var file_zerone_governance_synthesis_v1_query_proto_depIdxs = []int32{
-	2, // 0: zerone.governance_synthesis.v1.QuerySystemHealthResponse.health:type_name -> zerone.governance_synthesis.v1.SystemHealth
-	0, // 1: zerone.governance_synthesis.v1.Query.SystemHealth:input_type -> zerone.governance_synthesis.v1.QuerySystemHealthRequest
-	1, // 2: zerone.governance_synthesis.v1.Query.SystemHealth:output_type -> zerone.governance_synthesis.v1.QuerySystemHealthResponse
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	4, // 0: zerone.governance_synthesis.v1.QuerySystemHealthResponse.health:type_name -> zerone.governance_synthesis.v1.SystemHealth
+	5, // 1: zerone.governance_synthesis.v1.QueryFrontierResponse.frontier:type_name -> zerone.governance_synthesis.v1.Frontier
+	0, // 2: zerone.governance_synthesis.v1.Query.SystemHealth:input_type -> zerone.governance_synthesis.v1.QuerySystemHealthRequest
+	2, // 3: zerone.governance_synthesis.v1.Query.Frontier:input_type -> zerone.governance_synthesis.v1.QueryFrontierRequest
+	1, // 4: zerone.governance_synthesis.v1.Query.SystemHealth:output_type -> zerone.governance_synthesis.v1.QuerySystemHealthResponse
+	3, // 5: zerone.governance_synthesis.v1.Query.Frontier:output_type -> zerone.governance_synthesis.v1.QueryFrontierResponse
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_zerone_governance_synthesis_v1_query_proto_init() }
@@ -154,7 +255,7 @@ func file_zerone_governance_synthesis_v1_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_governance_synthesis_v1_query_proto_rawDesc), len(file_zerone_governance_synthesis_v1_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -41,3 +41,30 @@ type ChallengeStatusCounts struct {
 type AlignmentKeeper interface {
 	GetGlobalPacingMultiplier(ctx context.Context) (creationBps, analysisBps uint64)
 }
+
+// ─── Frontier-query upstreams ────────────────────────────────────────
+
+// OntologyKeeper exposes the list of domains so the frontier
+// synthesizer can iterate them.
+type OntologyKeeper interface {
+	IterateDomainNames(ctx context.Context, cb func(name string) bool)
+}
+
+// FrontierKnowledgeKeeper exposes per-domain fact counts plus a
+// fact-domain lookup that the counterexamples scope-counter needs.
+type FrontierKnowledgeKeeper interface {
+	CountFactsByDomain(ctx context.Context, domain string) uint64
+	FactDomain(ctx context.Context, factID string) string
+}
+
+// FrontierInquiryKeeper exposes per-domain open-inquiry counts.
+type FrontierInquiryKeeper interface {
+	CountOpenInquiriesByDomain(ctx context.Context, domain string) uint64
+}
+
+// FrontierCounterexamplesKeeper exposes per-domain counterexample
+// counts (authored and validated). Used to compute
+// counterexample_coverage_bps in the frontier signal.
+type FrontierCounterexamplesKeeper interface {
+	CountCounterexamplesByDomain(ctx context.Context, domain string, factDomain func(factID string) string) (authored, validated uint64)
+}

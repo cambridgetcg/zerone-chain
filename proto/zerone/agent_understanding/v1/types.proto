@@ -1,0 +1,70 @@
+syntax = "proto3";
+package zerone.agent_understanding.v1;
+option go_package = "github.com/zerone-chain/zerone/x/agent_understanding/types";
+
+// DomainProfile describes one agent's understanding within one
+// epistemic domain. All counts are derived from existing chain
+// state — knowledge facts, qualification metrics, counterexample
+// authorship, inquiry answers — composed at query time. The
+// synthesizer holds no state.
+message DomainProfile {
+  string domain = 1;
+
+  // Verification activity (from x/qualification metrics).
+  uint64 verifications_cast = 2;
+  uint64 verifications_correct = 3;
+  // Calibration in basis points (1,000,000 = 100%). Read from
+  // x/qualification's recorded accuracy.
+  uint64 accuracy_bps = 4;
+
+  // Authorship — facts the agent submitted that became verified
+  // facts in this domain.
+  uint64 facts_authored = 5;
+
+  // Counterexample contributions (from x/counterexamples).
+  uint64 counterexamples_authored = 6;
+  uint64 counterexamples_validated = 7; // count that passed validation
+
+  // Inquiry activity (from x/inquiry).
+  uint64 inquiries_answered = 8;
+  uint64 inquiries_won = 9;
+
+  // Qualification status from x/qualification: ACTIVE,
+  // PROBATIONARY, SUSPENDED, REVOKED, EXPIRED.
+  string qualification_status = 10;
+
+  // Domain-specific qualification weight (0 if not qualified).
+  uint32 qualification_weight = 11;
+}
+
+// UnderstandingProfile is the per-agent composite. It rolls up
+// per-domain profiles and adds chain-level signals that aren't
+// domain-scoped.
+message UnderstandingProfile {
+  // Bech32 address.
+  string agent = 1;
+
+  // Per-domain breakdown. Domains in which the agent has zero
+  // activity are omitted.
+  repeated DomainProfile domains = 2;
+
+  // Chain-level totals.
+  uint64 total_facts_authored = 3;
+  uint64 total_counterexamples_validated = 4;
+  uint64 total_inquiries_won = 5;
+
+  // Frontier reach: fraction (BPS) of the agent's activity that
+  // happens in SPARSE domains — domains with low public fact
+  // density. High frontier-reach agents are exploring; low
+  // frontier-reach agents are consolidating in known territory.
+  // Both are valuable; this score lets external observers
+  // distinguish them.
+  uint64 frontier_reach_bps = 6;
+
+  // Composite understanding score (BPS). Aggregates accuracy,
+  // breadth (number of active domains), depth (counterexample
+  // contributions), and frontier reach. NOT a singular
+  // "intelligence score" — read the per-domain breakdown for
+  // anything load-bearing.
+  uint64 composite_score_bps = 7;
+}
