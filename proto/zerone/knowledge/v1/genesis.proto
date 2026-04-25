@@ -290,6 +290,23 @@ message Params {
   // Paid in addition to stake refund, participation reward, and
   // success amplification.
   string invitation_bonus_amount = 158; // default "500000" = 0.5 ZRN per answered invitation
+
+  // ─── Wave 16: guardian-veto window ────────────────────────────────────
+  // The privileged-action log made authority abuse queryable; the
+  // guardian-veto window makes it preventable. The set of addresses
+  // listed in guardian_addresses can VETO authority-gated fact
+  // injection during the time window between proposal and
+  // materialization. Closes the persistent-authority-compromise gap
+  // documented in Wave 14: the chain no longer relies on a single key
+  // for actions that bypass the verifier panel.
+  //
+  // The single authority can still propose actions cheaply; legitimate
+  // operations are not blocked. But any one of the configured
+  // guardians can cancel a malicious or mistaken proposal during the
+  // veto window. Trust shifts from "the authority key is honest" to
+  // "no individual can unilaterally inject untruth."
+  repeated string guardian_addresses              = 159; // veto-eligible addresses; empty = no guardian set, immediate execution
+  uint64 add_fact_veto_window_blocks              = 160; // default 0 (immediate); set > 0 to enable veto window
 }
 
 // GenesisState is the genesis state of the knowledge module.

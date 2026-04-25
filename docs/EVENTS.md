@@ -1481,6 +1481,27 @@ Popperian survival counter incremented: a fact withstood a falsification attempt
 - `new_count` -- corroboration_count after increment
 - `block_height` -- height at which the challenge was resolved
 
+### zerone.knowledge.add_fact_proposed
+Wave 16 guardian-veto path. Authority called MsgAddFact while a guardian set is configured and the veto window is positive — instead of materializing the fact immediately, the proposal is queued. Guardians have until `execute_at_block` to call MsgVetoFactInjection. Without veto, the BeginBlocker emits `pending_fact_materialized` when the window closes.
+- `pending_id` -- id of the queued PendingFactInjection
+- `authority` -- the proposing authority
+- `domain`, `category` -- mirrors the proposed fact
+- `execute_at_block` -- block at which the proposal materializes if not vetoed
+
+### zerone.knowledge.fact_injection_vetoed
+A registered guardian invoked MsgVetoFactInjection during the veto window. The pending fact is removed from the queue; the privileged-action log records the cancellation. The chain no longer relies on a single key being honest for the only path that bypasses the verifier panel.
+- `pending_id` -- the cancelled PendingFactInjection id
+- `guardian` -- guardian address that cast the veto (must appear in `Params.guardian_addresses`)
+- `proposer` -- the original authority that proposed the injection
+- `reason` -- audit comment
+
+### zerone.knowledge.pending_fact_materialized
+BeginBlocker emitted when a queued fact-injection's veto window expires without a veto. The actual Fact record is written at this point with `status=VERIFIED` (matching the immediate-AddFact path semantics).
+- `fact_id` -- id of the now-existing fact
+- `proposer` -- the originating authority
+- `domain`, `category` -- fact metadata
+- `proposed_at_block`, `materialized_at_block` -- proposal vs materialization heights
+
 ### zerone.knowledge.invitation_bonus_paid
 Emitted when the probe bounty pool pays the flat `InvitationBonusAmount` to a prober who answered a chain-issued stress-test invitation. Fires on any verdict — the chain pays for showing up, not only for winning. Invitation was "current" (fact's `ProbeInvitedAtBlock > 0` and `LastCorroboratedBlock ≤ ProbeInvitedAtBlock`). Converts invitations from demand signals into standing offers.
 - `claim_id` -- the challenge claim that answered the invitation

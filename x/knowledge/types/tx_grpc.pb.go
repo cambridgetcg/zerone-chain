@@ -67,6 +67,7 @@ const (
 	Msg_PauseModule_FullMethodName                   = "/zerone.knowledge.v1.Msg/PauseModule"
 	Msg_UnpauseModule_FullMethodName                 = "/zerone.knowledge.v1.Msg/UnpauseModule"
 	Msg_CorrectManifestMerkleRoot_FullMethodName     = "/zerone.knowledge.v1.Msg/CorrectManifestMerkleRoot"
+	Msg_VetoFactInjection_FullMethodName             = "/zerone.knowledge.v1.Msg/VetoFactInjection"
 )
 
 // MsgClient is the client API for Msg service.
@@ -209,6 +210,13 @@ type MsgClient interface {
 	// no version bumps, no supersession. Pure recomputation from data
 	// already committed to by the manifest's own ID lists.
 	CorrectManifestMerkleRoot(ctx context.Context, in *MsgCorrectManifestMerkleRoot, opts ...grpc.CallOption) (*MsgCorrectManifestMerkleRootResponse, error)
+	// VetoFactInjection — Wave 16 multi-sig defense. A registered
+	// guardian cancels a pending authority-injected fact during the veto
+	// window. After the window expires without veto, the fact
+	// materializes; before, any single guardian can stop it. The chain
+	// no longer relies on a single key being honest for actions that
+	// bypass the verifier panel.
+	VetoFactInjection(ctx context.Context, in *MsgVetoFactInjection, opts ...grpc.CallOption) (*MsgVetoFactInjectionResponse, error)
 }
 
 type msgClient struct {
@@ -699,6 +707,16 @@ func (c *msgClient) CorrectManifestMerkleRoot(ctx context.Context, in *MsgCorrec
 	return out, nil
 }
 
+func (c *msgClient) VetoFactInjection(ctx context.Context, in *MsgVetoFactInjection, opts ...grpc.CallOption) (*MsgVetoFactInjectionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgVetoFactInjectionResponse)
+	err := c.cc.Invoke(ctx, Msg_VetoFactInjection_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -839,6 +857,13 @@ type MsgServer interface {
 	// no version bumps, no supersession. Pure recomputation from data
 	// already committed to by the manifest's own ID lists.
 	CorrectManifestMerkleRoot(context.Context, *MsgCorrectManifestMerkleRoot) (*MsgCorrectManifestMerkleRootResponse, error)
+	// VetoFactInjection — Wave 16 multi-sig defense. A registered
+	// guardian cancels a pending authority-injected fact during the veto
+	// window. After the window expires without veto, the fact
+	// materializes; before, any single guardian can stop it. The chain
+	// no longer relies on a single key being honest for actions that
+	// bypass the verifier panel.
+	VetoFactInjection(context.Context, *MsgVetoFactInjection) (*MsgVetoFactInjectionResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -992,6 +1017,9 @@ func (UnimplementedMsgServer) UnpauseModule(context.Context, *MsgUnpauseModule) 
 }
 func (UnimplementedMsgServer) CorrectManifestMerkleRoot(context.Context, *MsgCorrectManifestMerkleRoot) (*MsgCorrectManifestMerkleRootResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CorrectManifestMerkleRoot not implemented")
+}
+func (UnimplementedMsgServer) VetoFactInjection(context.Context, *MsgVetoFactInjection) (*MsgVetoFactInjectionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method VetoFactInjection not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -1878,6 +1906,24 @@ func _Msg_CorrectManifestMerkleRoot_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_VetoFactInjection_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgVetoFactInjection)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).VetoFactInjection(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_VetoFactInjection_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).VetoFactInjection(ctx, req.(*MsgVetoFactInjection))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -2076,6 +2122,10 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CorrectManifestMerkleRoot",
 			Handler:    _Msg_CorrectManifestMerkleRoot_Handler,
+		},
+		{
+			MethodName: "VetoFactInjection",
+			Handler:    _Msg_VetoFactInjection_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -252,6 +252,15 @@ func DefaultParams() Params {
 		// ─── Wave 15b: invitation bonuses ──────────────────────────────
 		// Flat reward for probers answering a chain-issued invitation.
 		InvitationBonusAmount: "500000", // 0.5 ZRN per answered invitation
+
+		// ─── Wave 16: guardian-veto multi-sig defense ──────────────────
+		// Empty guardian set + zero veto window = current single-key
+		// behavior (back-compat at genesis). Governance enables the
+		// veto by populating GuardianAddresses and setting
+		// AddFactVetoWindowBlocks > 0. Until then, MsgAddFact still
+		// fires immediately with privileged-action logging only.
+		GuardianAddresses:           []string{},
+		AddFactVetoWindowBlocks:     0,
 	}
 }
 

@@ -98,6 +98,11 @@ func (k Keeper) BeginBlocker(ctx context.Context) error {
 		k.MintToProbeBountyPool(ctx, params)
 	}
 
+	// Wave 16: materialize pending fact injections whose guardian-veto
+	// window has expired without a veto. Until materialization the fact
+	// does not exist in state — guardians can still cancel.
+	k.MaterializeMaturedFactInjections(ctx, height)
+
 	return nil
 }
 

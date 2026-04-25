@@ -418,6 +418,51 @@ func (m *msgServer) AddFact(ctx context.Context, msg *types.MsgAddFact) (*types.
 		return nil, fmt.Errorf("failed to get params: %w", err)
 	}
 
+	// AddFact bypasses the verifier-panel trust chain. The Wave 16
+	// guardian-veto window protects this path from single-key abuse:
+	// when a guardian set is configured AND a veto window is active,
+	// the proposed fact is queued instead of materializing immediately.
+	// During the window any guardian can call MsgVetoFactInjection to
+	// cancel. After the window the BeginBlocker materializes the fact
+	// (existing behavior). Without configuration, the immediate path
+	// remains for genesis seeding / corrective injection on a still-
+	// trusted authority.
+	if m.keeper.AddFactVetoEnabled(ctx) {
+		executeAt := height + params.AddFactVetoWindowBlocks
+		pending := &types.PendingFactInjection{
+			Id:              factID,
+			Content:         msg.Content,
+			Domain:          msg.Domain,
+			Category:        msg.Category,
+			Confidence:      msg.Confidence,
+			References:      msg.References,
+			Proposer:        msg.Authority,
+			ProposedAtBlock: height,
+			ExecuteAtBlock:  executeAt,
+		}
+		if err := m.keeper.SetPendingFactInjection(ctx, pending); err != nil {
+			return nil, err
+		}
+		m.keeper.RecordPrivilegedAction(ctx,
+			types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_FACT_AUTHORITY_INJECT,
+			msg.Authority,
+			factID,
+			"",
+			fmt.Sprintf("PROPOSED domain=%s category=%s veto_until=%d", msg.Domain, msg.Category, executeAt),
+		)
+		sdkCtx.EventManager().EmitEvent(
+			sdk.NewEvent("zerone.knowledge.add_fact_proposed",
+				sdk.NewAttribute("pending_id", factID),
+				sdk.NewAttribute("authority", msg.Authority),
+				sdk.NewAttribute("domain", msg.Domain),
+				sdk.NewAttribute("category", msg.Category),
+				sdk.NewAttribute("execute_at_block", fmt.Sprintf("%d", executeAt)),
+			),
+		)
+		return &types.MsgAddFactResponse{FactId: factID}, nil
+	}
+
+	// ── Immediate path (no guardian veto configured) ──
 	fact := &types.Fact{
 		Id:                factID,
 		Content:           msg.Content,
@@ -446,12 +491,9 @@ func (m *msgServer) AddFact(ctx context.Context, msg *types.MsgAddFact) (*types.
 	// Update domain stats for carrying capacity (R29-1)
 	m.keeper.IncrementDomainFactCount(ctx, fact.Domain, true, fact.Energy)
 
-	// AddFact bypasses the verifier-panel trust chain (stake →
-	// qualification → round → methodology-weighted acceptance). It is
-	// deliberately retained for genesis seeding and authority-gated
-	// corrective injection, but every call must be recorded in the
-	// privileged-action log so that compromised-authority abuse is
-	// queryable rather than buried in the generic block event stream.
+	// Privileged-action log captures every authority-gated injection so
+	// compromised-authority abuse is queryable rather than buried in the
+	// generic block event stream.
 	m.keeper.RecordPrivilegedAction(ctx,
 		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_FACT_AUTHORITY_INJECT,
 		msg.Authority,
@@ -471,6 +513,47 @@ func (m *msgServer) AddFact(ctx context.Context, msg *types.MsgAddFact) (*types.
 	)
 
 	return &types.MsgAddFactResponse{FactId: factID}, nil
+}
+
+// VetoFactInjection — Wave 16 multi-sig defense. A registered guardian
+// cancels a pending authority-injected fact during the veto window.
+// Removes the entry from the pending queue; the fact never materializes.
+// The privileged-action log records the veto for audit.
+func (m *msgServer) VetoFactInjection(ctx context.Context, msg *types.MsgVetoFactInjection) (*types.MsgVetoFactInjectionResponse, error) {
+	if msg == nil || msg.PendingId == "" {
+		return nil, fmt.Errorf("pending_id required")
+	}
+	if !m.keeper.IsGuardian(ctx, msg.Guardian) {
+		return nil, fmt.Errorf("unauthorized: %s is not a registered guardian", msg.Guardian)
+	}
+	pending, ok := m.keeper.GetPendingFactInjection(ctx, msg.PendingId)
+	if !ok {
+		return nil, fmt.Errorf("no pending fact injection with id %s", msg.PendingId)
+	}
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+	if height >= pending.ExecuteAtBlock {
+		return nil, fmt.Errorf("veto window closed: pending %s materializes at block %d (now %d)",
+			msg.PendingId, pending.ExecuteAtBlock, height)
+	}
+	if err := m.keeper.DeletePendingFactInjection(ctx, msg.PendingId); err != nil {
+		return nil, err
+	}
+	m.keeper.RecordPrivilegedAction(ctx,
+		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_FACT_AUTHORITY_INJECT,
+		msg.Guardian,
+		pending.Id,
+		"",
+		fmt.Sprintf("VETOED proposer=%s reason=%s", pending.Proposer, msg.Reason),
+	)
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.knowledge.fact_injection_vetoed",
+		sdk.NewAttribute("pending_id", pending.Id),
+		sdk.NewAttribute("guardian", msg.Guardian),
+		sdk.NewAttribute("proposer", pending.Proposer),
+		sdk.NewAttribute("reason", msg.Reason),
+	))
+	return &types.MsgVetoFactInjectionResponse{}, nil
 }
 
 // ─── Param update handlers ──────────────────────────────────────────────────

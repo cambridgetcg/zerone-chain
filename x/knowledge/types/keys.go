@@ -201,7 +201,29 @@ var (
 	// ─── Wave 14: privileged-action audit log ────────────────────────
 	PrivilegedActionKeyPrefix       = []byte{0x78} // 0x78 | be64(seq) → PrivilegedAction
 	PrivilegedActionSeqKey          = []byte{0x79} // singleton: next-seq counter (uvarint)
+
+	// ─── Wave 16: guardian-veto pending fact-injection queue ────────
+	PendingFactInjectionKeyPrefix          = []byte{0x7A} // 0x7A | id → PendingFactInjection
+	PendingFactInjectionByExecuteKeyPrefix = []byte{0x7B} // 0x7B | be64(execute_at) | id → 1 (time index for BeginBlocker scan)
 )
+
+// PendingFactInjectionKey returns the store key for a pending injection.
+func PendingFactInjectionKey(id string) []byte {
+	return append(append([]byte{}, PendingFactInjectionKeyPrefix...), []byte(id)...)
+}
+
+// PendingFactInjectionByExecuteKey returns the time-index key for a
+// pending injection. Sorted by execute_at_block (big-endian) so the
+// BeginBlocker can scan-and-stop at the first record whose deadline
+// has not yet passed.
+func PendingFactInjectionByExecuteKey(executeAt uint64, id string) []byte {
+	out := append([]byte{}, PendingFactInjectionByExecuteKeyPrefix...)
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, executeAt)
+	out = append(out, buf...)
+	out = append(out, []byte(id)...)
+	return out
+}
 
 // MethodologyKey returns the store key for a methodology by ID.
 func MethodologyKey(id string) []byte {

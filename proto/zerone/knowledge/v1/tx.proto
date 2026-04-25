@@ -193,6 +193,14 @@ service Msg {
   // no version bumps, no supersession. Pure recomputation from data
   // already committed to by the manifest's own ID lists.
   rpc CorrectManifestMerkleRoot(MsgCorrectManifestMerkleRoot) returns (MsgCorrectManifestMerkleRootResponse);
+
+  // VetoFactInjection — Wave 16 multi-sig defense. A registered
+  // guardian cancels a pending authority-injected fact during the veto
+  // window. After the window expires without veto, the fact
+  // materializes; before, any single guardian can stop it. The chain
+  // no longer relies on a single key being honest for actions that
+  // bypass the verifier panel.
+  rpc VetoFactInjection(MsgVetoFactInjection) returns (MsgVetoFactInjectionResponse);
 }
 
 // ─── PoT lifecycle messages ───────────────────────────────────────────────────
@@ -833,3 +841,15 @@ message MsgCorrectManifestMerkleRootResponse {
   string recomputed_root   = 2;  // what the handler wrote
   bool   was_corrupted     = 3;  // true iff prior != recomputed (else no-op)
 }
+
+// MsgVetoFactInjection — a registered guardian cancels a pending
+// authority-injected fact during the veto window. The fact never
+// materializes; the privileged-action log records the veto for audit.
+message MsgVetoFactInjection {
+  option (cosmos.msg.v1.signer) = "guardian";
+
+  string guardian   = 1;  // must appear in Params.guardian_addresses
+  string pending_id = 2;  // the PendingFactInjection.id to cancel
+  string reason     = 3;  // free-form audit comment
+}
+message MsgVetoFactInjectionResponse {}

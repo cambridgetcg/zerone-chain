@@ -272,8 +272,24 @@ type Params struct {
 	// Paid in addition to stake refund, participation reward, and
 	// success amplification.
 	InvitationBonusAmount string `protobuf:"bytes,158,opt,name=invitation_bonus_amount,json=invitationBonusAmount,proto3" json:"invitation_bonus_amount,omitempty"` // default "500000" = 0.5 ZRN per answered invitation
-	unknownFields         protoimpl.UnknownFields
-	sizeCache             protoimpl.SizeCache
+	// ─── Wave 16: guardian-veto window ────────────────────────────────────
+	// The privileged-action log made authority abuse queryable; the
+	// guardian-veto window makes it preventable. The set of addresses
+	// listed in guardian_addresses can VETO authority-gated fact
+	// injection during the time window between proposal and
+	// materialization. Closes the persistent-authority-compromise gap
+	// documented in Wave 14: the chain no longer relies on a single key
+	// for actions that bypass the verifier panel.
+	//
+	// The single authority can still propose actions cheaply; legitimate
+	// operations are not blocked. But any one of the configured
+	// guardians can cancel a malicious or mistaken proposal during the
+	// veto window. Trust shifts from "the authority key is honest" to
+	// "no individual can unilaterally inject untruth."
+	GuardianAddresses       []string `protobuf:"bytes,159,rep,name=guardian_addresses,json=guardianAddresses,proto3" json:"guardian_addresses,omitempty"`                          // veto-eligible addresses; empty = no guardian set, immediate execution
+	AddFactVetoWindowBlocks uint64   `protobuf:"varint,160,opt,name=add_fact_veto_window_blocks,json=addFactVetoWindowBlocks,proto3" json:"add_fact_veto_window_blocks,omitempty"` // default 0 (immediate); set > 0 to enable veto window
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *Params) Reset() {
@@ -1412,6 +1428,20 @@ func (x *Params) GetInvitationBonusAmount() string {
 	return ""
 }
 
+func (x *Params) GetGuardianAddresses() []string {
+	if x != nil {
+		return x.GuardianAddresses
+	}
+	return nil
+}
+
+func (x *Params) GetAddFactVetoWindowBlocks() uint64 {
+	if x != nil {
+		return x.AddFactVetoWindowBlocks
+	}
+	return 0
+}
+
 // GenesisState is the genesis state of the knowledge module.
 type GenesisState struct {
 	state                     protoimpl.MessageState      `protogen:"open.v1"`
@@ -1649,7 +1679,7 @@ var File_zerone_knowledge_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xebN\n" +
+	"!zerone/knowledge/v1/genesis.proto\x12\x13zerone.knowledge.v1\x1a\x1fzerone/knowledge/v1/types.proto\"\xdaO\n" +
 	"\x06Params\x12#\n" +
 	"\rmin_verifiers\x18\x01 \x01(\x04R\fminVerifiers\x12#\n" +
 	"\rmax_verifiers\x18\x02 \x01(\x04R\fmaxVerifiers\x12.\n" +
@@ -1809,7 +1839,9 @@ const file_zerone_knowledge_v1_genesis_proto_rawDesc = "" +
 	"\"probe_invitation_reinvite_cooldown\x18\x9b\x01 \x01(\x04R\x1fprobeInvitationReinviteCooldown\x12=\n" +
 	"\x1bprobe_bounty_mint_per_block\x18\x9c\x01 \x01(\tR\x17probeBountyMintPerBlock\x12;\n" +
 	"\x1aprobe_bounty_max_pool_size\x18\x9d\x01 \x01(\tR\x16probeBountyMaxPoolSize\x127\n" +
-	"\x17invitation_bonus_amount\x18\x9e\x01 \x01(\tR\x15invitationBonusAmount\x1aN\n" +
+	"\x17invitation_bonus_amount\x18\x9e\x01 \x01(\tR\x15invitationBonusAmount\x12.\n" +
+	"\x12guardian_addresses\x18\x9f\x01 \x03(\tR\x11guardianAddresses\x12=\n" +
+	"\x1badd_fact_veto_window_blocks\x18\xa0\x01 \x01(\x04R\x17addFactVetoWindowBlocks\x1aN\n" +
 	" MethodologyNormalizationBpsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x04R\x05value:\x028\x01\"\xe5\x0e\n" +

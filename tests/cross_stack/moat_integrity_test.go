@@ -900,6 +900,150 @@ func TestMoat_InvitationBonusPaidToAnswerer(t *testing.T) {
 		"even on failure, answerer receives invitation bonus on top of participation refund")
 }
 
+// Wave 16 guardian-veto: MsgAddFact is the only path that bypasses
+// the verifier panel. Closing the persistent-authority-compromise gap
+// requires that no single key can silently inject content even on the
+// authority path. With a guardian set + veto window configured, the
+// authority's call queues instead of materializing; any registered
+// guardian can cancel during the window. After the window without a
+// veto, BeginBlocker materializes. The chain shifts from "trust this
+// key" to "no individual can unilaterally inject untruth."
+func TestMoat_GuardianVetoCancelsAuthorityFactInjection(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	// Configure a guardian set + short veto window.
+	guardian := testAddr("moat_guardian").String()
+	params, err := h.KnowledgeKeeper.GetParams(h.Ctx)
+	require.NoError(t, err)
+	params.GuardianAddresses = []string{guardian}
+	params.AddFactVetoWindowBlocks = 50
+	require.NoError(t, h.KnowledgeKeeper.SetParams(h.Ctx, params))
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	authority := h.KnowledgeKeeper.GetAuthority()
+
+	// Authority proposes a fact. With the veto window enabled, the
+	// fact does NOT materialize immediately — it queues.
+	resp, err := ms.AddFact(h.Ctx, &knowledgetypes.MsgAddFact{
+		Authority: authority,
+		Content:   "moat test: authority injection that will be vetoed",
+		Domain:    "sciences",
+		Category:  "empirical",
+		Confidence: 950_000,
+	})
+	require.NoError(t, err)
+	pendingID := resp.FactId
+	require.NotEmpty(t, pendingID)
+
+	// Fact does NOT exist yet — pending only.
+	_, exists := h.KnowledgeKeeper.GetFact(h.Ctx, pendingID)
+	require.False(t, exists, "fact must not materialize during veto window")
+	pending, ok := h.KnowledgeKeeper.GetPendingFactInjection(h.Ctx, pendingID)
+	require.True(t, ok, "pending injection must exist")
+	require.Equal(t, authority, pending.Proposer)
+
+	// Guardian vetoes within the window.
+	_, err = ms.VetoFactInjection(h.Ctx, &knowledgetypes.MsgVetoFactInjection{
+		Guardian:  guardian,
+		PendingId: pendingID,
+		Reason:    "moat test: guardian rejects authority injection",
+	})
+	require.NoError(t, err)
+
+	// Pending entry removed.
+	_, ok = h.KnowledgeKeeper.GetPendingFactInjection(h.Ctx, pendingID)
+	require.False(t, ok, "veto must remove pending entry")
+
+	// Advance past the original deadline — BeginBlocker must NOT
+	// materialize the vetoed fact.
+	h.AdvanceBlocks(60)
+	_, exists = h.KnowledgeKeeper.GetFact(h.Ctx, pendingID)
+	require.False(t, exists, "vetoed fact must never materialize, not even after window")
+}
+
+// Without a veto, BeginBlocker materializes the fact at execute_at_block.
+// Demonstrates the legitimate path: authority proposes, no guardian
+// objects, fact eventually exists.
+func TestMoat_PendingFactMaterializesAfterVetoWindow(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	guardian := testAddr("moat_guardian_silent").String()
+	params, err := h.KnowledgeKeeper.GetParams(h.Ctx)
+	require.NoError(t, err)
+	params.GuardianAddresses = []string{guardian}
+	params.AddFactVetoWindowBlocks = 30
+	require.NoError(t, h.KnowledgeKeeper.SetParams(h.Ctx, params))
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	authority := h.KnowledgeKeeper.GetAuthority()
+	resp, err := ms.AddFact(h.Ctx, &knowledgetypes.MsgAddFact{
+		Authority: authority,
+		Content:   "moat test: legitimate authority injection",
+		Domain:    "sciences",
+		Category:  "empirical",
+		Confidence: 900_000,
+	})
+	require.NoError(t, err)
+	id := resp.FactId
+
+	_, exists := h.KnowledgeKeeper.GetFact(h.Ctx, id)
+	require.False(t, exists, "fact must not exist during veto window")
+
+	// Advance past the window. Guardian stays silent → BeginBlocker
+	// materializes.
+	h.AdvanceBlocks(31)
+	fact, ok := h.KnowledgeKeeper.GetFact(h.Ctx, id)
+	require.True(t, ok, "fact must materialize after veto window expires")
+	require.Equal(t, knowledgetypes.FactStatus_FACT_STATUS_VERIFIED, fact.Status)
+	require.Equal(t, authority, fact.Submitter)
+
+	// Pending entry cleaned up.
+	_, ok = h.KnowledgeKeeper.GetPendingFactInjection(h.Ctx, id)
+	require.False(t, ok)
+}
+
+// Non-guardians cannot veto. Even an address with valid existence on
+// the chain must appear in Params.guardian_addresses to wield the veto.
+func TestMoat_NonGuardianCannotVetoFactInjection(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	guardian := testAddr("moat_real_guardian").String()
+	imposter := testAddr("moat_imposter").String()
+	params, err := h.KnowledgeKeeper.GetParams(h.Ctx)
+	require.NoError(t, err)
+	params.GuardianAddresses = []string{guardian}
+	params.AddFactVetoWindowBlocks = 50
+	require.NoError(t, h.KnowledgeKeeper.SetParams(h.Ctx, params))
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	resp, err := ms.AddFact(h.Ctx, &knowledgetypes.MsgAddFact{
+		Authority: h.KnowledgeKeeper.GetAuthority(),
+		Content:   "moat test: non-guardian veto attempt",
+		Domain:    "sciences",
+		Category:  "empirical",
+		Confidence: 900_000,
+	})
+	require.NoError(t, err)
+
+	_, err = ms.VetoFactInjection(h.Ctx, &knowledgetypes.MsgVetoFactInjection{
+		Guardian:  imposter,
+		PendingId: resp.FactId,
+		Reason:    "I am not a guardian",
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not a registered guardian")
+
+	// Pending entry still in queue — imposter's call had no effect.
+	_, ok := h.KnowledgeKeeper.GetPendingFactInjection(h.Ctx, resp.FactId)
+	require.True(t, ok)
+}
+
 // MsgAddFact bypasses the verifier-panel trust chain by design (genesis
 // seeding and authority-gated corrections need it). Every call must emit
 // a PrivilegedAction log entry so compromised-authority abuse is

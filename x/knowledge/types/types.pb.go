@@ -8113,6 +8113,123 @@ func (x *PrivilegedAction) GetNote() string {
 	return ""
 }
 
+// PendingFactInjection is a fact that the authority has proposed via
+// MsgAddFact but which has not yet materialized — it is held in a
+// queue for AddFactVetoWindowBlocks while any guardian listed in
+// Params.guardian_addresses can cancel it via MsgVetoFactInjection.
+// After the window expires without veto, BeginBlocker materializes
+// the fact (creates the actual Fact record). This is the Wave 16
+// multi-sig defense for the only authority path that bypasses
+// verification: a single-key compromise can no longer silently inject
+// content into the training corpus.
+type PendingFactInjection struct {
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"` // unique id (also used as the eventual fact id)
+	Content         string                 `protobuf:"bytes,2,opt,name=content,proto3" json:"content,omitempty"`
+	Domain          string                 `protobuf:"bytes,3,opt,name=domain,proto3" json:"domain,omitempty"`
+	Category        string                 `protobuf:"bytes,4,opt,name=category,proto3" json:"category,omitempty"`
+	Confidence      uint64                 `protobuf:"varint,5,opt,name=confidence,proto3" json:"confidence,omitempty"`
+	References      []string               `protobuf:"bytes,6,rep,name=references,proto3" json:"references,omitempty"`
+	Proposer        string                 `protobuf:"bytes,7,opt,name=proposer,proto3" json:"proposer,omitempty"` // the authority that called MsgAddFact
+	ProposedAtBlock uint64                 `protobuf:"varint,8,opt,name=proposed_at_block,json=proposedAtBlock,proto3" json:"proposed_at_block,omitempty"`
+	ExecuteAtBlock  uint64                 `protobuf:"varint,9,opt,name=execute_at_block,json=executeAtBlock,proto3" json:"execute_at_block,omitempty"` // proposed_at_block + Params.add_fact_veto_window_blocks
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *PendingFactInjection) Reset() {
+	*x = PendingFactInjection{}
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PendingFactInjection) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PendingFactInjection) ProtoMessage() {}
+
+func (x *PendingFactInjection) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_knowledge_v1_types_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PendingFactInjection.ProtoReflect.Descriptor instead.
+func (*PendingFactInjection) Descriptor() ([]byte, []int) {
+	return file_zerone_knowledge_v1_types_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *PendingFactInjection) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *PendingFactInjection) GetContent() string {
+	if x != nil {
+		return x.Content
+	}
+	return ""
+}
+
+func (x *PendingFactInjection) GetDomain() string {
+	if x != nil {
+		return x.Domain
+	}
+	return ""
+}
+
+func (x *PendingFactInjection) GetCategory() string {
+	if x != nil {
+		return x.Category
+	}
+	return ""
+}
+
+func (x *PendingFactInjection) GetConfidence() uint64 {
+	if x != nil {
+		return x.Confidence
+	}
+	return 0
+}
+
+func (x *PendingFactInjection) GetReferences() []string {
+	if x != nil {
+		return x.References
+	}
+	return nil
+}
+
+func (x *PendingFactInjection) GetProposer() string {
+	if x != nil {
+		return x.Proposer
+	}
+	return ""
+}
+
+func (x *PendingFactInjection) GetProposedAtBlock() uint64 {
+	if x != nil {
+		return x.ProposedAtBlock
+	}
+	return 0
+}
+
+func (x *PendingFactInjection) GetExecuteAtBlock() uint64 {
+	if x != nil {
+		return x.ExecuteAtBlock
+	}
+	return 0
+}
+
 var File_zerone_knowledge_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
@@ -8809,7 +8926,21 @@ const file_zerone_knowledge_v1_types_proto_rawDesc = "" +
 	"\x06target\x18\x05 \x01(\tR\x06target\x12\x1f\n" +
 	"\vincident_id\x18\x06 \x01(\tR\n" +
 	"incidentId\x12\x12\n" +
-	"\x04note\x18\a \x01(\tR\x04note*\xe2\x02\n" +
+	"\x04note\x18\a \x01(\tR\x04note\"\xa6\x02\n" +
+	"\x14PendingFactInjection\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x18\n" +
+	"\acontent\x18\x02 \x01(\tR\acontent\x12\x16\n" +
+	"\x06domain\x18\x03 \x01(\tR\x06domain\x12\x1a\n" +
+	"\bcategory\x18\x04 \x01(\tR\bcategory\x12\x1e\n" +
+	"\n" +
+	"confidence\x18\x05 \x01(\x04R\n" +
+	"confidence\x12\x1e\n" +
+	"\n" +
+	"references\x18\x06 \x03(\tR\n" +
+	"references\x12\x1a\n" +
+	"\bproposer\x18\a \x01(\tR\bproposer\x12*\n" +
+	"\x11proposed_at_block\x18\b \x01(\x04R\x0fproposedAtBlock\x12(\n" +
+	"\x10execute_at_block\x18\t \x01(\x04R\x0eexecuteAtBlock*\xe2\x02\n" +
 	"\n" +
 	"FactStatus\x12\x1b\n" +
 	"\x17FACT_STATUS_UNSPECIFIED\x10\x00\x12\x17\n" +
@@ -9016,7 +9147,7 @@ func file_zerone_knowledge_v1_types_proto_rawDescGZIP() []byte {
 }
 
 var file_zerone_knowledge_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 22)
-var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 52)
+var file_zerone_knowledge_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
 var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(FactStatus)(0),                     // 0: zerone.knowledge.v1.FactStatus
 	(ClaimStatus)(0),                    // 1: zerone.knowledge.v1.ClaimStatus
@@ -9090,15 +9221,16 @@ var file_zerone_knowledge_v1_types_proto_goTypes = []any{
 	(*IncidentRecord)(nil),              // 69: zerone.knowledge.v1.IncidentRecord
 	(*ModulePause)(nil),                 // 70: zerone.knowledge.v1.ModulePause
 	(*PrivilegedAction)(nil),            // 71: zerone.knowledge.v1.PrivilegedAction
-	nil,                                 // 72: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
-	nil,                                 // 73: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	(*PendingFactInjection)(nil),        // 72: zerone.knowledge.v1.PendingFactInjection
+	nil,                                 // 73: zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	nil,                                 // 74: zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 }
 var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	5,  // 0: zerone.knowledge.v1.FactRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 1: zerone.knowledge.v1.FactRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
 	5,  // 2: zerone.knowledge.v1.ClaimRelation.relation:type_name -> zerone.knowledge.v1.RelationType
 	6,  // 3: zerone.knowledge.v1.ClaimRelation.inference:type_name -> zerone.knowledge.v1.InferenceType
-	72, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
+	73, // 4: zerone.knowledge.v1.Methodology.cross_method_discount_bps:type_name -> zerone.knowledge.v1.Methodology.CrossMethodDiscountBpsEntry
 	0,  // 5: zerone.knowledge.v1.Fact.status:type_name -> zerone.knowledge.v1.FactStatus
 	4,  // 6: zerone.knowledge.v1.Fact.claim_type:type_name -> zerone.knowledge.v1.ClaimType
 	22, // 7: zerone.knowledge.v1.Fact.outgoing_relations:type_name -> zerone.knowledge.v1.FactRelation
@@ -9106,7 +9238,7 @@ var file_zerone_knowledge_v1_types_proto_depIdxs = []int32{
 	26, // 9: zerone.knowledge.v1.Fact.structure:type_name -> zerone.knowledge.v1.ClaimStructure
 	10, // 10: zerone.knowledge.v1.Augmentation.verdict:type_name -> zerone.knowledge.v1.AugmentationVerdict
 	10, // 11: zerone.knowledge.v1.Augmentation.verdict_votes:type_name -> zerone.knowledge.v1.AugmentationVerdict
-	73, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
+	74, // 12: zerone.knowledge.v1.AgentCalibration.per_method:type_name -> zerone.knowledge.v1.AgentCalibration.PerMethodEntry
 	1,  // 13: zerone.knowledge.v1.Claim.status:type_name -> zerone.knowledge.v1.ClaimStatus
 	4,  // 14: zerone.knowledge.v1.Claim.claim_type:type_name -> zerone.knowledge.v1.ClaimType
 	23, // 15: zerone.knowledge.v1.Claim.relations:type_name -> zerone.knowledge.v1.ClaimRelation
@@ -9173,7 +9305,7 @@ func file_zerone_knowledge_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_knowledge_v1_types_proto_rawDesc), len(file_zerone_knowledge_v1_types_proto_rawDesc)),
 			NumEnums:      22,
-			NumMessages:   52,
+			NumMessages:   53,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

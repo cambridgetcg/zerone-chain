@@ -1507,3 +1507,24 @@ message PrivilegedAction {
   string incident_id     = 6;    // if the action cites an open incident
   string note            = 7;    // free-form; mirrors the handler's reason/note field
 }
+
+// PendingFactInjection is a fact that the authority has proposed via
+// MsgAddFact but which has not yet materialized — it is held in a
+// queue for AddFactVetoWindowBlocks while any guardian listed in
+// Params.guardian_addresses can cancel it via MsgVetoFactInjection.
+// After the window expires without veto, BeginBlocker materializes
+// the fact (creates the actual Fact record). This is the Wave 16
+// multi-sig defense for the only authority path that bypasses
+// verification: a single-key compromise can no longer silently inject
+// content into the training corpus.
+message PendingFactInjection {
+  string id                  = 1;  // unique id (also used as the eventual fact id)
+  string content             = 2;
+  string domain              = 3;
+  string category            = 4;
+  uint64 confidence          = 5;
+  repeated string references = 6;
+  string proposer            = 7;  // the authority that called MsgAddFact
+  uint64 proposed_at_block   = 8;
+  uint64 execute_at_block    = 9;  // proposed_at_block + Params.add_fact_veto_window_blocks
+}
