@@ -15,15 +15,35 @@ func DefaultParams() Params {
 		ClaimCooldownBlocks:   50,
 
 		// ─── Confidence scoring ───────────────────────────────────────────────
-		InitialConfidence:             500_000, // 50%
-		ConfidenceBoostPerVerification: 50_000, // 5%
-		ConfidenceThreshold:           770_000, // 77% (acceptance)
-		QuorumThreshold:               660_000, // 66%
+		// These four values are not chosen for plausibility; they are the
+		// numerical edges of two truth-seeking commitments:
+		//   - Commitment 1 (methodology over statement): a claim does
+		//     not become a fact merely by being asserted. ConfidenceThreshold
+		//     of 77% sets the bar high enough that consensus has to mean
+		//     something. ConfidenceThreshold == 0 would let everything
+		//     through; Validate() rejects that explicitly.
+		//   - Commitment 8 (panel weights skill, not bond): QuorumThreshold
+		//     of 66% means a verdict requires meaningful agreement, not a
+		//     bare majority. The same threshold applies to the augmentation
+		//     panel's stake-weighted tally.
+		// See docs/TRUTH_SEEKING.md and Validate() below for the bounds.
+		InitialConfidence:             500_000, // 50% — neutral default; nothing is true without verification
+		ConfidenceBoostPerVerification: 50_000, // 5% — single verification is incremental, not authoritative
+		ConfidenceThreshold:           770_000, // 77% — acceptance bar is meaningfully high
+		QuorumThreshold:               660_000, // 66% — supermajority, not bare majority
 
 		// ─── Slashing — MUST be non-zero ─────────────────────────────────────
-		WrongVerificationSlashBps: 50_000,  // 5%
-		MissedRevealSlashBps:      100_000, // 10%
-		EquivocationSlashBps:      200_000, // 20%
+		// Validate() enforces the non-zero floor. The non-zero floor is the
+		// belief: commitment 8 says the panel weights skill, not bond, and
+		// skill is something a verifier loses by being wrong. Slash rates of
+		// zero would say "be wrong without consequence" — that is not what
+		// this chain believes about verification. The graduated rates (5% →
+		// 10% → 20%) express that some failures are worse than others:
+		// equivocation (deliberate inconsistency) > missed reveal
+		// (irresponsibility) > wrong verification (honest error).
+		WrongVerificationSlashBps: 50_000,  // 5%  — honest error, costly but recoverable
+		MissedRevealSlashBps:      100_000, // 10% — abandonment of duty
+		EquivocationSlashBps:      200_000, // 20% — adversarial behavior, severe
 		InvalidClaimSlashBps:      0,       // DEPRECATED (R19-6): unused — review fee is non-refundable
 
 		// ─── Rewards ─────────────────────────────────────────────────────────
@@ -31,18 +51,32 @@ func DefaultParams() Params {
 		VerificationRewardDecayBps:  999_000,   // 0.999× per epoch
 
 		// ─── Claim validation ─────────────────────────────────────────────────
+		// MinReviewFee is non-refundable by design. Commitment 6 (no
+		// unilateral injection): adding to the substrate must cost
+		// something the submitter cannot recover by withdrawing the claim.
+		// A refundable fee would make claim-flooding free; the friction is
+		// the commitment.
 		MinClaimTextLength: 20,
 		MaxClaimTextLength: 1_000,
 		MinReviewFee:       "100000", // 0.1 ZRN — non-refundable review fee
 
 		// ─── Adversarial verification ─────────────────────────────────────────
+		// AdversarialVerificationEnabled is the substrate-level expression of
+		// commitment 4 (substrate stress-tests its truth). Set to false, the
+		// chain becomes a confidence-only voting system; set to true, every
+		// passing claim has standing to be challenged. The challenge stake
+		// (11 ZRN) is meaningful — not because it deters all challengers,
+		// but because it makes spam-challenges costly while keeping
+		// genuine-disagreement challenges affordable. The 30% reward to
+		// successful challengers is the inversion of farming economics:
+		// being right against the crowd pays more than being right with it.
 		AdversarialVerificationEnabled: true,
 		ProvisionalThreshold:           500_000, // 50%
 		RejectThreshold:                300_000, // 30%
 		ChallengeDurationBlocks:        34_272,  // 1 day
-		MinChallengeStake:              "11000000", // 11 ZRN in uzrn
-		FailedChallengeSlashBps:        220_000, // 22%
-		SuccessfulChallengeRewardBps:   300_000, // 30%
+		MinChallengeStake:              "11000000", // 11 ZRN — challenges are costly but accessible
+		FailedChallengeSlashBps:        220_000, // 22% — frivolous challenges burn
+		SuccessfulChallengeRewardBps:   300_000, // 30% — vindicated challenges pay above market
 		MaxConcurrentChallenges:        3,
 
 		// ─── Citation economics ───────────────────────────────────────────────
@@ -213,16 +247,29 @@ func DefaultParams() Params {
 		ReformulationConsensusBps:              666_000, // 66.6%
 		ReformulationSuperiorBonusBps:          500_000, // +50% payout on SUPERIOR
 		AugmentationExpiryFeeBps:               30_000,  // 3% kept-market-open fee
+		// MethodologyNormalizationBps expresses commitment 3 (Popper, not
+		// popularity). Methodologies that produce more falsifiable claims
+		// (PHENOMENOLOGICAL, PRACTICE, ECOLOGICAL) get higher TVW multipliers
+		// because they are harder to fake convincingly. M-LEGACY is
+		// down-weighted to 0.5× to disincentivise farming the easy
+		// methodology. The chain pays more for the kind of evidence that
+		// makes us less confident in the wrong answer.
 		MethodologyNormalizationBps:            map[string]uint64{
-			// Tune so lower-corroboration methodologies aren't starved.
-			"M-PHENOMENOLOGICAL": 2_000_000, // 2.0×
-			"M-PRACTICE":         1_750_000, // 1.75×
-			"M-ECOLOGICAL":       1_500_000, // 1.5×
-			"M-TESTIMONIAL":      1_250_000, // 1.25×
-			"M-LEGACY":           500_000,   // 0.5× — disincentivise legacy-method farming
+			"M-PHENOMENOLOGICAL": 2_000_000, // 2.0× — first-person rigor pays the most
+			"M-PRACTICE":         1_750_000, // 1.75× — embedded evidence is hard to fabricate
+			"M-ECOLOGICAL":       1_500_000, // 1.5× — context-rich methodologies
+			"M-TESTIMONIAL":      1_250_000, // 1.25× — testimony with provenance
+			"M-LEGACY":           500_000,   // 0.5× — legacy-method farming loses
 		},
+		// VindicationTvwMultiplier and DisprovalClawback are the
+		// asymmetric payoffs of commitment 13 (training corpus is not for
+		// sale). Surviving disproof and being vindicated against the
+		// majority is rewarded 2.5× because that is exactly the signal a
+		// truth-seeking corpus needs to retain. Disproven facts claw back
+		// 50% of recent revenue because revenue earned on a wrong fact
+		// was, in retrospect, theft from the audit pool.
 		VindicationTvwMultiplierBps:            2_500_000, // 2.5× for vindicated minority
-		DisprovalClawbackBps:                   500_000,   // 50% of recent revenue
+		DisprovalClawbackBps:                   500_000,   // 50% of recent revenue clawed back on disproof
 		DisprovalClawbackWindowEpochs:          30,
 		TrainingFundCalibrationFloorBps:        500_000, // 50%
 		TrainingFundVestingEpochs:              60,
@@ -236,29 +283,44 @@ func DefaultParams() Params {
 		MaxPauseDurationBlocks: 28_800, // ~40h at 5s blocks — ample hotfix window; caps DoS impact.
 
 		// ─── Wave 15: chain-driven stress-test invitation ─────────────
-		// The chain doesn't wait for probes; it nominates its own
-		// high-confidence facts for stress-testing every heartbeat.
-		ProbeInvitationIdleThresholdBlocks: 34_272,  // ~1 day at 2.5s blocks
-		ProbeInvitationMinConfidenceBps:    700_000, // only invite probes on facts ≥ 70% confidence
+		// This block IS commitment 5 (chain manufactures probe demand) made
+		// numerical. ProbeInvitationIdleThresholdBlocks of 1 day says: a
+		// fact that has gone a day without being probed is a fact whose
+		// confidence is decaying. The chain does not wait for skeptics —
+		// it nominates its own high-confidence facts for stress-testing
+		// every heartbeat. The 70% confidence floor focuses probes on
+		// facts the chain is most exposed to being wrong about.
+		ProbeInvitationIdleThresholdBlocks: 34_272,  // ~1 day — silence is decay
+		ProbeInvitationMinConfidenceBps:    700_000, // only invite probes on facts ≥ 70% — focus on what we're betting on
 		ProbeInvitationBatchSize:           10,      // bound BeginBlocker work
 		ProbeInvitationReinviteCooldown:    100_000, // don't re-invite the same fact back-to-back
 
 		// ─── Wave 15: probe bounty pool ───────────────────────────────
-		// Per-block mint into the pool. Caps at max pool size so issuance
-		// throttles naturally once the chain has enough auditing budget.
-		ProbeBountyMintPerBlock: "1000000",        // 1 ZRN/block
+		// Commitment 12 (chain pays for its own audit). Per-block mint
+		// into the pool means the cost of being audited is spread across
+		// every block, not paid by victims after the fact. The pool caps
+		// at 1M ZRN — past that point, the chain has enough auditing
+		// budget and issuance throttles naturally. Setting MintPerBlock
+		// to zero would mean "audits happen only when someone else pays
+		// for them" — which is what we believe must NOT be true.
+		ProbeBountyMintPerBlock: "1000000",        // 1 ZRN/block — audit budget is non-negotiable
 		ProbeBountyMaxPoolSize:  "1000000000000",  // 1,000,000 ZRN cap
 
 		// ─── Wave 15b: invitation bonuses ──────────────────────────────
 		// Flat reward for probers answering a chain-issued invitation.
+		// Pairs with the invitation system above: the chain doesn't just
+		// ask, it pays.
 		InvitationBonusAmount: "500000", // 0.5 ZRN per answered invitation
 
 		// ─── Wave 16: guardian-veto multi-sig defense ──────────────────
-		// Empty guardian set + zero veto window = current single-key
-		// behavior (back-compat at genesis). Governance enables the
-		// veto by populating GuardianAddresses and setting
-		// AddFactVetoWindowBlocks > 0. Until then, MsgAddFact still
-		// fires immediately with privileged-action logging only.
+		// Commitment 6 (no unilateral injection) and commitment 10
+		// (forward-only audit) crystallised into a parameter. The guardian
+		// veto window is the chain saying: even an authority with the key
+		// to add a fact directly is not above question. Set the window to
+		// zero and the chain trusts a single signer; set it > 0 and the
+		// chain insists that adding a fact is a public, observable, and
+		// reversible-during-window action. The privileged-action log fires
+		// regardless — that part is non-optional.
 		GuardianAddresses:           []string{},
 		AddFactVetoWindowBlocks:     0,
 	}

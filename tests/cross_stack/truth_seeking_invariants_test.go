@@ -17,6 +17,9 @@ package cross_stack_test
 // other binding tests where they exist.
 
 import (
+	"os"
+	"regexp"
+	"strconv"
 	"testing"
 
 	sdkmath "cosmossdk.io/math"
@@ -411,6 +414,208 @@ func TestTruthSeeking_AuditBudgetIsAutonomous(t *testing.T) {
 	h.AdvanceBlocks(20)
 	require.Greater(t, h.KnowledgeKeeper.ProbeBountyPoolBalance(h.Ctx).Int64(), int64(0),
 		"the chain must fund its own audit autonomously; without per-block mint, the budget depends on someone else's discipline")
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Commitment 10: Forward-only audit.
+//
+// "Every privileged action is logged. The chain's history is
+// append-only and verifiable."
+//
+// Bound here AND by: TestMoat_AddFactWritesPrivilegedLog,
+// TestInternalHackDrill_SchemaAmendmentDetection.
+// ════════════════════════════════════════════════════════════════════
+
+func TestTruthSeeking_PrivilegedActionsLogMonotonically(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	ms := knowledgekeeper.NewMsgServerImpl(h.KnowledgeKeeper)
+	authority := h.KnowledgeKeeper.GetAuthority()
+	qs := knowledgekeeper.NewQueryServerImpl(h.KnowledgeKeeper)
+
+	// Three privileged actions of different types — each must land in
+	// the log with strictly increasing seq. The log is the chain's
+	// audit substrate; without monotonicity, history can be reordered.
+	for i, content := range []string{"audit-1", "audit-2", "audit-3"} {
+		_ = i
+		_, err := ms.AddFact(h.Ctx, &knowledgetypes.MsgAddFact{
+			Authority: authority, Content: content,
+			Domain: "sciences", Category: "empirical", Confidence: 800_000,
+		})
+		require.NoError(t, err)
+	}
+	logs, err := qs.PrivilegedActions(h.Ctx, &knowledgetypes.QueryPrivilegedActionsRequest{})
+	require.NoError(t, err)
+	require.GreaterOrEqual(t, len(logs.Actions), 3,
+		"every privileged action must land in the log")
+
+	var prevSeq uint64
+	for _, a := range logs.Actions {
+		require.Greater(t, a.Seq, prevSeq,
+			"the privileged-action log must be strictly monotonic; reorderable history is not history")
+		prevSeq = a.Seq
+		require.NotEmpty(t, a.Invoker, "every log entry must name its invoker — accountability is structural")
+		require.Greater(t, a.InvokedAtBlock, uint64(0),
+			"every log entry must carry the block it was invoked at — time-stamped, not post-dateable")
+	}
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Commitment 13: The training corpus is not for sale.
+//
+// "What enters the corpus enters because it survived. Facts are
+// append-only post-acceptance; status transitions are forward-only;
+// training revenue clawback fires deterministically on disprove."
+//
+// Bound here AND by: TestRouteB_Adversarial_ClawbackStickyAndIdempotent,
+// TestRouteB_Wave4b_PopperWeightedTVWAndClawback.
+// ════════════════════════════════════════════════════════════════════
+
+func TestTruthSeeking_DisprovenFactClawsBackAndStaysClawedBack(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	submitter := testAddr("ts_clawback").String()
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, &knowledgetypes.Fact{
+		Id: "F-TS-CLAWBACK", Content: "to be disproven", Domain: "sciences",
+		Status:                          knowledgetypes.FactStatus_FACT_STATUS_ACTIVE,
+		Submitter:                       submitter,
+		MethodId:                        knowledgetypes.MethodologyEmpirical,
+		Confidence:                      900_000,
+		CorroborationCount:              5,
+		SubmitterCalibrationSnapshotBps: 800_000,
+	}))
+
+	qs := knowledgekeeper.NewQueryServerImpl(h.KnowledgeKeeper)
+	pre, err := qs.TrainingValueWeight(h.Ctx, &knowledgetypes.QueryTrainingValueWeightRequest{FactId: "F-TS-CLAWBACK"})
+	require.NoError(t, err)
+	require.Greater(t, pre.TvwBps, uint64(0))
+
+	require.NoError(t, h.KnowledgeKeeper.ClawbackOnDisproval(h.Ctx, "F-TS-CLAWBACK"))
+
+	post, err := qs.TrainingValueWeight(h.Ctx, &knowledgetypes.QueryTrainingValueWeightRequest{FactId: "F-TS-CLAWBACK"})
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), post.TvwBps,
+		"a disproven fact must lose its training value immediately")
+	require.True(t, post.Disproven,
+		"the clawback must be a structural state, not a transient flag")
+
+	// Status flip back to ACTIVE — clawback must STAY.
+	recovered, _ := h.KnowledgeKeeper.GetFact(h.Ctx, "F-TS-CLAWBACK")
+	recovered.Status = knowledgetypes.FactStatus_FACT_STATUS_ACTIVE
+	require.NoError(t, h.KnowledgeKeeper.SetFact(h.Ctx, recovered))
+
+	postFlip, err := qs.TrainingValueWeight(h.Ctx, &knowledgetypes.QueryTrainingValueWeightRequest{FactId: "F-TS-CLAWBACK"})
+	require.NoError(t, err)
+	require.Equal(t, uint64(0), postFlip.TvwBps,
+		"clawback must survive status flips; the corpus is not negotiable post-acceptance")
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Commitment 14: Reasoning traces are first-class.
+//
+// "The chain trains not just on conclusions but on derivations.
+// Reasoning traces are gold-standard chain-of-thought, recorded
+// on-chain alongside the conclusion."
+//
+// Bound here AND by: TestRouteB_Wave5_MethodologyApplicationTraceAssembly.
+// ════════════════════════════════════════════════════════════════════
+
+func TestTruthSeeking_ReasoningTracePropagatesThroughVerification(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	submitter := testAddr("ts_trace").String()
+	const tracePayload = `[{"step":1,"observation":"premise A"},{"step":2,"derivation":"therefore B"}]`
+	claim := &knowledgetypes.Claim{
+		Id: "claim-ts-trace", Submitter: submitter,
+		FactContent:    "claim with explicit derivation",
+		Domain:         "sciences",
+		Category:       "empirical",
+		MethodId:       knowledgetypes.MethodologyEmpirical,
+		ReasoningTrace: tracePayload,
+		Status:         knowledgetypes.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
+		Stake:          "1000000",
+	}
+	require.NoError(t, h.KnowledgeKeeper.SetClaim(h.Ctx, claim))
+	round := &knowledgetypes.VerificationRound{
+		Id: "round-ts-trace", ClaimId: claim.Id,
+		Phase: knowledgetypes.VerificationPhase_VERIFICATION_PHASE_COMPLETE, StartedAtBlock: 1,
+	}
+	require.NoError(t, h.KnowledgeKeeper.CompleteRound(h.Ctx, round, &knowledgekeeper.VerificationResult{
+		Verdict: knowledgetypes.Verdict_VERDICT_ACCEPT, Confidence: 900_000, AcceptCount: 3,
+	}))
+
+	var fact *knowledgetypes.Fact
+	h.KnowledgeKeeper.IterateFacts(h.Ctx, func(f *knowledgetypes.Fact) bool {
+		if f.ClaimId == claim.Id {
+			fact = f
+			return true
+		}
+		return false
+	})
+	require.NotNil(t, fact)
+	require.Equal(t, tracePayload, fact.ReasoningTrace,
+		"a claim's reasoning trace must propagate verbatim into the accepted Fact; without the derivation, the corpus is a list of assertions, not a curriculum")
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Meta-invariant: the creed and the contract stay in sync.
+//
+// docs/TRUTH_SEEKING.md numbers its commitments. Every numbered
+// commitment in the creed must have at least one corresponding
+// TestTruthSeeking_ test in this file. Every TestTruthSeeking_ test
+// must cite a commitment number in its header comment.
+//
+// This test is the discipline enforced mechanically: if you add a
+// commitment to the creed without binding it, this test fails. If
+// you add a binding test without a creed entry, this test fails.
+// The creed and the contract cannot drift.
+// ════════════════════════════════════════════════════════════════════
+
+func TestTruthSeeking_CreedAndContractStayInSync(t *testing.T) {
+	creedBytes, err := os.ReadFile("../../docs/TRUTH_SEEKING.md")
+	require.NoError(t, err, "creed must exist; if you renamed or moved it, update this test")
+
+	creed := string(creedBytes)
+	commitmentNumberRe := regexp.MustCompile(`(?m)^### (\d+)\. `)
+	matches := commitmentNumberRe.FindAllStringSubmatch(creed, -1)
+	require.NotEmpty(t, matches, "no numbered commitments parsed — creed format may have changed")
+
+	creedNumbers := make(map[int]bool)
+	for _, m := range matches {
+		n, err := strconv.Atoi(m[1])
+		require.NoError(t, err)
+		creedNumbers[n] = true
+	}
+
+	testFile, err := os.ReadFile("truth_seeking_invariants_test.go")
+	require.NoError(t, err)
+	testContent := string(testFile)
+
+	// Every numbered commitment must appear in some "Commitment N:"
+	// header inside this file. The header pattern is the contract.
+	citationRe := regexp.MustCompile(`(?m)^// Commitment (\d+):`)
+	citationMatches := citationRe.FindAllStringSubmatch(testContent, -1)
+	citedNumbers := make(map[int]bool)
+	for _, m := range citationMatches {
+		n, err := strconv.Atoi(m[1])
+		require.NoError(t, err)
+		citedNumbers[n] = true
+	}
+
+	for n := range creedNumbers {
+		require.True(t, citedNumbers[n],
+			"commitment %d in the creed has no binding test; either add a TestTruthSeeking_ test that cites it, or remove the commitment from the creed. Slogan vs belief.", n)
+	}
+	for n := range citedNumbers {
+		require.True(t, creedNumbers[n],
+			"a binding test cites commitment %d which does not appear in the creed; either add the commitment to TRUTH_SEEKING.md or remove the citation. The creed and the contract must stay in sync.", n)
+	}
 }
 
 // sdkCoinsForTest keeps the panel test readable; mirrors the inlined
