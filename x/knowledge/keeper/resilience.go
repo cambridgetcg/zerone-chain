@@ -187,12 +187,17 @@ func (m *msgServer) PauseModule(ctx context.Context, msg *types.MsgPauseModule) 
 	m.keeper.RecordPrivilegedAction(ctx,
 		types.PrivilegedActionType_PRIVILEGED_ACTION_TYPE_MODULE_PAUSE,
 		msg.Authority, msg.ModuleName, msg.IncidentId, msg.Reason)
+	// A pause is the chain admitting it should not stress-test broken
+	// state (commitment 4) and recording that admission append-only
+	// (commitment 10). The pair is announced together. See
+	// TRUTH_SEEKING.md.
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.module_paused",
 		sdk.NewAttribute("module_name", p.ModuleName),
 		sdk.NewAttribute("reason", p.Reason),
 		sdk.NewAttribute("incident_id", p.IncidentId),
 		sdk.NewAttribute("auto_unpause_at_block", fmt.Sprintf("%d", p.AutoUnpauseAtBlock)),
+		sdk.NewAttribute("creed_commitment", "4,10"),
 	))
 	return &types.MsgPauseModuleResponse{PausedAtBlock: height}, nil
 }

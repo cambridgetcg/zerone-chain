@@ -804,6 +804,10 @@ func (k Keeper) handleChallengeSurvival(ctx context.Context, challengeClaim *typ
 	originalFact.AtRiskSinceEpoch = 0
 	_ = k.SetFact(ctx, originalFact)
 
+	// Popper, not popularity: a fact's standing comes from how many
+	// serious challenges it has survived. This event records one more
+	// survival — the counter that BaseWeight reads to decide TVW.
+	// See TRUTH_SEEKING.md commitment 3.
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.corroboration_incremented",
 		sdk.NewAttribute("fact_id", originalFact.Id),
@@ -811,6 +815,7 @@ func (k Keeper) handleChallengeSurvival(ctx context.Context, challengeClaim *typ
 		sdk.NewAttribute("new_count", fmt.Sprintf("%d", originalFact.CorroborationCount)),
 		sdk.NewAttribute("block_height", fmt.Sprintf("%d", height)),
 		sdk.NewAttribute("counter_incremented", fmt.Sprintf("%t", eligible)),
+		sdk.NewAttribute("creed_commitment", "3"),
 	))
 }
 
@@ -914,6 +919,10 @@ func (k Keeper) settleChallengeStake(ctx context.Context, claim *types.Claim, ve
 					}
 				}
 			}
+			// Substrate stress-tests its own truth: the chain
+			// announces every challenge resolution because the
+			// resolution itself is the audit. See TRUTH_SEEKING.md
+			// commitment 4.
 			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 				"zerone.knowledge.challenge_settled",
 				sdk.NewAttribute("claim_id", claim.Id),
@@ -921,6 +930,7 @@ func (k Keeper) settleChallengeStake(ctx context.Context, claim *types.Claim, ve
 				sdk.NewAttribute("outcome", "accepted"),
 				sdk.NewAttribute("refund", remainder.String()),
 				sdk.NewAttribute("reward_bps", fmt.Sprintf("%d", effectiveBonusBps)),
+				sdk.NewAttribute("creed_commitment", "4"),
 			))
 			break
 		}
@@ -931,6 +941,7 @@ func (k Keeper) settleChallengeStake(ctx context.Context, claim *types.Claim, ve
 			sdk.NewAttribute("outcome", "accepted"),
 			sdk.NewAttribute("refund", remainder.String()),
 			sdk.NewAttribute("reward_bps", "0"),
+			sdk.NewAttribute("creed_commitment", "4"),
 		))
 
 	case types.Verdict_VERDICT_REJECT:
@@ -982,6 +993,7 @@ func (k Keeper) settleChallengeStake(ctx context.Context, claim *types.Claim, ve
 			sdk.NewAttribute("outcome", "rejected"),
 			sdk.NewAttribute("participation_refund", participation.String()),
 			sdk.NewAttribute("to_treasury", toTreasury.String()),
+			sdk.NewAttribute("creed_commitment", "4"),
 		))
 	}
 }
@@ -1057,11 +1069,16 @@ func (k Keeper) payInvitationBonus(ctx context.Context, claim *types.Claim, para
 		return
 	}
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	// The chain manufactures probe demand (commitment 5) and pays for
+	// its own audit (commitment 12): this event is the observable
+	// proof that the bounty pool actually paid. Without it, "probes
+	// are paid" is rhetoric. See TRUTH_SEEKING.md.
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.invitation_bonus_paid",
 		sdk.NewAttribute("claim_id", claim.Id),
 		sdk.NewAttribute("challenger", claim.Submitter),
 		sdk.NewAttribute("fact_id", claim.ProvisionalFactId),
 		sdk.NewAttribute("amount", paid.String()),
+		sdk.NewAttribute("creed_commitment", "5,12"),
 	))
 }

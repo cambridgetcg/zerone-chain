@@ -210,11 +210,16 @@ func (k Keeper) handleChallengeDisproven(ctx context.Context, challengeClaim *ty
 	_ = k.SetFact(ctx, originalFact)
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	// Popper, not popularity: a fact stops being a fact when a serious
+	// attempt to disprove it succeeds. The chain announces the verdict
+	// publicly so future training and citation runs can route around it.
+	// See TRUTH_SEEKING.md commitment 3.
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.fact_disproven",
 		sdk.NewAttribute("fact_id", originalFact.Id),
 		sdk.NewAttribute("disproven_by", newFactId),
 		sdk.NewAttribute("challenge_claim_id", challengeClaim.Id),
+		sdk.NewAttribute("creed_commitment", "3"),
 	))
 
 	// Phase 5 feedback loop:

@@ -57,6 +57,11 @@ func (k Keeper) RunAccuracyDecay(ctx context.Context, currentBlock uint64, param
 		accuracy := q.Metrics.AccuracyBps
 
 		switch q.Status {
+		// All three decay transitions below announce commitment 7:
+		// skill is current, not historical. Each event marks a
+		// validator's qualification weight changing because their
+		// recent accuracy crossed a threshold. See TRUTH_SEEKING.md.
+
 		case types.QualificationStatus_QUALIFICATION_STATUS_ACTIVE:
 			if probationBps > 0 && accuracy < probationBps {
 				q.Status = types.QualificationStatus_QUALIFICATION_STATUS_PROBATIONARY
@@ -74,6 +79,7 @@ func (k Keeper) RunAccuracyDecay(ctx context.Context, currentBlock uint64, param
 					sdk.NewAttribute("domain", q.Domain),
 					sdk.NewAttribute("accuracy_bps", fmt.Sprintf("%d", accuracy)),
 					sdk.NewAttribute("threshold_bps", fmt.Sprintf("%d", probationBps)),
+					sdk.NewAttribute("creed_commitment", "7"),
 				))
 			}
 
@@ -88,6 +94,7 @@ func (k Keeper) RunAccuracyDecay(ctx context.Context, currentBlock uint64, param
 					sdk.NewAttribute("domain", q.Domain),
 					sdk.NewAttribute("accuracy_bps", fmt.Sprintf("%d", accuracy)),
 					sdk.NewAttribute("threshold_bps", fmt.Sprintf("%d", suspensionBps)),
+					sdk.NewAttribute("creed_commitment", "7"),
 				))
 				return false
 			}
@@ -101,6 +108,7 @@ func (k Keeper) RunAccuracyDecay(ctx context.Context, currentBlock uint64, param
 					sdk.NewAttribute("domain", q.Domain),
 					sdk.NewAttribute("accuracy_bps", fmt.Sprintf("%d", accuracy)),
 					sdk.NewAttribute("threshold_bps", fmt.Sprintf("%d", recoveryBps)),
+					sdk.NewAttribute("creed_commitment", "7"),
 				))
 			}
 		}

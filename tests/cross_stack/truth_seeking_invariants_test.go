@@ -663,6 +663,76 @@ func TestTruthSeeking_CreedAndContractStayInSync(t *testing.T) {
 		require.True(t, creedNumbers[n],
 			"an x/*/doc.go declares commitment %d which does not appear in the creed; either add the commitment to TRUTH_SEEKING.md or remove the declaration. Position must match creed.", n)
 	}
+
+	// ─── Voice echo ─────────────────────────────────────────────────
+	// The creed binds tests, the tests bind code, the code binds
+	// position. The fourth leg is voice: events emitted by the chain
+	// to off-chain observers carry a "creed_commitment" attribute
+	// naming which commitment the announcement preserves. Off-chain
+	// indexers and dashboards filter on this attribute to surface
+	// truth-seeking activity in the same vocabulary the creed uses.
+	//
+	// This test asserts every "creed_commitment" attribute value is a
+	// real commitment number from the creed. Adding an event with a
+	// commitment value that doesn't exist in TRUTH_SEEKING.md fails
+	// CI. Renaming or renumbering the creed without updating event
+	// emission sites also fails CI.
+	//
+	// We do NOT enforce that every commitment has at least one event:
+	// some commitments (e.g., 11 "trust queryable", 14 "reasoning
+	// traces are first-class") are properties of data structures or
+	// query surfaces, not transition moments. Forcing them into events
+	// would create ceremonial events with no real audit value.
+
+	announcedNumbers := make(map[int]bool)
+	creedAttrRe := regexp.MustCompile(`sdk\.NewAttribute\("creed_commitment",\s*"([^"]+)"\)`)
+	err = filepath.Walk(xRoot, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if info.IsDir() {
+			return nil
+		}
+		base := filepath.Base(path)
+		if !regexp.MustCompile(`\.go$`).MatchString(base) {
+			return nil
+		}
+		// Skip generated and test files. The convention applies to
+		// production emission sites only.
+		if regexp.MustCompile(`(_test\.go|\.pb\.go|\.pb\.gw\.go)$`).MatchString(base) {
+			return nil
+		}
+		body, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		for _, m := range creedAttrRe.FindAllStringSubmatch(string(body), -1) {
+			// Value can be "5" or "5,12" or "6, 10" — split and trim.
+			raw := m[1]
+			for _, part := range regexp.MustCompile(`,\s*`).Split(raw, -1) {
+				part = regexp.MustCompile(`^\s+|\s+$`).ReplaceAllString(part, "")
+				if part == "" {
+					continue
+				}
+				n, convErr := strconv.Atoi(part)
+				require.NoError(t, convErr,
+					"file %s emits an event with creed_commitment=%q; value %q is not an integer. The attribute must be a comma-separated list of commitment numbers.",
+					path, raw, part)
+				require.True(t, creedNumbers[n],
+					"file %s emits an event with creed_commitment=%q; commitment %d does not appear in TRUTH_SEEKING.md. Either add the commitment to the creed or correct the announcement.",
+					path, raw, n)
+				announcedNumbers[n] = true
+			}
+		}
+		return nil
+	})
+	require.NoError(t, err, "walking x/ for event emissions failed")
+
+	// Soft check: at least one event must announce truth-seeking
+	// activity at all. If this number is zero, the convention has
+	// been silently abandoned — fail loudly.
+	require.NotEmpty(t, announcedNumbers,
+		"no creed_commitment attributes found in any x/ source file. The voice layer of truth-seeking has been silently removed; either restore the convention or remove this test and document why.")
 }
 
 // sdkCoinsForTest keeps the panel test readable; mirrors the inlined

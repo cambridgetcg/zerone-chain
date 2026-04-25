@@ -98,6 +98,10 @@ func (k Keeper) InviteIdleFactsForProbing(ctx context.Context, height uint64, pa
 			k.Logger(ctx).Error("probe invitation SetFact failed", "fact", f.Id, "err", err)
 			return false
 		}
+		// The chain manufactures probe demand. This event is the
+		// announcement: "this high-confidence fact has gone idle and
+		// I am inviting you to challenge it." See TRUTH_SEEKING.md
+		// commitment 5.
 		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 			"zerone.knowledge.probe_invited",
 			sdk.NewAttribute("fact_id", f.Id),
@@ -106,6 +110,7 @@ func (k Keeper) InviteIdleFactsForProbing(ctx context.Context, height uint64, pa
 			sdk.NewAttribute("corroboration_count", fmt.Sprintf("%d", f.CorroborationCount)),
 			sdk.NewAttribute("idle_since_block", fmt.Sprintf("%d", lastProbe)),
 			sdk.NewAttribute("invited_at_block", fmt.Sprintf("%d", height)),
+			sdk.NewAttribute("creed_commitment", "5"),
 		))
 		invited++
 		return false

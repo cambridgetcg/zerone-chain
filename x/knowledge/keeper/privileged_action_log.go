@@ -56,6 +56,10 @@ func (k Keeper) RecordPrivilegedAction(
 	}
 	// Emit event even if store write failed — some audit trail is better
 	// than none, and the event is a separate durable channel.
+	// No unilateral injection (commitment 6) and forward-only audit
+	// (commitment 10): every privileged action is announced as it
+	// happens, with a monotonic seq that no future actor can rewrite.
+	// See TRUTH_SEEKING.md.
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.knowledge.privileged_action_recorded",
 		sdk.NewAttribute("seq", u64String(seq)),
@@ -63,6 +67,7 @@ func (k Keeper) RecordPrivilegedAction(
 		sdk.NewAttribute("invoker", invoker),
 		sdk.NewAttribute("target", target),
 		sdk.NewAttribute("incident_id", incidentID),
+		sdk.NewAttribute("creed_commitment", "6,10"),
 	))
 	return seq
 }

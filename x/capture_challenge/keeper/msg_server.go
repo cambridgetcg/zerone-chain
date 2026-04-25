@@ -265,12 +265,17 @@ func (m msgServer) ResolveChallenge(goCtx context.Context, msg *types.MsgResolve
 			}
 		}
 
-		// Emit capture_confirmed event for alignment module
+		// Cartel detection has consequence: this event announces the
+		// uphold verdict that downstream consumers (qualification
+		// penalty, threshold raise, stake slash) read. Without the
+		// announcement, the consequence flow is invisible. See
+		// TRUTH_SEEKING.md commitment 9.
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent(
 				"zerone.capture_challenge.capture_confirmed",
 				sdk.NewAttribute("domain", challenge.Domain),
 				sdk.NewAttribute("challenge_id", challenge.Id),
+				sdk.NewAttribute("creed_commitment", "9"),
 			),
 		)
 
