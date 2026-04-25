@@ -18,14 +18,35 @@ func DefaultTierConfigs() []*TierConfig {
 }
 
 // DefaultParams returns the default disputes module parameters.
+//
+// These values express commitment 3 (Popper, not popularity) and
+// commitment 10 (forward-only audit). See doc.go for the contract;
+// the values below price the falsification opportunity and the
+// asymmetric payoffs of being right against a verified fact.
 func DefaultParams() *Params {
 	return &Params{
 		TierConfigs:        DefaultTierConfigs(),
+
+		// MaxActiveDisputes caps concurrent dispute load. 100 is
+		// enough that the panel pipeline doesn't bottleneck
+		// adjudication, low enough that nuisance flooding is bounded.
 		MaxActiveDisputes:  100,
+
+		// EscalationDelay (~21 minutes) is the cooling period before
+		// a tier-1 dispute can be escalated. Purpose: deliberation
+		// between tiers, not race-to-tier-4.
 		EscalationDelay:    500,
-		SlashRateLoserBps:  500000,  // 50%
-		RewardRateWinnerBps: 400000, // 40%
-		ArbiterRewardBps:   100000,  // 10%
+
+		// Asymmetric payoffs (commitment 3): the loser of a dispute
+		// loses 50% of their bond; the winner takes 40%; arbiters
+		// share 10%. The slash exceeds the reward because the
+		// substrate cares more about discouraging frivolous bonds
+		// than maximally rewarding correct ones — the chain's
+		// epistemic interest is sharper bond-allocation than louder
+		// payouts.
+		SlashRateLoserBps:  500000,  // 50% — frivolous bonds burn meaningfully
+		RewardRateWinnerBps: 400000, // 40% — correct disputes pay above market
+		ArbiterRewardBps:   100000,  // 10% — adjudicators are paid for their attention
 	}
 }
 

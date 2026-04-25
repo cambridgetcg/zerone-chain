@@ -11,15 +11,50 @@ func DefaultGenesis() *GenesisState {
 	}
 }
 
-// DefaultParams returns default ontology parameters.
-// MinProposalStake is in uzrn (1000000 uzrn = 1 ZRN).
+// DefaultParams returns the default ontology module parameters.
+//
+// These values express commitment 2 (is-ought wall) and commitment 10
+// (forward-only audit). See doc.go for the contract; the values
+// below establish the rate at which new domains and strata can enter
+// the chain's epistemological taxonomy.
 func DefaultParams() Params {
 	return Params{
+		// MinProposalStake (1 ZRN) is the floor for proposing a new
+		// domain. Cost is meaningful but not gatekeeping — any
+		// serious proposer can afford it; it discourages nuisance
+		// proposals that would dilute the taxonomy.
 		MinProposalStake:     "1000000",
+
+		// ProposalVotingPeriod (~1 day) is the deliberation window.
+		// Domains define epistemological territory; the chain takes
+		// a day to think before adding new territory to its map.
 		ProposalVotingPeriod: 34272,
+
+		// MinEndorsements (3) ensures any new domain is endorsed by
+		// at least three distinct authorities. Domain creation is
+		// not unilateral — commitment 2 depends on stratum
+		// classification, and the classification must reflect more
+		// than one perspective.
 		MinEndorsements:      3,
+
+		// CrossStratumDiscount (5%) is the small penalty applied to
+		// citations that cross strata. The DISCOUNT, not a hard
+		// rejection: cross-stratum reasoning is allowed but marked.
+		// This is commitment 2 in soft form — the wall is structural
+		// between facts and commitments, permeable-with-tax across
+		// the other strata.
 		CrossStratumDiscount: 50000,
+
+		// MaxDomainsPerStratum (100) caps proliferation. If the
+		// chain has more than 100 domains in one stratum, the
+		// stratum itself probably needs to split.
 		MaxDomainsPerStratum: 100,
+
+		// AllowNewStrata (false): the 7 default strata are the
+		// chain's pre-committed epistemological taxonomy. Adding a
+		// new stratum is a foundational change requiring governance
+		// — the chain does not casually expand its theory of
+		// evidence types.
 		AllowNewStrata:       false,
 	}
 }
