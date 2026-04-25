@@ -182,18 +182,27 @@ We believe: the chain trains not just on conclusions but on derivations. The pat
 
 ## How the commitments echo
 
-### Architecture
-Every commitment above is enforced by a code path. Every code path is exercised by an invariant test in `tests/cross_stack/truth_seeking_invariants_test.go`. The test names read as creed lines — they're a contract between the document and the substrate.
+The creed is enforced at five layers, each one mechanically synced to the others by `TestTruthSeeking_CreedAndContractStayInSync`. Adding a commitment to one layer without the others fails CI.
 
-### Infrastructure
-- **Param defaults** are chosen as expressions of the values, not for plausibility. ConfidenceThreshold rejects zero; AccuracyBps thresholds are tiered for ACTIVE/PROBATIONARY/SUSPENDED; ProbeBountyMintPerBlock is non-zero by default in genesis.
-- **Event names** declare acts: `probe_invited`, `cartel_detected`, `pending_fact_materialized`, `decay_recovered`, `invitation_bonus_paid`. Each names the moral act, not just the state change.
-- **Module names** declare role: `training_provenance` synthesises trust per manifest; `trust_score` per address; `governance_synthesis` per system. Each name is a commitment to what that module exists for.
+#### Test layer — every commitment has a binding scenario
+Every commitment above is exercised by an invariant test in `tests/cross_stack/truth_seeking_invariants_test.go`. Each test header reads `// Commitment N: ...` and the scenario drives the chain through a path where the commitment could be violated. If the test fails, the commitment is broken — not the test.
 
-### Position
-- This document is the chain's external-facing epistemic stance, grounded in code. External consumers — model trainers, regulators, alignment researchers — reading this document can verify each claim by querying the chain.
-- The README at the repo root points here.
-- The three synthesiser modules (`x/training_provenance`, `x/trust_score`, `x/governance_synthesis`) expose verifiable queries that publish the chain's current state against these commitments.
+#### Position layer — every commitment is named in package docs
+Every commitment is declared by at least one `x/*/doc.go` file in the module that preserves it (e.g., `x/knowledge/doc.go` for commitments 1, 2, 3, 4, 5, 6, 10, 12, 13, 14; `x/qualification/doc.go` for 7, 8, 9). A reader running `go doc ./x/foo` sees the package's truth-seeking stance without having to chase down test files.
+
+#### Voice layer — events announce the commitment they preserve
+Truth-seeking events emitted to off-chain observers carry a `creed_commitment` attribute whose value is one or more commitment numbers. `probe_invited` announces commitment 5; `fact_disproven` announces commitment 3; `capture_confirmed` announces commitment 9; `privileged_action_recorded` announces commitments 6 and 10. Indexers and dashboards filter on this attribute to surface truth-seeking activity in the same vocabulary the creed uses.
+
+#### Refusal layer — rejections cite the protecting commitment
+When the chain refuses an action because of a truth-seeking commitment, the error message names the commitment and explains the protection in the chain's voice. "Insufficient challenge stake (commitment 4: probe cost scales with confidence)." "Veto window closed (commitment 6: the veto window is the chain's promise that authority injection is reviewable)." The chain speaks through intentions whether saying yes or saying no.
+
+#### Graph layer — commitments cross-reference each other
+Each commitment has an **Echoes** line naming the other commitments it depends on, reinforces, or operationalises. Commitment 4 echoes 3 (Popper is the principle, stress-testing is the operation). Commitment 12 echoes 4 and 5 (the audit budget funds them). Commitment 11 echoes 7, 8, 9, and 10 (the synthesiser reads each component). The cross-references make the creed a navigable graph; the meta-test enforces that every echoed reference is real and that no commitment stands alone.
+
+#### Infrastructure
+- **Param defaults** are chosen as expressions of the values, not for plausibility. Each truth-load-bearing module's `DefaultParams()` carries intention comments naming the commitment a value expresses. Reading the defaults teaches the reader what the chain believes about each parameter.
+- **Module declarations** name role: `training_provenance` synthesises trust per manifest; `trust_score` per address; `governance_synthesis` per system. Each name is a commitment to what that module exists for.
+- **The creed itself lives in this repo**, committed alongside the code it describes. It cannot drift from the chain's actual behaviour because the test layer mechanically prevents that drift.
 
 ---
 
