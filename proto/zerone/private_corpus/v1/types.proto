@@ -1,0 +1,117 @@
+syntax = "proto3";
+package zerone.private_corpus.v1;
+option go_package = "github.com/zerone-chain/zerone/x/private_corpus/types";
+
+// Vault is an off-chain data store whose existence is anchored on
+// ZERONE. The chain DOES NOT store, serve, or gate access to vault
+// content. The vault operator is responsible for hosting the data,
+// authenticating clients, and enforcing whatever access policy they
+// choose. ZERONE records the vault's identity, ownership, and the
+// content hashes the operator chooses to publish.
+message Vault {
+  // Unique vault id, operator-chosen. Alphanumeric + - _ . / characters,
+  // 3..128 bytes.
+  string id = 1;
+  // Bech32 address of the vault operator. Only this address can
+  // publish manifests, update metadata, or record accesses.
+  string operator = 2;
+  // Human-readable display name.
+  string display_name = 3;
+  // Public description of what the vault is for. Visible on-chain.
+  string description = 4;
+  // URL where the operator publishes their access policy. On-chain
+  // proof that the vault has stated rules; the chain does not parse
+  // or enforce them.
+  string access_policy_url = 5;
+  // Public key the operator uses to sign vault server responses.
+  // Clients reading from the off-chain server verify responses against
+  // this key. Operator-chosen format (eg. "ed25519:base64..." or PEM).
+  string operator_pubkey = 6;
+  // URL of the off-chain vault server (HTTPS expected). Optional —
+  // operator can leave blank if discovery is out-of-band.
+  string server_endpoint = 7;
+  // Status of the vault from the chain's perspective.
+  VaultStatus status = 8;
+  // Block at which the vault was registered.
+  uint64 registered_at_block = 9;
+  // Block of last metadata update. 0 if never updated.
+  uint64 updated_at_block = 10;
+}
+
+enum VaultStatus {
+  VAULT_STATUS_UNSPECIFIED = 0;
+  // Vault is operating normally. New manifests can be published.
+  VAULT_STATUS_ACTIVE = 1;
+  // Vault is temporarily paused. Existing manifests remain queryable;
+  // no new manifests accepted.
+  VAULT_STATUS_PAUSED = 2;
+  // Vault has been deprecated by its operator. Existing manifests
+  // remain in audit history; no new activity. Cannot be resumed.
+  VAULT_STATUS_DEPRECATED = 3;
+}
+
+// CorpusManifest is a published reference to a snapshot of vault
+// contents. The content_hash is the only on-chain commitment to what
+// the manifest contains; the chain stores no item data.
+message CorpusManifest {
+  // Unique manifest id, operator-chosen. Convention: "<vault_id>#<n>"
+  // where n is monotonically increasing per vault. Alphanumeric +
+  // - _ . / # characters, 3..192 bytes.
+  string id = 1;
+  // Vault this manifest belongs to.
+  string vault_id = 2;
+  // Operator-defined version label (eg. "1.0", "2.3", "training-v4").
+  string version = 3;
+  // Hex-encoded content hash. Convention is a Merkle root over the
+  // vault items included in this manifest, so a client can verify
+  // any single item it receives against this root. The hash function
+  // is operator-chosen but should be documented in the access_policy_url.
+  string content_hash = 4;
+  // Operator-defined item count. Informational; not enforced by the
+  // chain. Useful for clients deciding whether a download is in scope.
+  uint64 item_count = 5;
+  // Operator-defined size in bytes. Informational only.
+  uint64 size_bytes = 6;
+  // Optional short description of this version.
+  string description = 7;
+  // Lifecycle status.
+  ManifestStatus status = 8;
+  // Block at which the manifest was published.
+  uint64 published_at_block = 9;
+  // Bech32 address that published this manifest. Must equal the
+  // vault operator at publish time.
+  string published_by = 10;
+  // Block at which the manifest was withdrawn. 0 if not withdrawn.
+  uint64 withdrawn_at_block = 11;
+  // Operator-supplied reason for withdrawal. Empty if not withdrawn.
+  string withdrawn_reason = 12;
+}
+
+enum ManifestStatus {
+  MANIFEST_STATUS_UNSPECIFIED = 0;
+  MANIFEST_STATUS_PUBLISHED = 1;
+  MANIFEST_STATUS_WITHDRAWN = 2;
+}
+
+// AccessRecord is an opt-in audit entry. The vault operator may
+// choose to publish that they granted access to a specific party
+// at a specific block. The chain neither requires nor verifies
+// these records — they are purely a transparency mechanism the
+// operator can use if they want their access pattern to be public.
+message AccessRecord {
+  // Monotonically increasing sequence number, chain-assigned.
+  uint64 seq = 1;
+  // Vault that granted the access.
+  string vault_id = 2;
+  // Manifest that was accessed. Empty if access spanned multiple
+  // manifests or was not manifest-specific.
+  string manifest_id = 3;
+  // Bech32 of the party who received access. Operator-chosen
+  // (could be a real address, a pseudonym address, or the operator's
+  // own bookkeeping address).
+  string accessor = 4;
+  // Block at which the record was added.
+  uint64 recorded_at_block = 5;
+  // Free-form note describing the access (purpose, scope, etc).
+  string note = 6;
+}

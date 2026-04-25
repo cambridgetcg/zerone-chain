@@ -198,6 +198,9 @@ import (
 	zeronegovsynth "github.com/zerone-chain/zerone/x/governance_synthesis"
 	zeronegovsynthkeeper "github.com/zerone-chain/zerone/x/governance_synthesis/keeper"
 	zeronegovsynthtypes "github.com/zerone-chain/zerone/x/governance_synthesis/types"
+	zeroneprivatecorpus "github.com/zerone-chain/zerone/x/private_corpus"
+	zeroneprivatecorpuskeeper "github.com/zerone-chain/zerone/x/private_corpus/keeper"
+	zeroneprivatecorpustypes "github.com/zerone-chain/zerone/x/private_corpus/types"
 	zeroneautopoiesis "github.com/zerone-chain/zerone/x/autopoiesis"
 	zeroneapkeeper "github.com/zerone-chain/zerone/x/autopoiesis/keeper"
 	zeroneaptypes "github.com/zerone-chain/zerone/x/autopoiesis/types"
@@ -298,6 +301,7 @@ var (
 		zeronetree.AppModuleBasic{},         // R7-5: x/tree
 		zeronepartnerships.AppModuleBasic{}, // R8-1: x/partnerships
 		zeronetoolbox.AppModuleBasic{},      // R8-1: x/toolbox
+		zeroneprivatecorpus.AppModuleBasic{}, // x/private_corpus: off-chain vault references
 	)
 
 	// Module account permissions.
@@ -485,6 +489,7 @@ type ZeroneApp struct {
 	EvidenceMgmtKeeper      zeroneemkeeper.Keeper
 	ClaimingPotKeeper       zeronecpotkeeper.Keeper
 	TreeKeeper              zeronetreekeeper.Keeper // R7-5: x/tree
+	PrivateCorpusKeeper     zeroneprivatecorpuskeeper.Keeper // x/private_corpus: off-chain vault references
 
 	// ABCI++ vote extension config (nil until validator is configured)
 	VoteExtConfig *VoteExtensionConfig
@@ -601,6 +606,7 @@ func NewZeroneApp(
 		zeroneemtypes.StoreKey,
 		zeronecpottypes.StoreKey,
 		zeronettreetypes.StoreKey,
+		zeroneprivatecorpustypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -1035,6 +1041,15 @@ func NewZeroneApp(
 	)
 	app.GovernanceSynthesisKeeper.SetAlignmentKeeper(&app.AlignmentKeeper)
 
+	// x/private_corpus: hash-anchor for off-chain vaults. The keeper is
+	// stateful (vaults, manifests, access records) but does NOT read
+	// from any other module — by design, see x/private_corpus/doc.go.
+	app.PrivateCorpusKeeper = zeroneprivatecorpuskeeper.NewKeeper(
+		sdkruntime.NewKVStoreService(keys[zeroneprivatecorpustypes.StoreKey]),
+		appCodec,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
 	// knowledge → capture_defense (feed verification history + reputation)
 	app.KnowledgeKeeper.SetCaptureDefenseKeeper(
 		zeronecdkeeper.NewKnowledgeCaptureDefenseAdapter(app.CaptureDefenseKeeper),
@@ -1293,6 +1308,7 @@ func NewZeroneApp(
 		zeronehome.NewAppModule(appCodec, app.HomeKeeper),                // R8-1: x/home
 		zeronepartnerships.NewAppModule(appCodec, app.PartnershipsKeeper), // R8-1: x/partnerships
 		zeronetoolbox.NewAppModule(appCodec, app.ToolboxKeeper),          // R8-1: x/toolbox
+		zeroneprivatecorpus.NewAppModule(appCodec, app.PrivateCorpusKeeper),
 	)
 
 	app.ModuleManager.SetOrderBeginBlockers(
@@ -1346,6 +1362,7 @@ func NewZeroneApp(
 		zeronecpottypes.ModuleName,                  // claiming_pot: pot expiry
 		zeronettreetypes.ModuleName,                 // tree: expire seeds past expiry block
 		zeronetoolboxtypes.ModuleName,               // toolbox: no-op BeginBlock
+		zeroneprivatecorpustypes.ModuleName,         // private_corpus: no-op BeginBlock (operator-driven)
 	)
 
 	app.ModuleManager.SetOrderEndBlockers(
@@ -1398,6 +1415,7 @@ func NewZeroneApp(
 		zeronecpottypes.ModuleName,                  // EndBlocker: no-op
 		zeronettreetypes.ModuleName,                 // EndBlocker: no-op
 		zeronetoolboxtypes.ModuleName,               // EndBlocker: no-op
+		zeroneprivatecorpustypes.ModuleName,         // EndBlocker: no-op
 	)
 
 	genesisOrder := []string{
@@ -1451,6 +1469,7 @@ func NewZeroneApp(
 		zeronecpottypes.ModuleName,                  // Genesis: after staking + auth + bank
 		zeronettreetypes.ModuleName,                 // Genesis: after bank + channels + vesting_rewards
 		zeronetoolboxtypes.ModuleName,               // Genesis: after discovery + billing + home + tree (needs all)
+		zeroneprivatecorpustypes.ModuleName,         // Genesis: standalone, no cross-module deps
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisOrder...)

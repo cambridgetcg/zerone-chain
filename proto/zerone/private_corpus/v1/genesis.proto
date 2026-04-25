@@ -1,0 +1,29 @@
+syntax = "proto3";
+package zerone.private_corpus.v1;
+option go_package = "github.com/zerone-chain/zerone/x/private_corpus/types";
+
+import "zerone/private_corpus/v1/types.proto";
+
+message GenesisState {
+  Params params = 1;
+  repeated Vault vaults = 2;
+  repeated CorpusManifest manifests = 3;
+  repeated AccessRecord access_records = 4;
+  uint64 next_access_seq = 5;
+}
+
+message Params {
+  // Maximum length of vault description text. Default: 4096.
+  uint32 max_description_bytes = 1;
+  // Maximum length of manifest description text. Default: 1024.
+  uint32 max_manifest_description_bytes = 2;
+  // Maximum length of access record note text. Default: 512.
+  uint32 max_access_note_bytes = 3;
+  // Maximum number of access records returned per query page.
+  // Default: 200.
+  uint32 max_access_records_per_query = 4;
+  // Whether new vault registration is currently accepted. Governance
+  // can pause registration without affecting existing vaults.
+  // Default: true.
+  bool registration_enabled = 5;
+}

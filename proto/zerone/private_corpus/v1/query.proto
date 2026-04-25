@@ -1,0 +1,72 @@
+syntax = "proto3";
+package zerone.private_corpus.v1;
+option go_package = "github.com/zerone-chain/zerone/x/private_corpus/types";
+
+import "google/api/annotations.proto";
+import "zerone/private_corpus/v1/types.proto";
+import "zerone/private_corpus/v1/genesis.proto";
+
+service Query {
+  rpc Vault(QueryVaultRequest) returns (QueryVaultResponse) {
+    option (google.api.http).get = "/zerone/private_corpus/v1/vault/{id}";
+  }
+  rpc Vaults(QueryVaultsRequest) returns (QueryVaultsResponse) {
+    option (google.api.http).get = "/zerone/private_corpus/v1/vaults";
+  }
+  rpc VaultsByOperator(QueryVaultsByOperatorRequest) returns (QueryVaultsByOperatorResponse) {
+    option (google.api.http).get = "/zerone/private_corpus/v1/vaults_by_operator/{operator}";
+  }
+  rpc Manifest(QueryManifestRequest) returns (QueryManifestResponse) {
+    option (google.api.http).get = "/zerone/private_corpus/v1/manifest/{id}";
+  }
+  rpc ManifestsByVault(QueryManifestsByVaultRequest) returns (QueryManifestsByVaultResponse) {
+    option (google.api.http).get = "/zerone/private_corpus/v1/manifests/{vault_id}";
+  }
+  rpc AccessRecords(QueryAccessRecordsRequest) returns (QueryAccessRecordsResponse) {
+    option (google.api.http).get = "/zerone/private_corpus/v1/access_records/{vault_id}";
+  }
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/private_corpus/v1/params";
+  }
+}
+
+message QueryVaultRequest { string id = 1; }
+message QueryVaultResponse { Vault vault = 1; }
+
+message QueryVaultsRequest {
+  uint32 limit = 1;
+  string start_after_id = 2; // pagination cursor
+}
+message QueryVaultsResponse {
+  repeated Vault vaults = 1;
+  string next_start_after_id = 2;
+}
+
+message QueryVaultsByOperatorRequest { string operator = 1; }
+message QueryVaultsByOperatorResponse { repeated Vault vaults = 1; }
+
+message QueryManifestRequest { string id = 1; }
+message QueryManifestResponse { CorpusManifest manifest = 1; }
+
+message QueryManifestsByVaultRequest {
+  string vault_id = 1;
+  uint32 limit = 2;
+  string start_after_id = 3;
+}
+message QueryManifestsByVaultResponse {
+  repeated CorpusManifest manifests = 1;
+  string next_start_after_id = 2;
+}
+
+message QueryAccessRecordsRequest {
+  string vault_id = 1;
+  uint32 limit = 2;
+  uint64 start_after_seq = 3;
+}
+message QueryAccessRecordsResponse {
+  repeated AccessRecord records = 1;
+  uint64 next_start_after_seq = 2;
+}
+
+message QueryParamsRequest {}
+message QueryParamsResponse { Params params = 1; }

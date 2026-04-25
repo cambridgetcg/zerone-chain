@@ -1,0 +1,90 @@
+syntax = "proto3";
+package zerone.private_corpus.v1;
+option go_package = "github.com/zerone-chain/zerone/x/private_corpus/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/private_corpus/v1/types.proto";
+import "zerone/private_corpus/v1/genesis.proto";
+
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  rpc RegisterVault(MsgRegisterVault) returns (MsgRegisterVaultResponse);
+  rpc UpdateVault(MsgUpdateVault) returns (MsgUpdateVaultResponse);
+  rpc PublishManifest(MsgPublishManifest) returns (MsgPublishManifestResponse);
+  rpc WithdrawManifest(MsgWithdrawManifest) returns (MsgWithdrawManifestResponse);
+  rpc RecordAccess(MsgRecordAccess) returns (MsgRecordAccessResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+message MsgRegisterVault {
+  option (cosmos.msg.v1.signer) = "operator";
+  string operator = 1;
+  string id = 2;
+  string display_name = 3;
+  string description = 4;
+  string access_policy_url = 5;
+  string operator_pubkey = 6;
+  string server_endpoint = 7;
+}
+message MsgRegisterVaultResponse {
+  string vault_id = 1;
+}
+
+message MsgUpdateVault {
+  option (cosmos.msg.v1.signer) = "operator";
+  string operator = 1;
+  string vault_id = 2;
+  // Each updatable field is optional in the message; use sentinels
+  // ("" for strings, status=UNSPECIFIED to skip) to leave a field
+  // unchanged.
+  string display_name = 3;
+  string description = 4;
+  string access_policy_url = 5;
+  string operator_pubkey = 6;
+  string server_endpoint = 7;
+  VaultStatus status = 8;
+}
+message MsgUpdateVaultResponse {}
+
+message MsgPublishManifest {
+  option (cosmos.msg.v1.signer) = "operator";
+  string operator = 1;
+  string vault_id = 2;
+  string manifest_id = 3;
+  string version = 4;
+  string content_hash = 5;
+  uint64 item_count = 6;
+  uint64 size_bytes = 7;
+  string description = 8;
+}
+message MsgPublishManifestResponse {
+  string manifest_id = 1;
+}
+
+message MsgWithdrawManifest {
+  option (cosmos.msg.v1.signer) = "operator";
+  string operator = 1;
+  string manifest_id = 2;
+  string reason = 3;
+}
+message MsgWithdrawManifestResponse {}
+
+message MsgRecordAccess {
+  option (cosmos.msg.v1.signer) = "operator";
+  string operator = 1;
+  string vault_id = 2;
+  string manifest_id = 3;
+  string accessor = 4;
+  string note = 5;
+}
+message MsgRecordAccessResponse {
+  uint64 seq = 1;
+}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params = 2;
+}
+message MsgUpdateParamsResponse {}
