@@ -125,3 +125,14 @@ type CaptureDefenseKeeper interface {
 type PacingKeeper interface {
 	GetGlobalPacingMultiplier(ctx context.Context) (creationBps, analysisBps uint64)
 }
+
+// CounterexampleKeeper exposes the alignment-by-structure read used
+// by ComputeTrainingValueWeight. The contract is intentionally narrow:
+// "does this fact have at least one validated counterexample, and if
+// so, what BPS multiplier should TVW apply?" Anything richer (the
+// counterexamples themselves, validations, error type) belongs to
+// queries against x/counterexamples directly.
+type CounterexampleKeeper interface {
+	HasValidatedCounterexample(ctx context.Context, factID string) bool
+	GetTvwMultiplierBps(ctx context.Context) uint64
+}

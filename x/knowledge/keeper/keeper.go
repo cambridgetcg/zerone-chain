@@ -31,6 +31,7 @@ type Keeper struct {
 	zeroneAuthKeeper           types.ZeroneAuthKeeper           // nil until R28-5
 	captureDefenseKeeper       types.CaptureDefenseKeeper       // nil until R28-8
 	pacingKeeper               types.PacingKeeper               // nil until R29-6
+	counterexampleKeeper       types.CounterexampleKeeper       // nil until counterexamples wired
 }
 
 // NewKeeper creates a new knowledge Keeper.
@@ -93,6 +94,12 @@ func (k *Keeper) SetZeroneAuthKeeper(ak types.ZeroneAuthKeeper) {
 // SetCaptureDefenseKeeper sets the capture defense keeper post-initialization.
 func (k *Keeper) SetCaptureDefenseKeeper(cdk types.CaptureDefenseKeeper) {
 	k.captureDefenseKeeper = cdk
+}
+
+// SetCounterexampleKeeper wires the counterexamples module so TVW
+// can apply the alignment-by-structure multiplier (commitment 15).
+func (k *Keeper) SetCounterexampleKeeper(ck types.CounterexampleKeeper) {
+	k.counterexampleKeeper = ck
 }
 
 // SetPacingKeeper sets the pacing keeper for adaptive timing (R29-6).

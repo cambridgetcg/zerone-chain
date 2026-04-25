@@ -1,0 +1,34 @@
+syntax = "proto3";
+package zerone.counterexamples.v1;
+option go_package = "github.com/zerone-chain/zerone/x/counterexamples/types";
+
+import "google/api/annotations.proto";
+import "zerone/counterexamples/v1/types.proto";
+import "zerone/counterexamples/v1/genesis.proto";
+
+service Query {
+  rpc Counterexample(QueryCounterexampleRequest) returns (QueryCounterexampleResponse) {
+    option (google.api.http).get = "/zerone/counterexamples/v1/counterexample/{id}";
+  }
+  rpc CounterexamplesByFact(QueryByFactRequest) returns (QueryByFactResponse) {
+    option (google.api.http).get = "/zerone/counterexamples/v1/by_fact/{fact_id}";
+  }
+  rpc Validations(QueryValidationsRequest) returns (QueryValidationsResponse) {
+    option (google.api.http).get = "/zerone/counterexamples/v1/validations/{counterexample_id}";
+  }
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/counterexamples/v1/params";
+  }
+}
+
+message QueryCounterexampleRequest { string id = 1; }
+message QueryCounterexampleResponse { Counterexample counterexample = 1; }
+
+message QueryByFactRequest { string fact_id = 1; }
+message QueryByFactResponse { repeated Counterexample counterexamples = 1; }
+
+message QueryValidationsRequest { string counterexample_id = 1; }
+message QueryValidationsResponse { repeated Validation validations = 1; }
+
+message QueryParamsRequest {}
+message QueryParamsResponse { Params params = 1; }

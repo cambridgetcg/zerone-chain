@@ -201,6 +201,9 @@ import (
 	zeroneprivatecorpus "github.com/zerone-chain/zerone/x/private_corpus"
 	zeroneprivatecorpuskeeper "github.com/zerone-chain/zerone/x/private_corpus/keeper"
 	zeroneprivatecorpustypes "github.com/zerone-chain/zerone/x/private_corpus/types"
+	zeronecounterex "github.com/zerone-chain/zerone/x/counterexamples"
+	zeronecounterexkeeper "github.com/zerone-chain/zerone/x/counterexamples/keeper"
+	zeronecounterextypes "github.com/zerone-chain/zerone/x/counterexamples/types"
 	zeroneautopoiesis "github.com/zerone-chain/zerone/x/autopoiesis"
 	zeroneapkeeper "github.com/zerone-chain/zerone/x/autopoiesis/keeper"
 	zeroneaptypes "github.com/zerone-chain/zerone/x/autopoiesis/types"
@@ -302,6 +305,7 @@ var (
 		zeronepartnerships.AppModuleBasic{}, // R8-1: x/partnerships
 		zeronetoolbox.AppModuleBasic{},      // R8-1: x/toolbox
 		zeroneprivatecorpus.AppModuleBasic{}, // x/private_corpus: off-chain vault references
+		zeronecounterex.AppModuleBasic{},     // x/counterexamples: alignment-by-structure
 	)
 
 	// Module account permissions.
@@ -490,6 +494,7 @@ type ZeroneApp struct {
 	ClaimingPotKeeper       zeronecpotkeeper.Keeper
 	TreeKeeper              zeronetreekeeper.Keeper // R7-5: x/tree
 	PrivateCorpusKeeper     zeroneprivatecorpuskeeper.Keeper // x/private_corpus: off-chain vault references
+	CounterexamplesKeeper   zeronecounterexkeeper.Keeper     // x/counterexamples: alignment-by-structure (commitment 15)
 
 	// ABCI++ vote extension config (nil until validator is configured)
 	VoteExtConfig *VoteExtensionConfig
@@ -607,6 +612,7 @@ func NewZeroneApp(
 		zeronecpottypes.StoreKey,
 		zeronettreetypes.StoreKey,
 		zeroneprivatecorpustypes.StoreKey,
+		zeronecounterextypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -1050,6 +1056,25 @@ func NewZeroneApp(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
+	// x/counterexamples: alignment-by-structure. Commitment 15 says
+	// the corpus must include not just what is true but what is wrong
+	// AND WHY. The keeper holds counterexample state and exposes
+	// HasValidatedCounterexample to x/knowledge so TVW can apply the
+	// alignment-by-structure multiplier.
+	app.CounterexamplesKeeper = zeronecounterexkeeper.NewKeeper(
+		sdkruntime.NewKVStoreService(keys[zeronecounterextypes.StoreKey]),
+		appCodec,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+	// Wire the existence-check from knowledge → counterexamples (so
+	// counterexamples can refuse anchoring to non-existent facts) and
+	// the validated-flag from counterexamples → knowledge (so TVW can
+	// apply the multiplier).
+	app.CounterexamplesKeeper.SetFactKeeper(
+		zeroneknowledgekeeper.NewCounterexamplesFactAdapter(app.KnowledgeKeeper),
+	)
+	app.KnowledgeKeeper.SetCounterexampleKeeper(&app.CounterexamplesKeeper)
+
 	// knowledge → capture_defense (feed verification history + reputation)
 	app.KnowledgeKeeper.SetCaptureDefenseKeeper(
 		zeronecdkeeper.NewKnowledgeCaptureDefenseAdapter(app.CaptureDefenseKeeper),
@@ -1309,6 +1334,7 @@ func NewZeroneApp(
 		zeronepartnerships.NewAppModule(appCodec, app.PartnershipsKeeper), // R8-1: x/partnerships
 		zeronetoolbox.NewAppModule(appCodec, app.ToolboxKeeper),          // R8-1: x/toolbox
 		zeroneprivatecorpus.NewAppModule(appCodec, app.PrivateCorpusKeeper),
+		zeronecounterex.NewAppModule(appCodec, app.CounterexamplesKeeper),
 	)
 
 	app.ModuleManager.SetOrderBeginBlockers(
@@ -1363,6 +1389,7 @@ func NewZeroneApp(
 		zeronettreetypes.ModuleName,                 // tree: expire seeds past expiry block
 		zeronetoolboxtypes.ModuleName,               // toolbox: no-op BeginBlock
 		zeroneprivatecorpustypes.ModuleName,         // private_corpus: no-op BeginBlock (operator-driven)
+		zeronecounterextypes.ModuleName,             // counterexamples: no-op BeginBlock (proposal-driven)
 	)
 
 	app.ModuleManager.SetOrderEndBlockers(
@@ -1416,6 +1443,7 @@ func NewZeroneApp(
 		zeronettreetypes.ModuleName,                 // EndBlocker: no-op
 		zeronetoolboxtypes.ModuleName,               // EndBlocker: no-op
 		zeroneprivatecorpustypes.ModuleName,         // EndBlocker: no-op
+		zeronecounterextypes.ModuleName,             // EndBlocker: no-op
 	)
 
 	genesisOrder := []string{
@@ -1470,6 +1498,7 @@ func NewZeroneApp(
 		zeronettreetypes.ModuleName,                 // Genesis: after bank + channels + vesting_rewards
 		zeronetoolboxtypes.ModuleName,               // Genesis: after discovery + billing + home + tree (needs all)
 		zeroneprivatecorpustypes.ModuleName,         // Genesis: standalone, no cross-module deps
+		zeronecounterextypes.ModuleName,             // Genesis: after knowledge (uses fact-existence adapter)
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisOrder...)

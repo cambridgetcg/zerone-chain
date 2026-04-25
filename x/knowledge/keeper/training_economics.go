@@ -29,16 +29,17 @@ const bps uint64 = 1_000_000
 // TrainingValueWeightBreakdown exposes the component factors of TVW so
 // callers (query handlers, auditors, tests) can inspect the computation.
 type TrainingValueWeightBreakdown struct {
-	BaseWeight             uint64 // survived falsification + 1
-	MethodologyMultiplier  uint64 // BPS
-	VindicationMultiplier  uint64 // BPS (>= bps when vindicated, else bps)
-	SubmitterCalibration   uint64 // BPS snapshot at submission
-	AxiomProximity         uint64 // BPS (closer to axiom → higher)
-	HardeningMultiplier    uint64 // BPS — accelerating return on survived attacks
-	Disproven              bool
-	BlockedByIsOught       bool
-	StatusIneligible       bool   // true if fact status bars training-value accrual
-	Final                  uint64 // composed TVW
+	BaseWeight              uint64 // survived falsification + 1
+	MethodologyMultiplier   uint64 // BPS
+	VindicationMultiplier   uint64 // BPS (>= bps when vindicated, else bps)
+	SubmitterCalibration    uint64 // BPS snapshot at submission
+	AxiomProximity          uint64 // BPS (closer to axiom → higher)
+	HardeningMultiplier     uint64 // BPS — accelerating return on survived attacks
+	CounterexampleMultiplier uint64 // BPS — alignment-by-structure boost (commitment 15)
+	Disproven               bool
+	BlockedByIsOught        bool
+	StatusIneligible        bool   // true if fact status bars training-value accrual
+	Final                   uint64 // composed TVW
 }
 
 // Hardening parameters: each rate-limited corroboration bumps the
@@ -142,13 +143,29 @@ func (k Keeper) ComputeTrainingValueWeight(ctx context.Context, factID string) T
 		out.HardeningMultiplier = hardeningMaxBps
 	}
 
-	// Compose: final = base × meth × vind × cal × proximity × hardening.
+	// Counterexample multiplier (commitment 15: counterexamples are
+	// part of the corpus). Facts with at least one VALIDATED
+	// counterexample carry alignment-by-structure context and earn a
+	// configurable bonus (default 1.2× from x/counterexamples params).
+	// Without the counterexamples module wired, the multiplier
+	// degrades to 1.0 — the chain stays correct but offers no
+	// alignment-by-structure premium.
+	out.CounterexampleMultiplier = bps
+	if k.counterexampleKeeper != nil && k.counterexampleKeeper.HasValidatedCounterexample(ctx, fact.Id) {
+		mult := k.counterexampleKeeper.GetTvwMultiplierBps(ctx)
+		if mult > 0 {
+			out.CounterexampleMultiplier = mult
+		}
+	}
+
+	// Compose: final = base × meth × vind × cal × proximity × hardening × counterexample.
 	final := uint64(out.BaseWeight) * bps
 	final = safeMulDivTVW(final, out.MethodologyMultiplier, bps)
 	final = safeMulDivTVW(final, out.VindicationMultiplier, bps)
 	final = safeMulDivTVW(final, out.SubmitterCalibration, bps)
 	final = safeMulDivTVW(final, out.AxiomProximity, bps)
 	final = safeMulDivTVW(final, out.HardeningMultiplier, bps)
+	final = safeMulDivTVW(final, out.CounterexampleMultiplier, bps)
 	out.Final = final
 	return out
 }

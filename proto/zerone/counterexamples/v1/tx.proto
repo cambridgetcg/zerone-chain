@@ -1,0 +1,50 @@
+syntax = "proto3";
+package zerone.counterexamples.v1;
+option go_package = "github.com/zerone-chain/zerone/x/counterexamples/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/counterexamples/v1/types.proto";
+import "zerone/counterexamples/v1/genesis.proto";
+
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  rpc ProposeCounterexample(MsgProposeCounterexample) returns (MsgProposeCounterexampleResponse);
+  rpc Validate(MsgValidate) returns (MsgValidateResponse);
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+message MsgProposeCounterexample {
+  option (cosmos.msg.v1.signer) = "author";
+  string author = 1;
+  string fact_id = 2;
+  string wrong_claim = 3;
+  string reasoning = 4;
+  ErrorType error_type = 5;
+  repeated string violated_methodology_ids = 6;
+}
+message MsgProposeCounterexampleResponse {
+  string counterexample_id = 1;
+}
+
+message MsgValidate {
+  option (cosmos.msg.v1.signer) = "validator";
+  string validator = 1;
+  string counterexample_id = 2;
+  bool affirm = 3;
+  string reason = 4;
+}
+message MsgValidateResponse {
+  uint64 validation_id = 1;
+  // True if this vote caused the counterexample to resolve.
+  bool resolved = 2;
+  // Final status if resolved.
+  CounterexampleStatus status = 3;
+}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params = 2;
+}
+message MsgUpdateParamsResponse {}

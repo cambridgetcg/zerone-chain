@@ -1,0 +1,51 @@
+syntax = "proto3";
+package zerone.counterexamples.v1;
+option go_package = "github.com/zerone-chain/zerone/x/counterexamples/types";
+
+import "zerone/counterexamples/v1/types.proto";
+
+message GenesisState {
+  Params params = 1;
+  repeated Counterexample counterexamples = 2;
+  repeated Validation validations = 3;
+  uint64 next_counterexample_seq = 4;
+  uint64 next_validation_id = 5;
+}
+
+message Params {
+  // uzrn bond locked when proposing a counterexample. Returned on
+  // VALIDATED, burned on REJECTED. Default: 1 ZRN.
+  string proposal_bond = 1;
+
+  // uzrn reward paid from the protocol treasury to the proposer when
+  // a counterexample is VALIDATED. Default: 0.5 ZRN. Note this
+  // exceeds bond at the margin so the chain ECONOMICALLY ENCOURAGES
+  // counterexample contribution — alignment-by-structure is a public
+  // good the chain pays for.
+  string validation_reward = 2;
+
+  // Minimum total votes (validations + rejections) before the chain
+  // will resolve a counterexample. Prevents premature resolution on
+  // a single vote.
+  uint32 min_votes = 3;
+
+  // Validation succeeds if affirm_votes >= total_votes *
+  // affirm_threshold_bps / 1_000_000. Default: 666,000 (66.6%).
+  // Below that, counterexample is REJECTED.
+  uint64 affirm_threshold_bps = 4;
+
+  // Maximum bytes for reasoning, wrong_claim, and validation reason
+  // text fields.
+  uint32 max_reason_bytes = 5;
+
+  // Per-fact TVW multiplier (in BPS) granted when a fact has at
+  // least one VALIDATED counterexample. Read by x/knowledge during
+  // ComputeTrainingValueWeight.
+  // Default: 1,200,000 (1.2x — facts with counterexamples earn 20%
+  // more training-data value than facts without).
+  uint64 tvw_multiplier_bps = 6;
+
+  // Whether new counterexample proposals are accepted. Governance
+  // can pause without affecting existing counterexamples.
+  bool proposals_enabled = 7;
+}

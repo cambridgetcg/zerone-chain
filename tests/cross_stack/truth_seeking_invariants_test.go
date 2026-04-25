@@ -17,6 +17,7 @@ package cross_stack_test
 // other binding tests where they exist.
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,6 +28,8 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
 
+	counterexampleskeeper "github.com/zerone-chain/zerone/x/counterexamples/keeper"
+	counterexamplestypes "github.com/zerone-chain/zerone/x/counterexamples/types"
 	knowledgekeeper "github.com/zerone-chain/zerone/x/knowledge/keeper"
 	knowledgetypes "github.com/zerone-chain/zerone/x/knowledge/types"
 	qualificationtypes "github.com/zerone-chain/zerone/x/qualification/types"
@@ -562,6 +565,96 @@ func TestTruthSeeking_ReasoningTracePropagatesThroughVerification(t *testing.T) 
 	require.NotNil(t, fact)
 	require.Equal(t, tracePayload, fact.ReasoningTrace,
 		"a claim's reasoning trace must propagate verbatim into the accepted Fact; without the derivation, the corpus is a list of assertions, not a curriculum")
+}
+
+// Commitment 15: counterexamples are part of the corpus. The training
+// corpus must include not just what is true, but what is wrong AND
+// WHY. The chain operationalises this in two halves: x/counterexamples
+// stores audited (fact_id, wrong_claim, error_type, reasoning) records;
+// x/knowledge's TVW formula multiplies BPS for facts that have at
+// least one VALIDATED counterexample. This test asserts the
+// MULTIPLIER PATH — that a fact with a validated counterexample
+// produces strictly higher TVW than the same fact without one.
+func TestTruthSeeking_CounterexamplesRaiseTVW(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	// Create a fact via the existing claim+verify path.
+	submitter := testAddr("ts_counterex_author").String()
+	claim := &knowledgetypes.Claim{
+		Id:          "claim-ts-counterex",
+		Submitter:   submitter,
+		FactContent: "claim that will gain a counterexample",
+		Domain:      "sciences",
+		Category:    "empirical",
+		MethodId:    knowledgetypes.MethodologyEmpirical,
+		Status:      knowledgetypes.ClaimStatus_CLAIM_STATUS_IN_VERIFICATION,
+		Stake:       "1000000",
+	}
+	require.NoError(t, h.KnowledgeKeeper.SetClaim(h.Ctx, claim))
+	round := &knowledgetypes.VerificationRound{
+		Id: "round-ts-counterex", ClaimId: claim.Id,
+		Phase: knowledgetypes.VerificationPhase_VERIFICATION_PHASE_COMPLETE, StartedAtBlock: 1,
+	}
+	require.NoError(t, h.KnowledgeKeeper.CompleteRound(h.Ctx, round, &knowledgekeeper.VerificationResult{
+		Verdict: knowledgetypes.Verdict_VERDICT_ACCEPT, Confidence: 900_000, AcceptCount: 3,
+	}))
+
+	var fact *knowledgetypes.Fact
+	h.KnowledgeKeeper.IterateFacts(h.Ctx, func(f *knowledgetypes.Fact) bool {
+		if f.ClaimId == claim.Id {
+			fact = f
+			return true
+		}
+		return false
+	})
+	require.NotNil(t, fact, "fact must be created for counterexample to anchor to")
+
+	// Baseline TVW: no counterexample yet.
+	baseline := h.KnowledgeKeeper.ComputeTrainingValueWeight(h.Ctx, fact.Id)
+	require.Greater(t, baseline.Final, uint64(0), "baseline TVW must be non-zero")
+	require.Equal(t, uint64(1_000_000), baseline.CounterexampleMultiplier,
+		"without a validated counterexample the multiplier defaults to 1.0x")
+
+	// Propose a counterexample.
+	ms := counterexampleskeeper.NewMsgServerImpl(h.CounterexamplesKeeper)
+	proposeResp, err := ms.ProposeCounterexample(h.Ctx, &counterexamplestypes.MsgProposeCounterexample{
+		Author:     submitter,
+		FactId:     fact.Id,
+		WrongClaim: "an alternative that confuses categorical levels",
+		Reasoning: "the alternative would treat the empirical claim as normative, " +
+			"which the is-ought wall (commitment 2) forbids structurally",
+		ErrorType: counterexamplestypes.ErrorType_ERROR_TYPE_CATEGORICAL,
+	})
+	require.NoError(t, err)
+	require.NotEmpty(t, proposeResp.CounterexampleId)
+
+	// Three distinct validators affirm — meets default min_votes=3
+	// with 100% affirm rate, well above the 66.6% threshold.
+	for i, name := range []string{"ts_ce_val1", "ts_ce_val2", "ts_ce_val3"} {
+		validator := testAddr(name).String()
+		_, err := ms.Validate(h.Ctx, &counterexamplestypes.MsgValidate{
+			Validator:        validator,
+			CounterexampleId: proposeResp.CounterexampleId,
+			Affirm:           true,
+			Reason:           fmt.Sprintf("validator %d concurs", i+1),
+		})
+		require.NoError(t, err)
+	}
+
+	// The counterexample must now be VALIDATED.
+	ce, ok := h.CounterexamplesKeeper.GetCounterexample(h.Ctx, proposeResp.CounterexampleId)
+	require.True(t, ok)
+	require.Equal(t, counterexamplestypes.CounterexampleStatus_COUNTEREXAMPLE_STATUS_VALIDATED, ce.Status,
+		"after 3-of-3 affirmations the counterexample must auto-resolve to VALIDATED")
+
+	// And the fact's TVW must now apply the multiplier.
+	boosted := h.KnowledgeKeeper.ComputeTrainingValueWeight(h.Ctx, fact.Id)
+	require.Greater(t, boosted.CounterexampleMultiplier, uint64(1_000_000),
+		"validated counterexample must raise the multiplier above 1.0x")
+	require.Greater(t, boosted.Final, baseline.Final,
+		"a fact with a validated counterexample must earn STRICTLY MORE training-data value than the same fact without one — alignment-by-structure must be paid for, not declared")
 }
 
 // ════════════════════════════════════════════════════════════════════

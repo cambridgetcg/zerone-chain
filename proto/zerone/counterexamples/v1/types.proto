@@ -1,0 +1,106 @@
+syntax = "proto3";
+package zerone.counterexamples.v1;
+option go_package = "github.com/zerone-chain/zerone/x/counterexamples/types";
+
+// Counterexample is a structured "wrong-but-plausible alternative" paired
+// with a Fact. The alignment-by-structure principle: a model trained on
+// (fact, counterexample) pairs learns the discriminator, not just the
+// predictor — distinguishing right from wrong is the cognitive primitive
+// that resists manipulation.
+//
+// See docs/TRUTH_SEEKING.md commitment 15.
+message Counterexample {
+  // Chain-assigned monotonic id. Format: "ce-<n>".
+  string id = 1;
+
+  // The fact this counterexample is paired with. Must reference an
+  // existing fact in x/knowledge.
+  string fact_id = 2;
+
+  // Bech32 address of whoever proposed the counterexample.
+  string author = 3;
+
+  // The wrong claim — a plausible but mistaken alternative to the
+  // fact's content. The training signal is "this would seem to follow
+  // but is wrong because <reasoning>."
+  string wrong_claim = 4;
+
+  // Why the wrong_claim is wrong. The reasoning is what teaches the
+  // model the discriminator.
+  string reasoning = 5;
+
+  // Category of error. The enumeration produces structured curriculum
+  // for training pipelines (e.g., "show me 100 CATEGORICAL errors").
+  ErrorType error_type = 6;
+
+  // Methodology IDs whose output, if mis-applied, would yield the
+  // wrong_claim. Optional but encouraged — connects the counterexample
+  // to commitment 1 (methodology over statement).
+  repeated string violated_methodology_ids = 7;
+
+  // Block when proposed.
+  uint64 submitted_at_block = 8;
+
+  // Status driven by validations and rejections crossing thresholds.
+  CounterexampleStatus status = 9;
+
+  // Tally fields. Validations affirm "yes this IS a counterexample
+  // and the reasoning is right." Rejections deny it.
+  uint32 validations = 10;
+  uint32 rejections = 11;
+
+  // Block when status was last changed (PROPOSED → VALIDATED/REJECTED).
+  uint64 resolved_at_block = 12;
+
+  // uzrn bond locked on submission. Returned (plus reward) on
+  // VALIDATED; burned on REJECTED.
+  string bond = 13;
+}
+
+enum ErrorType {
+  ERROR_TYPE_UNSPECIFIED = 0;
+
+  // Confuses categories (e.g. treats a normative claim as empirical,
+  // or applies one stratum's confidence to another).
+  ERROR_TYPE_CATEGORICAL = 1;
+
+  // Would require a methodology that does not yield this conclusion
+  // (e.g. claims an ECOLOGICAL conclusion from a LEGACY method).
+  ERROR_TYPE_METHODOLOGY = 2;
+
+  // Contradicts established facts (would conflict with a higher-
+  // confidence fact already in the corpus).
+  ERROR_TYPE_FACTUAL = 3;
+
+  // Premises are valid but the inference is invalid (non sequitur,
+  // affirming the consequent, etc.).
+  ERROR_TYPE_REASONING = 4;
+
+  // Ignores critical context that the fact addresses (e.g. omits
+  // boundary conditions, scope qualifiers, or cited counter-evidence).
+  ERROR_TYPE_OMISSION = 5;
+
+  // Begs the question — the reasoning presupposes its conclusion.
+  ERROR_TYPE_CIRCULAR = 6;
+}
+
+enum CounterexampleStatus {
+  COUNTEREXAMPLE_STATUS_UNSPECIFIED = 0;
+  COUNTEREXAMPLE_STATUS_PROPOSED = 1;
+  COUNTEREXAMPLE_STATUS_VALIDATED = 2;
+  COUNTEREXAMPLE_STATUS_REJECTED = 3;
+}
+
+// Validation is one validator's vote on a Counterexample. The chain
+// records every vote (commitment 10: forward-only audit).
+message Validation {
+  uint64 id = 1;
+  string counterexample_id = 2;
+  string validator = 3; // bech32
+  // True = "this IS a good counterexample"; false = "no, this is
+  // actually right or the reasoning is wrong."
+  bool affirm = 4;
+  // Free-text rationale. Bounded by params.max_reason_bytes.
+  string reason = 5;
+  uint64 submitted_at_block = 6;
+}

@@ -180,6 +180,18 @@ We believe: the chain trains not just on conclusions but on derivations. The pat
 
 ---
 
+### 15. Counterexamples are part of the corpus
+
+We believe: a model trained on conclusions alone learns the predictor; a model trained on conclusions paired with their structured negations learns the discriminator. Discrimination — distinguishing right from wrong — is the cognitive primitive that lets a model resist manipulation rather than absorb it. The training corpus must therefore include not just what is true, but what is wrong AND WHY.
+
+**Code expression**: `x/counterexamples` stores `Counterexample` records (fact_id, wrong_claim, error_type, reasoning) audited by qualified validators. `MsgProposeCounterexample` opens a vote; auto-resolution at `min_votes` and `affirm_threshold_bps` flips status to VALIDATED or REJECTED. `ComputeTrainingValueWeight` reads `HasValidatedCounterexample` via the `CounterexampleKeeper` interface and applies a multiplier (default 1.2×) — facts with alignment-by-structure context earn meaningfully more training-data value than bare facts. The chain ECONOMICALLY ENCOURAGES counterexample contribution: the validation reward exceeds the bond at the margin, because alignment-by-structure is a public good.
+
+**What would break it**: a TVW formula that ignores the counterexample multiplier; a counterexample pipeline with no validation gate (allowing junk to inflate TVW); a chain that accepts facts without ever attaching counterexamples; a training-data export path that drops the counterexample fields; an economic structure that costs more to add a counterexample than to skip one.
+
+**Echoes**: commitment 1 (methodology over statement — counterexamples can name violated_methodology_ids, teaching the model which mis-application yields which wrong answer); commitment 3 (Popper, not popularity — counterexamples are pre-emptive falsification candidates baked into the corpus); commitment 14 (reasoning traces are first-class — a counterexample's `reasoning` field is its own first-class derivation).
+
+---
+
 ## How the commitments echo
 
 The creed is enforced at five layers, each one mechanically synced to the others by `TestTruthSeeking_CreedAndContractStayInSync`. Adding a commitment to one layer without the others fails CI.
