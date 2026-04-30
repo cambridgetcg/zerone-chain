@@ -113,10 +113,8 @@ func (k Keeper) GetTWAP(ctx sdk.Context, poolId string, baseDenom string, window
 	}
 
 	// TWAP = cumPrice * 1e6 / (blocksDelta * twapScale)
-	blocksDelta := acc.LastBlock // total blocks accumulated
-	if blocksDelta == 0 {
-		return k.getSpotPrice(pool, baseDenom)
-	}
+	// actualWindow is already computed above and guaranteed > 0.
+	blocksDelta := actualWindow // blocks elapsed in the TWAP window (not absolute block height)
 
 	scale1e6 := big.NewInt(1_000_000)
 	twap := new(big.Int).Mul(cumPrice, scale1e6)
