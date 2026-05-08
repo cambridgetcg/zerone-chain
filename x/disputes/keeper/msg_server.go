@@ -70,7 +70,7 @@ func (m msgServer) InitiateDispute(goCtx context.Context, msg *types.MsgInitiate
 	minBond := new(big.Int)
 	minBond.SetString(tierCfg.MinBond, 10)
 	if bond.Cmp(minBond) < 0 {
-		return nil, fmt.Errorf("%w: need %s, got %s", types.ErrInsufficientBond, tierCfg.MinBond, msg.Bond)
+		return nil, fmt.Errorf("%w: need %s, got %s (commitment 3: surviving challenge is the standard for credibility — the bond is what makes the challenge a serious attempt rather than a costless heckling)", types.ErrInsufficientBond, tierCfg.MinBond, msg.Bond)
 	}
 
 	// Escrow bond from challenger
@@ -111,6 +111,11 @@ func (m msgServer) InitiateDispute(goCtx context.Context, msg *types.MsgInitiate
 
 	m.SetDispute(ctx, dispute)
 
+	// Commitment 3 (Popper, not popularity): a dispute is the formal
+	// venue where a fact's claim to truth must survive serious challenge.
+	// The opening of a dispute is the chain inviting the falsification
+	// attempt — without this, "challengeable" is a property no one ever
+	// exercises.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.disputes.dispute_initiated",
@@ -120,6 +125,7 @@ func (m msgServer) InitiateDispute(goCtx context.Context, msg *types.MsgInitiate
 			sdk.NewAttribute("target_id", msg.TargetId),
 			sdk.NewAttribute("bond", msg.Bond),
 			sdk.NewAttribute("tier", fmt.Sprintf("%d", tier)),
+			sdk.NewAttribute("creed_commitment", "3"),
 		),
 	)
 
@@ -169,12 +175,16 @@ func (m msgServer) CommitEvidence(goCtx context.Context, msg *types.MsgCommitEvi
 	}
 	m.SetCommitment(ctx, commitment)
 
+	// Commitment 10 (forward-only audit): the commitment hash binds the
+	// submitter to specific content before reveal — the audit record
+	// cannot be revised in place once the hash is on chain.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.disputes.evidence_committed",
 			sdk.NewAttribute("dispute_id", msg.DisputeId),
 			sdk.NewAttribute("submitter", msg.Submitter),
 			sdk.NewAttribute("side", side),
+			sdk.NewAttribute("creed_commitment", "10"),
 		),
 	)
 
@@ -205,14 +215,14 @@ func (m msgServer) RevealEvidence(goCtx context.Context, msg *types.MsgRevealEvi
 		return nil, fmt.Errorf("%w: no commitment found for %s", types.ErrCommitmentNotFound, msg.Submitter)
 	}
 	if commitment.Revealed {
-		return nil, fmt.Errorf("%w: commitment already revealed", types.ErrAlreadyRevealed)
+		return nil, fmt.Errorf("%w: commitment already revealed (commitment 10: a revealed evidence commitment is the corpus's record — re-revealing it would imply substitution, which the forward-only audit refuses)", types.ErrAlreadyRevealed)
 	}
 
 	// Verify hash: SHA256(content + nonce) must match commitment
 	h := sha256.Sum256([]byte(msg.Content + msg.Nonce))
 	revealedHash := hex.EncodeToString(h[:])
 	if revealedHash != commitment.ContentHash {
-		return nil, fmt.Errorf("%w: expected %s, got %s", types.ErrHashMismatch, commitment.ContentHash, revealedHash)
+		return nil, fmt.Errorf("%w: expected %s, got %s (commitment 10: the commitment hash is the chain's binding pre-commitment — content cannot be substituted at reveal time, the record runs forward only)", types.ErrHashMismatch, commitment.ContentHash, revealedHash)
 	}
 
 	// Mark commitment as revealed
@@ -235,12 +245,17 @@ func (m msgServer) RevealEvidence(goCtx context.Context, msg *types.MsgRevealEvi
 	dispute.EvidenceCount++
 	m.SetDispute(ctx, dispute)
 
+	// Commitment 10 (forward-only audit): revealing matches the prior
+	// commitment hash, binding the evidence to the chain's record. The
+	// pair (commit, reveal) is append-only — once revealed, the content
+	// is the corpus's permanent record of what was offered as proof.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.disputes.evidence_revealed",
 			sdk.NewAttribute("dispute_id", msg.DisputeId),
 			sdk.NewAttribute("submitter", msg.Submitter),
 			sdk.NewAttribute("evidence_id", evidenceID),
+			sdk.NewAttribute("creed_commitment", "10"),
 		),
 	)
 
@@ -279,7 +294,7 @@ func (m msgServer) ArbiterVote(goCtx context.Context, msg *types.MsgArbiterVote)
 
 	// Check not already voted
 	if _, exists := m.GetVote(ctx, msg.DisputeId, msg.Arbiter); exists {
-		return nil, fmt.Errorf("%w: %s", types.ErrAlreadyVoted, msg.Arbiter)
+		return nil, fmt.Errorf("%w: %s (commitment 3: each arbiter's judgment counts once — Popperian survival is meaningful only when every test is independent, not a repeated stamp by the same hand)", types.ErrAlreadyVoted, msg.Arbiter)
 	}
 
 	vote := &types.DisputeVote{
@@ -292,12 +307,17 @@ func (m msgServer) ArbiterVote(goCtx context.Context, msg *types.MsgArbiterVote)
 	}
 	m.SetVote(ctx, vote)
 
+	// Commitment 3 (Popper, not popularity) AND commitment 10
+	// (forward-only audit): the arbiter's vote is one independent test
+	// of the claim's survival, recorded immutably so the dialectical
+	// history of the dispute remains visible to off-chain observers.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.disputes.arbiter_voted",
 			sdk.NewAttribute("dispute_id", msg.DisputeId),
 			sdk.NewAttribute("arbiter", msg.Arbiter),
 			sdk.NewAttribute("vote", msg.Vote.String()),
+			sdk.NewAttribute("creed_commitment", "3,10"),
 		),
 	)
 
@@ -379,6 +399,11 @@ func (m msgServer) EscalateDispute(goCtx context.Context, msg *types.MsgEscalate
 	dispute.VotingDeadline = currentBlock + newTierCfg.EvidencePeriod + newTierCfg.VotingPeriod
 	m.SetDispute(ctx, dispute)
 
+	// Commitment 10 (forward-only audit): escalation re-enters evidence
+	// at a higher tier without erasing the prior tier's record. The
+	// dispute history runs forward only — every tier's votes and
+	// evidence remain queryable as the audit substrate of how the
+	// chain finally arrived at settlement.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.disputes.dispute_escalated",
@@ -386,6 +411,7 @@ func (m msgServer) EscalateDispute(goCtx context.Context, msg *types.MsgEscalate
 			sdk.NewAttribute("new_tier", fmt.Sprintf("%d", newTier)),
 			sdk.NewAttribute("additional_bond", msg.AdditionalBond),
 			sdk.NewAttribute("total_bond", dispute.Bond),
+			sdk.NewAttribute("creed_commitment", "10"),
 		),
 	)
 
@@ -406,7 +432,7 @@ func (m msgServer) SettleDispute(goCtx context.Context, msg *types.MsgSettleDisp
 	}
 
 	if dispute.Phase != types.DisputePhase_DISPUTE_PHASE_ARBITRATION {
-		return nil, fmt.Errorf("%w: expected ARBITRATION, got %s", types.ErrWrongPhase, dispute.Phase.String())
+		return nil, fmt.Errorf("%w: expected ARBITRATION, got %s (commitment 10: the dispute lifecycle is forward-only — once a phase has closed, settlement cannot re-enter it; the chain's record of how the dispute was resolved is bounded in time)", types.ErrWrongPhase, dispute.Phase.String())
 	}
 
 	// Tally votes
@@ -424,11 +450,18 @@ func (m msgServer) SettleDispute(goCtx context.Context, msg *types.MsgSettleDisp
 		return nil, fmt.Errorf("failed to distribute settlement: %w", err)
 	}
 
+	// Commitment 3 (Popper, not popularity) AND commitment 10
+	// (forward-only audit): settlement IS the verdict on whether the
+	// claim survived challenge — corroboration earned or refused. The
+	// outcome is final post-resolve; future tiers can re-test, but this
+	// resolution remains the chain's permanent record of how this
+	// dispute closed.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.disputes.dispute_settled",
 			sdk.NewAttribute("dispute_id", msg.DisputeId),
 			sdk.NewAttribute("outcome", outcome.String()),
+			sdk.NewAttribute("creed_commitment", "3,10"),
 		),
 	)
 
