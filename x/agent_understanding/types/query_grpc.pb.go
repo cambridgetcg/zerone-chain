@@ -27,6 +27,16 @@ const (
 // QueryClient is the client API for Query service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Query is the per-agent, per-domain trust synthesis surface for
+// x/agent_understanding.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): an
+// agent's understanding-shape across the domains it has acted in
+// must be readable as a structured profile — not stitched together
+// from per-domain qualification, calibration, and dialectic
+// signals scattered across upstream modules. The composite IS the
+// promise that trust is queryable at the agent-domain granularity.
 type QueryClient interface {
 	// AgentProfile composes the full per-agent UnderstandingProfile.
 	AgentProfile(ctx context.Context, in *QueryAgentProfileRequest, opts ...grpc.CallOption) (*QueryAgentProfileResponse, error)
@@ -77,6 +87,16 @@ func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts .
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
+//
+// Query is the per-agent, per-domain trust synthesis surface for
+// x/agent_understanding.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): an
+// agent's understanding-shape across the domains it has acted in
+// must be readable as a structured profile — not stitched together
+// from per-domain qualification, calibration, and dialectic
+// signals scattered across upstream modules. The composite IS the
+// promise that trust is queryable at the agent-domain granularity.
 type QueryServer interface {
 	// AgentProfile composes the full per-agent UnderstandingProfile.
 	AgentProfile(context.Context, *QueryAgentProfileRequest) (*QueryAgentProfileResponse, error)

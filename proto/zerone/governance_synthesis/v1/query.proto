@@ -6,6 +6,16 @@ option go_package = "github.com/zerone-chain/zerone/x/governance_synthesis/types
 import "google/api/annotations.proto";
 import "zerone/governance_synthesis/v1/types.proto";
 
+// Query is the per-system trust synthesis surface for
+// x/governance_synthesis.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): the
+// chain's overall governance posture — incident state, pause
+// breakers, pending authority injections, privileged-action log,
+// cartel allegations, alignment pacing — must be readable as a
+// single composite. Trust that requires four queries to read is
+// trust that depends on the curator stitching it together; this
+// service refuses that posture.
 service Query {
   // SystemHealth synthesises the chain's accumulated stress state
   // from incidents, pauses, pending injections, privileged-action

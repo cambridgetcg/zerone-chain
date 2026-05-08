@@ -26,6 +26,17 @@ const (
 // QueryClient is the client API for Query service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Query is the per-system trust synthesis surface for
+// x/governance_synthesis.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): the
+// chain's overall governance posture — incident state, pause
+// breakers, pending authority injections, privileged-action log,
+// cartel allegations, alignment pacing — must be readable as a
+// single composite. Trust that requires four queries to read is
+// trust that depends on the curator stitching it together; this
+// service refuses that posture.
 type QueryClient interface {
 	// SystemHealth synthesises the chain's accumulated stress state
 	// from incidents, pauses, pending injections, privileged-action
@@ -69,6 +80,17 @@ func (c *queryClient) Frontier(ctx context.Context, in *QueryFrontierRequest, op
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
+//
+// Query is the per-system trust synthesis surface for
+// x/governance_synthesis.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): the
+// chain's overall governance posture — incident state, pause
+// breakers, pending authority injections, privileged-action log,
+// cartel allegations, alignment pacing — must be readable as a
+// single composite. Trust that requires four queries to read is
+// trust that depends on the curator stitching it together; this
+// service refuses that posture.
 type QueryServer interface {
 	// SystemHealth synthesises the chain's accumulated stress state
 	// from incidents, pauses, pending injections, privileged-action

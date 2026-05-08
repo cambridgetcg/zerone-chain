@@ -29,6 +29,12 @@ const (
 // Query exposes a single synthesised view: the ProvenanceCertificate
 // for a given manifest. The module owns no state of its own; the cert
 // is computed live from x/knowledge + x/qualification + x/capture_challenge.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): a
+// training manifest's trustworthiness — fact survival, validator
+// calibration, capture posture — must be readable as a single
+// composite, not reconstructed by an external auditor stitching
+// upstream signals together. The certificate IS that single read.
 type QueryClient interface {
 	ProvenanceCertificate(ctx context.Context, in *QueryProvenanceCertificateRequest, opts ...grpc.CallOption) (*QueryProvenanceCertificateResponse, error)
 }
@@ -58,6 +64,12 @@ func (c *queryClient) ProvenanceCertificate(ctx context.Context, in *QueryProven
 // Query exposes a single synthesised view: the ProvenanceCertificate
 // for a given manifest. The module owns no state of its own; the cert
 // is computed live from x/knowledge + x/qualification + x/capture_challenge.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): a
+// training manifest's trustworthiness — fact survival, validator
+// calibration, capture posture — must be readable as a single
+// composite, not reconstructed by an external auditor stitching
+// upstream signals together. The certificate IS that single read.
 type QueryServer interface {
 	ProvenanceCertificate(context.Context, *QueryProvenanceCertificateRequest) (*QueryProvenanceCertificateResponse, error)
 	mustEmbedUnimplementedQueryServer()

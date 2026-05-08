@@ -25,6 +25,16 @@ const (
 // QueryClient is the client API for Query service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Query is the per-address trust synthesis surface for x/trust_score.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): every
+// signal contributing to per-address trustworthiness — calibration,
+// qualification status, cartel-strike posture — must be readable
+// through a single query that synthesises the components and exposes
+// both the composite and the per-component breakdown. Consumers
+// cannot be required to stitch four upstream queries together; this
+// surface is the chain making that promise good.
 type QueryClient interface {
 	// TrustScore returns the per-address synthesised trustworthiness
 	// signal. Computed live from x/knowledge (calibration), x/qualification
@@ -53,6 +63,16 @@ func (c *queryClient) TrustScore(ctx context.Context, in *QueryTrustScoreRequest
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
+//
+// Query is the per-address trust synthesis surface for x/trust_score.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): every
+// signal contributing to per-address trustworthiness — calibration,
+// qualification status, cartel-strike posture — must be readable
+// through a single query that synthesises the components and exposes
+// both the composite and the per-component breakdown. Consumers
+// cannot be required to stitch four upstream queries together; this
+// surface is the chain making that promise good.
 type QueryServer interface {
 	// TrustScore returns the per-address synthesised trustworthiness
 	// signal. Computed live from x/knowledge (calibration), x/qualification

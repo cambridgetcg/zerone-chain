@@ -9,6 +9,12 @@ import "zerone/training_provenance/v1/types.proto";
 // Query exposes a single synthesised view: the ProvenanceCertificate
 // for a given manifest. The module owns no state of its own; the cert
 // is computed live from x/knowledge + x/qualification + x/capture_challenge.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): a
+// training manifest's trustworthiness — fact survival, validator
+// calibration, capture posture — must be readable as a single
+// composite, not reconstructed by an external auditor stitching
+// upstream signals together. The certificate IS that single read.
 service Query {
   rpc ProvenanceCertificate(QueryProvenanceCertificateRequest) returns (QueryProvenanceCertificateResponse) {
     option (google.api.http).get = "/zerone/training_provenance/v1/certificate/{manifest_id}";
