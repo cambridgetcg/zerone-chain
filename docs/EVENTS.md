@@ -19,6 +19,7 @@ identical events.
 - [channels](#channels)
 - [claiming_pot](#claiming_pot)
 - [compute_pool](#compute_pool)
+- [counterexamples](#counterexamples)
 - [discovery](#discovery)
 - [disputes](#disputes)
 - [emergency](#emergency)
@@ -32,6 +33,7 @@ identical events.
 - [liquiditypool](#liquiditypool)
 - [ontology](#ontology)
 - [partnerships](#partnerships)
+- [private_corpus](#private_corpus)
 - [qualification](#qualification)
 - [research](#research)
 - [schedule](#schedule)
@@ -563,6 +565,35 @@ Governance parameter update.
 *BeginBlock.* Provider unbonding completed, removed.
 - `address` -- provider address
 - `stake_refunded` -- refunded stake
+
+---
+
+## counterexamples
+
+### zerone.counterexamples.proposed
+A new counterexample was proposed against an existing fact. Pairs the fact with a wrong claim, an error type, and reasoning — alignment-by-structure material that the chain will pay for if validators affirm. Embodies commitment 15 (counterexamples are part of the corpus): the chain treats wrong-and-why as first-class corpus content, not a footnote.
+- `counterexample_id` -- chain-assigned id
+- `fact_id` -- the parent fact this counterexample pairs against
+- `author` -- bech32 of the proposer (whose bond is at risk)
+- `error_type` -- categorical kind of error (e.g. methodology mis-application)
+- `creed_commitment` -- "15"
+
+### zerone.counterexamples.validation_recorded
+A qualified validator cast a vote (affirm or reject) on a proposed counterexample. One validator, one vote per counterexample. Composite affirm/reject totals are surfaced on `resolved` once the supermajority threshold is met.
+- `validation_id` -- chain-assigned id of this individual vote
+- `counterexample_id` -- the counterexample being voted on
+- `validator` -- bech32 of the validator
+- `affirm` -- "true" if the validator affirms the counterexample, "false" if rejecting
+- `creed_commitment` -- "15"
+
+### zerone.counterexamples.resolved
+A counterexample reached `min_votes` and resolved. Status flips to VALIDATED if the affirm fraction met the supermajority threshold, REJECTED otherwise. A VALIDATED counterexample contributes to its parent fact's TVW multiplier — the chain pays meaningfully more for facts that come with alignment-supporting structure.
+- `counterexample_id` -- the resolved counterexample
+- `status` -- "COUNTEREXAMPLE_STATUS_VALIDATED" | "COUNTEREXAMPLE_STATUS_REJECTED"
+- `validations` -- final affirm count
+- `rejections` -- final reject count
+- `resolved_at_block` -- block at which resolution committed
+- `creed_commitment` -- "15"
 
 ---
 
@@ -2103,6 +2134,47 @@ Domain dropped below the social saturation threshold (R31-5 Water effect).
 - `density` -- partnership density at detection
 - `threshold` -- configured social saturation threshold
 
+---
+
+## private_corpus
+
+### zerone.private_corpus.vault_registered
+A new private-corpus vault was registered on-chain. The vault is an off-chain dataset reference — the chain stores the vault's public identity and access policy URL but never the corpus contents themselves. Embodies the *privacy without deception* posture: private datasets get an on-chain manifest pointing at off-chain storage, so trainers can audit provenance without the chain claiming custody of data it does not actually hold.
+- `vault_id` -- chain-assigned vault identifier
+- `operator` -- bech32 of the vault operator (the one who can update or publish manifests)
+- `display_name` -- human-readable label
+- `registered_at_block` -- block at which registration committed
+
+### zerone.private_corpus.vault_updated
+A vault's metadata, access policy, endpoint, or status was modified by its operator. Status transitions including DEPRECATED are signalled here.
+- `vault_id` -- the updated vault
+- `status` -- new vault status string
+- `updated_at_block` -- block at which the update committed
+
+### zerone.private_corpus.manifest_published
+The vault operator published a new corpus manifest — a content-hashed snapshot of what the off-chain dataset contains at this version. Item count, byte size, and content hash are on-chain; the actual content is not. Downstream consumers verify provenance against this manifest.
+- `manifest_id` -- operator-supplied manifest identifier
+- `vault_id` -- the parent vault
+- `version` -- operator-supplied version string
+- `content_hash` -- hash of the manifest's contents (off-chain audit anchor)
+- `published_at_block` -- block at which publication committed
+
+### zerone.private_corpus.manifest_withdrawn
+A previously-published manifest was withdrawn by the vault operator with a stated reason. Withdrawn manifests remain on-chain (forward-only audit, commitment 10) but are flagged so trainers can detect retraction and treat older snapshots accordingly.
+- `manifest_id` -- the withdrawn manifest
+- `vault_id` -- the parent vault
+- `reason` -- operator-supplied withdrawal reason (free-form string)
+- `withdrawn_at_block` -- block at which withdrawal committed
+
+### zerone.private_corpus.access_recorded
+The vault operator recorded an access event — an explicit log entry attributing data egress to a named accessor (training run, partner, audit). Access records are append-only and are how the chain makes private-corpus consumption auditable without observing the data itself.
+- `seq` -- monotonic per-vault sequence number for this access
+- `vault_id` -- the vault accessed
+- `manifest_id` -- the specific manifest accessed (empty for vault-level access)
+- `accessor` -- bech32 (or operator-defined identifier) of the consuming party
+- `recorded_at_block` -- block at which the access record committed
+
+---
 
 ## qualification
 
