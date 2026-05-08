@@ -30,7 +30,7 @@ Zerone is a **Proof-of-Truth** (PoT) blockchain where all tokens are minted thro
 | **Initial Block Reward** | 10 ZRN/block |
 | **Block Time** | ~2.521 seconds |
 | **Epoch Length** | 100,000 blocks (~2.9 days) |
-| **Decay Rate** | 0.85× per epoch |
+| **Decay Rate** | 0.994478× per epoch (1-year half-life) |
 | **Floor Reward** | 0.1 ZRN/block |
 | **Revenue to Contributors** | 55% |
 | **Revenue to Protocol** | 22% |

@@ -18,20 +18,20 @@ interaction backed by cryptographic truth.
 
 | | |
 |---|---|
-| Total Supply | 222,222,222,222 ZRN |
+| Total Supply | 222,222,222 ZRN (hard cap) |
 | Block Time | ~2.5 seconds (2,521 ms) |
 | Chain ID | `zerone-testnet-1` |
 | Address Prefix | `zrn1...` |
 
 ### Genesis Distribution
 
-| Allocation | Amount (ZRN) | Share |
-|---|---|---|
-| Validators (4x) | 88,888,888,888 | 40% |
-| Research Fund | 44,444,444,444 | 20% |
-| Claiming Pots | 44,444,444,446 | 20% |
-| Founder | 22,222,222,222 | 10% |
-| AI Agents | 22,222,222,222 | 10% |
+**Genesis circulating supply: 0 ZRN.** No pre-mine, no ICO, no foundation
+allocation, no team treasury. Every ZRN enters circulation as a Proof-of-Truth
+block reward. Validators bootstrap with `virtual_stake = 11 ZRN` (VRF
+participation weight without real tokens) and earn from block 1; the Research
+Fund and Development Fund fill organically from the revenue split. See
+[docs/tokenomics/GENESIS.md](docs/tokenomics/GENESIS.md) for the full
+specification.
 
 ---
 
@@ -71,7 +71,7 @@ build upon.
 
 ## Modules
 
-30 custom modules organized by function:
+38 custom modules organized by function:
 
 ### Knowledge & Truth
 | Module | Purpose |
@@ -80,6 +80,18 @@ build upon.
 | `ontology` | Epistemic domains, strata, and domain proposals |
 | `research` | Research submissions, peer review, bounties |
 | `evidence_mgmt` | Evidence oracle and verification |
+| `counterexamples` | Validated wrong-claims paired with facts — alignment-by-structure (commitment 15) |
+| `inquiry` | Open questions with escrowed bounties (commitment 16) |
+| `dialectic` | Per-fact disagreement signatures (commitment 17) |
+| `private_corpus` | Off-chain vault references with on-chain provenance |
+
+### Synthesizers (read-only)
+| Module | Purpose |
+|---|---|
+| `training_provenance` | Per-manifest trust composition |
+| `trust_score` | Per-address trust composition |
+| `governance_synthesis` | Per-system trust composition |
+| `agent_understanding` | Per-agent topic profiles |
 
 ### Validator & Staking
 | Module | Purpose |
@@ -195,7 +207,9 @@ make proto-gen
 | Document | Description |
 |---|---|
 | [Validator Guide](docs/VALIDATOR-GUIDE.md) | Full validator onboarding walkthrough |
-| [Parameters](docs/PARAMETERS.md) | All governance-adjustable parameters (30 modules) |
+| [Parameters](docs/PARAMETERS.md) | All governance-adjustable parameters (38 modules) |
+| [Tokenomics](docs/tokenomics/) | Supply, vesting, revenue split, governance migration |
+| [Truth-Seeking](docs/TRUTH_SEEKING.md) | The 17 epistemological commitments, bound by tests |
 | [FAQ](docs/FAQ.md) | Validator and network FAQ |
 | [API Reference](docs/API.md) | REST/gRPC endpoint reference |
 | [Events](docs/EVENTS.md) | On-chain event reference |
