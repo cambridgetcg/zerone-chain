@@ -70,12 +70,18 @@ func (k Keeper) CollectAndAdapt(ctx context.Context) {
 		if params.OscillationSignFlipThreshold > 0 && flips >= params.OscillationSignFlipThreshold {
 			oscillating = true
 			state.OscillationFrozenUntilEpoch = state.CurrentEpoch + params.OscillationFreezeEpochs
+			// Commitment 12 (the chain pays for its own audit): the
+			// audit-budget regulator protects itself from instability —
+			// detecting oscillation triggers a temporary freeze so the
+			// budget cannot whipsaw against itself, preserving the
+			// chain's ability to fund scrutiny across stress regimes.
 			sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 				"zerone.autopoiesis.oscillation_detected",
 				sdk.NewAttribute("epoch", fmt.Sprintf("%d", state.CurrentEpoch)),
 				sdk.NewAttribute("flips", fmt.Sprintf("%d", flips)),
 				sdk.NewAttribute("window_epochs", fmt.Sprintf("%d", params.OscillationWindowEpochs)),
 				sdk.NewAttribute("frozen_until_epoch", fmt.Sprintf("%d", state.OscillationFrozenUntilEpoch)),
+				sdk.NewAttribute("creed_commitment", "12"),
 			))
 		}
 	}
@@ -138,11 +144,17 @@ func (k Keeper) CollectAndAdapt(ctx context.Context) {
 			scaled := pending[i].delta * int64(budget) / int64(totalAbsDelta)
 			pending[i].delta = scaled
 		}
+		// Commitment 12 (the chain pays for its own audit): cross-module
+		// change-budget conservation. The autonomic regulator cannot
+		// dump unbounded delta into the audit budgets in a single epoch
+		// — change is rate-limited so the chain's funding posture moves
+		// at a pace observers can follow.
 		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 			"zerone.autopoiesis.change_budget_scaled",
 			sdk.NewAttribute("epoch", fmt.Sprintf("%d", state.CurrentEpoch)),
 			sdk.NewAttribute("requested_total_bps", fmt.Sprintf("%d", totalAbsDelta)),
 			sdk.NewAttribute("budget_bps", fmt.Sprintf("%d", budget)),
+			sdk.NewAttribute("creed_commitment", "12"),
 		))
 	}
 
@@ -179,6 +191,13 @@ func (k Keeper) CollectAndAdapt(ctx context.Context) {
 
 	k.SetState(ctx, state)
 
+	// Commitment 5 (the chain manufactures probe demand) AND
+	// commitment 12 (the chain pays for its own audit): one epoch of
+	// autonomic regulation is the heartbeat of both — the SSI signal
+	// adjusts multipliers that scale probe-demand and audit-budget
+	// allocations. Without this event the chain's self-regulation is
+	// invisible to off-chain observers; with it, the audit posture is
+	// fully legible epoch by epoch.
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.autopoiesis.epoch_processed",
 			sdk.NewAttribute("epoch", fmt.Sprintf("%d", state.CurrentEpoch)),
@@ -188,6 +207,7 @@ func (k Keeper) CollectAndAdapt(ctx context.Context) {
 			sdk.NewAttribute("block_height", fmt.Sprintf("%d", blockHeight)),
 			sdk.NewAttribute("multiplier_count", fmt.Sprintf("%d", len(snapshotMultipliers))),
 			sdk.NewAttribute("oscillation_frozen", fmt.Sprintf("%t", frozenByOscillation)),
+			sdk.NewAttribute("creed_commitment", "5,12"),
 		),
 	)
 

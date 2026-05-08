@@ -60,10 +60,15 @@ func (k msgServer) Activate(goCtx context.Context, msg *types.MsgActivateAutopoi
 	}
 	k.SetState(goCtx, state)
 
+	// Commitment 12 (the chain pays for its own audit): activation is
+	// the chain turning on its self-regulating budget mechanism.
+	// Without this, the audit-budget multipliers stay static and the
+	// chain cannot adapt its own funding to its own stress posture.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.autopoiesis.activated",
 			sdk.NewAttribute("authority", msg.Authority),
 			sdk.NewAttribute("activated", fmt.Sprintf("%t", msg.Activate)),
+			sdk.NewAttribute("creed_commitment", "12"),
 		),
 	)
 
@@ -91,11 +96,17 @@ func (k msgServer) OverrideMultiplier(goCtx context.Context, msg *types.MsgOverr
 	ms.LastUpdated = uint64(ctx.BlockHeight())
 	k.SetMultiplierState(goCtx, ms)
 
+	// Commitment 12 (the chain pays for its own audit): an authority
+	// override of an audit-budget multiplier is governance expressing a
+	// belief at the parameter layer about how much the chain should
+	// fund its own scrutiny. The event makes that belief visible to
+	// anyone watching the chain's audit posture.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.autopoiesis.multiplier_overridden",
 			sdk.NewAttribute("authority", msg.Authority),
 			sdk.NewAttribute("path", msg.Path),
 			sdk.NewAttribute("value", fmt.Sprintf("%d", msg.Value)),
+			sdk.NewAttribute("creed_commitment", "12"),
 		),
 	)
 
@@ -121,11 +132,17 @@ func (k msgServer) FreezeMultiplier(goCtx context.Context, msg *types.MsgFreezeM
 		k.SetMultiplierState(goCtx, ms)
 	}
 
+	// Commitment 12 (the chain pays for its own audit): freezing a
+	// multiplier pins a specific belief about an audit-budget allocation
+	// against further autonomic adjustment. Whether held open or held
+	// closed, the freeze is the chain's audit-budget posture made
+	// stable for as long as the freeze stands.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.autopoiesis.multiplier_frozen",
 			sdk.NewAttribute("authority", msg.Authority),
 			sdk.NewAttribute("path", msg.Path),
 			sdk.NewAttribute("frozen", fmt.Sprintf("%t", msg.Frozen)),
+			sdk.NewAttribute("creed_commitment", "12"),
 		),
 	)
 
