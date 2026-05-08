@@ -440,7 +440,8 @@ func TestMockDomainQualificationKeeper_GetQualifiedValidators(t *testing.T) {
 func TestGetEligibleValidators_UsesEffectiveMinVerifiers_FallbackWhenBelowEffective(t *testing.T) {
 	// MinVerifiers=3, nil partnershipKeeper → effective=4.
 	// With 3 qualified validators (== params.MinVerifiers), old code would NOT fall back.
-	// New code: 3 < effective(4) → fallback fires → returns all 5 validators.
+	// New code: 3 < effective(4) → fallback fires. Under scaled-fallback (T6),
+	// 3 qualified ≥ ceil(4/2)=2, so returns qualified + 1 padded = 4 validators.
 	k, ctx, _, sk := setupKnowledgeTestFull(t)
 	sk.addValidator("zrn1val1", 500_000, "bonded")
 	sk.addValidator("zrn1val2", 400_000, "bonded")
@@ -456,8 +457,8 @@ func TestGetEligibleValidators_UsesEffectiveMinVerifiers_FallbackWhenBelowEffect
 
 	vals, err := k.GetEligibleValidators(ctx, "physics")
 	require.NoError(t, err)
-	require.Len(t, vals, 5,
-		"3 qualified < effective min 4 → fallback returns all validators")
+	require.Len(t, vals, 4,
+		"3 qualified < effective min 4 → scaled fallback returns 3 qualified + 1 padded")
 }
 
 // Suppress unused import warning
