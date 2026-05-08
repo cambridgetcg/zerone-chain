@@ -94,10 +94,15 @@ func (k Keeper) senseGovernanceParticipation(ctx context.Context) uint64 {
 		}
 
 		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		// Commitment 4 (the substrate stress-tests its own truth): the
+		// verification subsystem's throughput and dispute-rate are
+		// stress signals — extreme dispute rate shows the substrate is
+		// already under test, and the chain announces what it sees.
 		sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 			"zerone.alignment.verification_health_observed",
 			sdk.NewAttribute("throughput_bps", fmt.Sprintf("%d", throughput)),
 			sdk.NewAttribute("dispute_rate_bps", fmt.Sprintf("%d", disputeRate)),
+			sdk.NewAttribute("creed_commitment", "4"),
 		))
 	}
 
@@ -165,10 +170,15 @@ func (k Keeper) EmitGrowthPressureEvent(ctx sdk.Context, qualityScore uint64) {
 		return // no pressure
 	}
 
+	// Commitment 4 (the substrate stress-tests its own truth): a high
+	// pending-verification ratio means the substrate's testing capacity
+	// is under pressure. The chain announces the pressure rather than
+	// hiding it behind an apparently-healthy throughput score.
 	ctx.EventManager().EmitEvent(sdk.NewEvent(
 		"zerone.alignment.growth_pressure_detected",
 		sdk.NewAttribute("pending_ratio_bps", fmt.Sprintf("%d", pendingRatio)),
 		sdk.NewAttribute("quality_penalty_applied", "true"),
+		sdk.NewAttribute("creed_commitment", "4"),
 	))
 }
 

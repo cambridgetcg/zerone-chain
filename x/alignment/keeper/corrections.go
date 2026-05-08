@@ -123,6 +123,11 @@ func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.Corre
 		// to autopoiesis — emit an advisory event and record with applied=false.
 		// Keeps small deviations from chattering the regulatory layer.
 		if params.AdvisoryMagnitudeBps > 0 && c.Magnitude < params.AdvisoryMagnitudeBps {
+			// Commitment 11 (trust is queryable): a sub-threshold
+			// deviation is observed and recorded but not forwarded to
+			// the regulator. Off-chain synthesisers can read it as part
+			// of the chain's trust surface without it chattering the
+			// budget layer.
 			sdkCtx.EventManager().EmitEvent(
 				sdk.NewEvent("zerone.alignment.correction_advisory",
 					sdk.NewAttribute("dimension", c.Dimension),
@@ -130,6 +135,7 @@ func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.Corre
 					sdk.NewAttribute("direction", c.Direction),
 					sdk.NewAttribute("magnitude", fmt.Sprintf("%d", c.Magnitude)),
 					sdk.NewAttribute("advisory_threshold", fmt.Sprintf("%d", params.AdvisoryMagnitudeBps)),
+					sdk.NewAttribute("creed_commitment", "11"),
 				),
 			)
 			c.Applied = false
@@ -145,6 +151,10 @@ func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.Corre
 				"magnitude", c.Magnitude,
 				"effective_max", effectiveMax,
 			)
+			// Commitment 11 (trust is queryable): a correction beyond
+			// the auto-apply ceiling is surfaced for governance review,
+			// recorded queryably so external observers can see what the
+			// chain wanted to correct but had to wait on humans for.
 			sdkCtx.EventManager().EmitEvent(
 				sdk.NewEvent("zerone.alignment.correction_governance_required",
 					sdk.NewAttribute("dimension", c.Dimension),
@@ -152,6 +162,7 @@ func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.Corre
 					sdk.NewAttribute("direction", c.Direction),
 					sdk.NewAttribute("magnitude", fmt.Sprintf("%d", c.Magnitude)),
 					sdk.NewAttribute("effective_max", fmt.Sprintf("%d", effectiveMax)),
+					sdk.NewAttribute("creed_commitment", "11"),
 				),
 			)
 			c.Applied = false
@@ -164,6 +175,11 @@ func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.Corre
 				"parameter", c.Parameter,
 				"magnitude", c.Magnitude,
 			)
+			// Commitment 11 (trust is queryable): when correction
+			// confidence is too low to act on, the chain still
+			// surfaces what it noticed — the queryable record is the
+			// trust surface, not the decision. Human governance reads
+			// this and decides whether to act.
 			sdkCtx.EventManager().EmitEvent(
 				sdk.NewEvent("zerone.alignment.correction_governance_required",
 					sdk.NewAttribute("dimension", c.Dimension),
@@ -172,6 +188,7 @@ func (k Keeper) ApplyCorrections(ctx context.Context, corrections []*types.Corre
 					sdk.NewAttribute("magnitude", fmt.Sprintf("%d", c.Magnitude)),
 					sdk.NewAttribute("effective_max", "0"),
 					sdk.NewAttribute("reason", "low_confidence"),
+					sdk.NewAttribute("creed_commitment", "11"),
 				),
 			)
 			c.Applied = false

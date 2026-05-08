@@ -106,6 +106,10 @@ func (k Keeper) EvaluatePendingCorrections(ctx context.Context, currentScores *t
 		k.SetCorrectionOutcome(ctx, outcome)
 
 		sdkCtx := sdk.UnwrapSDKContext(ctx)
+		// Commitment 11 (trust is queryable): the outcome of a prior
+		// correction — whether it actually moved the score toward the
+		// healthy threshold — is recorded queryably. The chain learns
+		// (and shows it learns) which corrections worked.
 		sdkCtx.EventManager().EmitEvent(
 			sdk.NewEvent("zerone.alignment.correction_outcome_recorded",
 				sdk.NewAttribute("height", fmt.Sprintf("%d", outcome.Height)),
@@ -114,6 +118,7 @@ func (k Keeper) EvaluatePendingCorrections(ctx context.Context, currentScores *t
 				sdk.NewAttribute("score_before", fmt.Sprintf("%d", outcome.ScoreBefore)),
 				sdk.NewAttribute("score_after", fmt.Sprintf("%d", outcome.ScoreAfter)),
 				sdk.NewAttribute("successful", fmt.Sprintf("%t", outcome.Successful)),
+				sdk.NewAttribute("creed_commitment", "11"),
 			),
 		)
 	}

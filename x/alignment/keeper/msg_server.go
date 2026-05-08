@@ -51,10 +51,16 @@ func (m msgServer) Activate(ctx context.Context, msg *types.MsgActivate) (*types
 	m.Keeper.SetState(ctx, state)
 
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	// Commitment 11 (trust is queryable) AND commitment 12 (the chain
+	// pays for its own audit): activation is the chain turning on the
+	// observational upstream of the alignment surface — the sensor
+	// outputs and correction records that downstream synthesisers and
+	// the audit-budget regulator both consume.
 	sdkCtx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.alignment.activated",
 			sdk.NewAttribute("authority", msg.Authority),
 			sdk.NewAttribute("enabled", fmt.Sprintf("%t", msg.Enabled)),
+			sdk.NewAttribute("creed_commitment", "11,12"),
 		),
 	)
 
