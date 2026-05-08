@@ -26,14 +26,17 @@ import (
 
 	sdkmath "cosmossdk.io/math"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/stretchr/testify/require"
 
 	counterexampleskeeper "github.com/zerone-chain/zerone/x/counterexamples/keeper"
 	counterexamplestypes "github.com/zerone-chain/zerone/x/counterexamples/types"
+	emergencytypes "github.com/zerone-chain/zerone/x/emergency/types"
 	inquirykeeper "github.com/zerone-chain/zerone/x/inquiry/keeper"
 	inquirytypes "github.com/zerone-chain/zerone/x/inquiry/types"
 	knowledgekeeper "github.com/zerone-chain/zerone/x/knowledge/keeper"
 	knowledgetypes "github.com/zerone-chain/zerone/x/knowledge/types"
+	ontologytypes "github.com/zerone-chain/zerone/x/ontology/types"
 	qualificationtypes "github.com/zerone-chain/zerone/x/qualification/types"
 	trustscorekeeper "github.com/zerone-chain/zerone/x/trust_score/keeper"
 	trustscoretypes "github.com/zerone-chain/zerone/x/trust_score/types"
@@ -469,6 +472,134 @@ func TestTruthSeeking_PrivilegedActionsLogMonotonically(t *testing.T) {
 }
 
 // ════════════════════════════════════════════════════════════════════
+// Commitment 10: Forward-only audit (emergency ceremonies).
+//
+// "Every privileged action is logged. The chain's history is
+// append-only and verifiable." For x/emergency specifically: a
+// halt/revert/resume ceremony record, once finalized, must be the
+// chain's permanent record of how that emergency was handled.
+// Subsequent emergencies append to the audit log; they never
+// rewrite prior entries.
+//
+// Bound here AND by: TestTruthSeeking_PrivilegedActionsLogMonotonically
+// (the knowledge-side privileged-action log binds the same commitment
+// for authority-gated handlers; this test extends the binding to the
+// emergency ceremony audit trail).
+// ════════════════════════════════════════════════════════════════════
+
+func TestTruthSeeking_EmergencyCeremoniesAreImmutablePostFinalize(t *testing.T) {
+	h := NewTestHarness(t)
+
+	// First ceremony: a halt. Drive it manually to Finalized phase
+	// (the prevote/precommit machinery is exercised elsewhere; the
+	// commitment under test here is what happens AFTER finalization,
+	// not how a ceremony reaches that phase).
+	haltID := "ts-emergency-halt-1"
+	_, err := h.EmergencyKeeper.CreateHaltCeremony(h.Ctx, &emergencytypes.EmergencyHaltProposal{
+		Id:              haltID,
+		Proposer:        testAddr("ts_emergency_proposer").String(),
+		Reason:          "truth-seeking invariant: halt audit immutability",
+		ProposedAtBlock: uint64(h.Ctx.BlockHeight()),
+	})
+	require.NoError(t, err)
+
+	ceremony, found := h.EmergencyKeeper.GetCeremony(h.Ctx, haltID)
+	require.True(t, found, "halt ceremony must exist before finalization")
+	ceremony.Phase = string(emergencytypes.PhaseFinalized)
+	require.NoError(t, h.EmergencyKeeper.SetCeremony(h.Ctx, ceremony))
+
+	h.EmergencyKeeper.HandleCeremonyFinalization(h.Ctx, haltID)
+
+	// Snapshot the audit log immediately after the halt finalization.
+	// Every byte of these entries must survive subsequent operations
+	// — the audit substrate cannot be rewritten by later activity.
+	postHaltLog := h.EmergencyKeeper.GetAuditLog(h.Ctx)
+	require.NotEmpty(t, postHaltLog,
+		"halt finalization must write at least one audit entry — without the entry, 'forward-only audit' has no record to be forward-only about")
+
+	// Capture canonical content of every entry by serialising fields
+	// the chain treats as the immutable record (action, actor,
+	// ceremony id, block, timestamp, details).
+	type frozen struct {
+		Timestamp   int64
+		BlockNumber uint64
+		Action      string
+		Actor       string
+		CeremonyId  string
+		Details     string
+	}
+	freeze := func(entries []*emergencytypes.EmergencyAuditEntry) []frozen {
+		out := make([]frozen, len(entries))
+		for i, e := range entries {
+			out[i] = frozen{
+				Timestamp:   e.Timestamp,
+				BlockNumber: e.BlockNumber,
+				Action:      e.Action,
+				Actor:       e.Actor,
+				CeremonyId:  e.CeremonyId,
+				Details:     e.Details,
+			}
+		}
+		return out
+	}
+	preResumeFreeze := freeze(postHaltLog)
+	preResumeLen := len(preResumeFreeze)
+
+	// Advance a few blocks to ensure the second ceremony's audit entry
+	// lands at a strictly later height than the first — exercising the
+	// (height, monotonic-index) keying that protects against accidental
+	// overwrites of prior records.
+	h.AdvanceBlocks(3)
+
+	// Second ceremony: a resume. Same drive-to-finalized pattern.
+	resumeID := "ts-emergency-resume-1"
+	_, err = h.EmergencyKeeper.CreateResumeCeremony(h.Ctx, &emergencytypes.EmergencyResumeProposal{
+		Id:             resumeID,
+		Proposer:       testAddr("ts_emergency_proposer").String(),
+		HaltCeremonyId: haltID,
+	})
+	require.NoError(t, err)
+
+	ceremony, found = h.EmergencyKeeper.GetCeremony(h.Ctx, resumeID)
+	require.True(t, found, "resume ceremony must exist before finalization")
+	ceremony.Phase = string(emergencytypes.PhaseFinalized)
+	require.NoError(t, h.EmergencyKeeper.SetCeremony(h.Ctx, ceremony))
+
+	h.EmergencyKeeper.HandleCeremonyFinalization(h.Ctx, resumeID)
+
+	// Re-read the audit log. The contract:
+	//   1. The log must have grown (resume finalization wrote at
+	//      least one new entry).
+	//   2. Every entry that existed before the resume operation must
+	//      still exist with byte-identical content. The chain cannot
+	//      rewrite history to make the halt look different now that
+	//      the resume has happened.
+	postResumeLog := h.EmergencyKeeper.GetAuditLog(h.Ctx)
+	require.Greater(t, len(postResumeLog), preResumeLen,
+		"resume finalization must add new audit entries — without them, the resume is invisible to future audit; with them, the audit substrate strictly grows")
+
+	postResumeFreeze := freeze(postResumeLog)
+	for i, prior := range preResumeFreeze {
+		require.Equal(t, prior, postResumeFreeze[i],
+			"audit entry %d existed before resume and must remain byte-identical after resume; commitment 10 forbids overwriting prior records to fit a later narrative", i)
+	}
+
+	// And the prior halt's emergency-status side-effect must remain
+	// visible in the historical record even though the resume has
+	// since transitioned the chain back to Normal — the audit log
+	// preserves WHAT HAPPENED, not just the current end-state.
+	var sawHaltExecuted bool
+	for _, e := range postResumeFreeze {
+		if e.CeremonyId == haltID && e.Action == string(emergencytypes.AuditHaltExecuted) {
+			sawHaltExecuted = true
+			break
+		}
+	}
+	require.True(t, sawHaltExecuted,
+		"the halt-executed audit entry from before the resume must still be present afterward; without it, 'we can re-enter normal' silently overwrites 'we were once halted'")
+}
+
+// ════════════════════════════════════════════════════════════════════
 // Commitment 13: The training corpus is not for sale.
 //
 // "What enters the corpus enters because it survived. Facts are
@@ -807,6 +938,107 @@ func TestTruthSeeking_DialecticSignatureCarriesVoteShape(t *testing.T) {
 		"a 2-1 verdict must register below the contested threshold")
 	require.Equal(t, "CONTESTED", sig.StressLabel,
 		"a 2-1 verdict must label CONTESTED — settled and contested-but-resolved are different shapes the chain must distinguish")
+}
+
+// Commitment 18: the chain manufactures exploration demand. Where
+// commitment 5 has the chain mint to stress-test what it already
+// thinks it knows, and commitment 16 lets askers escrow bounties for
+// the questions that interest them, this commitment names the third
+// shape of demand: the chain itself, seeing through its own frontier
+// composition that a domain is sparse, FUNDS open inquiries there
+// without waiting for an outside party to ask. This test asserts
+// the LOAD-BEARING falsifier — the round-trip — that distinguishes
+// commitment 18 from rhetoric: a chain-sponsored inquiry that
+// expires unanswered must return its bounty to the frontier-bounty
+// pool. Without the round-trip, the chain's exploration mint silently
+// leaks into general circulation, the audit budget cannot be tracked
+// across cycles, and "the chain pays for its own audit" (commitment
+// 12) becomes incoherent at the budget layer.
+//
+// Bound here AND by: TestFrontier_ChainSponsorsInquiriesForSparseDomains
+// (the sponsorship path), TestFrontier_OpenInquiriesRaiseSparsity (the
+// frontier-input bind that this commitment consumes).
+func TestTruthSeeking_FrontierBountyRoundTripsOnExpiry(t *testing.T) {
+	h := NewTestHarness(t)
+	_, err := h.KnowledgeKeeper.SeedRouteB(h.Ctx)
+	require.NoError(t, err)
+
+	// One sparse domain — enough for top-K=1 sponsorship.
+	h.App.ZeroneOntologyKeeper.SetDomain(h.Ctx, &ontologytypes.Domain{
+		Name:    "philosophy",
+		Stratum: uint32(ontologytypes.StratumEmpirical),
+		Status:  "active",
+		Depth:   1,
+	})
+
+	// Tighten the cadence and expiry so the test runs in a few blocks.
+	// cadence=2 → height 2 fires sponsorship.
+	// expiry=1 → ExpiresAtBlock = 2 + 1 = 3; height 3 is NOT a cadence
+	//            multiple, so the resolution scan triggers expiry without
+	//            also producing a second sponsorship in the same tick —
+	//            keeps the round-trip assertion uncontaminated.
+	p := h.App.InquiryKeeper.GetParams(h.Ctx)
+	p.FrontierInvitationCadenceBlocks = 2
+	p.FrontierInvitationSparsityThresholdBps = 600_000
+	p.FrontierInvitationTopK = 1
+	p.FrontierInvitationBounty = "5000000"
+	p.FrontierInvitationExpiryBlocks = 1
+	require.NoError(t, h.App.InquiryKeeper.SetParams(h.Ctx, p))
+
+	frontierAddr := authtypes.NewModuleAddress(inquirytypes.FrontierBountyPoolModuleName)
+	inquiryAddr := authtypes.NewModuleAddress(inquirytypes.BountyPoolModuleName)
+
+	// Advance to height 2 — cadence tick. Sponsorship fires.
+	h.AdvanceBlocks(1)
+	require.NoError(t, h.App.InquiryKeeper.BeginBlocker(h.Ctx))
+
+	var sponsored *inquirytypes.Inquiry
+	require.NoError(t, h.App.InquiryKeeper.IterateAllInquiries(h.Ctx, func(q *inquirytypes.Inquiry) bool {
+		if q.SystemInitiated {
+			sponsored = q
+			return true
+		}
+		return false
+	}))
+	require.NotNil(t, sponsored,
+		"commitment 18: BeginBlocker at cadence tick must sponsor at least one chain-asked inquiry; without sponsorship, the commitment is rhetoric")
+	require.Equal(t, "5000000", sponsored.Bounty)
+
+	// Pre-expiry balances: frontier pool emptied (mint round-tripped
+	// out to inquiry pool); inquiry pool holds the bounty.
+	require.True(t, h.GetBalance(frontierAddr, "uzrn").Amount.IsZero(),
+		"after sponsorship, frontier pool is empty — mint flowed through to inquiry pool")
+	require.Equal(t, sdkmath.NewInt(5_000_000), h.GetBalance(inquiryAddr, "uzrn").Amount,
+		"after sponsorship, inquiry pool holds the chain-sponsored bounty awaiting answer or expiry")
+
+	// Advance past expiry. ExpiresAtBlock = 3, so height 3 makes
+	// `currentBlock >= ExpiresAtBlock` true and the resolution scan
+	// in BeginBlocker calls expireInquiry → refundBounty. For
+	// system_initiated inquiries, refundBounty must route the funds
+	// back to the frontier pool, not to a user account. Height 3 is
+	// also NOT a cadence-aligned block (cadence=2), so the
+	// frontier-invitation cycle does not fire — keeps the assertion
+	// focused on the round-trip alone.
+	h.AdvanceBlocks(1) // height now 3
+	require.NoError(t, h.App.InquiryKeeper.BeginBlocker(h.Ctx))
+
+	// Re-load the inquiry. It must have transitioned to EXPIRED.
+	expired, ok := h.App.InquiryKeeper.GetInquiry(h.Ctx, sponsored.Id)
+	require.True(t, ok, "expired inquiry must still exist for audit")
+	require.Equal(t, inquirytypes.InquiryStatus_INQUIRY_STATUS_EXPIRED, expired.Status,
+		"unanswered chain-sponsored inquiries must transition to EXPIRED — without this, commitment 18's expiry path is dead code")
+
+	// THE LOAD-BEARING ASSERTION: the bounty is back in the frontier
+	// pool. The chain's exploration audit budget conserves itself
+	// across unanswered cycles. If this fails, every expired chain-
+	// sponsored inquiry leaks uzrn into circulation, the audit budget
+	// becomes untrackable, and the chain has silently paid for
+	// nothing — which is the structural form of "rhetoric, not
+	// commitment."
+	require.Equal(t, sdkmath.NewInt(5_000_000), h.GetBalance(frontierAddr, "uzrn").Amount,
+		"commitment 18 + commitment 12: the bounty of an unanswered chain-sponsored inquiry must round-trip back to the frontier pool — anything less is leakage of the chain's audit budget")
+	require.True(t, h.GetBalance(inquiryAddr, "uzrn").Amount.IsZero(),
+		"inquiry pool must release the system-sponsored bounty on expiry — leaving it would let chain-mint silently subsidise unrelated user-asked inquiries")
 }
 
 // ════════════════════════════════════════════════════════════════════
