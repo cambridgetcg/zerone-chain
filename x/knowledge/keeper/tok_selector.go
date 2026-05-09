@@ -1,7 +1,9 @@
 package keeper
 
 import (
+	"context"
 	"fmt"
+	"sort"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
@@ -70,4 +72,77 @@ func ValidateAndCapToKSelector(s *types.ToKSelector) (*types.ToKSelector, error)
 		}
 	}
 	return out, nil
+}
+
+// GatherRootedSubtree walks descendants from the given root up to max_depth
+// and returns sorted node IDs + sorted edges. Re-uses the descendant walk
+// already used by grpc_query.go.
+func (k Keeper) GatherRootedSubtree(
+	ctx context.Context,
+	sel *types.RootedSubtreeSelector,
+) (nodeIDs []string, edges []*types.ToKEdge, err error) {
+	root, found := k.GetFact(ctx, sel.RootFactId)
+	if !found {
+		return nil, nil, fmt.Errorf("root fact %s not found", sel.RootFactId)
+	}
+	visited := map[string]bool{root.Id: true}
+	edgeSet := map[string]*types.ToKEdge{}
+	if err := k.gatherDescendantsRecursive(ctx, root.Id, 1, sel.MaxDepth, visited, edgeSet); err != nil {
+		return nil, nil, err
+	}
+	for id := range visited {
+		nodeIDs = append(nodeIDs, id)
+	}
+	sort.Strings(nodeIDs)
+	for _, e := range edgeSet {
+		edges = append(edges, e)
+	}
+	sortToKEdges(edges)
+	return nodeIDs, edges, nil
+}
+
+func (k Keeper) gatherDescendantsRecursive(
+	ctx context.Context,
+	factID string,
+	depth, maxDepth uint32,
+	visited map[string]bool,
+	edges map[string]*types.ToKEdge,
+) error {
+	if depth > maxDepth {
+		return nil
+	}
+	incoming, err := k.GetIncomingRelations(ctx, factID)
+	if err != nil {
+		return err
+	}
+	for _, rel := range incoming {
+		edgeKey := rel.SourceFactId + "→" + rel.TargetFactId + "|" + rel.Relation.String()
+		if _, ok := edges[edgeKey]; !ok {
+			edges[edgeKey] = &types.ToKEdge{
+				FromFactId: rel.SourceFactId,
+				ToFactId:   rel.TargetFactId,
+				Relation:   rel.Relation.String(),
+				Inference:  rel.Inference.String(),
+			}
+		}
+		if !visited[rel.SourceFactId] {
+			visited[rel.SourceFactId] = true
+			if err := k.gatherDescendantsRecursive(ctx, rel.SourceFactId, depth+1, maxDepth, visited, edges); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func sortToKEdges(edges []*types.ToKEdge) {
+	sort.Slice(edges, func(i, j int) bool {
+		if edges[i].FromFactId != edges[j].FromFactId {
+			return edges[i].FromFactId < edges[j].FromFactId
+		}
+		if edges[i].ToFactId != edges[j].ToFactId {
+			return edges[i].ToFactId < edges[j].ToFactId
+		}
+		return edges[i].Relation < edges[j].Relation
+	})
 }
