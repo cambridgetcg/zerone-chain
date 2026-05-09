@@ -1,28 +1,21 @@
 # Testnet Token Economics
 
-This document describes the token supply, allocation, and distribution mechanics for the Zerone testnet (localnet and `zerone-testnet-1`).
+This document describes the token supply, faucet, and distribution mechanics for Zerone localnet and the public testnet (`zerone-testnet-1`).
 
-## Genesis Supply
+## Hard Cap
 
 | Denomination | Amount |
 |-------------|--------|
-| ZRN | 222,222,222,222 |
-| uzrn | 222,222,222,222,000,000 |
+| ZRN | 222,222,222 |
+| uzrn | 222,222,222,000,000 |
 
-1 ZRN = 1,000,000 uzrn (micro-ZRN).
+1 ZRN = 1,000,000 uzrn (micro-ZRN). The hard cap is enforced at `x/vesting_rewards/types/keys.go:MaxSupplyUzrn`. See [tokenomics/SUPPLY.md](tokenomics/SUPPLY.md).
 
-## Allocation Table
+## Genesis Distribution
 
-| Category | ZRN | % | Purpose |
-|----------|-----|---|---------|
-| Research Fund | 44,444,444,444 | 20.00% | Protocol-governed research grants and bounties |
-| Founder | 22,222,222,222 | 10.00% | Founder allocation |
-| AI Agent | 22,222,222,222 | 10.00% | AI agent bootstrap and operational funds |
-| Validators (4 x 22,222,222,222) | 88,888,888,888 | 40.00% | Genesis validator allocations (equal per-validator) |
-| Claiming Pots | 44,444,444,446 | 20.00% | Airdrops, vesting distributions, community claims |
-| **Total** | **222,222,222,222** | **100.00%** | |
+**Public testnet (`zerone-testnet-1`): zero genesis supply.** No pre-mine, no foundation allocation, no validator allocation. Every ZRN enters circulation as a Proof-of-Truth block reward. Validators bootstrap with `virtual_stake` (11 ZRN VRF participation weight) and earn from block 1. See [tokenomics/GENESIS.md](tokenomics/GENESIS.md).
 
-The Claiming Pots allocation includes 2 ZRN above an exact 20% share to absorb the integer rounding remainder from dividing the total supply into the five allocation buckets.
+**Localnet:** the localnet ceremony script pre-funds a small set of accounts so iteration is fast (faucet, test agents, validator balances scaled for tier-progression testing). The pre-fund total stays well below the 222,222,222 ZRN hard cap. See `scripts/localnet.sh` and the [Localnet Accounts](#localnet-accounts) section below for the actual numbers.
 
 ## Faucet
 

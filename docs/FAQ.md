@@ -15,18 +15,24 @@ incorrect ones are slashed.
 
 ZRN is Zerone's native token. It is used for staking, transaction fees,
 knowledge claim bonds, and governance voting. The micro-denomination is
-`uzrn` (1 ZRN = 1,000,000 uzrn). The total supply at genesis is
-222,222,222,222 ZRN.
+`uzrn` (1 ZRN = 1,000,000 uzrn). The hard cap is **222,222,222 ZRN** —
+not a genesis allocation. See [SUPPLY.md](tokenomics/SUPPLY.md).
 
 ### How is ZRN distributed at genesis?
 
-| Allocation | Amount (ZRN) | % | Purpose |
-|-----------|-------------|---|---------|
-| Validators (4x) | 88,888,888,888 | 40% | Genesis validator stake and operations |
-| Research Fund | 44,444,444,444 | 20% | Research grants and bounties |
-| Claiming Pots | 44,444,444,446 | 20% | Community claiming pools |
-| Founder | 22,222,222,222 | 10% | Founder allocation |
-| AI Agents | 22,222,222,222 | 10% | AI agent economy bootstrap |
+**Genesis circulating supply: 0 ZRN.** No pre-mine, no ICO, no
+foundation allocation, no team treasury. Every ZRN enters circulation
+as a Proof-of-Truth block reward.
+
+| Account | Genesis balance | Path to funding |
+|---------|----------------|-----------------|
+| Genesis validators | 0 ZRN | Virtual stake (11 ZRN VRF weight) — earn from block 1 |
+| Foundation / Treasury | 0 ZRN | Funded by governance proposals over time |
+| Research Treasury | 0 ZRN | Fills organically from 3.33% of revenue split |
+| Faucet | 0 ZRN | Optional — funded by governance or validator tips |
+
+See [GENESIS.md](tokenomics/GENESIS.md) for the genesis-ceremony
+mechanics and the bootstrap design.
 
 ---
 
@@ -107,16 +113,17 @@ Slash escalation increases the penalty by 10% for each successive slash.
 
 ### What is the bootstrap period?
 
-The first 480,000 blocks (~14 days) after genesis. During bootstrap, the
-following transactions are **gas-free**:
+The first 480,000 blocks (~14 days at 2.521s blocks). During bootstrap,
+essential PoT transactions are **gas-free**:
 
-- Validator registration
-- Account registration
-- Knowledge claim submission
-- Verification commit and reveal
+- `MsgRegisterValidator`
+- `MsgRegisterAccount`
+- `MsgSubmitClaim`
+- `MsgSubmitCommitment`
+- `MsgSubmitReveal`
 
-This allows the network to begin verifying truth before any fees are
-collected.
+This lets the network begin verifying truth before any ZRN has been
+minted (genesis circulating supply is 0). See `app/gas.go:BootstrapEndBlock`.
 
 ### What are the gas prices?
 
@@ -258,3 +265,7 @@ Target: 2,521 milliseconds (~2.5 seconds).
 
 - [Validator Guide](VALIDATOR-GUIDE.md) — Full onboarding walkthrough
 - [Parameters Reference](PARAMETERS.md) — All governance-adjustable parameters
+- [Tokenomics](tokenomics/) — Supply, vesting, revenue split, governance migration
+- [Truth-Seeking](TRUTH_SEEKING.md) — The 18 epistemological commitments, bound by tests
+- [ToK Substrate](TOK_SUBSTRATE.md) — The chain's training-resource doctrine
+- [Roadmap](ROADMAP.md) — Where we are, what's bound, what ships next

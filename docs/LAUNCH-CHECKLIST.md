@@ -22,8 +22,9 @@ Chain ID: `zerone-testnet-1`
 - [ ] Run `zeroned init` on each validator node
 - [ ] Run `zeroned prepare-genesis zerone-testnet-1` with all addresses
 - [ ] Verify 777 axioms injected into knowledge module
-- [ ] Verify token distribution sums to 222,222,222,222 ZRN
-- [ ] Verify bank supply equals sum of all balances
+- [ ] Verify genesis circulating supply is **0 ZRN** (no pre-mine — every ZRN enters circulation as a PoT block reward)
+- [ ] Verify bank supply equals sum of all balances (= 0 at genesis)
+- [ ] Verify hard cap `MaxSupplyUzrn` = `222222222000000` (222,222,222 ZRN)
 - [ ] Distribute signed genesis.json to all validators
 - [ ] SHA256 hash matches across all validators
 - [ ] Genesis time set (coordinated UTC timestamp)
@@ -62,7 +63,7 @@ Chain ID: `zerone-testnet-1`
 
 - [ ] README.md updated with testnet info
 - [ ] Validator Guide reviewed and tested end-to-end
-- [ ] Parameter Reference complete for all 30 modules
+- [ ] Parameter Reference complete for all 35 parameter-bearing modules (38 total; 3 pure synthesisers carry no params)
 - [ ] FAQ covers common validator questions
 - [ ] API documentation (Swagger) deployed
 

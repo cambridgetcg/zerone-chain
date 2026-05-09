@@ -10,8 +10,13 @@
 > change before mainnet.
 
 Complete reference for all governance-adjustable parameters across Zerone's
-30 custom modules. All BPS (basis points) values use a 1,000,000 scale
-(1,000,000 = 100%). Token amounts are in `uzrn` (1 ZRN = 1,000,000 uzrn).
+35 parameter-bearing custom modules. All BPS (basis points) values use a
+1,000,000 scale (1,000,000 = 100%). Token amounts are in `uzrn`
+(1 ZRN = 1,000,000 uzrn).
+
+The chain ships 38 custom modules total; the three pure synthesisers
+(`training_provenance`, `trust_score`, `governance_synthesis`) carry
+no params — they are read-only consumers over the modules below.
 
 ## Table of Contents
 
@@ -42,6 +47,11 @@ Complete reference for all governance-adjustable parameters across Zerone's
 - [liquiditypool](#liquiditypool)
 - [claiming_pot](#claiming_pot)
 - [evidence_mgmt](#evidence_mgmt)
+- [counterexamples](#counterexamples)
+- [inquiry](#inquiry)
+- [dialectic](#dialectic)
+- [private_corpus](#private_corpus)
+- [agent_understanding](#agent_understanding)
 - [ibcratelimit](#ibcratelimit)
 - [icaauth](#icaauth)
 - [tokens](#tokens)
@@ -771,6 +781,93 @@ Evidence management and oracle parameters.
 | `verification_quorum` | uint32 | 3 | Verification quorum |
 | `challenge_bond` | string | "500000" (0.5 ZRN) | Challenge bond amount |
 | `challenge_window_blocks` | uint64 | 50,000 | Challenge submission window |
+
+---
+
+## counterexamples
+
+Validated wrong-claims paired with facts — alignment-by-structure
+(commitment 15: counterexamples are part of the corpus). Defaults make
+the chain net-pay for counterexample contribution: validation reward
+exceeds the bond at the margin.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `proposal_bond` | string | "1000000" (1 ZRN) | Bond at proposal time. Returned on VALIDATED, burned on REJECTED. |
+| `validation_reward` | string | "500000" (0.5 ZRN) | Reward paid on VALIDATED. Net result: validated counterexample pays 0.5 ZRN above the returned bond. |
+| `min_votes` | uint32 | 3 | Minimum vote count before auto-resolution. |
+| `affirm_threshold_bps` | uint64 | 666,000 (66.6%) | Affirmation threshold for VALIDATED. Matches the chain's broader supermajority convention. |
+| `max_reason_bytes` | uint32 | 4,096 | Maximum size of the `reasoning` text field. |
+| `tvw_multiplier_bps` | uint64 | 1,200,000 (1.2x) | TVW boost applied to facts that carry at least one validated counterexample. Read by `x/knowledge` during `ComputeTrainingValueWeight`. |
+| `proposals_enabled` | bool | true | Master switch for new counterexample proposals. |
+
+---
+
+## inquiry
+
+Open-question bounty market (commitment 16: chain pays for exploration
+of the unknown) plus chain-sponsored frontier inquiries (commitment 18:
+chain manufactures exploration demand). The frontier-invitation block of
+defaults activates the chain's own asks; setting `frontier_invitation_cadence_blocks`
+to 0 disables system sponsorship without affecting user-asked inquiries.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `min_bounty` | string | "1000000" (1 ZRN) | Minimum asker bounty. Above zero so spam is costly; modest enough that asking stays accessible. |
+| `max_question_bytes` | uint32 | 4,096 | Maximum question text size. |
+| `max_context_bytes` | uint32 | 8,192 | Maximum context-payload size. |
+| `default_expiry_blocks` | uint64 | 100,000 (~3 days) | Default inquiry expiry if asker omits one. |
+| `max_expiry_blocks` | uint64 | 1,000,000 (~30 days) | Hard cap on expiry; bounties cannot be locked indefinitely. |
+| `max_answers_per_inquiry` | uint32 | 32 | Caps griefing — first accepted answer wins; the chain doesn't need to evaluate 1000 candidates. |
+| `begin_blocker_scan_limit` | uint32 | 100 | Inquiries scanned per BeginBlocker for resolution / refund. |
+| `submissions_enabled` | bool | true | Master switch for new inquiries. |
+| `frontier_invitation_cadence_blocks` | uint64 | 600 (~25 min) | Cadence at which the BeginBlocker reads the frontier and sponsors system inquiries. 0 disables. |
+| `frontier_invitation_top_k` | uint32 | 3 | Number of sparsest domains to sponsor per cadence tick. |
+| `frontier_invitation_sparsity_threshold_bps` | uint64 | 700,000 (70%) | Domain must clear this sparsity score to attract chain sponsorship. |
+| `frontier_invitation_bounty` | string | "5000000" (5 ZRN) | Per-system-sponsored-inquiry bounty. 5× `min_bounty` — the chain pays meaningfully more for exploration than the floor. |
+| `frontier_invitation_expiry_blocks` | uint64 | 600,000 (~17 days) | System inquiries persist longer than user inquiries; the corpus does not give up on a sparse domain after 3 days. |
+
+---
+
+## dialectic
+
+Per-fact, per-domain, per-agent-pair disagreement signatures
+(commitment 17: disagreement is structure, not noise). Pure-synthesizer
+behaviour over `x/knowledge` rounds; only the verdict-classification
+thresholds and the query-walk cap are tunable.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `contested_threshold_bps` | uint64 | 850,000 (85%) | Below this affirm-share, a verdict is labelled CONTESTED. A 5-1 vote (83.3%) is contested; a 6-1 (85.7%) is strong-but-not-unanimous. |
+| `bare_majority_threshold_bps` | uint64 | 550,000 (55%) | Below this affirm-share, a verdict is labelled BARE. Must be in `(0, contested_threshold_bps)`. |
+| `max_facts_per_domain_query` | uint32 | 1,000 | Bounds `DomainDialectic` walking cost. |
+
+---
+
+## private_corpus
+
+Off-chain vault references with on-chain provenance. The chain anchors
+hashes; it does not store content. Limits below apply only to
+human-readable metadata.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `max_description_bytes` | uint32 | 4,096 | Vault / manifest description length cap (paragraph-scale). |
+| `max_manifest_description_bytes` | uint32 | 1,024 | Per-manifest version-note length cap. |
+| `max_access_note_bytes` | uint32 | 512 | Per-access-record annotation length cap. |
+| `max_access_records_per_query` | uint32 | 200 | Bounds access-history query payload size. |
+| `registration_enabled` | bool | true | Master switch for new vault / manifest registration. |
+
+---
+
+## agent_understanding
+
+Per-agent topic profiles synthesised over verification activity.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `sparse_domain_fact_threshold` | uint64 | 50 | Below this fact count, a domain is "sparse" — agents working there earn `frontier_reach`. |
+| `max_domains_per_query` | uint32 | 100 | Bounds payload size for queries on highly-active agents. |
 
 ---
 

@@ -81,7 +81,7 @@ build upon.
 | `research` | Research submissions, peer review, bounties |
 | `evidence_mgmt` | Evidence oracle and verification |
 | `counterexamples` | Validated wrong-claims paired with facts — alignment-by-structure (commitment 15) |
-| `inquiry` | Open questions with escrowed bounties (commitment 16) |
+| `inquiry` | Open questions with escrowed bounties + chain-sponsored frontier inquiries (commitments 16, 18) |
 | `dialectic` | Per-fact disagreement signatures (commitment 17) |
 | `private_corpus` | Off-chain vault references with on-chain provenance |
 
@@ -209,7 +209,9 @@ make proto-gen
 | [Validator Guide](docs/VALIDATOR-GUIDE.md) | Full validator onboarding walkthrough |
 | [Parameters](docs/PARAMETERS.md) | All governance-adjustable parameters (38 modules) |
 | [Tokenomics](docs/tokenomics/) | Supply, vesting, revenue split, governance migration |
-| [Truth-Seeking](docs/TRUTH_SEEKING.md) | The 17 epistemological commitments, bound by tests |
+| [Truth-Seeking](docs/TRUTH_SEEKING.md) | The 18 epistemological commitments, bound by tests |
+| [ToK Substrate](docs/TOK_SUBSTRATE.md) | The chain's training-resource doctrine — verified knowledge graph as headline product |
+| [Roadmap](docs/ROADMAP.md) | Where we are, what's bound, what ships next |
 | [FAQ](docs/FAQ.md) | Validator and network FAQ |
 | [API Reference](docs/API.md) | REST/gRPC endpoint reference |
 | [Events](docs/EVENTS.md) | On-chain event reference |
