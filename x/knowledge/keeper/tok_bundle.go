@@ -47,10 +47,16 @@ func ComputeToKSnapshotRoot(nodeIDs []string, edges []*types.ToKEdge) []byte {
 
 	edgesH := tokDomainHash(tokDomainEdges, func(h interface{ Write([]byte) (int, error) }) {
 		for _, e := range sortedEdges {
-			// Canonical edge string: FromFactId|ToFactId|Relation|Inference.
-			// Length-prefixed to prevent field-boundary ambiguity.
-			canon := e.FromFactId + "|" + e.ToFactId + "|" + e.Relation + "|" + e.Inference
-			writeLenString(h, canon)
+			// Length-prefix each field individually to prevent field-boundary
+			// collisions. A pipe-concatenated canon would make
+			// {FromFactId:"a|b", ToFactId:"c"} indistinguishable from
+			// {FromFactId:"a", ToFactId:"b|c"}. writeLenString encodes
+			// each field as (uint64-length || bytes), so fields with embedded
+			// separators cannot collide with fields at a boundary.
+			writeLenString(h, e.FromFactId)
+			writeLenString(h, e.ToFactId)
+			writeLenString(h, e.Relation)
+			writeLenString(h, e.Inference)
 		}
 	})
 

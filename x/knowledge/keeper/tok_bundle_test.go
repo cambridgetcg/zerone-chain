@@ -261,6 +261,17 @@ func TestComputeToKSnapshotRoot_DomainSeparated(t *testing.T) {
 	require.NotEqual(t, r, r2)
 }
 
+func TestComputeToKSnapshotRoot_NoCanonCollision(t *testing.T) {
+	// Two semantically-distinct edge sets that would collide under naive
+	// pipe-concatenation. After the field-level length-prefix fix they
+	// must produce different roots.
+	setA := []*types.ToKEdge{{FromFactId: "a|b", ToFactId: "c", Relation: "X"}}
+	setB := []*types.ToKEdge{{FromFactId: "a", ToFactId: "b|c", Relation: "X"}}
+	rA := keeper.ComputeToKSnapshotRoot(nil, setA)
+	rB := keeper.ComputeToKSnapshotRoot(nil, setB)
+	require.NotEqual(t, rA, rB, "pipe in field must not collide with field separator")
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 type factSpec struct {

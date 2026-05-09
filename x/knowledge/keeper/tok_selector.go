@@ -330,6 +330,9 @@ func sortToKEdges(edges []*types.ToKEdge) {
 		if edges[i].ToFactId != edges[j].ToFactId {
 			return edges[i].ToFactId < edges[j].ToFactId
 		}
-		return edges[i].Relation < edges[j].Relation
+		if edges[i].Relation != edges[j].Relation {
+			return edges[i].Relation < edges[j].Relation
+		}
+		return edges[i].Inference < edges[j].Inference
 	})
 }
