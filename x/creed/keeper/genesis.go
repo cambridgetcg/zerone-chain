@@ -6,10 +6,10 @@ import (
 	"github.com/zerone-chain/zerone/x/creed/types"
 )
 
-// InitGenesis seeds the chain's params and the version-1 pin (the
-// Genesis Creed). Historical pins, if any, are recorded in
-// ascending order so chain queries against them work the same as
-// queries against post-launch pins.
+// InitGenesis seeds the chain's params, the version-1 pin (the
+// Genesis Creed), and the initial Creed Council roster. Historical
+// pins, if any, are recorded in ascending order so chain queries
+// against them work the same as queries against post-launch pins.
 //
 // docs/TRUTH_SEEKING.md commitment 10 (forward-only audit): the
 // genesis pin is version 1; any historical pins MUST be strictly
@@ -33,17 +33,33 @@ func (k Keeper) InitGenesis(ctx context.Context, gs *types.GenesisState) {
 	if gs.GenesisPin != nil {
 		_ = k.SetPin(ctx, gs.GenesisPin)
 	}
+	// Creed Council seats. Genesis-installed members carry an
+	// empty AdmittedViaLip (no LIP precedes genesis); their
+	// admitted_at_height defaults to 0 (the genesis block) unless
+	// the genesis file specifies otherwise.
+	for _, m := range gs.CouncilMembers {
+		if m == nil {
+			continue
+		}
+		_ = k.SetCouncilMember(ctx, m)
+	}
 }
 
 // ExportGenesis dumps the current pinned state. Pin history is
 // included in ascending version order; the highest version is the
-// current canonical pin.
+// current canonical pin. Council membership exports in
+// undefined order (the consumer should sort if order matters).
 func (k Keeper) ExportGenesis(ctx context.Context) *types.GenesisState {
 	params := k.GetParams(ctx)
 	cur := k.GetCurrentVersion(ctx)
 	gs := &types.GenesisState{
 		Params: &params,
 	}
+	// Council members.
+	k.IterateCouncilMembers(ctx, func(m *types.CreedCouncilMember) bool {
+		gs.CouncilMembers = append(gs.CouncilMembers, m)
+		return false
+	})
 	if cur == 0 {
 		return gs
 	}

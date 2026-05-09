@@ -23,6 +23,12 @@ service Msg {
 
   // UpdateParams is the standard authority-gated param update.
   rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+
+  // UpdateCouncilMember adds, updates, or deactivates a single
+  // Creed Council seat. Authority-gated: pre-launch this is the
+  // gov module account; once x/gov.CategoryCreedAmendment ships,
+  // council changes flow through that LIP class.
+  rpc UpdateCouncilMember(MsgUpdateCouncilMember) returns (MsgUpdateCouncilMemberResponse);
 }
 
 message MsgAnchorPin {
@@ -52,3 +58,19 @@ message MsgUpdateParams {
   Params params = 2;
 }
 message MsgUpdateParamsResponse {}
+
+message MsgUpdateCouncilMember {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+
+  // The seat to upsert. address is the key; existing seats with
+  // the same address are updated in place (their admitted_at_height
+  // is preserved if unchanged).
+  CreedCouncilMember member = 2;
+
+  // LIP id that authorized this change. Required when params.
+  // direct_anchor_enabled is false. Empty allowed only for
+  // pre-launch council seeding outside of gov.
+  string source_lip = 3;
+}
+message MsgUpdateCouncilMemberResponse {}

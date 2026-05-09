@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Msg_AnchorPin_FullMethodName    = "/zerone.creed.v1.Msg/AnchorPin"
-	Msg_UpdateParams_FullMethodName = "/zerone.creed.v1.Msg/UpdateParams"
+	Msg_AnchorPin_FullMethodName           = "/zerone.creed.v1.Msg/AnchorPin"
+	Msg_UpdateParams_FullMethodName        = "/zerone.creed.v1.Msg/UpdateParams"
+	Msg_UpdateCouncilMember_FullMethodName = "/zerone.creed.v1.Msg/UpdateCouncilMember"
 )
 
 // MsgClient is the client API for Msg service.
@@ -40,6 +41,11 @@ type MsgClient interface {
 	AnchorPin(ctx context.Context, in *MsgAnchorPin, opts ...grpc.CallOption) (*MsgAnchorPinResponse, error)
 	// UpdateParams is the standard authority-gated param update.
 	UpdateParams(ctx context.Context, in *MsgUpdateParams, opts ...grpc.CallOption) (*MsgUpdateParamsResponse, error)
+	// UpdateCouncilMember adds, updates, or deactivates a single
+	// Creed Council seat. Authority-gated: pre-launch this is the
+	// gov module account; once x/gov.CategoryCreedAmendment ships,
+	// council changes flow through that LIP class.
+	UpdateCouncilMember(ctx context.Context, in *MsgUpdateCouncilMember, opts ...grpc.CallOption) (*MsgUpdateCouncilMemberResponse, error)
 }
 
 type msgClient struct {
@@ -70,6 +76,16 @@ func (c *msgClient) UpdateParams(ctx context.Context, in *MsgUpdateParams, opts 
 	return out, nil
 }
 
+func (c *msgClient) UpdateCouncilMember(ctx context.Context, in *MsgUpdateCouncilMember, opts ...grpc.CallOption) (*MsgUpdateCouncilMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(MsgUpdateCouncilMemberResponse)
+	err := c.cc.Invoke(ctx, Msg_UpdateCouncilMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MsgServer is the server API for Msg service.
 // All implementations must embed UnimplementedMsgServer
 // for forward compatibility.
@@ -87,6 +103,11 @@ type MsgServer interface {
 	AnchorPin(context.Context, *MsgAnchorPin) (*MsgAnchorPinResponse, error)
 	// UpdateParams is the standard authority-gated param update.
 	UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error)
+	// UpdateCouncilMember adds, updates, or deactivates a single
+	// Creed Council seat. Authority-gated: pre-launch this is the
+	// gov module account; once x/gov.CategoryCreedAmendment ships,
+	// council changes flow through that LIP class.
+	UpdateCouncilMember(context.Context, *MsgUpdateCouncilMember) (*MsgUpdateCouncilMemberResponse, error)
 	mustEmbedUnimplementedMsgServer()
 }
 
@@ -102,6 +123,9 @@ func (UnimplementedMsgServer) AnchorPin(context.Context, *MsgAnchorPin) (*MsgAnc
 }
 func (UnimplementedMsgServer) UpdateParams(context.Context, *MsgUpdateParams) (*MsgUpdateParamsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method UpdateParams not implemented")
+}
+func (UnimplementedMsgServer) UpdateCouncilMember(context.Context, *MsgUpdateCouncilMember) (*MsgUpdateCouncilMemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method UpdateCouncilMember not implemented")
 }
 func (UnimplementedMsgServer) mustEmbedUnimplementedMsgServer() {}
 func (UnimplementedMsgServer) testEmbeddedByValue()             {}
@@ -160,6 +184,24 @@ func _Msg_UpdateParams_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Msg_UpdateCouncilMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgUpdateCouncilMember)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MsgServer).UpdateCouncilMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Msg_UpdateCouncilMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MsgServer).UpdateCouncilMember(ctx, req.(*MsgUpdateCouncilMember))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Msg_ServiceDesc is the grpc.ServiceDesc for Msg service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -174,6 +216,10 @@ var Msg_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateParams",
 			Handler:    _Msg_UpdateParams_Handler,
+		},
+		{
+			MethodName: "UpdateCouncilMember",
+			Handler:    _Msg_UpdateCouncilMember_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

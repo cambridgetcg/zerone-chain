@@ -101,6 +101,65 @@ func (m *msgServer) AnchorPin(ctx context.Context, msg *types.MsgAnchorPin) (*ty
 	return &types.MsgAnchorPinResponse{NewVersion: pin.Version}, nil
 }
 
+// UpdateCouncilMember adds, updates, or deactivates a Creed
+// Council seat. Authority-gated; once x/gov.CategoryCreedAmendment
+// ships, this flows through that LIP class.
+func (m *msgServer) UpdateCouncilMember(ctx context.Context, msg *types.MsgUpdateCouncilMember) (*types.MsgUpdateCouncilMemberResponse, error) {
+	if msg == nil || msg.Member == nil {
+		return nil, types.ErrInvalidCouncilMember.Wrap("member required")
+	}
+	if msg.Authority != m.keeper.GetAuthority() {
+		return nil, types.ErrUnauthorized.Wrapf("expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)
+	}
+
+	params := m.keeper.GetParams(ctx)
+	if !params.DirectAnchorEnabled && msg.SourceLip == "" {
+		return nil, types.ErrSourceLIPRequired.Wrap("commitment 19: post-disable, council changes must cite the LIP that authorized them")
+	}
+
+	if msg.Member.Address == "" {
+		return nil, types.ErrInvalidCouncilMember.Wrap("address required")
+	}
+	if msg.Member.VotingWeightBps > 1_000_000 {
+		return nil, types.ErrInvalidCouncilMember.Wrap("voting_weight_bps must be ≤ 1_000_000")
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+
+	// Preserve admitted_at_height for existing seats unless caller
+	// explicitly bumps it. Stamp it for new ones.
+	if existing, ok := m.keeper.GetCouncilMember(ctx, msg.Member.Address); ok {
+		if msg.Member.AdmittedAtHeight == 0 {
+			msg.Member.AdmittedAtHeight = existing.AdmittedAtHeight
+		}
+	} else {
+		if msg.Member.AdmittedAtHeight == 0 {
+			msg.Member.AdmittedAtHeight = height
+		}
+	}
+	if msg.SourceLip != "" {
+		msg.Member.AdmittedViaLip = msg.SourceLip
+	}
+
+	if err := m.keeper.SetCouncilMember(ctx, msg.Member); err != nil {
+		return nil, err
+	}
+
+	// Voice layer: announce membership change so off-chain
+	// observers can compose council-roster dashboards.
+	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
+		"zerone.creed.council_member_updated",
+		sdk.NewAttribute("address", msg.Member.Address),
+		sdk.NewAttribute("active", fmt.Sprintf("%t", msg.Member.Active)),
+		sdk.NewAttribute("voting_weight_bps", fmt.Sprintf("%d", msg.Member.VotingWeightBps)),
+		sdk.NewAttribute("source_lip", msg.Member.AdmittedViaLip),
+		sdk.NewAttribute("creed_commitment", "19"),
+	))
+
+	return &types.MsgUpdateCouncilMemberResponse{}, nil
+}
+
 func (m *msgServer) UpdateParams(ctx context.Context, msg *types.MsgUpdateParams) (*types.MsgUpdateParamsResponse, error) {
 	if msg.Authority != m.keeper.GetAuthority() {
 		return nil, types.ErrUnauthorized.Wrapf("expected %s, got %s", m.keeper.GetAuthority(), msg.Authority)

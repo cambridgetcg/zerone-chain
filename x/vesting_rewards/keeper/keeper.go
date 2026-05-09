@@ -217,10 +217,24 @@ func (k Keeper) SetTotalMinted(ctx sdk.Context, amount *big.Int) {
 	}
 }
 
-// MintWithCap mints new ZRN tokens up to the supply cap (222,222,222 ZRN).
-// Burn recycling: the cap is enforced against current bank supply (not cumulative
-// totalMinted). Burned tokens free headroom for future block rewards.
-func (k Keeper) MintWithCap(ctx sdk.Context, amount *big.Int) (*big.Int, error) {
+// MintWithCap mints new ZRN tokens up to the supply cap (222,222,222 ZRN)
+// into the specified module account. The cap is enforced against current
+// bank supply (not cumulative totalMinted) so burned tokens free headroom
+// for future minting.
+//
+// This is the chain's single cap-gated mint entry point. Both emission
+// pathways gate through it:
+//
+//   - PoT block rewards: x/vesting_rewards calls MintWithCap with its own
+//     module name (recipientModule = vesting_rewards).
+//   - Bootstrap claims: x/claiming_pot calls MintWithCap with its module
+//     name (recipientModule = claiming_pot), then sends the minted coins
+//     to the claimer in the same transaction.
+//
+// Doctrine: docs/tokenomics/GENESIS.md (zero team allocation, two
+// participation-gated emission pathways). The function exists so the cap
+// is enforced once and only once across the chain.
+func (k Keeper) MintWithCap(ctx sdk.Context, recipientModule string, amount *big.Int) (*big.Int, error) {
 	if amount.Sign() <= 0 {
 		return new(big.Int), nil
 	}
@@ -248,8 +262,8 @@ func (k Keeper) MintWithCap(ctx sdk.Context, amount *big.Int) (*big.Int, error) 
 
 	if k.bankKeeper != nil {
 		mintCoins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(actual)))
-		if err := k.bankKeeper.MintCoins(ctx, types.ModuleName, mintCoins); err != nil {
-			return nil, fmt.Errorf("failed to mint block reward: %w", err)
+		if err := k.bankKeeper.MintCoins(ctx, recipientModule, mintCoins); err != nil {
+			return nil, fmt.Errorf("mint into module %s: %w", recipientModule, err)
 		}
 	}
 

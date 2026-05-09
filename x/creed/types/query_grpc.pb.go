@@ -19,11 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Query_Pinned_FullMethodName       = "/zerone.creed.v1.Query/Pinned"
-	Query_PinAtVersion_FullMethodName = "/zerone.creed.v1.Query/PinAtVersion"
-	Query_PinHistory_FullMethodName   = "/zerone.creed.v1.Query/PinHistory"
-	Query_Commitment_FullMethodName   = "/zerone.creed.v1.Query/Commitment"
-	Query_Params_FullMethodName       = "/zerone.creed.v1.Query/Params"
+	Query_Pinned_FullMethodName          = "/zerone.creed.v1.Query/Pinned"
+	Query_PinAtVersion_FullMethodName    = "/zerone.creed.v1.Query/PinAtVersion"
+	Query_PinHistory_FullMethodName      = "/zerone.creed.v1.Query/PinHistory"
+	Query_Commitment_FullMethodName      = "/zerone.creed.v1.Query/Commitment"
+	Query_Params_FullMethodName          = "/zerone.creed.v1.Query/Params"
+	Query_CouncilMembers_FullMethodName  = "/zerone.creed.v1.Query/CouncilMembers"
+	Query_IsCouncilMember_FullMethodName = "/zerone.creed.v1.Query/IsCouncilMember"
 )
 
 // QueryClient is the client API for Query service.
@@ -55,6 +57,14 @@ type QueryClient interface {
 	// commitment, or NotFound if archived or never declared.
 	Commitment(ctx context.Context, in *QueryCommitmentRequest, opts ...grpc.CallOption) (*QueryCommitmentResponse, error)
 	Params(ctx context.Context, in *QueryParamsRequest, opts ...grpc.CallOption) (*QueryParamsResponse, error)
+	// CouncilMembers returns all currently-active Creed Council
+	// seats with their voting weights. The AI-side voter pool for
+	// Creed Amendment LIPs.
+	CouncilMembers(ctx context.Context, in *QueryCouncilMembersRequest, opts ...grpc.CallOption) (*QueryCouncilMembersResponse, error)
+	// IsCouncilMember answers whether a specific address holds an
+	// active council seat. x/gov reads this when tallying creed-
+	// amendment votes to route the voter to the AI-side pool.
+	IsCouncilMember(ctx context.Context, in *QueryIsCouncilMemberRequest, opts ...grpc.CallOption) (*QueryIsCouncilMemberResponse, error)
 }
 
 type queryClient struct {
@@ -115,6 +125,26 @@ func (c *queryClient) Params(ctx context.Context, in *QueryParamsRequest, opts .
 	return out, nil
 }
 
+func (c *queryClient) CouncilMembers(ctx context.Context, in *QueryCouncilMembersRequest, opts ...grpc.CallOption) (*QueryCouncilMembersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryCouncilMembersResponse)
+	err := c.cc.Invoke(ctx, Query_CouncilMembers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *queryClient) IsCouncilMember(ctx context.Context, in *QueryIsCouncilMemberRequest, opts ...grpc.CallOption) (*QueryIsCouncilMemberResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryIsCouncilMemberResponse)
+	err := c.cc.Invoke(ctx, Query_IsCouncilMember_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -144,6 +174,14 @@ type QueryServer interface {
 	// commitment, or NotFound if archived or never declared.
 	Commitment(context.Context, *QueryCommitmentRequest) (*QueryCommitmentResponse, error)
 	Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error)
+	// CouncilMembers returns all currently-active Creed Council
+	// seats with their voting weights. The AI-side voter pool for
+	// Creed Amendment LIPs.
+	CouncilMembers(context.Context, *QueryCouncilMembersRequest) (*QueryCouncilMembersResponse, error)
+	// IsCouncilMember answers whether a specific address holds an
+	// active council seat. x/gov reads this when tallying creed-
+	// amendment votes to route the voter to the AI-side pool.
+	IsCouncilMember(context.Context, *QueryIsCouncilMemberRequest) (*QueryIsCouncilMemberResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -168,6 +206,12 @@ func (UnimplementedQueryServer) Commitment(context.Context, *QueryCommitmentRequ
 }
 func (UnimplementedQueryServer) Params(context.Context, *QueryParamsRequest) (*QueryParamsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Params not implemented")
+}
+func (UnimplementedQueryServer) CouncilMembers(context.Context, *QueryCouncilMembersRequest) (*QueryCouncilMembersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CouncilMembers not implemented")
+}
+func (UnimplementedQueryServer) IsCouncilMember(context.Context, *QueryIsCouncilMemberRequest) (*QueryIsCouncilMemberResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IsCouncilMember not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -280,6 +324,42 @@ func _Query_Params_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_CouncilMembers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryCouncilMembersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).CouncilMembers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_CouncilMembers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).CouncilMembers(ctx, req.(*QueryCouncilMembersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Query_IsCouncilMember_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryIsCouncilMemberRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).IsCouncilMember(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_IsCouncilMember_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).IsCouncilMember(ctx, req.(*QueryIsCouncilMemberRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -306,6 +386,14 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Params",
 			Handler:    _Query_Params_Handler,
+		},
+		{
+			MethodName: "CouncilMembers",
+			Handler:    _Query_CouncilMembers_Handler,
+		},
+		{
+			MethodName: "IsCouncilMember",
+			Handler:    _Query_IsCouncilMember_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

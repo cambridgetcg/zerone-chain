@@ -370,7 +370,7 @@ var (
 		zeronealignmenttypes.ModuleName:            nil,                                  // alignment: no mint/burn — signal-only module
 		zeroneaptypes.ModuleName:                   nil,                                  // autopoiesis: no mint/burn — signal-only module
 		zeroneemtypes.ModuleName:                   {authtypes.Burner},                   // evidence_mgmt: burn challenged bonds
-		zeronecpottypes.ModuleName:                 nil,                                  // claiming_pot: receive-only, bank sends from module
+		zeronecpottypes.ModuleName:                 {authtypes.Minter},                   // claiming_pot: bootstrap claims mint on demand (commitment 19)
 		zeronettreetypes.ModuleName:                {authtypes.Burner},                   // tree: revenue split
 		zeronepartnershipstypes.ModuleName:         {authtypes.Burner},                   // partnerships: dissolved stakes to dev fund
 		zeronetoolboxtypes.ModuleName:              {authtypes.Burner},                   // toolbox: deregistration fees
@@ -1312,6 +1312,7 @@ func NewZeroneApp(
 		cpotStakingAdapter,
 		cpotAuthAdapter,
 		app.BankKeeper,
+		app.VestingRewardsKeeper, // bootstrap pathway gates through MintWithCap
 	)
 
 	// ---- Tree keeper (R7-5) ----

@@ -32,4 +32,11 @@ var (
 	// Key: PinPrefix || version_be (so entries are co-located in
 	// the store with their parent pin).
 	CommitmentIndexPrefix = []byte{0x03}
+
+	// CouncilMemberPrefix indexes Creed Council seats by bech32
+	// address. The AI-side voter pool for Creed Amendment LIPs.
+	// Append-only with mutation in place: setting active=false is
+	// the structural form of archival (commitment 10: forward-
+	// only audit applies — the seat record persists).
+	CouncilMemberPrefix = []byte{0x04}
 )

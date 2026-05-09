@@ -45,6 +45,20 @@ service Query {
   rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
     option (google.api.http).get = "/zerone/creed/v1/params";
   }
+
+  // CouncilMembers returns all currently-active Creed Council
+  // seats with their voting weights. The AI-side voter pool for
+  // Creed Amendment LIPs.
+  rpc CouncilMembers(QueryCouncilMembersRequest) returns (QueryCouncilMembersResponse) {
+    option (google.api.http).get = "/zerone/creed/v1/council";
+  }
+
+  // IsCouncilMember answers whether a specific address holds an
+  // active council seat. x/gov reads this when tallying creed-
+  // amendment votes to route the voter to the AI-side pool.
+  rpc IsCouncilMember(QueryIsCouncilMemberRequest) returns (QueryIsCouncilMemberResponse) {
+    option (google.api.http).get = "/zerone/creed/v1/council/is_member/{address}";
+  }
 }
 
 message QueryPinnedRequest {}
@@ -67,3 +81,20 @@ message QueryCommitmentResponse { CommitmentEntry entry = 1; }
 
 message QueryParamsRequest {}
 message QueryParamsResponse { Params params = 1; }
+
+message QueryCouncilMembersRequest {
+  // If true, include inactive (archived) members; default false.
+  bool include_inactive = 1;
+}
+message QueryCouncilMembersResponse {
+  repeated CreedCouncilMember members = 1;
+  // Total active voting weight across the returned members.
+  // Useful for off-chain composers that compute quorum thresholds.
+  uint64 total_active_voting_weight_bps = 2;
+}
+
+message QueryIsCouncilMemberRequest { string address = 1; }
+message QueryIsCouncilMemberResponse {
+  bool is_member = 1;
+  CreedCouncilMember member = 2; // populated only if is_member=true
+}

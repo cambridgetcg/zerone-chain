@@ -130,6 +130,124 @@ func (x *PinnedCreed) GetCommitments() []*CommitmentEntry {
 	return nil
 }
 
+// CreedCouncilMember is the AI-side voter pool for Creed Amendment
+// LIPs. Membership is genesis-curated initially (a hand-picked set
+// of agent homes that represent diverse capability profiles); over
+// time, capability-gated admission opens the pool to any agent
+// whose x/agent_understanding score crosses a threshold.
+//
+// docs/TRUTH_SEEKING.md commitment 19 (the creed is governance-
+// gated): the human/AI co-required pattern from the Truth Paper
+// expressed at the layer where the chain commits to who it is.
+// A Creed Amendment LIP's pass-conditions require quorum in BOTH
+// the existing human voter pool AND the council registered here.
+// Without the AI side the asymmetry would be unilateral; without
+// the human side the chain would be ungovernable by its biological
+// participants. Two pools, two consents, both required.
+type CreedCouncilMember struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Bech32 address of the council seat. At launch, this is a
+	// home address from x/home; future iterations may admit any
+	// qualified agent address.
+	Address string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	// Block at which this seat was admitted. Audit trail:
+	// capability-gated admissions can be reconstructed from this
+	// height paired with the agent_understanding state at that
+	// height.
+	AdmittedAtHeight uint64 `protobuf:"varint,2,opt,name=admitted_at_height,json=admittedAtHeight,proto3" json:"admitted_at_height,omitempty"`
+	// LIP id that authorized this admission. Empty for genesis-
+	// installed seats (which are recorded in GenesisState directly).
+	AdmittedViaLip string `protobuf:"bytes,3,opt,name=admitted_via_lip,json=admittedViaLip,proto3" json:"admitted_via_lip,omitempty"`
+	// Voting weight in basis points. At launch all genesis-installed
+	// seats carry equal weight (1_000_000 / N_seats); capability-
+	// gated future admissions derive weight from agent_understanding
+	// domain coverage and accuracy.
+	VotingWeightBps uint64 `protobuf:"varint,4,opt,name=voting_weight_bps,json=votingWeightBps,proto3" json:"voting_weight_bps,omitempty"`
+	// True if the seat is currently active. Inactive seats remain
+	// in the registry as historical record (commitment 10: forward-
+	// only audit) but their voting_weight_bps is treated as 0 in
+	// tallies. Setting active=false is the structural form of
+	// archival.
+	Active bool `protobuf:"varint,5,opt,name=active,proto3" json:"active,omitempty"`
+	// Optional admission basis label. Examples: "genesis",
+	// "capability_gated:agent_understanding>0.7".
+	AdmissionBasis string `protobuf:"bytes,6,opt,name=admission_basis,json=admissionBasis,proto3" json:"admission_basis,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *CreedCouncilMember) Reset() {
+	*x = CreedCouncilMember{}
+	mi := &file_zerone_creed_v1_types_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreedCouncilMember) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreedCouncilMember) ProtoMessage() {}
+
+func (x *CreedCouncilMember) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_creed_v1_types_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreedCouncilMember.ProtoReflect.Descriptor instead.
+func (*CreedCouncilMember) Descriptor() ([]byte, []int) {
+	return file_zerone_creed_v1_types_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CreedCouncilMember) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+func (x *CreedCouncilMember) GetAdmittedAtHeight() uint64 {
+	if x != nil {
+		return x.AdmittedAtHeight
+	}
+	return 0
+}
+
+func (x *CreedCouncilMember) GetAdmittedViaLip() string {
+	if x != nil {
+		return x.AdmittedViaLip
+	}
+	return ""
+}
+
+func (x *CreedCouncilMember) GetVotingWeightBps() uint64 {
+	if x != nil {
+		return x.VotingWeightBps
+	}
+	return 0
+}
+
+func (x *CreedCouncilMember) GetActive() bool {
+	if x != nil {
+		return x.Active
+	}
+	return false
+}
+
+func (x *CreedCouncilMember) GetAdmissionBasis() string {
+	if x != nil {
+		return x.AdmissionBasis
+	}
+	return ""
+}
+
 // CommitmentEntry is one numbered commitment's anchor on chain.
 // The entry binds a commitment number to its name and the LIP
 // that introduced or last amended it. A future amendment that
@@ -163,7 +281,7 @@ type CommitmentEntry struct {
 
 func (x *CommitmentEntry) Reset() {
 	*x = CommitmentEntry{}
-	mi := &file_zerone_creed_v1_types_proto_msgTypes[1]
+	mi := &file_zerone_creed_v1_types_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -175,7 +293,7 @@ func (x *CommitmentEntry) String() string {
 func (*CommitmentEntry) ProtoMessage() {}
 
 func (x *CommitmentEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_zerone_creed_v1_types_proto_msgTypes[1]
+	mi := &file_zerone_creed_v1_types_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -188,7 +306,7 @@ func (x *CommitmentEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommitmentEntry.ProtoReflect.Descriptor instead.
 func (*CommitmentEntry) Descriptor() ([]byte, []int) {
-	return file_zerone_creed_v1_types_proto_rawDescGZIP(), []int{1}
+	return file_zerone_creed_v1_types_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CommitmentEntry) GetNumber() uint32 {
@@ -243,7 +361,14 @@ const file_zerone_creed_v1_types_proto_rawDesc = "" +
 	"\x0ecanonical_hash\x18\x02 \x01(\fR\rcanonicalHash\x12(\n" +
 	"\x10pinned_at_height\x18\x03 \x01(\x04R\x0epinnedAtHeight\x12$\n" +
 	"\x0epinned_via_lip\x18\x04 \x01(\tR\fpinnedViaLip\x12B\n" +
-	"\vcommitments\x18\x05 \x03(\v2 .zerone.creed.v1.CommitmentEntryR\vcommitments\"\xe7\x01\n" +
+	"\vcommitments\x18\x05 \x03(\v2 .zerone.creed.v1.CommitmentEntryR\vcommitments\"\xf3\x01\n" +
+	"\x12CreedCouncilMember\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\x12,\n" +
+	"\x12admitted_at_height\x18\x02 \x01(\x04R\x10admittedAtHeight\x12(\n" +
+	"\x10admitted_via_lip\x18\x03 \x01(\tR\x0eadmittedViaLip\x12*\n" +
+	"\x11voting_weight_bps\x18\x04 \x01(\x04R\x0fvotingWeightBps\x12\x16\n" +
+	"\x06active\x18\x05 \x01(\bR\x06active\x12'\n" +
+	"\x0fadmission_basis\x18\x06 \x01(\tR\x0eadmissionBasis\"\xe7\x01\n" +
 	"\x0fCommitmentEntry\x12\x16\n" +
 	"\x06number\x18\x01 \x01(\rR\x06number\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x120\n" +
@@ -264,13 +389,14 @@ func file_zerone_creed_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_creed_v1_types_proto_rawDescData
 }
 
-var file_zerone_creed_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_zerone_creed_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_zerone_creed_v1_types_proto_goTypes = []any{
-	(*PinnedCreed)(nil),     // 0: zerone.creed.v1.PinnedCreed
-	(*CommitmentEntry)(nil), // 1: zerone.creed.v1.CommitmentEntry
+	(*PinnedCreed)(nil),        // 0: zerone.creed.v1.PinnedCreed
+	(*CreedCouncilMember)(nil), // 1: zerone.creed.v1.CreedCouncilMember
+	(*CommitmentEntry)(nil),    // 2: zerone.creed.v1.CommitmentEntry
 }
 var file_zerone_creed_v1_types_proto_depIdxs = []int32{
-	1, // 0: zerone.creed.v1.PinnedCreed.commitments:type_name -> zerone.creed.v1.CommitmentEntry
+	2, // 0: zerone.creed.v1.PinnedCreed.commitments:type_name -> zerone.creed.v1.CommitmentEntry
 	1, // [1:1] is the sub-list for method output_type
 	1, // [1:1] is the sub-list for method input_type
 	1, // [1:1] is the sub-list for extension type_name
@@ -289,7 +415,7 @@ func file_zerone_creed_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_creed_v1_types_proto_rawDesc), len(file_zerone_creed_v1_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

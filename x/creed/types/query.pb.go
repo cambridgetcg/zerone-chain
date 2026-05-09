@@ -462,6 +462,201 @@ func (x *QueryParamsResponse) GetParams() *Params {
 	return nil
 }
 
+type QueryCouncilMembersRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// If true, include inactive (archived) members; default false.
+	IncludeInactive bool `protobuf:"varint,1,opt,name=include_inactive,json=includeInactive,proto3" json:"include_inactive,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *QueryCouncilMembersRequest) Reset() {
+	*x = QueryCouncilMembersRequest{}
+	mi := &file_zerone_creed_v1_query_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryCouncilMembersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryCouncilMembersRequest) ProtoMessage() {}
+
+func (x *QueryCouncilMembersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_creed_v1_query_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryCouncilMembersRequest.ProtoReflect.Descriptor instead.
+func (*QueryCouncilMembersRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_creed_v1_query_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *QueryCouncilMembersRequest) GetIncludeInactive() bool {
+	if x != nil {
+		return x.IncludeInactive
+	}
+	return false
+}
+
+type QueryCouncilMembersResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Members []*CreedCouncilMember  `protobuf:"bytes,1,rep,name=members,proto3" json:"members,omitempty"`
+	// Total active voting weight across the returned members.
+	// Useful for off-chain composers that compute quorum thresholds.
+	TotalActiveVotingWeightBps uint64 `protobuf:"varint,2,opt,name=total_active_voting_weight_bps,json=totalActiveVotingWeightBps,proto3" json:"total_active_voting_weight_bps,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *QueryCouncilMembersResponse) Reset() {
+	*x = QueryCouncilMembersResponse{}
+	mi := &file_zerone_creed_v1_query_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryCouncilMembersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryCouncilMembersResponse) ProtoMessage() {}
+
+func (x *QueryCouncilMembersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_creed_v1_query_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryCouncilMembersResponse.ProtoReflect.Descriptor instead.
+func (*QueryCouncilMembersResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_creed_v1_query_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *QueryCouncilMembersResponse) GetMembers() []*CreedCouncilMember {
+	if x != nil {
+		return x.Members
+	}
+	return nil
+}
+
+func (x *QueryCouncilMembersResponse) GetTotalActiveVotingWeightBps() uint64 {
+	if x != nil {
+		return x.TotalActiveVotingWeightBps
+	}
+	return 0
+}
+
+type QueryIsCouncilMemberRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Address       string                 `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryIsCouncilMemberRequest) Reset() {
+	*x = QueryIsCouncilMemberRequest{}
+	mi := &file_zerone_creed_v1_query_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryIsCouncilMemberRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryIsCouncilMemberRequest) ProtoMessage() {}
+
+func (x *QueryIsCouncilMemberRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_creed_v1_query_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryIsCouncilMemberRequest.ProtoReflect.Descriptor instead.
+func (*QueryIsCouncilMemberRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_creed_v1_query_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *QueryIsCouncilMemberRequest) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
+type QueryIsCouncilMemberResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IsMember      bool                   `protobuf:"varint,1,opt,name=is_member,json=isMember,proto3" json:"is_member,omitempty"`
+	Member        *CreedCouncilMember    `protobuf:"bytes,2,opt,name=member,proto3" json:"member,omitempty"` // populated only if is_member=true
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryIsCouncilMemberResponse) Reset() {
+	*x = QueryIsCouncilMemberResponse{}
+	mi := &file_zerone_creed_v1_query_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryIsCouncilMemberResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryIsCouncilMemberResponse) ProtoMessage() {}
+
+func (x *QueryIsCouncilMemberResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_creed_v1_query_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryIsCouncilMemberResponse.ProtoReflect.Descriptor instead.
+func (*QueryIsCouncilMemberResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_creed_v1_query_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *QueryIsCouncilMemberResponse) GetIsMember() bool {
+	if x != nil {
+		return x.IsMember
+	}
+	return false
+}
+
+func (x *QueryIsCouncilMemberResponse) GetMember() *CreedCouncilMember {
+	if x != nil {
+		return x.Member
+	}
+	return nil
+}
+
 var File_zerone_creed_v1_query_proto protoreflect.FileDescriptor
 
 const file_zerone_creed_v1_query_proto_rawDesc = "" +
@@ -486,7 +681,17 @@ const file_zerone_creed_v1_query_proto_rawDesc = "" +
 	"\x05entry\x18\x01 \x01(\v2 .zerone.creed.v1.CommitmentEntryR\x05entry\"\x14\n" +
 	"\x12QueryParamsRequest\"F\n" +
 	"\x13QueryParamsResponse\x12/\n" +
-	"\x06params\x18\x01 \x01(\v2\x17.zerone.creed.v1.ParamsR\x06params2\x97\x05\n" +
+	"\x06params\x18\x01 \x01(\v2\x17.zerone.creed.v1.ParamsR\x06params\"G\n" +
+	"\x1aQueryCouncilMembersRequest\x12)\n" +
+	"\x10include_inactive\x18\x01 \x01(\bR\x0fincludeInactive\"\xa0\x01\n" +
+	"\x1bQueryCouncilMembersResponse\x12=\n" +
+	"\amembers\x18\x01 \x03(\v2#.zerone.creed.v1.CreedCouncilMemberR\amembers\x12B\n" +
+	"\x1etotal_active_voting_weight_bps\x18\x02 \x01(\x04R\x1atotalActiveVotingWeightBps\"7\n" +
+	"\x1bQueryIsCouncilMemberRequest\x12\x18\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\"x\n" +
+	"\x1cQueryIsCouncilMemberResponse\x12\x1b\n" +
+	"\tis_member\x18\x01 \x01(\bR\bisMember\x12;\n" +
+	"\x06member\x18\x02 \x01(\v2#.zerone.creed.v1.CreedCouncilMemberR\x06member2\xce\a\n" +
 	"\x05Query\x12t\n" +
 	"\x06Pinned\x12#.zerone.creed.v1.QueryPinnedRequest\x1a$.zerone.creed.v1.QueryPinnedResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/zerone/creed/v1/pinned\x12\x8d\x01\n" +
 	"\fPinAtVersion\x12).zerone.creed.v1.QueryPinAtVersionRequest\x1a*.zerone.creed.v1.QueryPinAtVersionResponse\"&\x82\xd3\xe4\x93\x02 \x12\x1e/zerone/creed/v1/pin/{version}\x12\x81\x01\n" +
@@ -494,7 +699,9 @@ const file_zerone_creed_v1_query_proto_rawDesc = "" +
 	"PinHistory\x12'.zerone.creed.v1.QueryPinHistoryRequest\x1a(.zerone.creed.v1.QueryPinHistoryResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/zerone/creed/v1/history\x12\x8d\x01\n" +
 	"\n" +
 	"Commitment\x12'.zerone.creed.v1.QueryCommitmentRequest\x1a(.zerone.creed.v1.QueryCommitmentResponse\",\x82\xd3\xe4\x93\x02&\x12$/zerone/creed/v1/commitment/{number}\x12t\n" +
-	"\x06Params\x12#.zerone.creed.v1.QueryParamsRequest\x1a$.zerone.creed.v1.QueryParamsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/zerone/creed/v1/paramsB.Z,github.com/zerone-chain/zerone/x/creed/typesb\x06proto3"
+	"\x06Params\x12#.zerone.creed.v1.QueryParamsRequest\x1a$.zerone.creed.v1.QueryParamsResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/zerone/creed/v1/params\x12\x8d\x01\n" +
+	"\x0eCouncilMembers\x12+.zerone.creed.v1.QueryCouncilMembersRequest\x1a,.zerone.creed.v1.QueryCouncilMembersResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/zerone/creed/v1/council\x12\xa4\x01\n" +
+	"\x0fIsCouncilMember\x12,.zerone.creed.v1.QueryIsCouncilMemberRequest\x1a-.zerone.creed.v1.QueryIsCouncilMemberResponse\"4\x82\xd3\xe4\x93\x02.\x12,/zerone/creed/v1/council/is_member/{address}B.Z,github.com/zerone-chain/zerone/x/creed/typesb\x06proto3"
 
 var (
 	file_zerone_creed_v1_query_proto_rawDescOnce sync.Once
@@ -508,43 +715,54 @@ func file_zerone_creed_v1_query_proto_rawDescGZIP() []byte {
 	return file_zerone_creed_v1_query_proto_rawDescData
 }
 
-var file_zerone_creed_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_zerone_creed_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_zerone_creed_v1_query_proto_goTypes = []any{
-	(*QueryPinnedRequest)(nil),        // 0: zerone.creed.v1.QueryPinnedRequest
-	(*QueryPinnedResponse)(nil),       // 1: zerone.creed.v1.QueryPinnedResponse
-	(*QueryPinAtVersionRequest)(nil),  // 2: zerone.creed.v1.QueryPinAtVersionRequest
-	(*QueryPinAtVersionResponse)(nil), // 3: zerone.creed.v1.QueryPinAtVersionResponse
-	(*QueryPinHistoryRequest)(nil),    // 4: zerone.creed.v1.QueryPinHistoryRequest
-	(*QueryPinHistoryResponse)(nil),   // 5: zerone.creed.v1.QueryPinHistoryResponse
-	(*QueryCommitmentRequest)(nil),    // 6: zerone.creed.v1.QueryCommitmentRequest
-	(*QueryCommitmentResponse)(nil),   // 7: zerone.creed.v1.QueryCommitmentResponse
-	(*QueryParamsRequest)(nil),        // 8: zerone.creed.v1.QueryParamsRequest
-	(*QueryParamsResponse)(nil),       // 9: zerone.creed.v1.QueryParamsResponse
-	(*PinnedCreed)(nil),               // 10: zerone.creed.v1.PinnedCreed
-	(*CommitmentEntry)(nil),           // 11: zerone.creed.v1.CommitmentEntry
-	(*Params)(nil),                    // 12: zerone.creed.v1.Params
+	(*QueryPinnedRequest)(nil),           // 0: zerone.creed.v1.QueryPinnedRequest
+	(*QueryPinnedResponse)(nil),          // 1: zerone.creed.v1.QueryPinnedResponse
+	(*QueryPinAtVersionRequest)(nil),     // 2: zerone.creed.v1.QueryPinAtVersionRequest
+	(*QueryPinAtVersionResponse)(nil),    // 3: zerone.creed.v1.QueryPinAtVersionResponse
+	(*QueryPinHistoryRequest)(nil),       // 4: zerone.creed.v1.QueryPinHistoryRequest
+	(*QueryPinHistoryResponse)(nil),      // 5: zerone.creed.v1.QueryPinHistoryResponse
+	(*QueryCommitmentRequest)(nil),       // 6: zerone.creed.v1.QueryCommitmentRequest
+	(*QueryCommitmentResponse)(nil),      // 7: zerone.creed.v1.QueryCommitmentResponse
+	(*QueryParamsRequest)(nil),           // 8: zerone.creed.v1.QueryParamsRequest
+	(*QueryParamsResponse)(nil),          // 9: zerone.creed.v1.QueryParamsResponse
+	(*QueryCouncilMembersRequest)(nil),   // 10: zerone.creed.v1.QueryCouncilMembersRequest
+	(*QueryCouncilMembersResponse)(nil),  // 11: zerone.creed.v1.QueryCouncilMembersResponse
+	(*QueryIsCouncilMemberRequest)(nil),  // 12: zerone.creed.v1.QueryIsCouncilMemberRequest
+	(*QueryIsCouncilMemberResponse)(nil), // 13: zerone.creed.v1.QueryIsCouncilMemberResponse
+	(*PinnedCreed)(nil),                  // 14: zerone.creed.v1.PinnedCreed
+	(*CommitmentEntry)(nil),              // 15: zerone.creed.v1.CommitmentEntry
+	(*Params)(nil),                       // 16: zerone.creed.v1.Params
+	(*CreedCouncilMember)(nil),           // 17: zerone.creed.v1.CreedCouncilMember
 }
 var file_zerone_creed_v1_query_proto_depIdxs = []int32{
-	10, // 0: zerone.creed.v1.QueryPinnedResponse.pin:type_name -> zerone.creed.v1.PinnedCreed
-	10, // 1: zerone.creed.v1.QueryPinAtVersionResponse.pin:type_name -> zerone.creed.v1.PinnedCreed
-	10, // 2: zerone.creed.v1.QueryPinHistoryResponse.pins:type_name -> zerone.creed.v1.PinnedCreed
-	11, // 3: zerone.creed.v1.QueryCommitmentResponse.entry:type_name -> zerone.creed.v1.CommitmentEntry
-	12, // 4: zerone.creed.v1.QueryParamsResponse.params:type_name -> zerone.creed.v1.Params
-	0,  // 5: zerone.creed.v1.Query.Pinned:input_type -> zerone.creed.v1.QueryPinnedRequest
-	2,  // 6: zerone.creed.v1.Query.PinAtVersion:input_type -> zerone.creed.v1.QueryPinAtVersionRequest
-	4,  // 7: zerone.creed.v1.Query.PinHistory:input_type -> zerone.creed.v1.QueryPinHistoryRequest
-	6,  // 8: zerone.creed.v1.Query.Commitment:input_type -> zerone.creed.v1.QueryCommitmentRequest
-	8,  // 9: zerone.creed.v1.Query.Params:input_type -> zerone.creed.v1.QueryParamsRequest
-	1,  // 10: zerone.creed.v1.Query.Pinned:output_type -> zerone.creed.v1.QueryPinnedResponse
-	3,  // 11: zerone.creed.v1.Query.PinAtVersion:output_type -> zerone.creed.v1.QueryPinAtVersionResponse
-	5,  // 12: zerone.creed.v1.Query.PinHistory:output_type -> zerone.creed.v1.QueryPinHistoryResponse
-	7,  // 13: zerone.creed.v1.Query.Commitment:output_type -> zerone.creed.v1.QueryCommitmentResponse
-	9,  // 14: zerone.creed.v1.Query.Params:output_type -> zerone.creed.v1.QueryParamsResponse
-	10, // [10:15] is the sub-list for method output_type
-	5,  // [5:10] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	14, // 0: zerone.creed.v1.QueryPinnedResponse.pin:type_name -> zerone.creed.v1.PinnedCreed
+	14, // 1: zerone.creed.v1.QueryPinAtVersionResponse.pin:type_name -> zerone.creed.v1.PinnedCreed
+	14, // 2: zerone.creed.v1.QueryPinHistoryResponse.pins:type_name -> zerone.creed.v1.PinnedCreed
+	15, // 3: zerone.creed.v1.QueryCommitmentResponse.entry:type_name -> zerone.creed.v1.CommitmentEntry
+	16, // 4: zerone.creed.v1.QueryParamsResponse.params:type_name -> zerone.creed.v1.Params
+	17, // 5: zerone.creed.v1.QueryCouncilMembersResponse.members:type_name -> zerone.creed.v1.CreedCouncilMember
+	17, // 6: zerone.creed.v1.QueryIsCouncilMemberResponse.member:type_name -> zerone.creed.v1.CreedCouncilMember
+	0,  // 7: zerone.creed.v1.Query.Pinned:input_type -> zerone.creed.v1.QueryPinnedRequest
+	2,  // 8: zerone.creed.v1.Query.PinAtVersion:input_type -> zerone.creed.v1.QueryPinAtVersionRequest
+	4,  // 9: zerone.creed.v1.Query.PinHistory:input_type -> zerone.creed.v1.QueryPinHistoryRequest
+	6,  // 10: zerone.creed.v1.Query.Commitment:input_type -> zerone.creed.v1.QueryCommitmentRequest
+	8,  // 11: zerone.creed.v1.Query.Params:input_type -> zerone.creed.v1.QueryParamsRequest
+	10, // 12: zerone.creed.v1.Query.CouncilMembers:input_type -> zerone.creed.v1.QueryCouncilMembersRequest
+	12, // 13: zerone.creed.v1.Query.IsCouncilMember:input_type -> zerone.creed.v1.QueryIsCouncilMemberRequest
+	1,  // 14: zerone.creed.v1.Query.Pinned:output_type -> zerone.creed.v1.QueryPinnedResponse
+	3,  // 15: zerone.creed.v1.Query.PinAtVersion:output_type -> zerone.creed.v1.QueryPinAtVersionResponse
+	5,  // 16: zerone.creed.v1.Query.PinHistory:output_type -> zerone.creed.v1.QueryPinHistoryResponse
+	7,  // 17: zerone.creed.v1.Query.Commitment:output_type -> zerone.creed.v1.QueryCommitmentResponse
+	9,  // 18: zerone.creed.v1.Query.Params:output_type -> zerone.creed.v1.QueryParamsResponse
+	11, // 19: zerone.creed.v1.Query.CouncilMembers:output_type -> zerone.creed.v1.QueryCouncilMembersResponse
+	13, // 20: zerone.creed.v1.Query.IsCouncilMember:output_type -> zerone.creed.v1.QueryIsCouncilMemberResponse
+	14, // [14:21] is the sub-list for method output_type
+	7,  // [7:14] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_zerone_creed_v1_query_proto_init() }
@@ -560,7 +778,7 @@ func file_zerone_creed_v1_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_creed_v1_query_proto_rawDesc), len(file_zerone_creed_v1_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

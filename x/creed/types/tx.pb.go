@@ -223,6 +223,108 @@ func (*MsgUpdateParamsResponse) Descriptor() ([]byte, []int) {
 	return file_zerone_creed_v1_tx_proto_rawDescGZIP(), []int{3}
 }
 
+type MsgUpdateCouncilMember struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Authority string                 `protobuf:"bytes,1,opt,name=authority,proto3" json:"authority,omitempty"`
+	// The seat to upsert. address is the key; existing seats with
+	// the same address are updated in place (their admitted_at_height
+	// is preserved if unchanged).
+	Member *CreedCouncilMember `protobuf:"bytes,2,opt,name=member,proto3" json:"member,omitempty"`
+	// LIP id that authorized this change. Required when params.
+	// direct_anchor_enabled is false. Empty allowed only for
+	// pre-launch council seeding outside of gov.
+	SourceLip     string `protobuf:"bytes,3,opt,name=source_lip,json=sourceLip,proto3" json:"source_lip,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateCouncilMember) Reset() {
+	*x = MsgUpdateCouncilMember{}
+	mi := &file_zerone_creed_v1_tx_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateCouncilMember) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateCouncilMember) ProtoMessage() {}
+
+func (x *MsgUpdateCouncilMember) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_creed_v1_tx_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateCouncilMember.ProtoReflect.Descriptor instead.
+func (*MsgUpdateCouncilMember) Descriptor() ([]byte, []int) {
+	return file_zerone_creed_v1_tx_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *MsgUpdateCouncilMember) GetAuthority() string {
+	if x != nil {
+		return x.Authority
+	}
+	return ""
+}
+
+func (x *MsgUpdateCouncilMember) GetMember() *CreedCouncilMember {
+	if x != nil {
+		return x.Member
+	}
+	return nil
+}
+
+func (x *MsgUpdateCouncilMember) GetSourceLip() string {
+	if x != nil {
+		return x.SourceLip
+	}
+	return ""
+}
+
+type MsgUpdateCouncilMemberResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MsgUpdateCouncilMemberResponse) Reset() {
+	*x = MsgUpdateCouncilMemberResponse{}
+	mi := &file_zerone_creed_v1_tx_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MsgUpdateCouncilMemberResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MsgUpdateCouncilMemberResponse) ProtoMessage() {}
+
+func (x *MsgUpdateCouncilMemberResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_creed_v1_tx_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MsgUpdateCouncilMemberResponse.ProtoReflect.Descriptor instead.
+func (*MsgUpdateCouncilMemberResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_creed_v1_tx_proto_rawDescGZIP(), []int{5}
+}
+
 var File_zerone_creed_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_creed_v1_tx_proto_rawDesc = "" +
@@ -239,10 +341,17 @@ const file_zerone_creed_v1_tx_proto_rawDesc = "" +
 	"\x0fMsgUpdateParams\x12\x1c\n" +
 	"\tauthority\x18\x01 \x01(\tR\tauthority\x12/\n" +
 	"\x06params\x18\x02 \x01(\v2\x17.zerone.creed.v1.ParamsR\x06params:\x0e\x82\xe7\xb0*\tauthority\"\x19\n" +
-	"\x17MsgUpdateParamsResponse2\xbb\x01\n" +
+	"\x17MsgUpdateParamsResponse\"\xa2\x01\n" +
+	"\x16MsgUpdateCouncilMember\x12\x1c\n" +
+	"\tauthority\x18\x01 \x01(\tR\tauthority\x12;\n" +
+	"\x06member\x18\x02 \x01(\v2#.zerone.creed.v1.CreedCouncilMemberR\x06member\x12\x1d\n" +
+	"\n" +
+	"source_lip\x18\x03 \x01(\tR\tsourceLip:\x0e\x82\xe7\xb0*\tauthority\" \n" +
+	"\x1eMsgUpdateCouncilMemberResponse2\xac\x02\n" +
 	"\x03Msg\x12Q\n" +
 	"\tAnchorPin\x12\x1d.zerone.creed.v1.MsgAnchorPin\x1a%.zerone.creed.v1.MsgAnchorPinResponse\x12Z\n" +
-	"\fUpdateParams\x12 .zerone.creed.v1.MsgUpdateParams\x1a(.zerone.creed.v1.MsgUpdateParamsResponse\x1a\x05\x80\xe7\xb0*\x01B.Z,github.com/zerone-chain/zerone/x/creed/typesb\x06proto3"
+	"\fUpdateParams\x12 .zerone.creed.v1.MsgUpdateParams\x1a(.zerone.creed.v1.MsgUpdateParamsResponse\x12o\n" +
+	"\x13UpdateCouncilMember\x12'.zerone.creed.v1.MsgUpdateCouncilMember\x1a/.zerone.creed.v1.MsgUpdateCouncilMemberResponse\x1a\x05\x80\xe7\xb0*\x01B.Z,github.com/zerone-chain/zerone/x/creed/typesb\x06proto3"
 
 var (
 	file_zerone_creed_v1_tx_proto_rawDescOnce sync.Once
@@ -256,27 +365,33 @@ func file_zerone_creed_v1_tx_proto_rawDescGZIP() []byte {
 	return file_zerone_creed_v1_tx_proto_rawDescData
 }
 
-var file_zerone_creed_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_zerone_creed_v1_tx_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_zerone_creed_v1_tx_proto_goTypes = []any{
-	(*MsgAnchorPin)(nil),            // 0: zerone.creed.v1.MsgAnchorPin
-	(*MsgAnchorPinResponse)(nil),    // 1: zerone.creed.v1.MsgAnchorPinResponse
-	(*MsgUpdateParams)(nil),         // 2: zerone.creed.v1.MsgUpdateParams
-	(*MsgUpdateParamsResponse)(nil), // 3: zerone.creed.v1.MsgUpdateParamsResponse
-	(*PinnedCreed)(nil),             // 4: zerone.creed.v1.PinnedCreed
-	(*Params)(nil),                  // 5: zerone.creed.v1.Params
+	(*MsgAnchorPin)(nil),                   // 0: zerone.creed.v1.MsgAnchorPin
+	(*MsgAnchorPinResponse)(nil),           // 1: zerone.creed.v1.MsgAnchorPinResponse
+	(*MsgUpdateParams)(nil),                // 2: zerone.creed.v1.MsgUpdateParams
+	(*MsgUpdateParamsResponse)(nil),        // 3: zerone.creed.v1.MsgUpdateParamsResponse
+	(*MsgUpdateCouncilMember)(nil),         // 4: zerone.creed.v1.MsgUpdateCouncilMember
+	(*MsgUpdateCouncilMemberResponse)(nil), // 5: zerone.creed.v1.MsgUpdateCouncilMemberResponse
+	(*PinnedCreed)(nil),                    // 6: zerone.creed.v1.PinnedCreed
+	(*Params)(nil),                         // 7: zerone.creed.v1.Params
+	(*CreedCouncilMember)(nil),             // 8: zerone.creed.v1.CreedCouncilMember
 }
 var file_zerone_creed_v1_tx_proto_depIdxs = []int32{
-	4, // 0: zerone.creed.v1.MsgAnchorPin.pin:type_name -> zerone.creed.v1.PinnedCreed
-	5, // 1: zerone.creed.v1.MsgUpdateParams.params:type_name -> zerone.creed.v1.Params
-	0, // 2: zerone.creed.v1.Msg.AnchorPin:input_type -> zerone.creed.v1.MsgAnchorPin
-	2, // 3: zerone.creed.v1.Msg.UpdateParams:input_type -> zerone.creed.v1.MsgUpdateParams
-	1, // 4: zerone.creed.v1.Msg.AnchorPin:output_type -> zerone.creed.v1.MsgAnchorPinResponse
-	3, // 5: zerone.creed.v1.Msg.UpdateParams:output_type -> zerone.creed.v1.MsgUpdateParamsResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	6, // 0: zerone.creed.v1.MsgAnchorPin.pin:type_name -> zerone.creed.v1.PinnedCreed
+	7, // 1: zerone.creed.v1.MsgUpdateParams.params:type_name -> zerone.creed.v1.Params
+	8, // 2: zerone.creed.v1.MsgUpdateCouncilMember.member:type_name -> zerone.creed.v1.CreedCouncilMember
+	0, // 3: zerone.creed.v1.Msg.AnchorPin:input_type -> zerone.creed.v1.MsgAnchorPin
+	2, // 4: zerone.creed.v1.Msg.UpdateParams:input_type -> zerone.creed.v1.MsgUpdateParams
+	4, // 5: zerone.creed.v1.Msg.UpdateCouncilMember:input_type -> zerone.creed.v1.MsgUpdateCouncilMember
+	1, // 6: zerone.creed.v1.Msg.AnchorPin:output_type -> zerone.creed.v1.MsgAnchorPinResponse
+	3, // 7: zerone.creed.v1.Msg.UpdateParams:output_type -> zerone.creed.v1.MsgUpdateParamsResponse
+	5, // 8: zerone.creed.v1.Msg.UpdateCouncilMember:output_type -> zerone.creed.v1.MsgUpdateCouncilMemberResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_zerone_creed_v1_tx_proto_init() }
@@ -292,7 +407,7 @@ func file_zerone_creed_v1_tx_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_creed_v1_tx_proto_rawDesc), len(file_zerone_creed_v1_tx_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

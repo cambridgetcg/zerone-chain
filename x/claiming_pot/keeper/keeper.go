@@ -17,12 +17,13 @@ import (
 )
 
 type Keeper struct {
-	storeService  store.KVStoreService
-	cdc           codec.BinaryCodec
-	authority     string
-	stakingKeeper types.StakingKeeper
-	authKeeper    types.AuthKeeper
-	bankKeeper    types.BankKeeper
+	storeService         store.KVStoreService
+	cdc                  codec.BinaryCodec
+	authority            string
+	stakingKeeper        types.StakingKeeper
+	authKeeper           types.AuthKeeper
+	bankKeeper           types.BankKeeper
+	vestingRewardsKeeper types.VestingRewardsKeeper
 }
 
 func NewKeeper(
@@ -32,14 +33,16 @@ func NewKeeper(
 	sk types.StakingKeeper,
 	ak types.AuthKeeper,
 	bk types.BankKeeper,
+	vrk types.VestingRewardsKeeper,
 ) Keeper {
 	return Keeper{
-		storeService:  storeService,
-		cdc:           cdc,
-		authority:     authority,
-		stakingKeeper: sk,
-		authKeeper:    ak,
-		bankKeeper:    bk,
+		storeService:         storeService,
+		cdc:                  cdc,
+		authority:            authority,
+		stakingKeeper:        sk,
+		authKeeper:           ak,
+		bankKeeper:           bk,
+		vestingRewardsKeeper: vrk,
 	}
 }
 

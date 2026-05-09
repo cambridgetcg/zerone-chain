@@ -423,8 +423,10 @@ func (k Keeper) DistributeBlockReward(
 		return dist, nil
 	}
 
-	// Mint new tokens (supply-cap enforced)
-	actualMinted, err := k.MintWithCap(ctx, effectiveReward)
+	// Mint new tokens (supply-cap enforced) into vesting_rewards' own
+	// module account; subsequent steps split and route per the revenue
+	// distribution.
+	actualMinted, err := k.MintWithCap(ctx, types.ModuleName, effectiveReward)
 	if err != nil {
 		k.Logger(ctx).Error("failed to mint block reward", "error", err)
 		dist := emptyDist()

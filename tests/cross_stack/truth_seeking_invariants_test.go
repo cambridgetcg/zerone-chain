@@ -834,6 +834,106 @@ func TestTruthSeeking_GenesisCreedReflectsCurrentTruthSeeking(t *testing.T) {
 		"genesis-installed commitments carry no source LIP — no LIP precedes genesis")
 }
 
+// Commitment 19 (creed governance-gated, AI-side pool): the Creed
+// Council registry is what makes the human/AI co-required pattern
+// load-bearing for creed amendments. Without an AI-side pool with
+// known voting weight, the chain has no way to enforce two-pool
+// quorum on Creed Amendment LIPs — the asymmetry would be
+// unilateral. This test exercises the registry's structural
+// invariants.
+func TestTruthSeeking_CreedCouncilIsGovernanceGated(t *testing.T) {
+	h := NewTestHarness(t)
+	ms := creedkeeper.NewMsgServerImpl(h.CreedKeeper)
+	qs := creedkeeper.NewQueryServerImpl(h.CreedKeeper)
+	authority := h.CreedKeeper.GetAuthority()
+
+	seat1 := &creedtypes.CreedCouncilMember{
+		Address:         testAddr("council_seat_1").String(),
+		VotingWeightBps: 500_000,
+		Active:          true,
+		AdmissionBasis:  "genesis",
+	}
+	_, err := ms.UpdateCouncilMember(h.Ctx, &creedtypes.MsgUpdateCouncilMember{
+		Authority: authority,
+		Member:    seat1,
+	})
+	require.NoError(t, err, "the authority can install a council seat under default params; otherwise genesis council bootstrap is impossible")
+
+	// Imposter caller refused.
+	_, err = ms.UpdateCouncilMember(h.Ctx, &creedtypes.MsgUpdateCouncilMember{
+		Authority: testAddr("council_imposter").String(),
+		Member: &creedtypes.CreedCouncilMember{
+			Address:         testAddr("council_seat_2").String(),
+			VotingWeightBps: 500_000,
+			Active:          true,
+		},
+	})
+	require.Error(t, err, "non-authority caller must not be able to install council seats")
+
+	// Voting weight bounded.
+	_, err = ms.UpdateCouncilMember(h.Ctx, &creedtypes.MsgUpdateCouncilMember{
+		Authority: authority,
+		Member: &creedtypes.CreedCouncilMember{
+			Address:         testAddr("council_seat_3").String(),
+			VotingWeightBps: 1_500_000, // > BPS scale
+			Active:          true,
+		},
+	})
+	require.Error(t, err, "voting weight must be ≤ 1_000_000 BPS")
+
+	// Add a second valid seat.
+	seat2 := &creedtypes.CreedCouncilMember{
+		Address:         testAddr("council_seat_2").String(),
+		VotingWeightBps: 500_000,
+		Active:          true,
+		AdmissionBasis:  "genesis",
+	}
+	_, err = ms.UpdateCouncilMember(h.Ctx, &creedtypes.MsgUpdateCouncilMember{
+		Authority: authority,
+		Member:    seat2,
+	})
+	require.NoError(t, err)
+
+	// Query: both seats visible, total active weight is 1_000_000.
+	res, err := qs.CouncilMembers(h.Ctx, &creedtypes.QueryCouncilMembersRequest{})
+	require.NoError(t, err)
+	require.Len(t, res.Members, 2,
+		"both active seats must be visible in the council query")
+	require.Equal(t, uint64(1_000_000), res.TotalActiveVotingWeightBps,
+		"total active weight must reflect the sum of seat weights — quorum thresholds depend on this signal")
+
+	// Deactivate seat1 and verify it disappears from the active
+	// list but remains queryable historically.
+	seat1Deactivated := &creedtypes.CreedCouncilMember{
+		Address:         seat1.Address,
+		VotingWeightBps: 500_000,
+		Active:          false,
+	}
+	_, err = ms.UpdateCouncilMember(h.Ctx, &creedtypes.MsgUpdateCouncilMember{
+		Authority: authority,
+		Member:    seat1Deactivated,
+	})
+	require.NoError(t, err)
+
+	resActive, _ := qs.CouncilMembers(h.Ctx, &creedtypes.QueryCouncilMembersRequest{})
+	require.Len(t, resActive.Members, 1,
+		"active query must exclude deactivated seats")
+	require.Equal(t, uint64(500_000), resActive.TotalActiveVotingWeightBps,
+		"deactivated seat must drop from total active weight")
+
+	resAll, _ := qs.CouncilMembers(h.Ctx, &creedtypes.QueryCouncilMembersRequest{IncludeInactive: true})
+	require.Len(t, resAll.Members, 2,
+		"forward-only audit: deactivated seats remain in the registry as historical record")
+
+	// IsCouncilMember reflects active status, not just presence.
+	imRes, _ := qs.IsCouncilMember(h.Ctx, &creedtypes.QueryIsCouncilMemberRequest{Address: seat1.Address})
+	require.False(t, imRes.IsMember,
+		"deactivated seat must not be counted as a member for vote-routing purposes")
+	imRes2, _ := qs.IsCouncilMember(h.Ctx, &creedtypes.QueryIsCouncilMemberRequest{Address: seat2.Address})
+	require.True(t, imRes2.IsMember,
+		"active seat must be reported as a member so x/gov can route their vote to the AI-side pool")
+}
+
 // ════════════════════════════════════════════════════════════════════
 // Commitment 10: Forward-only audit (emergency ceremonies).
 //

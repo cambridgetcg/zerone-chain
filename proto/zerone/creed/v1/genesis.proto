@@ -24,6 +24,13 @@ message GenesisState {
   // pre-x/creed state. Sorted by version ascending. Each must be
   // strictly older than genesis_pin.
   repeated PinnedCreed history = 3;
+
+  // Initial Creed Council members. At launch this is a curated
+  // set of AI-side home addresses representing diverse capability
+  // profiles. Their voting_weight_bps should sum to
+  // ≤ 1_000_000; future capability-gated admissions enter via
+  // Creed Amendment LIPs.
+  repeated CreedCouncilMember council_members = 4;
 }
 
 message Params {

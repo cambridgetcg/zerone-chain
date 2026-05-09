@@ -1152,7 +1152,7 @@ func TestMintWithCap_EnforcesSupplyLimit(t *testing.T) {
 	maxSupply.SetString(types.MaxSupplyUzrn, 10)
 	overMax := new(big.Int).Add(maxSupply, big.NewInt(1))
 
-	actual, err := k.MintWithCap(ctx, overMax)
+	actual, err := k.MintWithCap(ctx, types.ModuleName, overMax)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1166,7 +1166,7 @@ func TestMintWithCap_EnforcesSupplyLimit(t *testing.T) {
 		t.Errorf("expected total minted %s, got %s", maxSupply.String(), totalMinted.String())
 	}
 
-	actual2, err := k.MintWithCap(ctx, big.NewInt(1))
+	actual2, err := k.MintWithCap(ctx, types.ModuleName, big.NewInt(1))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1183,7 +1183,7 @@ func TestMintWithCap_SupplyMonotonic(t *testing.T) {
 	k, ctx := setupMintKeeper(t, bk, nearCap, 0)
 
 	// Mint exactly the remaining 500
-	actual, err := k.MintWithCap(ctx, big.NewInt(500))
+	actual, err := k.MintWithCap(ctx, types.ModuleName, big.NewInt(500))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1192,7 +1192,7 @@ func TestMintWithCap_SupplyMonotonic(t *testing.T) {
 	}
 
 	// Supply exhausted — no more minting possible
-	actual2, err := k.MintWithCap(ctx, big.NewInt(1000))
+	actual2, err := k.MintWithCap(ctx, types.ModuleName, big.NewInt(1000))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1201,7 +1201,7 @@ func TestMintWithCap_SupplyMonotonic(t *testing.T) {
 	}
 
 	// Repeated attempts also yield zero (no burn recycling to free headroom)
-	actual3, err := k.MintWithCap(ctx, big.NewInt(1))
+	actual3, err := k.MintWithCap(ctx, types.ModuleName, big.NewInt(1))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

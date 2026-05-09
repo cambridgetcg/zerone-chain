@@ -39,9 +39,15 @@ type GenesisState struct {
 	// Optional historical pins for chains that migrate from a
 	// pre-x/creed state. Sorted by version ascending. Each must be
 	// strictly older than genesis_pin.
-	History       []*PinnedCreed `protobuf:"bytes,3,rep,name=history,proto3" json:"history,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	History []*PinnedCreed `protobuf:"bytes,3,rep,name=history,proto3" json:"history,omitempty"`
+	// Initial Creed Council members. At launch this is a curated
+	// set of AI-side home addresses representing diverse capability
+	// profiles. Their voting_weight_bps should sum to
+	// ≤ 1_000_000; future capability-gated admissions enter via
+	// Creed Amendment LIPs.
+	CouncilMembers []*CreedCouncilMember `protobuf:"bytes,4,rep,name=council_members,json=councilMembers,proto3" json:"council_members,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *GenesisState) Reset() {
@@ -91,6 +97,13 @@ func (x *GenesisState) GetGenesisPin() *PinnedCreed {
 func (x *GenesisState) GetHistory() []*PinnedCreed {
 	if x != nil {
 		return x.History
+	}
+	return nil
+}
+
+func (x *GenesisState) GetCouncilMembers() []*CreedCouncilMember {
+	if x != nil {
+		return x.CouncilMembers
 	}
 	return nil
 }
@@ -158,12 +171,13 @@ var File_zerone_creed_v1_genesis_proto protoreflect.FileDescriptor
 
 const file_zerone_creed_v1_genesis_proto_rawDesc = "" +
 	"\n" +
-	"\x1dzerone/creed/v1/genesis.proto\x12\x0fzerone.creed.v1\x1a\x1bzerone/creed/v1/types.proto\"\xb6\x01\n" +
+	"\x1dzerone/creed/v1/genesis.proto\x12\x0fzerone.creed.v1\x1a\x1bzerone/creed/v1/types.proto\"\x84\x02\n" +
 	"\fGenesisState\x12/\n" +
 	"\x06params\x18\x01 \x01(\v2\x17.zerone.creed.v1.ParamsR\x06params\x12=\n" +
 	"\vgenesis_pin\x18\x02 \x01(\v2\x1c.zerone.creed.v1.PinnedCreedR\n" +
 	"genesisPin\x126\n" +
-	"\ahistory\x18\x03 \x03(\v2\x1c.zerone.creed.v1.PinnedCreedR\ahistory\"Z\n" +
+	"\ahistory\x18\x03 \x03(\v2\x1c.zerone.creed.v1.PinnedCreedR\ahistory\x12L\n" +
+	"\x0fcouncil_members\x18\x04 \x03(\v2#.zerone.creed.v1.CreedCouncilMemberR\x0ecouncilMembers\"Z\n" +
 	"\x06Params\x12\x1c\n" +
 	"\tauthority\x18\x01 \x01(\tR\tauthority\x122\n" +
 	"\x15direct_anchor_enabled\x18\x02 \x01(\bR\x13directAnchorEnabledB.Z,github.com/zerone-chain/zerone/x/creed/typesb\x06proto3"
@@ -182,19 +196,21 @@ func file_zerone_creed_v1_genesis_proto_rawDescGZIP() []byte {
 
 var file_zerone_creed_v1_genesis_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_zerone_creed_v1_genesis_proto_goTypes = []any{
-	(*GenesisState)(nil), // 0: zerone.creed.v1.GenesisState
-	(*Params)(nil),       // 1: zerone.creed.v1.Params
-	(*PinnedCreed)(nil),  // 2: zerone.creed.v1.PinnedCreed
+	(*GenesisState)(nil),       // 0: zerone.creed.v1.GenesisState
+	(*Params)(nil),             // 1: zerone.creed.v1.Params
+	(*PinnedCreed)(nil),        // 2: zerone.creed.v1.PinnedCreed
+	(*CreedCouncilMember)(nil), // 3: zerone.creed.v1.CreedCouncilMember
 }
 var file_zerone_creed_v1_genesis_proto_depIdxs = []int32{
 	1, // 0: zerone.creed.v1.GenesisState.params:type_name -> zerone.creed.v1.Params
 	2, // 1: zerone.creed.v1.GenesisState.genesis_pin:type_name -> zerone.creed.v1.PinnedCreed
 	2, // 2: zerone.creed.v1.GenesisState.history:type_name -> zerone.creed.v1.PinnedCreed
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	3, // 3: zerone.creed.v1.GenesisState.council_members:type_name -> zerone.creed.v1.CreedCouncilMember
+	4, // [4:4] is the sub-list for method output_type
+	4, // [4:4] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_zerone_creed_v1_genesis_proto_init() }

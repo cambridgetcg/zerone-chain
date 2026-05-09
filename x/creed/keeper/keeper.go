@@ -191,3 +191,105 @@ func (k Keeper) AnchorPin(ctx context.Context, p *types.PinnedCreed) error {
 	}
 	return k.SetPin(ctx, p)
 }
+
+// ── Council registry ───────────────────────────────────────────────
+
+// councilKey returns the storage key for a council seat by address.
+func councilKey(address string) []byte {
+	out := make([]byte, 0, len(types.CouncilMemberPrefix)+len(address))
+	out = append(out, types.CouncilMemberPrefix...)
+	out = append(out, []byte(address)...)
+	return out
+}
+
+// SetCouncilMember writes (or updates) a council seat. If the seat
+// already exists, admitted_at_height is preserved unless the
+// caller explicitly bumps it — this keeps the audit trail honest
+// even through admin updates.
+func (k Keeper) SetCouncilMember(ctx context.Context, m *types.CreedCouncilMember) error {
+	if m == nil {
+		return types.ErrInvalidCouncilMember.Wrap("nil member")
+	}
+	if m.Address == "" {
+		return types.ErrInvalidCouncilMember.Wrap("address required")
+	}
+	bz, err := k.cdc.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return k.storeService.OpenKVStore(ctx).Set(councilKey(m.Address), bz)
+}
+
+// GetCouncilMember returns the seat for an address, or false if
+// no entry exists.
+func (k Keeper) GetCouncilMember(ctx context.Context, address string) (*types.CreedCouncilMember, bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	bz, err := store.Get(councilKey(address))
+	if err != nil || bz == nil {
+		return nil, false
+	}
+	var m types.CreedCouncilMember
+	if err := k.cdc.Unmarshal(bz, &m); err != nil {
+		return nil, false
+	}
+	return &m, true
+}
+
+// IsActiveCouncilMember reports whether the address holds an
+// active council seat.
+func (k Keeper) IsActiveCouncilMember(ctx context.Context, address string) bool {
+	m, ok := k.GetCouncilMember(ctx, address)
+	if !ok {
+		return false
+	}
+	return m.Active
+}
+
+// IterateCouncilMembers walks all council seats in undefined
+// order. cb receiving true stops iteration.
+func (k Keeper) IterateCouncilMembers(ctx context.Context, cb func(*types.CreedCouncilMember) bool) {
+	store := k.storeService.OpenKVStore(ctx)
+	iter, err := store.Iterator(types.CouncilMemberPrefix, prefixEnd(types.CouncilMemberPrefix))
+	if err != nil {
+		return
+	}
+	defer iter.Close()
+	for ; iter.Valid(); iter.Next() {
+		var m types.CreedCouncilMember
+		if err := k.cdc.Unmarshal(iter.Value(), &m); err != nil {
+			continue
+		}
+		if cb(&m) {
+			return
+		}
+	}
+}
+
+// CouncilTotalActiveWeight returns the sum of voting_weight_bps
+// across all currently-active members. Used by off-chain composers
+// computing quorum thresholds.
+func (k Keeper) CouncilTotalActiveWeight(ctx context.Context) uint64 {
+	var total uint64
+	k.IterateCouncilMembers(ctx, func(m *types.CreedCouncilMember) bool {
+		if m.Active {
+			total += m.VotingWeightBps
+		}
+		return false
+	})
+	return total
+}
+
+// prefixEnd returns the smallest key strictly greater than the
+// given prefix, suitable as the exclusive end of an iterator
+// range.
+func prefixEnd(prefix []byte) []byte {
+	end := make([]byte, len(prefix))
+	copy(end, prefix)
+	for i := len(end) - 1; i >= 0; i-- {
+		if end[i] < 0xFF {
+			end[i]++
+			return end[:i+1]
+		}
+	}
+	return nil
+}

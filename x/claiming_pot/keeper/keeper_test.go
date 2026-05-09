@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"math/big"
 	"testing"
 
 	"cosmossdk.io/log"
@@ -94,6 +95,49 @@ func (m *mockBankKeeper) SendCoinsFromModuleToAccount(_ context.Context, senderM
 	return nil
 }
 
+// ---------- Mock VestingRewardsKeeper ----------
+//
+// The bootstrap pathway funnels through MintWithCap. The mock simulates
+// the live keeper: each call mints the requested amount into the recipient
+// module account up to a configurable remaining cap. capRemaining = 0
+// (default) means every mint is allowed (no cap clip in tests that don't
+// care about cap behavior); set capRemaining explicitly to exercise cap
+// edge cases.
+
+type mockVestingRewardsKeeper struct {
+	bk            *mockBankKeeper
+	capRemaining  *big.Int // nil → unlimited
+	totalMinted   *big.Int
+}
+
+func newMockVestingRewardsKeeper(bk *mockBankKeeper) *mockVestingRewardsKeeper {
+	return &mockVestingRewardsKeeper{bk: bk, totalMinted: new(big.Int)}
+}
+
+func (m *mockVestingRewardsKeeper) MintWithCap(_ sdk.Context, recipientModule string, amount *big.Int) (*big.Int, error) {
+	if amount.Sign() <= 0 {
+		return new(big.Int), nil
+	}
+	actual := new(big.Int).Set(amount)
+	if m.capRemaining != nil {
+		if m.capRemaining.Sign() <= 0 {
+			return new(big.Int), nil
+		}
+		if actual.Cmp(m.capRemaining) > 0 {
+			actual.Set(m.capRemaining)
+		}
+		m.capRemaining = new(big.Int).Sub(m.capRemaining, actual)
+	}
+	if m.bk != nil {
+		if m.bk.moduleBalances[recipientModule] == nil {
+			m.bk.moduleBalances[recipientModule] = make(map[string]int64)
+		}
+		m.bk.moduleBalances[recipientModule]["uzrn"] += actual.Int64()
+	}
+	m.totalMinted.Add(m.totalMinted, actual)
+	return actual, nil
+}
+
 // ---------- Test Addresses ----------
 
 func testAddr(name string) string {
@@ -121,9 +165,10 @@ func setupKeeper(t *testing.T) (keeper.Keeper, sdk.Context, *mockStakingKeeper, 
 	mockSK := newMockStakingKeeper()
 	mockAK := newMockAuthKeeper()
 	mockBK := newMockBankKeeper()
+	mockVRK := newMockVestingRewardsKeeper(mockBK)
 
 	storeService := runtime.NewKVStoreService(storeKey)
-	k := keeper.NewKeeper(storeService, cdc, "zrn1authority", mockSK, mockAK, mockBK)
+	k := keeper.NewKeeper(storeService, cdc, "zrn1authority", mockSK, mockAK, mockBK, mockVRK)
 
 	ctx := sdk.NewContext(stateStore, cmtproto.Header{Height: 1000, ChainID: "zerone-test-1"}, false, log.NewNopLogger())
 

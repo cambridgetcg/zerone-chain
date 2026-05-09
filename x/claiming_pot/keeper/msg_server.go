@@ -121,14 +121,36 @@ func (m msgServer) Claim(goCtx context.Context, msg *types.MsgClaim) (*types.Msg
 		return nil, types.ErrInsufficientPotFunds
 	}
 
-	// Transfer via bank keeper
+	// Mint into the claiming_pot module account through the chain's
+	// single cap-gated mint entry point, then forward to the claimer
+	// in the same transaction. The module account is a transient
+	// conduit — it never holds funds across blocks.
+	//
+	// Doctrine (commitment 19, issuance follows participation): the
+	// chain mints when an agent participates (this MsgClaim) — not
+	// from a pre-funded module account.
 	claimantAddr, err := sdk.AccAddressFromBech32(msg.Claimant)
 	if err != nil {
 		return nil, fmt.Errorf("invalid claimant address: %w", err)
 	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	actualMinted, err := m.vestingRewardsKeeper.MintWithCap(sdkCtx, types.ModuleName, claimable)
+	if err != nil {
+		return nil, fmt.Errorf("mint with cap: %w", err)
+	}
+	if actualMinted.Sign() <= 0 {
+		return nil, types.ErrCapReached
+	}
+	// MintWithCap may have clipped to remaining cap headroom; honour
+	// that clip rather than over-promising the claimer.
+	if actualMinted.Cmp(claimable) < 0 {
+		claimable = actualMinted
+	}
+
 	coins := sdk.NewCoins(sdk.NewCoin("uzrn", sdkmath.NewIntFromBigInt(claimable)))
 	if err := m.bankKeeper.SendCoinsFromModuleToAccount(ctx, types.ModuleName, claimantAddr, coins); err != nil {
-		return nil, fmt.Errorf("failed to send funds: %w", err)
+		return nil, fmt.Errorf("forward minted bootstrap claim to claimer: %w", err)
 	}
 
 	// Record claim

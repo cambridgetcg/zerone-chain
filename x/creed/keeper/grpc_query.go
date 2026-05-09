@@ -78,3 +78,33 @@ func (q *queryServer) Params(ctx context.Context, _ *types.QueryParamsRequest) (
 	p := q.keeper.GetParams(ctx)
 	return &types.QueryParamsResponse{Params: &p}, nil
 }
+
+func (q *queryServer) CouncilMembers(ctx context.Context, req *types.QueryCouncilMembersRequest) (*types.QueryCouncilMembersResponse, error) {
+	out := []*types.CreedCouncilMember{}
+	var totalActive uint64
+	q.keeper.IterateCouncilMembers(ctx, func(m *types.CreedCouncilMember) bool {
+		if !m.Active && !req.IncludeInactive {
+			return false
+		}
+		out = append(out, m)
+		if m.Active {
+			totalActive += m.VotingWeightBps
+		}
+		return false
+	})
+	return &types.QueryCouncilMembersResponse{
+		Members:                    out,
+		TotalActiveVotingWeightBps: totalActive,
+	}, nil
+}
+
+func (q *queryServer) IsCouncilMember(ctx context.Context, req *types.QueryIsCouncilMemberRequest) (*types.QueryIsCouncilMemberResponse, error) {
+	m, ok := q.keeper.GetCouncilMember(ctx, req.Address)
+	if !ok {
+		return &types.QueryIsCouncilMemberResponse{IsMember: false}, nil
+	}
+	return &types.QueryIsCouncilMemberResponse{
+		IsMember: m.Active,
+		Member:   m,
+	}, nil
+}

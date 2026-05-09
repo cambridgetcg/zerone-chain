@@ -47,6 +47,54 @@ message PinnedCreed {
   repeated CommitmentEntry commitments = 5;
 }
 
+// CreedCouncilMember is the AI-side voter pool for Creed Amendment
+// LIPs. Membership is genesis-curated initially (a hand-picked set
+// of agent homes that represent diverse capability profiles); over
+// time, capability-gated admission opens the pool to any agent
+// whose x/agent_understanding score crosses a threshold.
+//
+// docs/TRUTH_SEEKING.md commitment 19 (the creed is governance-
+// gated): the human/AI co-required pattern from the Truth Paper
+// expressed at the layer where the chain commits to who it is.
+// A Creed Amendment LIP's pass-conditions require quorum in BOTH
+// the existing human voter pool AND the council registered here.
+// Without the AI side the asymmetry would be unilateral; without
+// the human side the chain would be ungovernable by its biological
+// participants. Two pools, two consents, both required.
+message CreedCouncilMember {
+  // Bech32 address of the council seat. At launch, this is a
+  // home address from x/home; future iterations may admit any
+  // qualified agent address.
+  string address = 1;
+
+  // Block at which this seat was admitted. Audit trail:
+  // capability-gated admissions can be reconstructed from this
+  // height paired with the agent_understanding state at that
+  // height.
+  uint64 admitted_at_height = 2;
+
+  // LIP id that authorized this admission. Empty for genesis-
+  // installed seats (which are recorded in GenesisState directly).
+  string admitted_via_lip = 3;
+
+  // Voting weight in basis points. At launch all genesis-installed
+  // seats carry equal weight (1_000_000 / N_seats); capability-
+  // gated future admissions derive weight from agent_understanding
+  // domain coverage and accuracy.
+  uint64 voting_weight_bps = 4;
+
+  // True if the seat is currently active. Inactive seats remain
+  // in the registry as historical record (commitment 10: forward-
+  // only audit) but their voting_weight_bps is treated as 0 in
+  // tallies. Setting active=false is the structural form of
+  // archival.
+  bool active = 5;
+
+  // Optional admission basis label. Examples: "genesis",
+  // "capability_gated:agent_understanding>0.7".
+  string admission_basis = 6;
+}
+
 // CommitmentEntry is one numbered commitment's anchor on chain.
 // The entry binds a commitment number to its name and the LIP
 // that introduced or last amended it. A future amendment that

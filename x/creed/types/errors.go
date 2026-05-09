@@ -13,4 +13,6 @@ var (
 	ErrCommitmentNotFound     = errors.Register(ModuleName, 9, "no current entry for requested commitment number")
 	ErrSourceLIPRequired      = errors.Register(ModuleName, 10, "source_lip is required when direct_anchor_enabled is false")
 	ErrInvalidParams          = errors.Register(ModuleName, 11, "invalid params")
+	ErrInvalidCouncilMember   = errors.Register(ModuleName, 12, "invalid council member")
+	ErrCouncilMemberNotFound  = errors.Register(ModuleName, 13, "council member not found")
 )
