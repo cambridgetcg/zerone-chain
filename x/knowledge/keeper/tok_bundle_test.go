@@ -1,6 +1,7 @@
 package keeper_test
 
 import (
+	"fmt"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -125,6 +126,94 @@ func TestGatherAncestorCone_MaxPathsCapEnforced(t *testing.T) {
 	// The leaf "e" is always in visited; 2 edges means 2 targets were added,
 	// so visited = {e, d, c} — exactly 3 nodes.
 	require.Len(t, nodeIDs, 3)
+}
+
+// ─── GatherFrontier tests ─────────────────────────────────────────────────────
+
+func TestGatherFrontier_DomainScoped(t *testing.T) {
+	k, ctx, _, _ := setupKnowledgeTestFull(t)
+
+	// Store old facts with VerifiedAtBlock = 100.
+	require.NoError(t, k.SetFact(ctx, &types.Fact{
+		Id: "old1", Domain: "physics",
+		Status: types.FactStatus_FACT_STATUS_VERIFIED, VerifiedAtBlock: 100,
+	}))
+	require.NoError(t, k.SetFact(ctx, &types.Fact{
+		Id: "old2", Domain: "physics",
+		Status: types.FactStatus_FACT_STATUS_VERIFIED, VerifiedAtBlock: 100,
+	}))
+	// Add a recent fact with VerifiedAtBlock = 200.
+	require.NoError(t, k.SetFact(ctx, &types.Fact{
+		Id: "new1", Domain: "physics",
+		Status: types.FactStatus_FACT_STATUS_VERIFIED, VerifiedAtBlock: 200,
+	}))
+
+	sel := &types.FrontierSelector{Domain: "physics", SinceBlock: 150, Limit: 100}
+	nodeIDs, _, err := k.GatherFrontier(ctx, sel)
+	require.NoError(t, err)
+	require.Equal(t, []string{"new1"}, nodeIDs)
+}
+
+func TestGatherFrontier_LimitCapped(t *testing.T) {
+	k, ctx, _, _ := setupKnowledgeTestFull(t)
+
+	for i := 0; i < 5; i++ {
+		id := fmt.Sprintf("fact%d", i)
+		require.NoError(t, k.SetFact(ctx, &types.Fact{
+			Id: id, Domain: "math",
+			Status: types.FactStatus_FACT_STATUS_VERIFIED, VerifiedAtBlock: 200,
+		}))
+	}
+
+	sel := &types.FrontierSelector{Domain: "math", SinceBlock: 100, Limit: 3}
+	nodeIDs, _, err := k.GatherFrontier(ctx, sel)
+	require.NoError(t, err)
+	require.Len(t, nodeIDs, 3)
+}
+
+func TestGatherFrontier_InterSetEdgesIncluded(t *testing.T) {
+	k, ctx, _, _ := setupKnowledgeTestFull(t)
+
+	// Two recent facts in same domain with a relation between them.
+	require.NoError(t, k.SetFact(ctx, &types.Fact{
+		Id: "f1", Domain: "bio",
+		Status: types.FactStatus_FACT_STATUS_VERIFIED, VerifiedAtBlock: 300,
+	}))
+	require.NoError(t, k.SetFact(ctx, &types.Fact{
+		Id: "f2", Domain: "bio",
+		Status: types.FactStatus_FACT_STATUS_VERIFIED, VerifiedAtBlock: 300,
+	}))
+	require.NoError(t, k.SetFactRelation(ctx, &types.FactRelation{
+		SourceFactId: "f2",
+		TargetFactId: "f1",
+		Relation:     types.RelationType_RELATION_TYPE_SUPPORTS,
+	}))
+
+	sel := &types.FrontierSelector{Domain: "bio", SinceBlock: 200, Limit: 100}
+	nodeIDs, edges, err := k.GatherFrontier(ctx, sel)
+	require.NoError(t, err)
+	require.Equal(t, []string{"f1", "f2"}, nodeIDs)
+	require.Len(t, edges, 1)
+	require.Equal(t, "f2", edges[0].FromFactId)
+	require.Equal(t, "f1", edges[0].ToFactId)
+}
+
+func TestGatherFrontier_ExcludesDifferentDomain(t *testing.T) {
+	k, ctx, _, _ := setupKnowledgeTestFull(t)
+
+	require.NoError(t, k.SetFact(ctx, &types.Fact{
+		Id: "phys1", Domain: "physics",
+		Status: types.FactStatus_FACT_STATUS_VERIFIED, VerifiedAtBlock: 300,
+	}))
+	require.NoError(t, k.SetFact(ctx, &types.Fact{
+		Id: "chem1", Domain: "chemistry",
+		Status: types.FactStatus_FACT_STATUS_VERIFIED, VerifiedAtBlock: 300,
+	}))
+
+	sel := &types.FrontierSelector{Domain: "physics", SinceBlock: 100, Limit: 100}
+	nodeIDs, _, err := k.GatherFrontier(ctx, sel)
+	require.NoError(t, err)
+	require.Equal(t, []string{"phys1"}, nodeIDs)
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

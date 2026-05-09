@@ -230,6 +230,93 @@ func (k Keeper) gatherAncestorsRecursive(
 	return nil
 }
 
+// GatherFrontier returns the most-recently-verified facts in a domain since a
+// given block height, together with all edges among the included set.
+//
+// "Accepted at block" is approximated by Fact.VerifiedAtBlock — the height at
+// which the chain accepted a fact into the knowledge graph. Facts with
+// VerifiedAtBlock < sel.SinceBlock (or == 0, meaning unverified) are excluded.
+// Results are capped at sel.Limit (chain cap: ToKFrontierCap).
+func (k Keeper) GatherFrontier(
+	ctx context.Context,
+	sel *types.FrontierSelector,
+) (nodeIDs []string, edges []*types.ToKEdge, err error) {
+	if sel == nil || sel.Domain == "" {
+		return nil, nil, fmt.Errorf("frontier selector requires a non-empty domain")
+	}
+	limit := int(sel.Limit)
+	if limit <= 0 {
+		limit = int(ToKFrontierLimit)
+	}
+	if limit > int(ToKFrontierCap) {
+		limit = int(ToKFrontierCap)
+	}
+
+	// Collect qualifying facts by iterating the domain index.
+	included := map[string]*types.Fact{}
+	k.IterateFactsByDomain(ctx, sel.Domain, func(factID string) bool {
+		if len(included) >= limit {
+			return true // stop iteration
+		}
+		fact, ok := k.GetFact(ctx, factID)
+		if !ok {
+			return false // ghost — skip
+		}
+		// Filter: only facts verified at or after sinceBlock.
+		if fact.VerifiedAtBlock < sel.SinceBlock {
+			return false
+		}
+		included[factID] = fact
+		return false
+	})
+
+	// Build sorted node list.
+	for id := range included {
+		nodeIDs = append(nodeIDs, id)
+	}
+	sort.Strings(nodeIDs)
+
+	// Collect inter-set edges: for each included fact, inspect outgoing relations
+	// and keep only those whose target is also in the included set.
+	edgeSet := map[string]*types.ToKEdge{}
+	for _, factID := range nodeIDs {
+		relations, relErr := k.GetFactRelations(ctx, factID)
+		if relErr != nil {
+			continue
+		}
+		for _, rel := range relations {
+			// Only support-bearing relation types (consistent with subtree/cone).
+			switch rel.Relation {
+			case types.RelationType_RELATION_TYPE_SUPPORTS,
+				types.RelationType_RELATION_TYPE_REQUIRES,
+				types.RelationType_RELATION_TYPE_REFINES,
+				types.RelationType_RELATION_TYPE_GENERALIZES,
+				types.RelationType_RELATION_TYPE_CITES:
+			default:
+				continue
+			}
+			// Only include edges where the target is also in the frontier set.
+			if _, ok := included[rel.TargetFactId]; !ok {
+				continue
+			}
+			edgeKey := rel.SourceFactId + "->" + rel.TargetFactId + "|" + rel.Relation.String()
+			if _, ok := edgeSet[edgeKey]; !ok {
+				edgeSet[edgeKey] = &types.ToKEdge{
+					FromFactId: rel.SourceFactId,
+					ToFactId:   rel.TargetFactId,
+					Relation:   rel.Relation.String(),
+					Inference:  rel.Inference.String(),
+				}
+			}
+		}
+	}
+	for _, e := range edgeSet {
+		edges = append(edges, e)
+	}
+	sortToKEdges(edges)
+	return nodeIDs, edges, nil
+}
+
 func sortToKEdges(edges []*types.ToKEdge) {
 	sort.Slice(edges, func(i, j int) bool {
 		if edges[i].FromFactId != edges[j].FromFactId {
