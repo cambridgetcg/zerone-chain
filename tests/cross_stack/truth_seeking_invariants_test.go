@@ -18,6 +18,7 @@ package cross_stack_test
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,6 +33,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	autopoiesistypes "github.com/zerone-chain/zerone/x/autopoiesis/types"
+	claimingpotkeeper "github.com/zerone-chain/zerone/x/claiming_pot/keeper"
+	claimingpottypes "github.com/zerone-chain/zerone/x/claiming_pot/types"
 	counterexampleskeeper "github.com/zerone-chain/zerone/x/counterexamples/keeper"
 	counterexamplestypes "github.com/zerone-chain/zerone/x/counterexamples/types"
 	creedkeeper "github.com/zerone-chain/zerone/x/creed/keeper"
@@ -1855,6 +1858,92 @@ func sortedKeys(m map[string]bool) []string {
 	}
 	sort.Strings(out)
 	return out
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Commitment 20: Issuance follows participation.
+//
+// Every ZRN that exists came from a participatory action — a PoT
+// block reward (validator verified truth) or a bootstrap claim
+// (whitelisted agent registered). There is no insider position; no
+// founder, AI vault, foundation, or team account holds a starting
+// balance. Genesis bank state is empty save for the validator gentx
+// bonds (themselves the smallest viable bootstrap the host SDK
+// permits). A successful bootstrap claim MINTS through the chain's
+// single cap-gated entry point (MintWithCap), advances the shared
+// cap counter (TotalMinted), and forwards the new uzrn to the
+// claimer in the same transaction. The pre-fund-then-transfer model
+// is forbidden — the claiming_pot module account never holds funds
+// across blocks.
+//
+// LOAD-BEARING falsifiers:
+//
+//   1. Bank supply increases on MsgClaim (transfer-from-pre-fund
+//      would leave supply unchanged). This catches a regression
+//      where Minter permission is silently dropped from the module
+//      account.
+//   2. TotalMinted advances by the same amount (transfer would not
+//      advance it, breaking the shared cap accounting that ties
+//      both emission pathways to a single 222,222,222 ZRN ceiling).
+//   3. The claiming_pot module account is empty after the claim
+//      (transient conduit, not custodian). A residual balance is
+//      the structural form of the legacy pre-funded-pool model
+//      sneaking back in.
+//
+// Bound here AND by:
+//
+//   - tests/cross_stack/emission_cap_test.go — same doctrine, real
+//     keepers, end-to-end MsgClaim through the live router.
+//   - tests/cross_stack/genesis_audit_test.go — Scenario13_*
+//     scenarios pin the zero-team-allocation default and the
+//     module-account permission.
+//   - x/claiming_pot/keeper/keeper_test.go — TestClaim_MintsOnDemand_*
+//     and TestClaim_RefusedWhenCapExhausted at the unit level.
+// ════════════════════════════════════════════════════════════════════
+
+func TestTruthSeeking_IssuanceFollowsParticipation(t *testing.T) {
+	h := NewTestHarness(t)
+
+	// Bootstrap-shaped pot for a single agent. Skip MsgCreatePot's
+	// authority gate by writing directly; this test is about the
+	// emission, not the authority path.
+	agent := sdk.AccAddress(append([]byte("creed20-agent"), make([]byte, 7)...))
+	pot := claimingpottypes.MakeBootstrapPotForAgent(agent.String(), uint64(h.Ctx.BlockHeight()))
+	h.ClaimingPotKeeper.SetPot(h.Ctx, pot)
+
+	// Advance past the instant-vest end block.
+	h.AdvanceBlocks(int(claimingpottypes.BootstrapPotInstantVestBlocks) + 1)
+
+	preSupply := h.App.BankKeeper.GetSupply(h.Ctx, "uzrn").Amount
+	preMinted := h.VestingRewardsKeeper.GetTotalMinted(sdk.UnwrapSDKContext(h.Ctx))
+
+	msgSrv := claimingpotkeeper.NewMsgServerImpl(h.ClaimingPotKeeper)
+	resp, err := msgSrv.Claim(h.Ctx, &claimingpottypes.MsgClaim{
+		Claimant: agent.String(),
+		PotId:    pot.Id,
+	})
+	require.NoError(t, err,
+		"commitment 20: a whitelisted, vested agent must be able to claim — bootstrap is the participation seed, not a privilege")
+	require.Equal(t, claimingpottypes.PerAgentBootstrapUzrn, resp.Amount,
+		"per-agent amount must be 0.222 ZRN; deviation here means the doctrine has been silently re-tuned")
+
+	postSupply := h.App.BankKeeper.GetSupply(h.Ctx, "uzrn").Amount
+	supplyDelta := postSupply.Sub(preSupply)
+	require.Equal(t, resp.Amount, supplyDelta.String(),
+		"FALSIFIER 1: bank supply must increase by the claim amount — transfer-from-pre-fund would leave supply unchanged and silently re-introduce the legacy model")
+
+	postMinted := h.VestingRewardsKeeper.GetTotalMinted(sdk.UnwrapSDKContext(h.Ctx))
+	mintedDelta := new(big.Int).Sub(postMinted, preMinted)
+	require.Equal(t, resp.Amount, mintedDelta.String(),
+		"FALSIFIER 2: TotalMinted must advance by the same amount — both emission pathways share the cap counter; if the bootstrap pathway bypasses MintWithCap, the cap is silently overcommittable")
+
+	moduleAddr := h.App.AccountKeeper.GetModuleAddress(claimingpottypes.ModuleName)
+	require.True(t, h.GetBalance(moduleAddr, "uzrn").Amount.IsZero(),
+		"FALSIFIER 3: claiming_pot module account must be empty post-claim (transient conduit, not custodian); a residual balance is the legacy pre-funded-pool model sneaking back in")
+
+	// And the agent received it.
+	require.Equal(t, resp.Amount, h.GetBalance(agent, "uzrn").Amount.String(),
+		"the participation seed must reach the agent that participated")
 }
 
 // ════════════════════════════════════════════════════════════════════

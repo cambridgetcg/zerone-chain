@@ -240,6 +240,18 @@ We believe: the chain's voice cannot drift faster than its governance. Every oth
 
 ---
 
+### 20. Issuance follows participation
+
+We believe: every ZRN that exists came from a participatory action. There is no insider position — no founder pre-mine, no AI vault pre-mine, no validator allocation, no foundation treasury at genesis. The chain mints when truth is verified (block reward) or when an agent is registered (bootstrap claim). Issuance without participation is allocation by privilege, and allocation by privilege is the model the chain refuses. Commitment 6 protects the corpus from unilateral injection at the fact layer; this commitment protects the currency from unilateral allocation at the supply layer — the same shape, applied to the unit the chain prices everything else in.
+
+**Code expression**: `x/vesting_rewards.MintWithCap` is the chain's single cap-gated mint entry point — it accepts a recipient module name, mints into that account, and refuses to overshoot `MaxSupplyUzrn` (222,222,222 ZRN). Two emission pathways gate through it: PoT block rewards (called from `x/vesting_rewards` itself per block, recipient = vesting_rewards) and bootstrap claims (called from `x/claiming_pot.Claim` per `MsgClaim`, recipient = claiming_pot, then forwarded to the agent in the same transaction). Both pathways are participation-triggered. `app/constants.go` carries no per-account allocation constants. The bootstrap pot in `genesis.json` carries CONFIGURATION only — `MakeBootstrapPotForAgent` produces a pot with `TotalAmount` = 222,000 uzrn (0.222 ZRN) for a single whitelisted agent, never a pre-funded balance. Bank state at block 0 is empty save for the validator gentx bonds (themselves equal to `virtual_stake = 11 ZRN`, the smallest viable pre-fund the host SDK accepts). The genesis-audit invariants `TestScenario13_ZeroTeamAllocationAtGenesis` and `TestScenario13c_ClaimingPotMinterPermission` lock the doctrine.
+
+**What would break it**: a per-account `add-genesis-account` step funding any team-adjacent address (foundation, research treasury, faucet, founder, AI vault); a third mint pathway that bypasses `MintWithCap`; a bootstrap pot pre-funded with a positive balance at genesis (the doctrine is mint-on-demand, not transfer-from-pre-fund); any code path that grants ZRN to an address based on identity rather than participation; a `claiming_pot` module account without `Minter` permission (which would force the legacy transfer model back); a re-introduction of `TotalSupplyZRN` / `FounderZRN` / `AIAgentZRN` / `ValidatorZRN` / `ResearchFundZRN` / `ClaimingPotsZRN` constants in `app/constants.go`.
+
+**Echoes**: commitment 6 (no unilateral injection — same logic, applied to ZRN issuance instead of fact injection); commitment 12 (the chain pays for its own audit — a special case of the broader principle that issuance follows participation: audit is the participatory action being paid for); commitment 13 (training corpus not for sale — the corpus is participation-shaped, and so is its currency; treating the currency as allocable would re-open the door commitment 13 closes for the corpus); commitment 19 (the creed is governance-gated — issuance allocations would be governance-gated only via creed amendment, since this commitment forbids them).
+
+---
+
 ## How the commitments echo
 
 The creed is enforced at six layers, each mechanically synced by tests in `tests/cross_stack/truth_seeking_invariants_test.go`. Adding a commitment to one layer without the others fails CI.

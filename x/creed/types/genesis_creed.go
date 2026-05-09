@@ -41,6 +41,7 @@ var CanonicalCommitments = []struct {
 	{17, "Disagreement is structure, not noise"},
 	{18, "The chain manufactures exploration demand"},
 	{19, "The creed is governance-gated"},
+	{20, "Issuance follows participation"},
 }
 
 // BuildGenesisCreed materializes the canonical commitment list

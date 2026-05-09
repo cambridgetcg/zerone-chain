@@ -126,7 +126,7 @@ func (m msgServer) Claim(goCtx context.Context, msg *types.MsgClaim) (*types.Msg
 	// in the same transaction. The module account is a transient
 	// conduit — it never holds funds across blocks.
 	//
-	// Doctrine (commitment 19, issuance follows participation): the
+	// Doctrine (commitment 20, issuance follows participation): the
 	// chain mints when an agent participates (this MsgClaim) — not
 	// from a pre-funded module account.
 	claimantAddr, err := sdk.AccAddressFromBech32(msg.Claimant)
