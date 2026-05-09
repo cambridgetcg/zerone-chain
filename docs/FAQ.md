@@ -20,19 +20,32 @@ not a genesis allocation. See [SUPPLY.md](tokenomics/SUPPLY.md).
 
 ### How is ZRN distributed at genesis?
 
-**Genesis circulating supply: 0 ZRN.** No pre-mine, no ICO, no
-foundation allocation, no team treasury. Every ZRN enters circulation
-as a Proof-of-Truth block reward.
+**Zero team allocation. No insider position, period.** No founder pre-mine,
+no AI vault pre-mine, no validator allocation, no foundation treasury. Genesis
+circulating supply is 0 ZRN because no minting has happened yet.
+
+ZRN enters circulation through two participation-gated emission pathways:
+
+1. **PoT block rewards** (`x/vesting_rewards`) — minted per block to validators
+   as they verify truth. Validators bootstrap with virtual stake (11 ZRN VRF
+   weight) and earn from block 1.
+2. **Bootstrap claims** (`x/claiming_pot`) — minted on demand when a whitelisted
+   agent calls `MsgClaim` against the bootstrap pot. Each whitelisted agent
+   claims 0.222 ZRN; participation requires ZRN, so the bootstrap pool is the
+   seed.
 
 | Account | Genesis balance | Path to funding |
 |---------|----------------|-----------------|
-| Genesis validators | 0 ZRN | Virtual stake (11 ZRN VRF weight) — earn from block 1 |
-| Foundation / Treasury | 0 ZRN | Funded by governance proposals over time |
-| Research Treasury | 0 ZRN | Fills organically from 3.33% of revenue split |
-| Faucet | 0 ZRN | Optional — funded by governance or validator tips |
+| Genesis validators | 0 ZRN | PoT block rewards from block 1 |
+| Whitelisted agents | 0 ZRN | Bootstrap claim (0.222 ZRN each) via `x/claiming_pot` |
+| Founder | 0 ZRN | Governance-immune 0.23% revenue share, accruing from chain activity |
+| AI vault | 0 ZRN | Operational role only (governance signing) |
+| Research Treasury | 0 ZRN | 3.33% of revenue split, accruing |
+| Foundation | 0 ZRN | Governance proposals over time, drawing from research treasury |
+| Faucet (testnet only) | 0 ZRN | Optional — governance or validator tips |
 
 See [GENESIS.md](tokenomics/GENESIS.md) for the genesis-ceremony
-mechanics and the bootstrap design.
+mechanics, the bootstrap design, and the eligibility criteria.
 
 ---
 

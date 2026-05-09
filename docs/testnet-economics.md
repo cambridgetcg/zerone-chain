@@ -13,9 +13,16 @@ This document describes the token supply, faucet, and distribution mechanics for
 
 ## Genesis Distribution
 
-**Public testnet (`zerone-testnet-1`): zero genesis supply.** No pre-mine, no foundation allocation, no validator allocation. Every ZRN enters circulation as a Proof-of-Truth block reward. Validators bootstrap with `virtual_stake` (11 ZRN VRF participation weight) and earn from block 1. See [tokenomics/GENESIS.md](tokenomics/GENESIS.md).
+**Public testnet (`zerone-testnet-1`): zero team allocation.** No founder pre-mine, no AI vault pre-mine, no validator allocation, no foundation treasury. Genesis circulating supply is 0 ZRN — no minting has happened yet.
 
-**Localnet:** the localnet ceremony script pre-funds a small set of accounts so iteration is fast (faucet, test agents, validator balances scaled for tier-progression testing). The pre-fund total stays well below the 222,222,222 ZRN hard cap. See `scripts/localnet.sh` and the [Localnet Accounts](#localnet-accounts) section below for the actual numbers.
+ZRN enters circulation through two participation-gated emission pathways, both drawing against the 222,222,222 hard cap:
+
+- **PoT block rewards** — `x/vesting_rewards` mints per block to validators verifying truth. Validators bootstrap with `virtual_stake = 11 ZRN` (VRF weight without bonded tokens) and earn from block 1.
+- **Bootstrap claims** — `x/claiming_pot` mints 0.222 ZRN per whitelisted agent on `MsgClaim`. The bootstrap pool is the genesis distribution mechanism: agents need ZRN to participate, so participation requires a seed.
+
+See [tokenomics/GENESIS.md](tokenomics/GENESIS.md) for the full specification.
+
+**Localnet:** the localnet ceremony script pre-funds a small set of accounts so iteration is fast (faucet, test agents, validator balances scaled for tier-progression testing). Localnet pre-funds are explicitly NOT part of the public-testnet doctrine — they exist solely to make local iteration hands-on. See `scripts/localnet.sh` and the [Localnet Accounts](#localnet-accounts) section below for the actual numbers.
 
 ## Faucet
 

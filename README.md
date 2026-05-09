@@ -25,11 +25,24 @@ interaction backed by cryptographic truth.
 
 ### Genesis Distribution
 
-**Genesis circulating supply: 0 ZRN.** No pre-mine, no ICO, no foundation
-allocation, no team treasury. Every ZRN enters circulation as a Proof-of-Truth
-block reward. Validators bootstrap with `virtual_stake = 11 ZRN` (VRF
-participation weight without real tokens) and earn from block 1; the Research
-Fund and Development Fund fill organically from the revenue split. See
+**Zero team allocation. No insider position, period.** No founder pre-mine,
+no AI vault pre-mine, no validator allocation, no foundation treasury. Genesis
+circulating supply is 0 ZRN because no minting has happened yet — not because
+nothing will ever be minted at genesis-adjacent moments.
+
+ZRN enters circulation through **two participation-gated emission pathways**,
+both drawing against the 222,222,222 hard cap:
+
+1. **Proof-of-Truth block rewards** — `x/vesting_rewards` mints to validators
+   per block as truth is verified. Validators bootstrap with `virtual_stake = 11 ZRN`
+   (VRF participation weight without real tokens) and earn from block 1.
+2. **Bootstrap claims** — `x/claiming_pot` mints 0.222 ZRN per whitelisted
+   agent on `MsgClaim`. Participation in the chain requires ZRN; the bootstrap
+   pool is the seed.
+
+The founder earns the governance-immune 0.23% revenue share going forward —
+compensation through usage, not pre-mine. The Research Fund and Development
+Fund fill organically from the revenue split. See
 [docs/tokenomics/GENESIS.md](docs/tokenomics/GENESIS.md) for the full
 specification.
 

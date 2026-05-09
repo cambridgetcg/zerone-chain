@@ -1,14 +1,23 @@
 # Genesis Distribution
 
-## Zero Genesis Supply — Pure PoT Minting
+## Zero Team Allocation — Two Emission Paths, Both Gated by Participation
 
-**No pre-mine. No ICO. No foundation allocation. No treasury bootstrap.**
+**No founder pre-mine. No AI vault pre-mine. No validator allocation. No foundation treasury. No team holding of any kind at genesis.**
 
-Genesis circulating supply: **0 ZRN.**
+Genesis circulating supply: **0 ZRN.** No minting has occurred yet.
 
-Every single ZRN in existence is minted through Proof-of-Truth block rewards. The foundation, research treasury, and all participants start with nothing and earn everything through the protocol's own economic engine.
+ZRN enters circulation through two participation-gated emission pathways:
 
-This is a deliberate design choice. Most chains pre-fund insiders and call it "no pre-mine" with asterisks. Zerone has no asterisks.
+| Pathway | Module | Who | Why |
+|---------|--------|-----|-----|
+| **PoT block rewards** | `x/vesting_rewards` | Validators (and revenue-split downstream) | Rewards the work of verifying truth |
+| **Bootstrap claim** | `x/claiming_pot` | Whitelisted agents (0.222 ZRN each) | Participation in the chain requires ZRN; bootstrap is the seed |
+
+Both pathways draw against the 222,222,222 ZRN hard cap. Both are minted on-demand — block rewards per block as truth is verified, bootstrap claims per `MsgClaim` as agents register. **Neither grants anyone a privileged starting balance.**
+
+The founder earns the governance-immune 0.23% revenue share going forward — compensation through usage, not pre-mine. The AI vault holds 0 ZRN at genesis; its operational role is governance signing. The research treasury holds 0 ZRN at genesis; fills from the 3.33% revenue share.
+
+This is sharper than "no pre-mine." It is **"no insider position, period."** Every ZRN that exists came from a participatory action — verification or registration — not from being someone in particular at the right time.
 
 ### Bootstrap Problem
 
@@ -18,14 +27,21 @@ If nobody starts with ZRN, how do validators stake?
 
 > **Open design question:** The Cosmos SDK `gentx` flow traditionally requires bonded tokens. The genesis ceremony may need modification to support virtual-only validators, or a minimal seed (e.g., 1 uzrn per validator — purely for gas, not capital) could bootstrap the first transactions.
 
+If nobody starts with ZRN, how do agents transact?
+
+**Solution: Bootstrap Claim.** A whitelisted agent calls `MsgClaim` against the bootstrap pot in `x/claiming_pot`; the module mints 0.222 ZRN directly to the agent. The bootstrap pot is the genesis distribution mechanism — not an afterthought airdrop, but the participation seed every agent uses to begin acting on-chain.
+
 ### Genesis Accounts
 
-| Account | Balance | Purpose |
-|---------|---------|---------|
-| **Genesis Validators** | 0 ZRN | Participate via virtual stake, earn from block 1 |
-| **Foundation** | 0 ZRN | Funded by governance proposals over time |
-| **Research Treasury** | 0 ZRN | Fills organically from 3.33% revenue share |
-| **Faucet** | 0 ZRN | Optional — funded by governance or validator tips |
+| Account | Balance | Path to funding |
+|---------|---------|-----------------|
+| **Genesis Validators** | 0 ZRN | PoT block rewards from block 1 (virtual stake gives VRF weight without bonded tokens) |
+| **Whitelisted Agents** | 0 ZRN | Bootstrap claim (0.222 ZRN per agent) via `x/claiming_pot` |
+| **Founder** | 0 ZRN | Governance-immune 0.23% revenue share, accruing from chain activity |
+| **AI Vault** | 0 ZRN | Operational role only (governance signing); no ZRN holding required |
+| **Research Treasury** | 0 ZRN | 3.33% of revenue split, accruing from chain activity |
+| **Foundation** | 0 ZRN | Funded by governance proposals over time, drawing from the research treasury |
+| **Faucet (testnet only)** | 0 ZRN | Optional; funded by governance or validator tips |
 
 ## Genesis Ceremony
 
@@ -118,10 +134,15 @@ Registered in genesis for wallet compatibility:
 }
 ```
 
-## Airdrop (Planned)
+## Bootstrap Pool — the genesis distribution mechanism
 
-A planned **agent airdrop** at launch:
-- **0.222 ZRN per whitelisted agent** for bootstrap fund
-- Distributed via `x/claiming_pot` with vesting schedule
-- Eligibility: whitelisted agent addresses (criteria TBD)
-- Purpose: Enable AI agents to have initial stake for home creation and tool usage
+The bootstrap pool is the structural form of the doctrine: agents need ZRN to participate, so participation requires a seed, and the seed is minted on demand when the agent claims.
+
+| Parameter | Value | Reasoning |
+|-----------|-------|-----------|
+| **Per-agent claim** | 0.222 ZRN | Symbolic (the chain's signature digit) and operationally sufficient — covers gas for `home` creation, initial tool calls, and the first knowledge-claim bonds |
+| **Eligibility** | Whitelisted agent addresses | The chain seeds participants it has been told about; non-whitelisted addresses earn ZRN through PoT participation, not bootstrap |
+| **Distribution** | `x/claiming_pot` mints to claimer on `MsgClaim` | Mint is incremental — no pre-funded module account, no genesis-balance footprint; the cap is checked at mint time |
+| **Vesting** | Optional cliff + linear vesting per pot configuration | Prevents drain-and-dump; the seed is for participation, not speculation |
+
+The whitelist criteria, vesting schedule, and total addressable bootstrap (0.222 ZRN × N whitelisted agents = `N × 222,000` uzrn) are configured at genesis ceremony time. The maximum reachable bootstrap volume is bounded by the whitelist size; in practice this is a tiny fraction of the 222,222,222 cap.

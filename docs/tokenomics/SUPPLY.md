@@ -18,7 +18,20 @@ The cap is checked against **current bank supply** (not cumulative minted). The 
 
 The number is symbolic (ZERONE — the collapse of duality into unity) and practically useful: it's large enough to support a global knowledge economy at micro-denomination scale while being small enough to make each ZRN meaningful. At 6 decimal places, the smallest unit (1 uzrn) represents roughly one millionth of a single ZRN.
 
-## Emission Formula
+## Emission Pathways
+
+ZRN enters circulation through **two participation-gated emission pathways**, both drawing against the 222,222,222 hard cap. Neither grants anyone a privileged starting balance.
+
+| Pathway | Module | Trigger | Recipient |
+|---------|--------|---------|-----------|
+| **Proof-of-Truth block rewards** | `x/vesting_rewards` | Per block, scaled by validator participation and decay curve | Validators (then revenue-split downstream — contributors, protocol, development, research) |
+| **Bootstrap claim** | `x/claiming_pot` | Whitelisted agent calls `MsgClaim` | The claiming agent directly |
+
+The block-reward stream is the primary emission and dominates the cap-share over the chain's lifetime. The bootstrap stream is the genesis distribution mechanism: agents need ZRN to participate, so participation requires a seed, and the seed is minted on demand when the agent claims it.
+
+Both pathways are gated by `MintWithCap` (`x/vesting_rewards/keeper/keeper.go`) which checks current bank supply against `MaxSupplyUzrn` before minting. When the cap binds, both pathways stop minting; the economy runs on fees and existing velocity.
+
+## Block Reward Emission Formula
 
 ```
 reward(block) = max(
@@ -70,9 +83,10 @@ Floor reward (0.1 ZRN) kicks in around epoch 832 (~year 6.6). After that, emissi
 ## Long-Term Supply Projections
 
 ### Phase 0: Genesis (Block 0)
-- **0 ZRN in circulation** — no pre-mine, no bootstrap allocations
-- Validators participate via virtual stake (11 ZRN virtual weight)
+- **0 ZRN in circulation** — no minting has occurred yet, but **zero is the consequence of zero participation, not zero supply policy**
+- Validators participate via virtual stake (11 ZRN virtual weight) and earn from block 1 forward
 - Research fund, foundation, faucet all start empty
+- Bootstrap pool is configured (whitelist + 0.222 ZRN per agent) but mints nothing until agents claim
 
 ### Phase 1: Bootstrap Emission (Year 1)
 - ~90M ZRN minted from block rewards (~40.7% of cap)

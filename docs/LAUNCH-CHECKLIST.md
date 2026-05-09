@@ -22,9 +22,11 @@ Chain ID: `zerone-testnet-1`
 - [ ] Run `zeroned init` on each validator node
 - [ ] Run `zeroned prepare-genesis zerone-testnet-1` with all addresses
 - [ ] Verify 777 axioms injected into knowledge module
-- [ ] Verify genesis circulating supply is **0 ZRN** (no pre-mine — every ZRN enters circulation as a PoT block reward)
+- [ ] Verify genesis circulating supply is **0 ZRN** (zero team allocation; nothing has been minted yet — both emission pathways mint on demand)
 - [ ] Verify bank supply equals sum of all balances (= 0 at genesis)
 - [ ] Verify hard cap `MaxSupplyUzrn` = `222222222000000` (222,222,222 ZRN)
+- [ ] Verify bootstrap pool whitelist + per-agent claim amount (`0.222 ZRN`) configured in `x/claiming_pot` genesis state
+- [ ] Verify `x/vesting_rewards` mint pathway and `x/claiming_pot` mint pathway both gate through `MintWithCap`
 - [ ] Distribute signed genesis.json to all validators
 - [ ] SHA256 hash matches across all validators
 - [ ] Genesis time set (coordinated UTC timestamp)
