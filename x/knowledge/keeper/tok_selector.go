@@ -131,7 +131,7 @@ func (k Keeper) gatherDescendantsRecursive(
 		if _, ok := k.GetFact(ctx, rel.SourceFactId); !ok {
 			continue
 		}
-		edgeKey := rel.SourceFactId + "→" + rel.TargetFactId + "|" + rel.Relation.String()
+		edgeKey := rel.SourceFactId + "->" + rel.TargetFactId + "|" + rel.Relation.String()
 		if _, ok := edges[edgeKey]; !ok {
 			edges[edgeKey] = &types.ToKEdge{
 				FromFactId: rel.SourceFactId,
@@ -211,9 +211,6 @@ func (k Keeper) gatherAncestorsRecursive(
 			continue
 		}
 		*pathCount++
-		if *pathCount > maxPaths {
-			return nil
-		}
 		edgeKey := rel.SourceFactId + "->" + rel.TargetFactId + "|" + rel.Relation.String()
 		if _, ok := edges[edgeKey]; !ok {
 			edges[edgeKey] = &types.ToKEdge{

@@ -105,6 +105,28 @@ func TestGatherAncestorCone_LinearChain(t *testing.T) {
 	require.Equal(t, "b", edges[1].ToFactId)
 }
 
+func TestGatherAncestorCone_MaxPathsCapEnforced(t *testing.T) {
+	// Build a chain longer than maxPaths: axiom → b → c → d → e (each supports the prior).
+	// Relations: e SUPPORTS d, d SUPPORTS c, c SUPPORTS b, b SUPPORTS axiom.
+	// Traversal from leaf "e" follows outgoing edges: e→d, d→c, c→b, b→axiom — 4 edges total.
+	// With MaxPaths=2, the traversal must stop after recording exactly 2 edges.
+	k, ctx := setupKnowledgeWithFacts(t, []factSpec{
+		{id: "axiom", domain: "physics"},
+		{id: "b", domain: "physics", supports: []string{"axiom"}},
+		{id: "c", domain: "physics", supports: []string{"b"}},
+		{id: "d", domain: "physics", supports: []string{"c"}},
+		{id: "e", domain: "physics", supports: []string{"d"}},
+	})
+	sel := &types.AncestorConeSelector{LeafFactId: "e", MaxDepth: 10, MaxPaths: 2}
+	nodeIDs, edges, err := k.GatherAncestorCone(ctx, sel)
+	require.NoError(t, err)
+	// Exactly 2 edges must be recorded (cap enforced).
+	require.Len(t, edges, 2)
+	// The leaf "e" is always in visited; 2 edges means 2 targets were added,
+	// so visited = {e, d, c} — exactly 3 nodes.
+	require.Len(t, nodeIDs, 3)
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 type factSpec struct {
