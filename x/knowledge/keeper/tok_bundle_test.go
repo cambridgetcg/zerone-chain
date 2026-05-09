@@ -342,6 +342,34 @@ func TestSerialiseToK_JSONL_RoundTrip(t *testing.T) {
 	require.Len(t, lines, 3) // 2 nodes + 1 edge
 }
 
+// ─── BundleToK gRPC handler tests ────────────────────────────────────────────
+
+func TestQueryBundleToK_Happy(t *testing.T) {
+	k, ctx := setupKnowledgeWithFacts(t, []factSpec{
+		{id: "axiom", domain: "physics"},
+		{id: "b", domain: "physics", supports: []string{"axiom"}},
+	})
+	q := keeper.NewQueryServerImpl(*k)
+	resp, err := q.BundleToK(ctx, &types.QueryBundleToKRequest{
+		Selector: &types.ToKSelector{Variant: &types.ToKSelector_RootedSubtree{
+			RootedSubtree: &types.RootedSubtreeSelector{RootFactId: "axiom", MaxDepth: 5},
+		}},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp.Bundle)
+	require.NotEmpty(t, resp.Bundle.SnapshotRoot)
+}
+
+func TestQueryBundleToK_RejectsInvalidSelector(t *testing.T) {
+	k, ctx, _, _ := setupKnowledgeTestFull(t)
+	q := keeper.NewQueryServerImpl(k)
+	_, err := q.BundleToK(ctx, &types.QueryBundleToKRequest{
+		Selector: &types.ToKSelector{}, // empty variant
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "selector variant required")
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 type factSpec struct {
