@@ -237,6 +237,30 @@ func TestGatherFrontier_ExcludesDifferentDomain(t *testing.T) {
 	require.Equal(t, []string{"phys1"}, nodeIDs)
 }
 
+// ─── ComputeToKSnapshotRoot tests ────────────────────────────────────────────
+
+func TestComputeToKSnapshotRoot_Deterministic(t *testing.T) {
+	nodeIDs := []string{"a", "b", "c"}
+	edges := []*types.ToKEdge{
+		{FromFactId: "b", ToFactId: "a", Relation: "SUPPORTS"},
+		{FromFactId: "c", ToFactId: "b", Relation: "SUPPORTS"},
+	}
+	r1 := keeper.ComputeToKSnapshotRoot(nodeIDs, edges)
+	r2 := keeper.ComputeToKSnapshotRoot(nodeIDs, edges)
+	require.Equal(t, r1, r2)
+	require.Len(t, r1, 32) // 32-byte sha256
+}
+
+func TestComputeToKSnapshotRoot_DomainSeparated(t *testing.T) {
+	// Same IDs, but one set is "TOK_NODES" tagged and another is "TOK_EDGES" tagged.
+	// Roots must differ — domain tags prevent set-swap collisions.
+	r := keeper.ComputeToKSnapshotRoot([]string{"a", "b"}, nil)
+	r2 := keeper.ComputeToKSnapshotRoot(nil, []*types.ToKEdge{
+		{FromFactId: "a", ToFactId: "b", Relation: "SUPPORTS"},
+	})
+	require.NotEqual(t, r, r2)
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 type factSpec struct {
