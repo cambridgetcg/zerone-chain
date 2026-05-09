@@ -29,12 +29,42 @@ BINARY="${PROJECT_ROOT}/build/zeroned"
 CEREMONY_HOME="${HOME}/.zeroned/genesis-ceremony"
 KEYRING="test"
 
-# Economics: NO pre-mine. Bootstrap only.
-FOUNDATION_BALANCE="10000000000000${DENOM}"    # 10,000,000 ZRN (10M)
-RESEARCH_BALANCE="5000000000000${DENOM}"       #  5,000,000 ZRN  (5M)
-FAUCET_BALANCE="500000000000${DENOM}"          #    500,000 ZRN (500K)
-VALIDATOR_BALANCE="1000000000000${DENOM}"      #  1,000,000 ZRN  (1M)
-VALIDATOR_STAKE="100000000000${DENOM}"         #    100,000 ZRN (100K)
+# ─────────────────────────────────────────────────────────────────────────
+# Genesis Doctrine (commitment 20: issuance follows participation)
+#
+# Zero allocation to the team. No founder pre-mine, no AI vault pre-mine,
+# no foundation treasury, no faucet pre-fund, no validator allocation.
+# ZRN enters circulation through two participation-gated emission
+# pathways:
+#
+#   - PoT block rewards   (x/vesting_rewards) — minted per block
+#   - Bootstrap claims    (x/claiming_pot)    — minted per MsgClaim
+#
+# Both gate through MintWithCap; the 222,222,222 ZRN hard cap binds both.
+#
+# The Cosmos SDK gentx flow needs SOMETHING bonded for InitChain to find
+# a validator set. We mint exactly virtual_stake (= 11 ZRN per Zerone
+# staking params) to each validator account, gentx-bond the entire amount,
+# and the validator's account ends with zero balance — every uzrn in
+# bonded_pool came from a participatory action (running the genesis
+# ceremony to bond into the new chain). This is the smallest legal
+# bootstrap; 11 ZRN × N validators is a tiny fraction of the cap.
+#
+# Doctrine: docs/tokenomics/GENESIS.md ("Zero Team Allocation — Two
+# Emission Paths, Both Gated by Participation").
+# ─────────────────────────────────────────────────────────────────────────
+
+# Per-validator gentx bond. 11 ZRN aligns with the virtual_stake parameter
+# in x/staking; gentx-bonding the same amount means the validator's own
+# balance ends at zero post-gentx.
+VALIDATOR_BALANCE="11000000${DENOM}"           # 11 ZRN — gentx requires bonded tokens
+VALIDATOR_STAKE="11000000${DENOM}"             # 11 ZRN — entire pre-fund is bonded
+
+# (No FOUNDATION_BALANCE, RESEARCH_BALANCE, or FAUCET_BALANCE: the chain
+# refuses pre-funding any team-adjacent address. Foundation funds
+# accumulate from the 19.67% development-fund revenue split; research
+# treasury fills from the 3.33% research share; testnet faucets, if
+# desired, are funded post-genesis from validator tips or governance.)
 
 # ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -223,28 +253,29 @@ cmd_init() {
   # Validate after all patches
   validate_genesis "param patching"
 
-  # ── Step 7: Create bootstrap accounts ────────────────────────────────
-  info "Creating bootstrap accounts..."
-
-  # Foundation
-  ${BINARY} keys add foundation --keyring-backend ${KEYRING} --home "${CEREMONY_HOME}" 2>/dev/null
-  FOUNDATION_ADDR=$(${BINARY} keys show foundation -a --keyring-backend ${KEYRING} --home "${CEREMONY_HOME}")
-  ${BINARY} add-genesis-account "${FOUNDATION_ADDR}" "${FOUNDATION_BALANCE}" --home "${CEREMONY_HOME}"
-  info "  Foundation:        ${FOUNDATION_ADDR} (10M ZRN)"
-
-  # Research treasury
-  ${BINARY} keys add research-treasury --keyring-backend ${KEYRING} --home "${CEREMONY_HOME}" 2>/dev/null
-  RESEARCH_ADDR=$(${BINARY} keys show research-treasury -a --keyring-backend ${KEYRING} --home "${CEREMONY_HOME}")
-  ${BINARY} add-genesis-account "${RESEARCH_ADDR}" "${RESEARCH_BALANCE}" --home "${CEREMONY_HOME}"
-  info "  Research Treasury: ${RESEARCH_ADDR} (5M ZRN)"
-
-  # Faucet
-  ${BINARY} keys add faucet --keyring-backend ${KEYRING} --home "${CEREMONY_HOME}" 2>/dev/null
-  FAUCET_ADDR=$(${BINARY} keys show faucet -a --keyring-backend ${KEYRING} --home "${CEREMONY_HOME}")
-  ${BINARY} add-genesis-account "${FAUCET_ADDR}" "${FAUCET_BALANCE}" --home "${CEREMONY_HOME}"
-  info "  Faucet:            ${FAUCET_ADDR} (500K ZRN)"
-
-  validate_genesis "bootstrap accounts"
+  # ── Step 7: Bootstrap whitelist seeding (deferred to ceremony tool) ──
+  #
+  # The bootstrap pool (commitment 20: issuance follows participation)
+  # mints 0.222 ZRN per whitelisted agent on demand. The whitelist is
+  # NOT carried in this shell script — it lives in a separate file
+  # (typically published with the launch announcement), and the
+  # tools/bootstrap-loader CLI reads that file and inserts one
+  # claiming_pot per address into the genesis state.
+  #
+  # See x/claiming_pot/types/types.go::MakeBootstrapPotForAgent.
+  #
+  # To seed the whitelist:
+  #
+  #   go run tools/bootstrap-loader/main.go inject \
+  #     <whitelist.txt> "${CEREMONY_HOME}/config/genesis.json"
+  #
+  # The init step intentionally does NOT seed the whitelist. The
+  # operator runs bootstrap-loader after init and before finalize.
+  if [ -f "${PROJECT_ROOT}/tools/bootstrap-loader/main.go" ]; then
+    info "Bootstrap-loader available — see scripts/genesis-ceremony.sh comments for usage."
+  else
+    info "Bootstrap whitelist seeding requires tools/bootstrap-loader (not yet shipped — Phase 5b)."
+  fi
 
   # ── Summary ──────────────────────────────────────────────────────────
   echo ""
@@ -256,12 +287,14 @@ cmd_init() {
   echo "  Genesis Time:  ${GENESIS_TIME}"
   echo "  Ceremony Home: ${CEREMONY_HOME}"
   echo ""
-  echo "  Bootstrap Accounts:"
-  echo "    Foundation:        ${FOUNDATION_ADDR} (10,000,000 ZRN)"
-  echo "    Research Treasury: ${RESEARCH_ADDR}   (5,000,000 ZRN)"
-  echo "    Faucet:            ${FAUCET_ADDR}     (500,000 ZRN)"
+  echo "  Doctrine: ZERO TEAM ALLOCATION (commitment 20)."
+  echo "    - No foundation/research/faucet pre-funding."
+  echo "    - Validators bond exactly virtual_stake (11 ZRN) at gentx."
+  echo "    - Bootstrap pool mints 0.222 ZRN per whitelisted agent."
   echo ""
-  echo "  Next: ./scripts/genesis-ceremony.sh add-validator <name>"
+  echo "  Next:"
+  echo "    ./scripts/genesis-ceremony.sh add-validator <name>"
+  echo "    (then) seed bootstrap whitelist via tools/bootstrap-loader"
   echo "═══════════════════════════════════════════════════════════════"
 }
 
@@ -307,8 +340,14 @@ cmd_add_validator() {
   local val_addr
   val_addr=$(${BINARY} keys show "${name}" -a --keyring-backend ${KEYRING} --home "${CEREMONY_HOME}")
 
-  # ── Step 5: Fund validator in coordinator genesis ────────────────────
-  info "Funding validator: ${val_addr} (1M ZRN)"
+  # ── Step 5: Pre-fund validator with virtual_stake (gentx-bonded) ─────
+  #
+  # Commitment 20 doctrine: zero team allocation. The pre-fund here is
+  # exactly virtual_stake (11 ZRN), which is the entire amount that gets
+  # gentx-bonded into bonded_pool in the next step. The validator's
+  # account balance ends at zero post-gentx — no privileged starting
+  # balance held by any individual.
+  info "Pre-funding validator with gentx bond: ${val_addr} (${VALIDATOR_BALANCE})"
   ${BINARY} add-genesis-account "${val_addr}" "${VALIDATOR_BALANCE}" \
     --home "${CEREMONY_HOME}"
 
@@ -317,7 +356,7 @@ cmd_add_validator() {
   cp -r "${CEREMONY_HOME}/keyring-test" "${val_home}/"
 
   # ── Step 7: Generate gentx ───────────────────────────────────────────
-  info "Generating gentx (stake: 100K ZRN)..."
+  info "Generating gentx (bond: ${VALIDATOR_STAKE} — entire pre-fund)..."
   mkdir -p "${CEREMONY_HOME}/config/gentx"
 
   ${BINARY} genesis gentx "${name}" "${VALIDATOR_STAKE}" \
@@ -352,10 +391,10 @@ cmd_add_validator() {
   echo "  Validator '${name}' Added"
   echo "═══════════════════════════════════════════════════════════════"
   echo ""
-  echo "  Address:  ${val_addr}"
-  echo "  Balance:  1,000,000 ZRN"
-  echo "  Stake:    100,000 ZRN"
-  echo "  Node ID:  ${node_id}"
+  echo "  Address:       ${val_addr}"
+  echo "  Pre-fund:      11 ZRN (virtual_stake)"
+  echo "  Gentx bonded:  11 ZRN (entire pre-fund — account ends at zero)"
+  echo "  Node ID:       ${node_id}"
   echo ""
   echo "  Key Locations:"
   echo "    priv_validator_key.json: ${keys_dir}/priv_validator_key.json"
