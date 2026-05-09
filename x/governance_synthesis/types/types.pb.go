@@ -361,6 +361,177 @@ func (x *Frontier) GetComputedAtBlock() uint64 {
 	return 0
 }
 
+// CreedDrift is the chain's measure of how much its stated voice has
+// moved from where it started. Composed from x/creed: the genesis
+// pin, the current pin, the per-commitment registry deltas, and the
+// active Creed Council surface.
+//
+// docs/TRUTH_SEEKING.md commitments 11 (trust is queryable) and 19
+// (creed governance-gated): drift is the most load-bearing trust
+// signal in the chain — if it moves silently, every other commitment
+// inherits that silent movement. Surfacing it as a synthesised query
+// makes "the chain's voice has changed by N basis points since
+// genesis" a fact off-chain observers can read directly, in the
+// same vocabulary the creed itself uses.
+//
+// Each component is reported individually so dashboards can drill
+// in; a composite drift_bps is a heuristic combination consumers can
+// re-derive from the raw counts if they want a different weighting.
+type CreedDrift struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ── Pin lineage ──────────────────────────────────────────────────
+	CurrentVersion       uint32 `protobuf:"varint,1,opt,name=current_version,json=currentVersion,proto3" json:"current_version,omitempty"`                     // 0 if no pin yet
+	VersionsSinceGenesis uint32 `protobuf:"varint,2,opt,name=versions_since_genesis,json=versionsSinceGenesis,proto3" json:"versions_since_genesis,omitempty"` // current_version - 1, or 0
+	LastAmendmentHeight  uint64 `protobuf:"varint,3,opt,name=last_amendment_height,json=lastAmendmentHeight,proto3" json:"last_amendment_height,omitempty"`    // 0 if no post-genesis amendment
+	LastAmendmentLip     string `protobuf:"bytes,4,opt,name=last_amendment_lip,json=lastAmendmentLip,proto3" json:"last_amendment_lip,omitempty"`              // empty if no post-genesis amendment
+	// ── Commitment registry deltas ───────────────────────────────────
+	GenesisCommitmentCount uint32 `protobuf:"varint,5,opt,name=genesis_commitment_count,json=genesisCommitmentCount,proto3" json:"genesis_commitment_count,omitempty"`
+	CurrentCommitmentCount uint32 `protobuf:"varint,6,opt,name=current_commitment_count,json=currentCommitmentCount,proto3" json:"current_commitment_count,omitempty"`
+	CurrentActiveCount     uint32 `protobuf:"varint,7,opt,name=current_active_count,json=currentActiveCount,proto3" json:"current_active_count,omitempty"`  // excludes archived
+	CommitmentsAdded       uint32 `protobuf:"varint,8,opt,name=commitments_added,json=commitmentsAdded,proto3" json:"commitments_added,omitempty"`          // current_count - genesis_count
+	CommitmentsArchived    uint32 `protobuf:"varint,9,opt,name=commitments_archived,json=commitmentsArchived,proto3" json:"commitments_archived,omitempty"` // entries with archived=true in current pin
+	// ── AI-side voter pool ──────────────────────────────────────────
+	CouncilActiveCount    uint32 `protobuf:"varint,10,opt,name=council_active_count,json=councilActiveCount,proto3" json:"council_active_count,omitempty"`
+	CouncilTotalWeightBps uint64 `protobuf:"varint,11,opt,name=council_total_weight_bps,json=councilTotalWeightBps,proto3" json:"council_total_weight_bps,omitempty"`
+	// ── Composite ───────────────────────────────────────────────────
+	// drift_bps is a bounded composite (0..1_000_000) intended for
+	// dashboards that want a single-number drift indicator. Formula:
+	//
+	//	raw  = versions_since_genesis*100_000
+	//	     + commitments_added*50_000
+	//	     + commitments_archived*100_000
+	//	drift_bps = min(raw, 1_000_000)
+	//
+	// Consumers preferring a different weighting should compose their
+	// own from the raw fields above; the composite is convenience,
+	// not authority.
+	DriftBps        uint64 `protobuf:"varint,12,opt,name=drift_bps,json=driftBps,proto3" json:"drift_bps,omitempty"`
+	ComputedAtBlock uint64 `protobuf:"varint,13,opt,name=computed_at_block,json=computedAtBlock,proto3" json:"computed_at_block,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CreedDrift) Reset() {
+	*x = CreedDrift{}
+	mi := &file_zerone_governance_synthesis_v1_types_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreedDrift) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreedDrift) ProtoMessage() {}
+
+func (x *CreedDrift) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_governance_synthesis_v1_types_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreedDrift.ProtoReflect.Descriptor instead.
+func (*CreedDrift) Descriptor() ([]byte, []int) {
+	return file_zerone_governance_synthesis_v1_types_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CreedDrift) GetCurrentVersion() uint32 {
+	if x != nil {
+		return x.CurrentVersion
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetVersionsSinceGenesis() uint32 {
+	if x != nil {
+		return x.VersionsSinceGenesis
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetLastAmendmentHeight() uint64 {
+	if x != nil {
+		return x.LastAmendmentHeight
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetLastAmendmentLip() string {
+	if x != nil {
+		return x.LastAmendmentLip
+	}
+	return ""
+}
+
+func (x *CreedDrift) GetGenesisCommitmentCount() uint32 {
+	if x != nil {
+		return x.GenesisCommitmentCount
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetCurrentCommitmentCount() uint32 {
+	if x != nil {
+		return x.CurrentCommitmentCount
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetCurrentActiveCount() uint32 {
+	if x != nil {
+		return x.CurrentActiveCount
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetCommitmentsAdded() uint32 {
+	if x != nil {
+		return x.CommitmentsAdded
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetCommitmentsArchived() uint32 {
+	if x != nil {
+		return x.CommitmentsArchived
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetCouncilActiveCount() uint32 {
+	if x != nil {
+		return x.CouncilActiveCount
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetCouncilTotalWeightBps() uint64 {
+	if x != nil {
+		return x.CouncilTotalWeightBps
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetDriftBps() uint64 {
+	if x != nil {
+		return x.DriftBps
+	}
+	return 0
+}
+
+func (x *CreedDrift) GetComputedAtBlock() uint64 {
+	if x != nil {
+		return x.ComputedAtBlock
+	}
+	return 0
+}
+
 var File_zerone_governance_synthesis_v1_types_proto protoreflect.FileDescriptor
 
 const file_zerone_governance_synthesis_v1_types_proto_rawDesc = "" +
@@ -391,7 +562,23 @@ const file_zerone_governance_synthesis_v1_types_proto_rawDesc = "" +
 	"\x12sparsity_score_bps\x18\a \x01(\x04R\x10sparsityScoreBps\"\x80\x01\n" +
 	"\bFrontier\x12H\n" +
 	"\adomains\x18\x01 \x03(\v2..zerone.governance_synthesis.v1.DomainFrontierR\adomains\x12*\n" +
-	"\x11computed_at_block\x18\x02 \x01(\x04R\x0fcomputedAtBlockB=Z;github.com/zerone-chain/zerone/x/governance_synthesis/typesb\x06proto3"
+	"\x11computed_at_block\x18\x02 \x01(\x04R\x0fcomputedAtBlock\"\x87\x05\n" +
+	"\n" +
+	"CreedDrift\x12'\n" +
+	"\x0fcurrent_version\x18\x01 \x01(\rR\x0ecurrentVersion\x124\n" +
+	"\x16versions_since_genesis\x18\x02 \x01(\rR\x14versionsSinceGenesis\x122\n" +
+	"\x15last_amendment_height\x18\x03 \x01(\x04R\x13lastAmendmentHeight\x12,\n" +
+	"\x12last_amendment_lip\x18\x04 \x01(\tR\x10lastAmendmentLip\x128\n" +
+	"\x18genesis_commitment_count\x18\x05 \x01(\rR\x16genesisCommitmentCount\x128\n" +
+	"\x18current_commitment_count\x18\x06 \x01(\rR\x16currentCommitmentCount\x120\n" +
+	"\x14current_active_count\x18\a \x01(\rR\x12currentActiveCount\x12+\n" +
+	"\x11commitments_added\x18\b \x01(\rR\x10commitmentsAdded\x121\n" +
+	"\x14commitments_archived\x18\t \x01(\rR\x13commitmentsArchived\x120\n" +
+	"\x14council_active_count\x18\n" +
+	" \x01(\rR\x12councilActiveCount\x127\n" +
+	"\x18council_total_weight_bps\x18\v \x01(\x04R\x15councilTotalWeightBps\x12\x1b\n" +
+	"\tdrift_bps\x18\f \x01(\x04R\bdriftBps\x12*\n" +
+	"\x11computed_at_block\x18\r \x01(\x04R\x0fcomputedAtBlockB=Z;github.com/zerone-chain/zerone/x/governance_synthesis/typesb\x06proto3"
 
 var (
 	file_zerone_governance_synthesis_v1_types_proto_rawDescOnce sync.Once
@@ -405,11 +592,12 @@ func file_zerone_governance_synthesis_v1_types_proto_rawDescGZIP() []byte {
 	return file_zerone_governance_synthesis_v1_types_proto_rawDescData
 }
 
-var file_zerone_governance_synthesis_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_zerone_governance_synthesis_v1_types_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_zerone_governance_synthesis_v1_types_proto_goTypes = []any{
 	(*SystemHealth)(nil),   // 0: zerone.governance_synthesis.v1.SystemHealth
 	(*DomainFrontier)(nil), // 1: zerone.governance_synthesis.v1.DomainFrontier
 	(*Frontier)(nil),       // 2: zerone.governance_synthesis.v1.Frontier
+	(*CreedDrift)(nil),     // 3: zerone.governance_synthesis.v1.CreedDrift
 }
 var file_zerone_governance_synthesis_v1_types_proto_depIdxs = []int32{
 	1, // 0: zerone.governance_synthesis.v1.Frontier.domains:type_name -> zerone.governance_synthesis.v1.DomainFrontier
@@ -431,7 +619,7 @@ func file_zerone_governance_synthesis_v1_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_governance_synthesis_v1_types_proto_rawDesc), len(file_zerone_governance_synthesis_v1_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

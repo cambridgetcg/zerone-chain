@@ -3,6 +3,7 @@ package types
 import (
 	"context"
 
+	creedtypes "github.com/zerone-chain/zerone/x/creed/types"
 	knowledgetypes "github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
@@ -67,4 +68,27 @@ type FrontierInquiryKeeper interface {
 // counterexample_coverage_bps in the frontier signal.
 type FrontierCounterexamplesKeeper interface {
 	CountCounterexamplesByDomain(ctx context.Context, domain string, factDomain func(factID string) string) (authored, validated uint64)
+}
+
+// CreedKeeper exposes the canonical creed surface so the synthesis
+// can compose a creed-drift signal. Read-only access to the genesis
+// pin, the current pin, and the council registry. The synthesizer
+// adds no state of its own; drift is computed live from x/creed.
+//
+// docs/TRUTH_SEEKING.md commitments 11 and 19: drift is the
+// trust-queryability of the chain's voice (11) made specific to the
+// creed (19). Without this read path, observers would need to
+// stitch x/creed queries together themselves.
+type CreedKeeper interface {
+	// GetCurrentPin returns the canonical pin. ok=false means the
+	// chain is in a pre-anchor state (no genesis pin loaded yet).
+	GetCurrentPin(ctx context.Context) (*creedtypes.PinnedCreed, bool)
+	// GetPin returns a specific historical pin by version.
+	GetPin(ctx context.Context, version uint32) (*creedtypes.PinnedCreed, bool)
+	// CouncilTotalActiveWeight is the sum of voting weights across
+	// active Creed Council members.
+	CouncilTotalActiveWeight(ctx context.Context) uint64
+	// IterateCouncilMembers walks the council registry. The
+	// synthesizer uses this to count active seats.
+	IterateCouncilMembers(ctx context.Context, cb func(*creedtypes.CreedCouncilMember) bool)
 }

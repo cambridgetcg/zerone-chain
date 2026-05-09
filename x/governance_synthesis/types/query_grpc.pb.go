@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	Query_SystemHealth_FullMethodName = "/zerone.governance_synthesis.v1.Query/SystemHealth"
 	Query_Frontier_FullMethodName     = "/zerone.governance_synthesis.v1.Query/Frontier"
+	Query_CreedDrift_FullMethodName   = "/zerone.governance_synthesis.v1.Query/CreedDrift"
 )
 
 // QueryClient is the client API for Query service.
@@ -47,6 +48,12 @@ type QueryClient interface {
 	// trainers, alignment researchers, inquiry askers) see the same
 	// frontier the chain itself publishes.
 	Frontier(ctx context.Context, in *QueryFrontierRequest, opts ...grpc.CallOption) (*QueryFrontierResponse, error)
+	// CreedDrift exposes how much the chain's canonical creed has
+	// moved since genesis — the most load-bearing trust signal in
+	// the synthesis surface. Off-chain observers compose creed-drift
+	// dashboards from this single query in the same vocabulary the
+	// creed itself uses (commitments 11 and 19).
+	CreedDrift(ctx context.Context, in *QueryCreedDriftRequest, opts ...grpc.CallOption) (*QueryCreedDriftResponse, error)
 }
 
 type queryClient struct {
@@ -77,6 +84,16 @@ func (c *queryClient) Frontier(ctx context.Context, in *QueryFrontierRequest, op
 	return out, nil
 }
 
+func (c *queryClient) CreedDrift(ctx context.Context, in *QueryCreedDriftRequest, opts ...grpc.CallOption) (*QueryCreedDriftResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(QueryCreedDriftResponse)
+	err := c.cc.Invoke(ctx, Query_CreedDrift_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // QueryServer is the server API for Query service.
 // All implementations must embed UnimplementedQueryServer
 // for forward compatibility.
@@ -101,6 +118,12 @@ type QueryServer interface {
 	// trainers, alignment researchers, inquiry askers) see the same
 	// frontier the chain itself publishes.
 	Frontier(context.Context, *QueryFrontierRequest) (*QueryFrontierResponse, error)
+	// CreedDrift exposes how much the chain's canonical creed has
+	// moved since genesis — the most load-bearing trust signal in
+	// the synthesis surface. Off-chain observers compose creed-drift
+	// dashboards from this single query in the same vocabulary the
+	// creed itself uses (commitments 11 and 19).
+	CreedDrift(context.Context, *QueryCreedDriftRequest) (*QueryCreedDriftResponse, error)
 	mustEmbedUnimplementedQueryServer()
 }
 
@@ -116,6 +139,9 @@ func (UnimplementedQueryServer) SystemHealth(context.Context, *QuerySystemHealth
 }
 func (UnimplementedQueryServer) Frontier(context.Context, *QueryFrontierRequest) (*QueryFrontierResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method Frontier not implemented")
+}
+func (UnimplementedQueryServer) CreedDrift(context.Context, *QueryCreedDriftRequest) (*QueryCreedDriftResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CreedDrift not implemented")
 }
 func (UnimplementedQueryServer) mustEmbedUnimplementedQueryServer() {}
 func (UnimplementedQueryServer) testEmbeddedByValue()               {}
@@ -174,6 +200,24 @@ func _Query_Frontier_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Query_CreedDrift_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QueryCreedDriftRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(QueryServer).CreedDrift(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Query_CreedDrift_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(QueryServer).CreedDrift(ctx, req.(*QueryCreedDriftRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Query_ServiceDesc is the grpc.ServiceDesc for Query service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -188,6 +232,10 @@ var Query_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Frontier",
 			Handler:    _Query_Frontier_Handler,
+		},
+		{
+			MethodName: "CreedDrift",
+			Handler:    _Query_CreedDrift_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

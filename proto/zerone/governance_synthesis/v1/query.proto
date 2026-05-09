@@ -31,6 +31,15 @@ service Query {
   rpc Frontier(QueryFrontierRequest) returns (QueryFrontierResponse) {
     option (google.api.http).get = "/zerone/governance_synthesis/v1/frontier";
   }
+
+  // CreedDrift exposes how much the chain's canonical creed has
+  // moved since genesis — the most load-bearing trust signal in
+  // the synthesis surface. Off-chain observers compose creed-drift
+  // dashboards from this single query in the same vocabulary the
+  // creed itself uses (commitments 11 and 19).
+  rpc CreedDrift(QueryCreedDriftRequest) returns (QueryCreedDriftResponse) {
+    option (google.api.http).get = "/zerone/governance_synthesis/v1/creed_drift";
+  }
 }
 
 message QuerySystemHealthRequest {}
@@ -47,4 +56,10 @@ message QueryFrontierRequest {
 
 message QueryFrontierResponse {
   Frontier frontier = 1;
+}
+
+message QueryCreedDriftRequest {}
+
+message QueryCreedDriftResponse {
+  CreedDrift drift = 1;
 }

@@ -192,6 +192,86 @@ func (x *QueryFrontierResponse) GetFrontier() *Frontier {
 	return nil
 }
 
+type QueryCreedDriftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryCreedDriftRequest) Reset() {
+	*x = QueryCreedDriftRequest{}
+	mi := &file_zerone_governance_synthesis_v1_query_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryCreedDriftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryCreedDriftRequest) ProtoMessage() {}
+
+func (x *QueryCreedDriftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_governance_synthesis_v1_query_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryCreedDriftRequest.ProtoReflect.Descriptor instead.
+func (*QueryCreedDriftRequest) Descriptor() ([]byte, []int) {
+	return file_zerone_governance_synthesis_v1_query_proto_rawDescGZIP(), []int{4}
+}
+
+type QueryCreedDriftResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Drift         *CreedDrift            `protobuf:"bytes,1,opt,name=drift,proto3" json:"drift,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryCreedDriftResponse) Reset() {
+	*x = QueryCreedDriftResponse{}
+	mi := &file_zerone_governance_synthesis_v1_query_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryCreedDriftResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryCreedDriftResponse) ProtoMessage() {}
+
+func (x *QueryCreedDriftResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_zerone_governance_synthesis_v1_query_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryCreedDriftResponse.ProtoReflect.Descriptor instead.
+func (*QueryCreedDriftResponse) Descriptor() ([]byte, []int) {
+	return file_zerone_governance_synthesis_v1_query_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *QueryCreedDriftResponse) GetDrift() *CreedDrift {
+	if x != nil {
+		return x.Drift
+	}
+	return nil
+}
+
 var File_zerone_governance_synthesis_v1_query_proto protoreflect.FileDescriptor
 
 const file_zerone_governance_synthesis_v1_query_proto_rawDesc = "" +
@@ -203,10 +283,15 @@ const file_zerone_governance_synthesis_v1_query_proto_rawDesc = "" +
 	"\x14QueryFrontierRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\rR\x05limit\"]\n" +
 	"\x15QueryFrontierResponse\x12D\n" +
-	"\bfrontier\x18\x01 \x01(\v2(.zerone.governance_synthesis.v1.FrontierR\bfrontier2\xf0\x02\n" +
+	"\bfrontier\x18\x01 \x01(\v2(.zerone.governance_synthesis.v1.FrontierR\bfrontier\"\x18\n" +
+	"\x16QueryCreedDriftRequest\"[\n" +
+	"\x17QueryCreedDriftResponse\x12@\n" +
+	"\x05drift\x18\x01 \x01(\v2*.zerone.governance_synthesis.v1.CreedDriftR\x05drift2\xa5\x04\n" +
 	"\x05Query\x12\xba\x01\n" +
 	"\fSystemHealth\x128.zerone.governance_synthesis.v1.QuerySystemHealthRequest\x1a9.zerone.governance_synthesis.v1.QuerySystemHealthResponse\"5\x82\xd3\xe4\x93\x02/\x12-/zerone/governance_synthesis/v1/system_health\x12\xa9\x01\n" +
-	"\bFrontier\x124.zerone.governance_synthesis.v1.QueryFrontierRequest\x1a5.zerone.governance_synthesis.v1.QueryFrontierResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/governance_synthesis/v1/frontierB=Z;github.com/zerone-chain/zerone/x/governance_synthesis/typesb\x06proto3"
+	"\bFrontier\x124.zerone.governance_synthesis.v1.QueryFrontierRequest\x1a5.zerone.governance_synthesis.v1.QueryFrontierResponse\"0\x82\xd3\xe4\x93\x02*\x12(/zerone/governance_synthesis/v1/frontier\x12\xb2\x01\n" +
+	"\n" +
+	"CreedDrift\x126.zerone.governance_synthesis.v1.QueryCreedDriftRequest\x1a7.zerone.governance_synthesis.v1.QueryCreedDriftResponse\"3\x82\xd3\xe4\x93\x02-\x12+/zerone/governance_synthesis/v1/creed_driftB=Z;github.com/zerone-chain/zerone/x/governance_synthesis/typesb\x06proto3"
 
 var (
 	file_zerone_governance_synthesis_v1_query_proto_rawDescOnce sync.Once
@@ -220,27 +305,33 @@ func file_zerone_governance_synthesis_v1_query_proto_rawDescGZIP() []byte {
 	return file_zerone_governance_synthesis_v1_query_proto_rawDescData
 }
 
-var file_zerone_governance_synthesis_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_zerone_governance_synthesis_v1_query_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_zerone_governance_synthesis_v1_query_proto_goTypes = []any{
 	(*QuerySystemHealthRequest)(nil),  // 0: zerone.governance_synthesis.v1.QuerySystemHealthRequest
 	(*QuerySystemHealthResponse)(nil), // 1: zerone.governance_synthesis.v1.QuerySystemHealthResponse
 	(*QueryFrontierRequest)(nil),      // 2: zerone.governance_synthesis.v1.QueryFrontierRequest
 	(*QueryFrontierResponse)(nil),     // 3: zerone.governance_synthesis.v1.QueryFrontierResponse
-	(*SystemHealth)(nil),              // 4: zerone.governance_synthesis.v1.SystemHealth
-	(*Frontier)(nil),                  // 5: zerone.governance_synthesis.v1.Frontier
+	(*QueryCreedDriftRequest)(nil),    // 4: zerone.governance_synthesis.v1.QueryCreedDriftRequest
+	(*QueryCreedDriftResponse)(nil),   // 5: zerone.governance_synthesis.v1.QueryCreedDriftResponse
+	(*SystemHealth)(nil),              // 6: zerone.governance_synthesis.v1.SystemHealth
+	(*Frontier)(nil),                  // 7: zerone.governance_synthesis.v1.Frontier
+	(*CreedDrift)(nil),                // 8: zerone.governance_synthesis.v1.CreedDrift
 }
 var file_zerone_governance_synthesis_v1_query_proto_depIdxs = []int32{
-	4, // 0: zerone.governance_synthesis.v1.QuerySystemHealthResponse.health:type_name -> zerone.governance_synthesis.v1.SystemHealth
-	5, // 1: zerone.governance_synthesis.v1.QueryFrontierResponse.frontier:type_name -> zerone.governance_synthesis.v1.Frontier
-	0, // 2: zerone.governance_synthesis.v1.Query.SystemHealth:input_type -> zerone.governance_synthesis.v1.QuerySystemHealthRequest
-	2, // 3: zerone.governance_synthesis.v1.Query.Frontier:input_type -> zerone.governance_synthesis.v1.QueryFrontierRequest
-	1, // 4: zerone.governance_synthesis.v1.Query.SystemHealth:output_type -> zerone.governance_synthesis.v1.QuerySystemHealthResponse
-	3, // 5: zerone.governance_synthesis.v1.Query.Frontier:output_type -> zerone.governance_synthesis.v1.QueryFrontierResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	6, // 0: zerone.governance_synthesis.v1.QuerySystemHealthResponse.health:type_name -> zerone.governance_synthesis.v1.SystemHealth
+	7, // 1: zerone.governance_synthesis.v1.QueryFrontierResponse.frontier:type_name -> zerone.governance_synthesis.v1.Frontier
+	8, // 2: zerone.governance_synthesis.v1.QueryCreedDriftResponse.drift:type_name -> zerone.governance_synthesis.v1.CreedDrift
+	0, // 3: zerone.governance_synthesis.v1.Query.SystemHealth:input_type -> zerone.governance_synthesis.v1.QuerySystemHealthRequest
+	2, // 4: zerone.governance_synthesis.v1.Query.Frontier:input_type -> zerone.governance_synthesis.v1.QueryFrontierRequest
+	4, // 5: zerone.governance_synthesis.v1.Query.CreedDrift:input_type -> zerone.governance_synthesis.v1.QueryCreedDriftRequest
+	1, // 6: zerone.governance_synthesis.v1.Query.SystemHealth:output_type -> zerone.governance_synthesis.v1.QuerySystemHealthResponse
+	3, // 7: zerone.governance_synthesis.v1.Query.Frontier:output_type -> zerone.governance_synthesis.v1.QueryFrontierResponse
+	5, // 8: zerone.governance_synthesis.v1.Query.CreedDrift:output_type -> zerone.governance_synthesis.v1.QueryCreedDriftResponse
+	6, // [6:9] is the sub-list for method output_type
+	3, // [3:6] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_zerone_governance_synthesis_v1_query_proto_init() }
@@ -255,7 +346,7 @@ func file_zerone_governance_synthesis_v1_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_zerone_governance_synthesis_v1_query_proto_rawDesc), len(file_zerone_governance_synthesis_v1_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

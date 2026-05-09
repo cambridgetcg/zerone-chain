@@ -22,6 +22,11 @@ type Keeper struct {
 	frontierKnowledgeKeeper  types.FrontierKnowledgeKeeper
 	frontierInquiryKeeper    types.FrontierInquiryKeeper
 	frontierCounterexamples  types.FrontierCounterexamplesKeeper
+
+	// Creed-drift upstream. Optional; if nil, CreedDrift returns a
+	// zero-state response rather than panicking — keeps unit tests
+	// that don't exercise creed paths working without the wiring.
+	creedKeeper types.CreedKeeper
 }
 
 func NewKeeper(cdc codec.BinaryCodec) Keeper {
@@ -43,3 +48,8 @@ func (k *Keeper) SetFrontierInquiryKeeper(fk types.FrontierInquiryKeeper)     { 
 func (k *Keeper) SetFrontierCounterexamplesKeeper(fk types.FrontierCounterexamplesKeeper) {
 	k.frontierCounterexamples = fk
 }
+
+// SetCreedKeeper wires x/creed into the synthesizer for the
+// CreedDrift query. Optional — if not wired, CreedDrift returns a
+// zero-state response.
+func (k *Keeper) SetCreedKeeper(ck types.CreedKeeper) { k.creedKeeper = ck }

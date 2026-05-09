@@ -43,6 +43,8 @@ import (
 	creedkeeper "github.com/zerone-chain/zerone/x/creed/keeper"
 	creedtypes "github.com/zerone-chain/zerone/x/creed/types"
 	disputeskeeper "github.com/zerone-chain/zerone/x/disputes/keeper"
+	govsynthkeeper "github.com/zerone-chain/zerone/x/governance_synthesis/keeper"
+	govsynthtypes "github.com/zerone-chain/zerone/x/governance_synthesis/types"
 	disputestypes "github.com/zerone-chain/zerone/x/disputes/types"
 	emergencytypes "github.com/zerone-chain/zerone/x/emergency/types"
 	inquirykeeper "github.com/zerone-chain/zerone/x/inquiry/keeper"
@@ -838,6 +840,122 @@ func TestTruthSeeking_GenesisCreedReflectsCurrentTruthSeeking(t *testing.T) {
 		"BuildGenesisCreed must materialize every entry in CanonicalCommitments")
 	require.Empty(t, pin.PinnedViaLip,
 		"genesis-installed commitments carry no source LIP — no LIP precedes genesis")
+}
+
+// Commitment 19 (creed governance-gated, drift-signal binding):
+// the chain's creed is queryable as a synthesised composite, not
+// just as raw pin records. The governance_synthesis CreedDrift
+// query exposes versions_since_genesis, commitments_added,
+// commitments_archived, council surface, and a bounded composite
+// drift_bps — all derived live from x/creed. This binds the
+// promise that creed drift is observable in the same vocabulary
+// the creed itself uses (commitments 11 + 19).
+func TestTruthSeeking_CreedDriftSignalReflectsCreedAmendments(t *testing.T) {
+	h := NewTestHarness(t)
+	ms := creedkeeper.NewMsgServerImpl(h.CreedKeeper)
+	authority := h.CreedKeeper.GetAuthority()
+
+	// Pre-anchor state: drift signal should be zero across the board
+	// rather than panic. Test chains and dev chains live here briefly.
+	d := h.GovernanceSynthesisKeeper.ComposeCreedDrift(h.Ctx)
+	require.Equal(t, uint32(0), d.CurrentVersion,
+		"pre-anchor chain must report version 0; the synthesizer cannot fabricate a pin")
+	require.Equal(t, uint64(0), d.DriftBps,
+		"pre-anchor chain has no drift to measure; synthesizer must not invent a non-zero signal")
+
+	// Pin v1 (genesis-equivalent for this test) with two commitments.
+	_, err := ms.AnchorPin(h.Ctx, &creedtypes.MsgAnchorPin{
+		Authority: authority,
+		Pin: &creedtypes.PinnedCreed{
+			Version:       1,
+			CanonicalHash: []byte("genesis-hash"),
+			Commitments: []*creedtypes.CommitmentEntry{
+				{Number: 1, Name: "Methodology over statement"},
+				{Number: 2, Name: "Is-ought wall"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	// At v1 — genesis baseline. Drift should still be zero.
+	d = h.GovernanceSynthesisKeeper.ComposeCreedDrift(h.Ctx)
+	require.Equal(t, uint32(1), d.CurrentVersion)
+	require.Equal(t, uint32(0), d.VersionsSinceGenesis,
+		"a chain at v1 has not amended anything yet; the genesis pin IS the baseline")
+	require.Equal(t, uint32(2), d.GenesisCommitmentCount)
+	require.Equal(t, uint32(2), d.CurrentCommitmentCount)
+	require.Equal(t, uint32(2), d.CurrentActiveCount)
+	require.Equal(t, uint32(0), d.CommitmentsAdded)
+	require.Equal(t, uint64(0), d.DriftBps,
+		"at the genesis baseline, drift is zero by definition; any non-zero signal would be the synthesizer inventing motion")
+
+	// Pin v2 — adds commitment 3, archives nothing.
+	_, err = ms.AnchorPin(h.Ctx, &creedtypes.MsgAnchorPin{
+		Authority: authority,
+		Pin: &creedtypes.PinnedCreed{
+			Version:       2,
+			CanonicalHash: []byte("v2-hash"),
+			PinnedViaLip:  "LIP-creed-amend-1",
+			Commitments: []*creedtypes.CommitmentEntry{
+				{Number: 1, Name: "Methodology over statement"},
+				{Number: 2, Name: "Is-ought wall"},
+				{Number: 3, Name: "Popper, not popularity", IntroducedViaLip: "LIP-creed-amend-1"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	d = h.GovernanceSynthesisKeeper.ComposeCreedDrift(h.Ctx)
+	require.Equal(t, uint32(2), d.CurrentVersion)
+	require.Equal(t, uint32(1), d.VersionsSinceGenesis,
+		"one amendment landed; the synthesizer must reflect that count")
+	require.Equal(t, uint32(2), d.GenesisCommitmentCount,
+		"genesis baseline is fixed at v1's count; later amendments don't retroactively rewrite it")
+	require.Equal(t, uint32(3), d.CurrentCommitmentCount)
+	require.Equal(t, uint32(1), d.CommitmentsAdded,
+		"adding commitment 3 to a v1 with 2 entries means added=1")
+	require.Equal(t, uint32(0), d.CommitmentsArchived)
+	require.Equal(t, "LIP-creed-amend-1", d.LastAmendmentLip,
+		"the synthesizer must surface which LIP authorized the most recent amendment")
+	// Composite: 1*100k + 1*50k + 0*100k = 150_000.
+	require.Equal(t, uint64(150_000), d.DriftBps,
+		"drift_bps must reflect the heuristic composite truthfully — 1 amendment + 1 added commitment = 150k bps")
+
+	// Pin v3 — archives commitment 1. Tests that archival counts
+	// distinctly from addition (commitment 10: forward-only audit
+	// makes archival visible as its own structural movement).
+	_, err = ms.AnchorPin(h.Ctx, &creedtypes.MsgAnchorPin{
+		Authority: authority,
+		Pin: &creedtypes.PinnedCreed{
+			Version:       3,
+			CanonicalHash: []byte("v3-hash"),
+			PinnedViaLip:  "LIP-creed-amend-2",
+			Commitments: []*creedtypes.CommitmentEntry{
+				{Number: 1, Name: "Methodology over statement", Archived: true},
+				{Number: 2, Name: "Is-ought wall"},
+				{Number: 3, Name: "Popper, not popularity"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	d = h.GovernanceSynthesisKeeper.ComposeCreedDrift(h.Ctx)
+	require.Equal(t, uint32(2), d.VersionsSinceGenesis)
+	require.Equal(t, uint32(2), d.CurrentActiveCount,
+		"archival drops the entry from the active count without removing it from the registry")
+	require.Equal(t, uint32(1), d.CommitmentsArchived)
+	// Composite: 2*100k + 1*50k + 1*100k = 350_000.
+	require.Equal(t, uint64(350_000), d.DriftBps,
+		"archival weighs the same as a version transition (100k bps) because it is structurally equivalent — a load-bearing piece left the creed")
+
+	// Verify the gRPC query surface returns what ComposeCreedDrift
+	// composes. No divergence between keeper and query.
+	qs := govsynthkeeper.NewQueryServerImpl(h.GovernanceSynthesisKeeper)
+	resp, err := qs.CreedDrift(h.Ctx, &govsynthtypes.QueryCreedDriftRequest{})
+	require.NoError(t, err)
+	require.Equal(t, uint32(3), resp.Drift.CurrentVersion)
+	require.Equal(t, uint64(350_000), resp.Drift.DriftBps,
+		"the gRPC query must return what ComposeCreedDrift composes — no divergence between keeper and query surface")
 }
 
 // Commitment 19 (creed governance-gated, gov ↔ creed wiring):

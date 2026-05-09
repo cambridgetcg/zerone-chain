@@ -1183,6 +1183,12 @@ func NewZeroneApp(
 	app.GovernanceSynthesisKeeper.SetFrontierCounterexamplesKeeper(
 		zeronecounterexkeeper.NewGovernanceSynthesisAdapter(app.CounterexamplesKeeper),
 	)
+	// Commitment 19 wiring: governance_synthesis reads x/creed to
+	// compose the creed-drift signal (commitments 11 + 19). The
+	// keeper satisfies x/governance_synthesis.types.CreedKeeper
+	// directly via GetCurrentPin / GetPin / CouncilTotalActiveWeight
+	// / IterateCouncilMembers — no adapter required.
+	app.GovernanceSynthesisKeeper.SetCreedKeeper(&app.CreedKeeper)
 
 	// Commitment 18 wiring: inquiry's BeginBlocker walks the chain's
 	// frontier each cadence-tick and SPONSORS open inquiries in the

@@ -96,3 +96,52 @@ message Frontier {
   repeated DomainFrontier domains = 1;
   uint64 computed_at_block        = 2;
 }
+
+// CreedDrift is the chain's measure of how much its stated voice has
+// moved from where it started. Composed from x/creed: the genesis
+// pin, the current pin, the per-commitment registry deltas, and the
+// active Creed Council surface.
+//
+// docs/TRUTH_SEEKING.md commitments 11 (trust is queryable) and 19
+// (creed governance-gated): drift is the most load-bearing trust
+// signal in the chain — if it moves silently, every other commitment
+// inherits that silent movement. Surfacing it as a synthesised query
+// makes "the chain's voice has changed by N basis points since
+// genesis" a fact off-chain observers can read directly, in the
+// same vocabulary the creed itself uses.
+//
+// Each component is reported individually so dashboards can drill
+// in; a composite drift_bps is a heuristic combination consumers can
+// re-derive from the raw counts if they want a different weighting.
+message CreedDrift {
+  // ── Pin lineage ──────────────────────────────────────────────────
+  uint32 current_version             = 1;  // 0 if no pin yet
+  uint32 versions_since_genesis      = 2;  // current_version - 1, or 0
+  uint64 last_amendment_height       = 3;  // 0 if no post-genesis amendment
+  string last_amendment_lip          = 4;  // empty if no post-genesis amendment
+
+  // ── Commitment registry deltas ───────────────────────────────────
+  uint32 genesis_commitment_count    = 5;
+  uint32 current_commitment_count    = 6;
+  uint32 current_active_count        = 7;  // excludes archived
+  uint32 commitments_added           = 8;  // current_count - genesis_count
+  uint32 commitments_archived        = 9;  // entries with archived=true in current pin
+
+  // ── AI-side voter pool ──────────────────────────────────────────
+  uint32 council_active_count        = 10;
+  uint64 council_total_weight_bps    = 11;
+
+  // ── Composite ───────────────────────────────────────────────────
+  // drift_bps is a bounded composite (0..1_000_000) intended for
+  // dashboards that want a single-number drift indicator. Formula:
+  //   raw  = versions_since_genesis*100_000
+  //        + commitments_added*50_000
+  //        + commitments_archived*100_000
+  //   drift_bps = min(raw, 1_000_000)
+  //
+  // Consumers preferring a different weighting should compose their
+  // own from the raw fields above; the composite is convenience,
+  // not authority.
+  uint64 drift_bps                   = 12;
+  uint64 computed_at_block           = 13;
+}

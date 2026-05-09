@@ -33,3 +33,8 @@ func (q queryServer) Frontier(ctx context.Context, req *types.QueryFrontierReque
 	f := q.keeper.ComposeFrontier(ctx, limit)
 	return &types.QueryFrontierResponse{Frontier: &f}, nil
 }
+
+func (q queryServer) CreedDrift(ctx context.Context, _ *types.QueryCreedDriftRequest) (*types.QueryCreedDriftResponse, error) {
+	d := q.keeper.ComposeCreedDrift(ctx)
+	return &types.QueryCreedDriftResponse{Drift: &d}, nil
+}
