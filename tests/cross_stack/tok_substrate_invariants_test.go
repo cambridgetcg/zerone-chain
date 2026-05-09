@@ -33,6 +33,26 @@ func TestToKSubstrate_TC1_GraphIsTheHeadline(t *testing.T) {
 	require.NotEmpty(t, resp.Bundle.SnapshotRoot)
 }
 
+// TC2: every view is graph-pinned.
+// Verified by: bundle ships snapshot_root + snapshot_block, and the
+// root is re-derivable from IDs alone (trust-minimised verification).
+func TestToKSubstrate_TC2_EveryViewIsGraphPinned(t *testing.T) {
+	h := NewTestHarness(t)
+	seedTokFact(t, h, "physics", "axiom-tc2")
+	q := knowledgekeeper.NewQueryServerImpl(h.KnowledgeKeeper)
+	resp, err := q.BundleToK(h.Ctx, &knowledgetypes.QueryBundleToKRequest{
+		Selector: &knowledgetypes.ToKSelector{Variant: &knowledgetypes.ToKSelector_RootedSubtree{
+			RootedSubtree: &knowledgetypes.RootedSubtreeSelector{RootFactId: "axiom-tc2", MaxDepth: 1},
+		}},
+	})
+	require.NoError(t, err)
+	require.Len(t, resp.Bundle.SnapshotRoot, 32, "TC2: snapshot root must be 32 bytes")
+	require.Greater(t, resp.Bundle.SnapshotBlock, uint64(0), "TC2: snapshot_block must be set")
+	// Re-derivability — trust-minimised verification.
+	rederived := knowledgekeeper.ComputeToKSnapshotRoot(resp.Bundle.IncludedNodeIds, resp.Bundle.IncludedEdges)
+	require.Equal(t, resp.Bundle.SnapshotRoot, rederived, "TC2: root must be re-derivable from IDs")
+}
+
 // seedTokFact registers a fact + its domain so it can be bundled.
 func seedTokFact(t *testing.T, h *TestHarness, domain, factID string) {
 	t.Helper()
