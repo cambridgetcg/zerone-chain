@@ -123,12 +123,18 @@ func (m msgServer) ChallengeResearch(
 	research.UpdatedAt = uint64(ctx.BlockHeight())
 	m.Keeper.SetResearch(ctx, research)
 
+	// Commitment 3 (Popper, not popularity): a challenge against
+	// research is the formal falsification attempt — without the
+	// adversarial channel, research entered the corpus only on
+	// submitter assertion. This event marks the chain's invitation
+	// to disprove.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.research.research_challenged",
 			sdk.NewAttribute("research_id", msg.ResearchId),
 			sdk.NewAttribute("challenger", msg.Challenger),
 			sdk.NewAttribute("reason", msg.Reason),
+			sdk.NewAttribute("creed_commitment", "3"),
 		),
 	)
 
@@ -301,12 +307,19 @@ func (m msgServer) ResolveResearch(
 		outcomeStr = "rejected"
 	}
 
+	// Commitment 13 (the training corpus is not for sale): research
+	// resolution is the moment the chain decides whether an attempt
+	// earned a place in the citation surface. Funding paid for the
+	// attempt; this verdict — accept or reject — determines admission.
+	// Without this gate, bounty-funded research could silently expand
+	// the corpus through the back door.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.research.research_resolved",
 			sdk.NewAttribute("research_id", msg.ResearchId),
 			sdk.NewAttribute("outcome", outcomeStr),
 			sdk.NewAttribute("aggregate_score", fmt.Sprintf("%d", research.AggregateScore)),
+			sdk.NewAttribute("creed_commitment", "13"),
 		),
 	)
 
@@ -440,12 +453,18 @@ func (m msgServer) FulfillBounty(
 	bounty.FulfilledBy = bounty.ClaimedBy
 	m.Keeper.SetBounty(ctx, bounty)
 
+	// Commitment 13 (the training corpus is not for sale): bounty
+	// fulfilment pays for the WORK of an attempt that has now passed
+	// review and resolution. The funder paid for the attempt, never
+	// for a particular conclusion — this event records that the
+	// payment is for survived work, not for purchased outcome.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.research.bounty_fulfilled",
 			sdk.NewAttribute("bounty_id", msg.BountyId),
 			sdk.NewAttribute("fulfilled_by", bounty.ClaimedBy),
 			sdk.NewAttribute("reward", bounty.Reward),
+			sdk.NewAttribute("creed_commitment", "13"),
 		),
 	)
 
