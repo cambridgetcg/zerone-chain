@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -2375,6 +2376,28 @@ func (q *queryServer) TrainingManifestBundle(ctx context.Context, req *types.Que
 	return q.keeper.AssembleManifestBundle(ctx, req.Id)
 }
 
+// BundleToK is the headline trainer-facing endpoint. TC1: the graph is
+// the substrate; this is where trainers ask for it. TC5 (extraction is
+// open) is bound here: refusals are limited to syntax errors (InvalidArgument),
+// missing target facts (NotFound), and chain-state inconsistencies (Internal).
+func (q *queryServer) BundleToK(ctx context.Context, req *types.QueryBundleToKRequest) (*types.QueryBundleToKResponse, error) {
+	if req == nil || req.Selector == nil {
+		return nil, status.Error(codes.InvalidArgument, "selector required")
+	}
+	bundle, err := q.keeper.AssembleToKBundle(ctx, req.Selector, req.AtBlockHeight)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrToKRootFactNotFound), errors.Is(err, ErrToKLeafFactNotFound):
+			return nil, status.Errorf(codes.NotFound, "%v", err)
+		case errors.Is(err, ErrToKInconsistentState):
+			return nil, status.Errorf(codes.Internal, "%v", err)
+		default:
+			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+		}
+	}
+	return &types.QueryBundleToKResponse{Bundle: bundle}, nil
+}
+
 // RouteBCapabilities returns the chain's Route B self-description.
 func (q *queryServer) RouteBCapabilities(ctx context.Context, _ *types.QueryRouteBCapabilitiesRequest) (*types.QueryRouteBCapabilitiesResponse, error) {
 	return &types.QueryRouteBCapabilitiesResponse{
@@ -2538,19 +2561,4 @@ func (q *queryServer) IdleFacts(ctx context.Context, req *types.QueryIdleFactsRe
 	}
 	facts := q.keeper.IdleFactsForProbing(ctx, req.Domain, req.Limit)
 	return &types.QueryIdleFactsResponse{Facts: facts}, nil
-}
-
-// BundleToK is the headline trainer-facing endpoint. TC1: the graph is
-// the substrate; this is where trainers ask for it. TC5 (extraction is
-// open) is bound here: refusals are limited to syntax errors,
-// snapshot-out-of-range, and rate-limit.
-func (q *queryServer) BundleToK(ctx context.Context, req *types.QueryBundleToKRequest) (*types.QueryBundleToKResponse, error) {
-	if req == nil || req.Selector == nil {
-		return nil, status.Error(codes.InvalidArgument, "selector required")
-	}
-	bundle, err := q.keeper.AssembleToKBundle(ctx, req.Selector, req.AtBlockHeight)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	return &types.QueryBundleToKResponse{Bundle: bundle}, nil
 }

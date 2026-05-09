@@ -91,7 +91,7 @@ func (k Keeper) GatherRootedSubtree(
 ) (nodeIDs []string, edges []*types.ToKEdge, err error) {
 	root, found := k.GetFact(ctx, sel.RootFactId)
 	if !found {
-		return nil, nil, fmt.Errorf("root fact %s not found", sel.RootFactId)
+		return nil, nil, fmt.Errorf("%w: %s", ErrToKRootFactNotFound, sel.RootFactId)
 	}
 	visited := map[string]bool{root.Id: true}
 	edgeSet := map[string]*types.ToKEdge{}
@@ -167,7 +167,7 @@ func (k Keeper) GatherAncestorCone(
 ) (nodeIDs []string, edges []*types.ToKEdge, err error) {
 	leaf, found := k.GetFact(ctx, sel.LeafFactId)
 	if !found {
-		return nil, nil, fmt.Errorf("leaf fact %s not found", sel.LeafFactId)
+		return nil, nil, fmt.Errorf("%w: %s", ErrToKLeafFactNotFound, sel.LeafFactId)
 	}
 	visited := map[string]bool{leaf.Id: true}
 	edgeSet := map[string]*types.ToKEdge{}

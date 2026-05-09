@@ -3,12 +3,20 @@ package keeper
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"sort"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
 	"github.com/zerone-chain/zerone/x/knowledge/types"
+)
+
+// Sentinel errors for typed error dispatch in AssembleToKBundle / BundleToK.
+var (
+	ErrToKRootFactNotFound  = errors.New("root fact not found")
+	ErrToKLeafFactNotFound  = errors.New("leaf fact not found")
+	ErrToKInconsistentState = errors.New("inconsistent state")
 )
 
 // Version constants for provenance fields that have no keeper getter yet.
@@ -128,7 +136,7 @@ func (k Keeper) AssembleToKBundle(
 	for _, id := range nodeIDs {
 		f, ok := k.GetFact(ctx, id)
 		if !ok {
-			return nil, fmt.Errorf("inconsistent state: selected fact %s not found", id)
+			return nil, fmt.Errorf("%w: selected fact %s not found", ErrToKInconsistentState, id)
 		}
 		nodes = append(nodes, f)
 	}

@@ -7,6 +7,9 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+
 	"github.com/zerone-chain/zerone/x/knowledge/keeper"
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
@@ -368,6 +371,21 @@ func TestQueryBundleToK_RejectsInvalidSelector(t *testing.T) {
 	})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "selector variant required")
+}
+
+func TestQueryBundleToK_RejectsMissingRoot(t *testing.T) {
+	k, ctx, _, _ := setupKnowledgeTestFull(t)
+	q := keeper.NewQueryServerImpl(k)
+	_, err := q.BundleToK(ctx, &types.QueryBundleToKRequest{
+		Selector: &types.ToKSelector{Variant: &types.ToKSelector_RootedSubtree{
+			RootedSubtree: &types.RootedSubtreeSelector{RootFactId: "nonexistent", MaxDepth: 5},
+		}},
+	})
+	require.Error(t, err)
+	// Verify gRPC code is NotFound (not InvalidArgument).
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	require.Equal(t, codes.NotFound, st.Code())
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
