@@ -88,12 +88,18 @@ func (ms *msgServer) SubmitLIP(goCtx context.Context, msg *types.MsgSubmitLIP) (
 
 	ms.SetLIP(ctx, lip)
 
+	// Commitment 10 (forward-only audit) AND commitment 11 (trust is
+	// queryable): a new LIP enters the chain's permanent governance
+	// record from this moment. The LIP id, category, and initial
+	// stake are visible to off-chain governance dashboards in the
+	// same vocabulary downstream synthesisers consume.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.gov.lip_submitted",
 			sdk.NewAttribute("lip_id", lipID),
 			sdk.NewAttribute("proposer", msg.Proposer),
 			sdk.NewAttribute("category", category),
 			sdk.NewAttribute("initial_stake", msg.InitialStake),
+			sdk.NewAttribute("creed_commitment", "10,11"),
 		),
 	)
 
@@ -205,11 +211,17 @@ func (ms *msgServer) AdvanceLIPStage(goCtx context.Context, msg *types.MsgAdvanc
 
 	ms.SetLIP(ctx, lip)
 
+	// Commitment 10 (forward-only audit): LIP stage transitions are
+	// the chain's permanent record of how a proposal moved from
+	// draft to vote. Each transition is append-only — a stage
+	// cannot be silently rolled back to make a passed LIP look
+	// unpassed or vice versa.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.gov.lip_stage_advanced",
 			sdk.NewAttribute("lip_id", msg.LipId),
 			sdk.NewAttribute("authority", msg.Authority),
 			sdk.NewAttribute("new_stage", lip.Stage),
+			sdk.NewAttribute("creed_commitment", "10"),
 		),
 	)
 
@@ -281,12 +293,18 @@ func (ms *msgServer) CastVote(goCtx context.Context, msg *types.MsgCastVote) (*t
 	lip.UniqueVoters++
 	ms.SetLIP(ctx, lip)
 
+	// Commitment 10 (forward-only audit) AND commitment 11 (trust is
+	// queryable): votes are immutably recorded with the voter's
+	// stake-weight at vote-time. The tally is queryable in real
+	// time as part of the governance posture; historical votes are
+	// never retroactively reweighted as bond values change.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.gov.vote_cast",
 			sdk.NewAttribute("lip_id", msg.LipId),
 			sdk.NewAttribute("voter", msg.Voter),
 			sdk.NewAttribute("option", msg.Option),
 			sdk.NewAttribute("weight", weight),
+			sdk.NewAttribute("creed_commitment", "10,11"),
 		),
 	)
 
@@ -317,10 +335,16 @@ func (ms *msgServer) WithdrawLIP(goCtx context.Context, msg *types.MsgWithdrawLI
 	lip.Stage = types.StatusWithdrawn
 	ms.SetLIP(ctx, lip)
 
+	// Commitment 10 (forward-only audit): withdrawal is a forward
+	// transition to the WITHDRAWN terminal stage. The LIP record
+	// remains queryable as an honest account of what was proposed
+	// and then declined — a withdrawn LIP cannot be silently
+	// re-animated as a fresh proposal.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.gov.lip_withdrawn",
 			sdk.NewAttribute("lip_id", msg.LipId),
 			sdk.NewAttribute("proposer", msg.Proposer),
+			sdk.NewAttribute("creed_commitment", "10"),
 		),
 	)
 
@@ -387,11 +411,17 @@ func (ms *msgServer) AttachUpgradePlan(goCtx context.Context, msg *types.MsgAtta
 	}
 	ms.SetUpgradePlan(ctx, msg.LipId, plan)
 
+	// Commitment 10 (forward-only audit): an attached upgrade plan
+	// binds the LIP to a specific named upgrade at a specific block
+	// height. The attachment is permanent record of what the chain
+	// would do if this LIP passes — an upgrade cannot be silently
+	// switched out for a different one after attachment.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.gov.upgrade_plan_attached",
 			sdk.NewAttribute("lip_id", msg.LipId),
 			sdk.NewAttribute("upgrade_name", msg.UpgradeName),
 			sdk.NewAttribute("height", fmt.Sprintf("%d", msg.Height)),
+			sdk.NewAttribute("creed_commitment", "10"),
 		),
 	)
 
