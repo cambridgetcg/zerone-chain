@@ -3,6 +3,7 @@ package keeper_test
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"math/big"
 	"testing"
@@ -149,6 +150,12 @@ func testAddr(name string) string {
 
 func setupKeeper(t *testing.T) (keeper.Keeper, sdk.Context, *mockStakingKeeper, *mockAuthKeeper, *mockBankKeeper) {
 	t.Helper()
+	k, ctx, sk, ak, bk, _ := setupKeeperFull(t)
+	return k, ctx, sk, ak, bk
+}
+
+func setupKeeperFull(t *testing.T) (keeper.Keeper, sdk.Context, *mockStakingKeeper, *mockAuthKeeper, *mockBankKeeper, *mockVestingRewardsKeeper) {
+	t.Helper()
 
 	storeKey := storetypes.NewKVStoreKey(types.StoreKey)
 
@@ -172,13 +179,19 @@ func setupKeeper(t *testing.T) (keeper.Keeper, sdk.Context, *mockStakingKeeper, 
 
 	ctx := sdk.NewContext(stateStore, cmtproto.Header{Height: 1000, ChainID: "zerone-test-1"}, false, log.NewNopLogger())
 
-	return k, ctx, mockSK, mockAK, mockBK
+	return k, ctx, mockSK, mockAK, mockBK, mockVRK
 }
 
 func setupMsgServer(t *testing.T) (types.MsgServer, keeper.Keeper, sdk.Context, *mockStakingKeeper, *mockAuthKeeper, *mockBankKeeper) {
 	t.Helper()
 	k, ctx, sk, ak, bk := setupKeeper(t)
 	return keeper.NewMsgServerImpl(k), k, ctx, sk, ak, bk
+}
+
+func setupMsgServerFull(t *testing.T) (types.MsgServer, keeper.Keeper, sdk.Context, *mockStakingKeeper, *mockAuthKeeper, *mockBankKeeper, *mockVestingRewardsKeeper) {
+	t.Helper()
+	k, ctx, sk, ak, bk, vrk := setupKeeperFull(t)
+	return keeper.NewMsgServerImpl(k), k, ctx, sk, ak, bk, vrk
 }
 
 // ---------- Test 1: Create Pot (authority-gated) ----------
@@ -1791,5 +1804,164 @@ func TestParamsValidation(t *testing.T) {
 	p = &types.Params{MaxPotsActive: 10, MinClaimAmount: "-1"}
 	if err := p.Validate(); err == nil {
 		t.Error("expected error for negative MinClaimAmount")
+	}
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Doctrine binding: bootstrap claims mint on demand (commitment 20:
+// issuance follows participation). The pre-fund-then-transfer model
+// is forbidden — the claiming_pot module account must never carry a
+// positive balance across blocks. The cap-gated mint pathway is the
+// only way ZRN enters the module account, and the same transaction
+// forwards every minted uzrn to the claimer.
+// ════════════════════════════════════════════════════════════════════
+
+func TestClaim_MintsOnDemand_ModuleAccountIsTransient(t *testing.T) {
+	msgSrv, _, ctx, sk, ak, bk, vrk := setupMsgServerFull(t)
+
+	claimant := testAddr("claimant1")
+	sk.tiers[claimant] = 2
+	ak.registrationBlocks[claimant] = 10
+
+	// Whitelisted pot, fully vested by current block (1000).
+	resp, err := msgSrv.CreatePot(ctx, &types.MsgCreatePot{
+		Authority:   "zrn1authority",
+		Name:        "Bootstrap-shaped Pot",
+		TotalAmount: "10000000",
+		Schedule: &types.VestingSchedule{
+			StartBlock: 100,
+			EndBlock:   500,
+		},
+		Eligibility: &types.EligibilityCriteria{
+			Whitelist: []string{claimant},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreatePot: %v", err)
+	}
+
+	// CRITICAL: the module account must NOT be pre-funded. Any pre-fund
+	// would let the legacy transfer model continue undetected. We assert
+	// it is empty (or the entry is missing) BEFORE the claim.
+	preMod := bk.moduleBalances[types.ModuleName]["uzrn"]
+	if preMod != 0 {
+		t.Fatalf("claiming_pot module account must be empty before claim; got %d", preMod)
+	}
+	preMinted := new(big.Int).Set(vrk.totalMinted)
+
+	// Claim.
+	claimResp, err := msgSrv.Claim(ctx, &types.MsgClaim{
+		Claimant: claimant,
+		PotId:    resp.PotId,
+	})
+	if err != nil {
+		t.Fatalf("Claim: %v", err)
+	}
+	claimAmount, _ := new(big.Int).SetString(claimResp.Amount, 10)
+
+	// MintWithCap was called: the mock counter increments.
+	mintedDelta := new(big.Int).Sub(vrk.totalMinted, preMinted)
+	if mintedDelta.Cmp(claimAmount) != 0 {
+		t.Errorf("MintWithCap delta (%s) must equal claim amount (%s) — bootstrap pathway gates through the cap", mintedDelta, claimAmount)
+	}
+
+	// Module account is transient: net zero across the claim. The mock
+	// adds claim_amount on mint and the real msg-server forwards it via
+	// SendCoinsFromModuleToAccount which subtracts the same amount.
+	postMod := bk.moduleBalances[types.ModuleName]["uzrn"]
+	if postMod != 0 {
+		t.Errorf("claiming_pot module account must be empty after claim (transient conduit); got %d", postMod)
+	}
+
+	// Claimer received the funds.
+	gotClaimer := bk.balances[claimant]["uzrn"]
+	if gotClaimer != claimAmount.Int64() {
+		t.Errorf("claimer balance mismatch: got %d, want %s", gotClaimer, claimAmount)
+	}
+}
+
+func TestClaim_RefusedWhenCapExhausted(t *testing.T) {
+	msgSrv, _, ctx, sk, ak, _, vrk := setupMsgServerFull(t)
+
+	// Force the cap-remaining to zero. MintWithCap will return zero;
+	// claiming_pot must surface ErrCapReached rather than send zero coins
+	// to the claimer.
+	vrk.capRemaining = new(big.Int)
+
+	claimant := testAddr("claimant-cap")
+	sk.tiers[claimant] = 2
+	ak.registrationBlocks[claimant] = 10
+
+	resp, err := msgSrv.CreatePot(ctx, &types.MsgCreatePot{
+		Authority:   "zrn1authority",
+		Name:        "Cap-Exhausted Pot",
+		TotalAmount: "10000000",
+		Schedule: &types.VestingSchedule{
+			StartBlock: 100,
+			EndBlock:   500,
+		},
+		Eligibility: &types.EligibilityCriteria{
+			Whitelist: []string{claimant},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreatePot: %v", err)
+	}
+
+	_, err = msgSrv.Claim(ctx, &types.MsgClaim{
+		Claimant: claimant,
+		PotId:    resp.PotId,
+	})
+	if err == nil {
+		t.Fatal("expected ErrCapReached when cap exhausted")
+	}
+	if !errors.Is(err, types.ErrCapReached) {
+		t.Errorf("expected ErrCapReached, got: %v", err)
+	}
+}
+
+func TestClaim_MintClippedToCapHeadroom(t *testing.T) {
+	msgSrv, _, ctx, sk, ak, bk, vrk := setupMsgServerFull(t)
+
+	// Cap remaining is smaller than the claim. The chain mints the
+	// available headroom and forwards it; the claimer gets less than
+	// the nominal claim amount, but the chain remains under the cap.
+	headroom := big.NewInt(7_777)
+	vrk.capRemaining = new(big.Int).Set(headroom)
+
+	claimant := testAddr("claimant-clip")
+	sk.tiers[claimant] = 2
+	ak.registrationBlocks[claimant] = 10
+
+	resp, err := msgSrv.CreatePot(ctx, &types.MsgCreatePot{
+		Authority:   "zrn1authority",
+		Name:        "Cap-Clipping Pot",
+		TotalAmount: "1000000", // would-be claim is large
+		Schedule: &types.VestingSchedule{
+			StartBlock: 100,
+			EndBlock:   500,
+		},
+		Eligibility: &types.EligibilityCriteria{
+			Whitelist: []string{claimant},
+		},
+	})
+	if err != nil {
+		t.Fatalf("CreatePot: %v", err)
+	}
+
+	claimResp, err := msgSrv.Claim(ctx, &types.MsgClaim{
+		Claimant: claimant,
+		PotId:    resp.PotId,
+	})
+	if err != nil {
+		t.Fatalf("Claim: %v", err)
+	}
+
+	if claimResp.Amount != headroom.String() {
+		t.Errorf("claim amount must be clipped to cap headroom: got %s, want %s", claimResp.Amount, headroom)
+	}
+	got := bk.balances[claimant]["uzrn"]
+	if got != headroom.Int64() {
+		t.Errorf("claimer received %d, want %s (capped headroom)", got, headroom)
 	}
 }
