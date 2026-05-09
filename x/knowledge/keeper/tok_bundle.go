@@ -1,10 +1,22 @@
 package keeper
 
 import (
+	"context"
 	"crypto/sha256"
+	"fmt"
 	"sort"
 
+	sdk "github.com/cosmos/cosmos-sdk/types"
+
 	"github.com/zerone-chain/zerone/x/knowledge/types"
+)
+
+// Version constants for provenance fields that have no keeper getter yet.
+// GetTraceSchemaVersion and GetTokenizerVersion do not exist on the keeper;
+// these constants represent the current deployed versions.
+const (
+	tokTraceSchemaVersion = "v1"
+	tokTokenizerVersion   = "v0"
 )
 
 // Domain tags for ToK Merkle commitment. Separate tags prevent set-swap
@@ -78,4 +90,80 @@ func tokDomainHash(domain string, write func(interface{ Write([]byte) (int, erro
 	writeLenString(h, domain)
 	write(h)
 	return h.Sum(nil)
+}
+
+// AssembleToKBundle is the headline ToK extraction primitive. It validates
+// the selector, applies caps, gathers IDs, computes the snapshot root,
+// materialises payloads, and returns a complete bundle. TC1 (graph is
+// the headline) is bound by exposing this through gRPC + CLI as the
+// trainer-facing default.
+func (k Keeper) AssembleToKBundle(
+	ctx context.Context,
+	sel *types.ToKSelector,
+	atBlockHeight uint64,
+) (*types.ToKBundle, error) {
+	capped, err := ValidateAndCapToKSelector(sel)
+	if err != nil {
+		return nil, err
+	}
+	nodeIDs, edges, err := k.SelectToKIds(ctx, capped)
+	if err != nil {
+		return nil, err
+	}
+	root := ComputeToKSnapshotRoot(nodeIDs, edges)
+
+	// Materialise node payloads.
+	var nodes []*types.Fact
+	for _, id := range nodeIDs {
+		f, ok := k.GetFact(ctx, id)
+		if !ok {
+			return nil, fmt.Errorf("inconsistent state: selected fact %s not found", id)
+		}
+		nodes = append(nodes, f)
+	}
+
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	if atBlockHeight == 0 {
+		atBlockHeight = uint64(sdkCtx.BlockHeight())
+	}
+
+	return &types.ToKBundle{
+		SnapshotBlock:       atBlockHeight,
+		SnapshotRoot:        root,
+		IncludedNodeIds:     nodeIDs,
+		IncludedEdges:       edges,
+		Nodes:               nodes,
+		SerialisationFormat: "jsonl_adjacency_v1",
+		// SerialisedPayload omitted — Task 9 fills this when format requested.
+		Provenance: &types.ToKBundleProvenance{
+			ChainId: sdkCtx.ChainID(),
+			// GetTraceSchemaVersion / GetTokenizerVersion do not exist on the
+			// keeper; use the deployed-version constants until a param or
+			// getter is added.
+			TraceSchemaVersion:            tokTraceSchemaVersion,
+			CanonicalSerialisationVersion: "v1",
+			TokenizerVersion:              tokTokenizerVersion,
+			SelectorUsed:                  capped,
+			CapMaxDepth:                   ToKMaxDepthCap,
+			CapMaxPaths:                   ToKMaxPathsCap,
+			CapLimit:                      ToKFrontierCap,
+		},
+	}, nil
+}
+
+// SelectToKIds dispatches on the validated selector variant.
+func (k Keeper) SelectToKIds(
+	ctx context.Context,
+	sel *types.ToKSelector,
+) (nodeIDs []string, edges []*types.ToKEdge, err error) {
+	switch v := sel.Variant.(type) {
+	case *types.ToKSelector_RootedSubtree:
+		return k.GatherRootedSubtree(ctx, v.RootedSubtree)
+	case *types.ToKSelector_AncestorCone:
+		return k.GatherAncestorCone(ctx, v.AncestorCone)
+	case *types.ToKSelector_Frontier:
+		return k.GatherFrontier(ctx, v.Frontier)
+	default:
+		return nil, nil, fmt.Errorf("selector variant not handled in this plan")
+	}
 }

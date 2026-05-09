@@ -272,6 +272,27 @@ func TestComputeToKSnapshotRoot_NoCanonCollision(t *testing.T) {
 	require.NotEqual(t, rA, rB, "pipe in field must not collide with field separator")
 }
 
+// ─── AssembleToKBundle tests ─────────────────────────────────────────────────
+
+func TestAssembleToKBundle_RootedSubtree(t *testing.T) {
+	k, ctx := setupKnowledgeWithFacts(t, []factSpec{
+		{id: "axiom", domain: "physics"},
+		{id: "b", domain: "physics", supports: []string{"axiom"}},
+	})
+	sel := &types.ToKSelector{Variant: &types.ToKSelector_RootedSubtree{
+		RootedSubtree: &types.RootedSubtreeSelector{RootFactId: "axiom", MaxDepth: 5},
+	}}
+	bundle, err := k.AssembleToKBundle(ctx, sel, 0 /* current block */)
+	require.NoError(t, err)
+	require.NotEmpty(t, bundle.SnapshotRoot)
+	require.Equal(t, []string{"axiom", "b"}, bundle.IncludedNodeIds)
+	require.Len(t, bundle.IncludedEdges, 1)
+	require.Len(t, bundle.Nodes, 2)
+	// Re-derivability: re-compute root from IDs — must match.
+	rederived := keeper.ComputeToKSnapshotRoot(bundle.IncludedNodeIds, bundle.IncludedEdges)
+	require.Equal(t, bundle.SnapshotRoot, rederived)
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 type factSpec struct {
