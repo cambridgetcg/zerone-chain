@@ -39,4 +39,23 @@
 // chain's truth-seeking belief is enacted; touching code here is
 // touching a commitment, and every change should be checked against
 // the creed.
+//
+// docs/TOK_SUBSTRATE.md commitments preserved here:
+// - TC1 (graph is the headline) — BundleToK + RouteBCapabilities
+//   advertise the substrate first. See keeper/tok_bundle.go and
+//   keeper/grpc_query.go BundleToK handler.
+// - TC2 (every view is graph-pinned) — every bundle carries a 32-byte
+//   snapshot_root computed via ComputeToKSnapshotRoot from sorted node
+//   IDs + sorted edge IDs, domain-tagged TOK_NODES / TOK_EDGES.
+// - TC3 (topology is signal) — bundles ship edges, depth, and (when
+//   available) confidence-floor as first-class fields, not metadata.
+//   See keeper/tok_serialise.go for the JSONL adjacency-list format.
+// - TC5 (extraction is open) — ValidateAndCapToKSelector accepts any
+//   well-formed selector and applies uniform caps. Refusals are limited
+//   to syntax errors and snapshot-out-of-range; no curation gate exists.
+//
+// What would break these: see the corresponding "What would break it"
+// sections in docs/TOK_SUBSTRATE.md.
+//
+// We speak through intentions.
 package knowledge
