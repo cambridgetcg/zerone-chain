@@ -17,6 +17,9 @@ package cross_stack_test
 // other binding tests where they exist.
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"os"
@@ -2234,6 +2237,48 @@ func TestTruthSeeking_CreedAndContractStayInSync(t *testing.T) {
 		require.True(t, commitmentsWithEchoes[n],
 			"commitment %d has no Echoes line; the creed is a graph, not a list — every commitment must declare its connections", n)
 	}
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Creed hash bind: TRUTH_SEEKING.md is pinned to .creed-hash (Go side).
+//
+// Commitment 19 says the creed is governance-gated — its on-chain
+// anchor is `x/creed.PinnedCreed`, and its off-chain anchor is
+// `.creed-hash`. The shell script `scripts/check_creed_hash.sh`
+// already enforces the off-chain anchor at `make pr-check` time;
+// this test enforces it at `go test ./...` time, so the gate is
+// reachable from both CI surfaces. Drift in either direction —
+// editing the creed without bumping the hash, or bumping the hash
+// without editing the creed — fails CI here.
+//
+// Normalisation matches the shell script: strip CR (so platform line
+// endings don't affect the hash), then sha256.
+//
+// Bound here AND by: scripts/check_creed_hash.sh (same check, layered
+// for redundancy).
+// ════════════════════════════════════════════════════════════════════
+
+func TestTruthSeeking_CreedHashIsPinned(t *testing.T) {
+	creed, err := os.ReadFile("../../docs/TRUTH_SEEKING.md")
+	require.NoError(t, err, "TRUTH_SEEKING.md must exist")
+
+	// Strip CR — match scripts/check_creed_hash.sh's normalisation
+	// so the Go-side and shell-side checks compute the same hash.
+	normalized := bytes.ReplaceAll(creed, []byte("\r"), nil)
+	sum := sha256.Sum256(normalized)
+	actual := hex.EncodeToString(sum[:])
+
+	pinned, err := os.ReadFile("../../.creed-hash")
+	require.NoError(t, err, ".creed-hash must exist")
+	expected := strings.TrimSpace(string(pinned))
+
+	require.Equal(t, expected, actual,
+		"TRUTH_SEEKING.md hash drift detected.\n"+
+			"  pinned (.creed-hash): %s\n"+
+			"  actual (computed):    %s\n\n"+
+			"if you intentionally amended the creed, update .creed-hash to %s and commit both files together. The hash bump is the visible signal that the creed text changed, surfacing the change to reviewers and to the on-chain x/creed pin.\n\n"+
+			"commitment 19: the creed is governance-gated. silent amendment of the chain's voice — even by the chain's own contributors — is what this test refuses.",
+		expected, actual, actual)
 }
 
 // sdkCoinsForTest keeps the panel test readable; mirrors the inlined
