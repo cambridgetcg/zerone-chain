@@ -3101,3 +3101,19 @@ For Zerone-specific features, block explorers may want to:
 3. **Partnership lifecycle** -- Follow `partnership_proposed` -> `partnership_accepted` -> `operation_proposed` -> `operation_approved` -> `exit_initiated` flow
 4. **Alignment health** -- Display `observation_recorded` composite scores over time
 5. **Autopoiesis adaptation** -- Chart `epoch_processed` SSI scores and multiplier changes
+
+---
+
+## ToK substrate events (docs/TOK_SUBSTRATE.md)
+
+### tok_bundle_extracted
+A trainer extracted a ToK bundle via `BundleToK`. TC1 (graph is the headline) and TC5 (extraction is open) are both bound by this event firing on every successful bundle.
+- `tok_commitment` -- `"TC1,TC5"` — the doctrine commitments this event preserves
+- `selector_kind` -- `"rooted_subtree"` | `"ancestor_cone"` | `"frontier"`
+- `node_count` -- number of nodes in the bundle
+- `snapshot_block` -- block height the bundle is pinned to
+
+### tok_snapshot_root_pinned
+Every bundle pins to a 32-byte snapshot root (TC2: every view is graph-pinned). The root commits to sorted node IDs + sorted edge IDs domain-tagged separately, allowing trust-minimised re-derivation by any client with the IDs.
+- `tok_commitment` -- `"TC2"`
+- `snapshot_root` -- hex-encoded 32-byte Merkle root
