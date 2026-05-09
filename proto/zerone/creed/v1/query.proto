@@ -1,0 +1,69 @@
+syntax = "proto3";
+package zerone.creed.v1;
+option go_package = "github.com/zerone-chain/zerone/x/creed/types";
+
+import "google/api/annotations.proto";
+import "zerone/creed/v1/types.proto";
+import "zerone/creed/v1/genesis.proto";
+
+// Query exposes the chain's anchored creed surface.
+//
+// docs/TRUTH_SEEKING.md, commitment 11 (trust is queryable): the
+// chain's stated beliefs — which creed it is currently bound to,
+// and the full history of how it got here — must be readable as
+// a structured surface, not reconstructed from off-chain repo
+// archaeology. This service is the chain making that promise good
+// at the doctrinal layer.
+service Query {
+  // Pinned returns the current canonical PinnedCreed (highest
+  // version). This is the answer to "which creed is the chain
+  // running right now."
+  rpc Pinned(QueryPinnedRequest) returns (QueryPinnedResponse) {
+    option (google.api.http).get = "/zerone/creed/v1/pinned";
+  }
+
+  // PinAtVersion returns a specific historical pin. Version must
+  // be ≤ current pin's version. Used to look up "what was the
+  // creed at the time this fact was verified."
+  rpc PinAtVersion(QueryPinAtVersionRequest) returns (QueryPinAtVersionResponse) {
+    option (google.api.http).get = "/zerone/creed/v1/pin/{version}";
+  }
+
+  // PinHistory returns all pinned versions in descending order
+  // (newest first). Pagination is via limit + start_before_version
+  // so callers can walk back through amendment history.
+  rpc PinHistory(QueryPinHistoryRequest) returns (QueryPinHistoryResponse) {
+    option (google.api.http).get = "/zerone/creed/v1/history";
+  }
+
+  // Commitment returns the current registry entry for a numbered
+  // commitment, or NotFound if archived or never declared.
+  rpc Commitment(QueryCommitmentRequest) returns (QueryCommitmentResponse) {
+    option (google.api.http).get = "/zerone/creed/v1/commitment/{number}";
+  }
+
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse) {
+    option (google.api.http).get = "/zerone/creed/v1/params";
+  }
+}
+
+message QueryPinnedRequest {}
+message QueryPinnedResponse { PinnedCreed pin = 1; }
+
+message QueryPinAtVersionRequest { uint32 version = 1; }
+message QueryPinAtVersionResponse { PinnedCreed pin = 1; }
+
+message QueryPinHistoryRequest {
+  uint32 limit = 1;
+  uint32 start_before_version = 2; // 0 = start at current
+}
+message QueryPinHistoryResponse {
+  repeated PinnedCreed pins = 1;
+  uint32 next_start_before_version = 2;
+}
+
+message QueryCommitmentRequest { uint32 number = 1; }
+message QueryCommitmentResponse { CommitmentEntry entry = 1; }
+
+message QueryParamsRequest {}
+message QueryParamsResponse { Params params = 1; }

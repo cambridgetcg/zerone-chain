@@ -1,0 +1,40 @@
+syntax = "proto3";
+package zerone.creed.v1;
+option go_package = "github.com/zerone-chain/zerone/x/creed/types";
+
+import "zerone/creed/v1/types.proto";
+
+// GenesisState seeds the chain's pinned creed at version 1. The
+// genesis pin establishes the baseline against which all future
+// creed amendments are measured. Any commitment in TRUTH_SEEKING.md
+// at testnet→mainnet transition becomes part of the Genesis Creed
+// and is recorded with introduced_via_lip="" (no LIP precedes
+// genesis).
+message GenesisState {
+  Params params = 1;
+
+  // The version-1 pin. If empty at chain start, x/creed
+  // InitGenesis seeds a placeholder that subsequent governance
+  // must replace before any commitment-citing event passes
+  // CI's hash check. In normal mainnet startup this MUST be
+  // populated with the canonical Genesis Creed.
+  PinnedCreed genesis_pin = 2;
+
+  // Optional historical pins for chains that migrate from a
+  // pre-x/creed state. Sorted by version ascending. Each must be
+  // strictly older than genesis_pin.
+  repeated PinnedCreed history = 3;
+}
+
+message Params {
+  // Authority that may call MsgAnchorPin pre-LIP-class. Once
+  // x/gov.CategoryCreedAmendment ships, this should match the gov
+  // module account so only LIP-resolved amendments succeed.
+  string authority = 1;
+
+  // Whether direct authority-gated AnchorPin calls are enabled.
+  // Pre-launch: true (so genesis can pin and one-off corrections
+  // are possible). Post-launch: false, with all pins flowing
+  // through the LIP class.
+  bool direct_anchor_enabled = 2;
+}

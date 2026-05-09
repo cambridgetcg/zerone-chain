@@ -20,6 +20,7 @@ identical events.
 - [claiming_pot](#claiming_pot)
 - [compute_pool](#compute_pool)
 - [counterexamples](#counterexamples)
+- [creed](#creed)
 - [discovery](#discovery)
 - [disputes](#disputes)
 - [emergency](#emergency)
@@ -612,6 +613,23 @@ A counterexample reached `min_votes` and resolved. Status flips to VALIDATED if 
 - `rejections` -- final reject count
 - `resolved_at_block` -- block at which resolution committed
 - `creed_commitment` -- "15"
+
+---
+
+## creed
+
+### zerone.creed.pinned
+A new canonical creed version was anchored on chain. Carries the SHA256 hash of the new `docs/TRUTH_SEEKING.md`, the LIP that authorized the pin (empty for the genesis pin), and the count of commitment entries in the registry. Embodies commitments 6 (no unilateral injection — extended from facts to the chain's voice itself) and 10 (forward-only audit — pins are append-only by monotonic version, prior versions remain queryable).
+- `version` -- the new canonical version (current+1 at write time)
+- `canonical_hash` -- hex-encoded SHA256 of normalized TRUTH_SEEKING.md
+- `source_lip` -- LIP id that authorized the amendment (empty for genesis pin)
+- `commitment_count` -- number of entries in the per-commitment registry
+- `creed_commitment` -- "6,10"
+
+### zerone.creed.params_updated
+Module parameters updated. Most consequential field is `direct_anchor_enabled` — once flipped to false at mainnet, the only legitimate path to a new pin is through a passed `CategoryCreedAmendment` LIP.
+- `authority` -- governance address
+- `direct_anchor_enabled` -- "true" | "false"
 
 ---
 

@@ -1,0 +1,54 @@
+syntax = "proto3";
+package zerone.creed.v1;
+option go_package = "github.com/zerone-chain/zerone/x/creed/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/creed/v1/types.proto";
+import "zerone/creed/v1/genesis.proto";
+
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  // AnchorPin records a new PinnedCreed at version+1. Authority-
+  // gated; once x/gov.CategoryCreedAmendment ships, the gov module
+  // account is the only legitimate authority and the path runs
+  // through a passed Creed Amendment LIP.
+  //
+  // The handler refuses if direct_anchor_enabled is false (post-
+  // launch lockdown), if the version is not strictly greater than
+  // the current pin, if the canonical_hash is empty, or if the
+  // commitment registry breaks structural invariants (duplicate
+  // numbers, gaps that don't match an archive transition).
+  rpc AnchorPin(MsgAnchorPin) returns (MsgAnchorPinResponse);
+
+  // UpdateParams is the standard authority-gated param update.
+  rpc UpdateParams(MsgUpdateParams) returns (MsgUpdateParamsResponse);
+}
+
+message MsgAnchorPin {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+
+  // The new pinned creed. version MUST equal currentPin.version+1.
+  // canonical_hash MUST be non-empty. commitments MUST satisfy:
+  //   - all numbers unique
+  //   - numbers are 1..N for some N (no gaps unless the missing
+  //     number's prior entry is archived in this same version)
+  //   - introduced_at_height ≤ block_height for all entries
+  PinnedCreed pin = 2;
+
+  // The LIP id this pin came from. Required when params.
+  // direct_anchor_enabled is false. Empty allowed only for
+  // genesis-equivalent pre-launch pins.
+  string source_lip = 3;
+}
+message MsgAnchorPinResponse {
+  uint32 new_version = 1;
+}
+
+message MsgUpdateParams {
+  option (cosmos.msg.v1.signer) = "authority";
+  string authority = 1;
+  Params params = 2;
+}
+message MsgUpdateParamsResponse {}

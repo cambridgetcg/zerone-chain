@@ -207,6 +207,9 @@ import (
 	zeroneinquiry "github.com/zerone-chain/zerone/x/inquiry"
 	zeroneinquirykeeper "github.com/zerone-chain/zerone/x/inquiry/keeper"
 	zeroneinquirytypes "github.com/zerone-chain/zerone/x/inquiry/types"
+	zeronecreed "github.com/zerone-chain/zerone/x/creed"
+	zeronecreedkeeper "github.com/zerone-chain/zerone/x/creed/keeper"
+	zeronecreedtypes "github.com/zerone-chain/zerone/x/creed/types"
 	zeroneagentu "github.com/zerone-chain/zerone/x/agent_understanding"
 	zeroneagentukeeper "github.com/zerone-chain/zerone/x/agent_understanding/keeper"
 	zeroneagentutypes "github.com/zerone-chain/zerone/x/agent_understanding/types"
@@ -318,6 +321,7 @@ var (
 		zeroneinquiry.AppModuleBasic{},       // x/inquiry: open-question market for unmapped territory
 		zeroneagentu.AppModuleBasic{},        // x/agent_understanding: per-agent topic profile synthesizer
 		zeronedialectic.AppModuleBasic{},     // x/dialectic: disagreement-shape synthesizer (commitment 17)
+		zeronecreed.AppModuleBasic{},         // x/creed: on-chain anchor for TRUTH_SEEKING.md (commitments 6, 10)
 	)
 
 	// Module account permissions.
@@ -512,6 +516,7 @@ type ZeroneApp struct {
 	InquiryKeeper           zeroneinquirykeeper.Keeper       // x/inquiry: open-question market (commitment 16)
 	AgentUnderstandingKeeper zeroneagentukeeper.Keeper       // x/agent_understanding: per-agent profile synthesizer (extends commitment 11)
 	DialecticKeeper          zeronedialectickeeper.Keeper    // x/dialectic: disagreement-shape synthesizer (commitment 17)
+	CreedKeeper              zeronecreedkeeper.Keeper        // x/creed: on-chain creed anchor (commitments 6, 10)
 
 	// ABCI++ vote extension config (nil until validator is configured)
 	VoteExtConfig *VoteExtensionConfig
@@ -633,6 +638,7 @@ func NewZeroneApp(
 		zeroneinquirytypes.StoreKey,
 		zeroneagentutypes.StoreKey,
 		zeronedialectictypes.StoreKey,
+		zeronecreedtypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -1149,6 +1155,18 @@ func NewZeroneApp(
 		zeroneknowledgekeeper.NewDialecticAdapter(app.KnowledgeKeeper),
 	)
 
+	// x/creed: on-chain anchor for the canonical TRUTH_SEEKING.md.
+	// docs/TRUTH_SEEKING.md commitments 6 and 10: extends "no
+	// unilateral injection" from the corpus to the chain's voice
+	// itself, recorded forward-only by monotonic version. Authority
+	// is the gov module account so amendments flow through the
+	// CategoryCreedAmendment LIP class once that ships.
+	app.CreedKeeper = zeronecreedkeeper.NewKeeper(
+		sdkruntime.NewKVStoreService(keys[zeronecreedtypes.StoreKey]),
+		appCodec,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
 	// Frontier-query wiring: now that inquiry, counterexamples, and
 	// ontology keepers all exist, register the adapters with
 	// governance_synthesis so its Frontier query can compose
@@ -1457,6 +1475,7 @@ func NewZeroneApp(
 		zeronecounterex.NewAppModule(appCodec, app.CounterexamplesKeeper),
 		zeroneinquiry.NewAppModule(appCodec, app.InquiryKeeper),
 		zeroneagentu.NewAppModule(appCodec, app.AgentUnderstandingKeeper),
+		zeronecreed.NewAppModule(appCodec, app.CreedKeeper),
 		zeronedialectic.NewAppModule(appCodec, app.DialecticKeeper),
 	)
 
@@ -1516,6 +1535,7 @@ func NewZeroneApp(
 		zeroneinquirytypes.ModuleName,               // inquiry: scan OPEN/ANSWERED inquiries for resolution + expiry
 		zeroneagentutypes.ModuleName,                // agent_understanding: no-op BeginBlock (pure synthesizer)
 		zeronedialectictypes.ModuleName,             // dialectic: no-op BeginBlock (pure synthesizer)
+		zeronecreedtypes.ModuleName,                 // creed: no-op BeginBlock (pure registry)
 	)
 
 	app.ModuleManager.SetOrderEndBlockers(
@@ -1573,6 +1593,7 @@ func NewZeroneApp(
 		zeroneinquirytypes.ModuleName,               // EndBlocker: no-op
 		zeroneagentutypes.ModuleName,                // EndBlocker: no-op
 		zeronedialectictypes.ModuleName,             // EndBlocker: no-op
+		zeronecreedtypes.ModuleName,                 // EndBlocker: no-op (pure registry)
 	)
 
 	genesisOrder := []string{
@@ -1631,6 +1652,7 @@ func NewZeroneApp(
 		zeroneinquirytypes.ModuleName,               // Genesis: after knowledge (auto-resolver reads facts)
 		zeroneagentutypes.ModuleName,                // Genesis: after all upstream modules (pure synthesizer)
 		zeronedialectictypes.ModuleName,             // Genesis: after knowledge (pure synthesizer)
+		zeronecreedtypes.ModuleName,                 // Genesis: standalone (pure registry, no cross-module deps)
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisOrder...)

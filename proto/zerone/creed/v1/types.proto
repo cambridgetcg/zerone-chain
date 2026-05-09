@@ -1,0 +1,81 @@
+syntax = "proto3";
+package zerone.creed.v1;
+option go_package = "github.com/zerone-chain/zerone/x/creed/types";
+
+// PinnedCreed is the chain's on-chain anchor for the canonical
+// docs/TRUTH_SEEKING.md text. The hash protects against silent
+// drift: a build whose normalized creed file does not hash to
+// PinnedCreed.canonical_hash is not the build the chain claims to
+// be running. The per-commitment registry protects against
+// interpretation drift: even an amendment that preserves the
+// overall hash (or sneaks in via post-pin edits) cannot redefine
+// commitment N without bumping the registry entry's
+// introduced_via_lip.
+//
+// See docs/TRUTH_SEEKING.md commitments 6 and 10:
+//   - 6 (no unilateral injection): extends from facts to the
+//     creed itself. The chain's voice is now governance-gated by
+//     the same shape as authority injection of facts.
+//   - 10 (forward-only audit): pin records are append-only by
+//     monotonic version; prior creed versions remain queryable as
+//     the chain's history of self-amendment.
+message PinnedCreed {
+  // Monotonic, starting at 1 at genesis. version=N+1 archives
+  // version=N; both remain queryable. The current pin is whichever
+  // version has highest number.
+  uint32 version = 1;
+
+  // sha256 of normalized docs/TRUTH_SEEKING.md (CR characters
+  // stripped; no other normalization applied so structural changes
+  // remain visible).
+  bytes canonical_hash = 2;
+
+  // Block at which this version became canonical.
+  uint64 pinned_at_height = 3;
+
+  // LIP id that authorized this pin. Empty for the genesis pin
+  // (version=1) since no LIP precedes genesis. Required for any
+  // version > 1 once x/gov.CategoryCreedAmendment ships.
+  string pinned_via_lip = 4;
+
+  // Per-commitment registry at this version. Each entry names a
+  // commitment by number and tracks when it entered the creed and
+  // (if archived) when it left. The registry is the structural
+  // protection against interpretation drift — commitment 7 can
+  // only be redefined by amending its CommitmentEntry, and that
+  // amendment is itself bound to a LIP.
+  repeated CommitmentEntry commitments = 5;
+}
+
+// CommitmentEntry is one numbered commitment's anchor on chain.
+// The entry binds a commitment number to its name and the LIP
+// that introduced or last amended it. A future amendment that
+// changes the meaning of commitment N must produce a new
+// PinnedCreed where the corresponding entry's introduced_via_lip
+// is the amending LIP — even if the commitment_number stays the
+// same.
+message CommitmentEntry {
+  // Stable identifier across versions. 1..N.
+  uint32 number = 1;
+
+  // Short canonical title. Examples: "Methodology over statement",
+  // "Is-ought wall is structural", "Forward-only audit".
+  // Must match the heading in TRUTH_SEEKING.md for the same number.
+  string name = 2;
+
+  // Block at which this commitment first entered the creed (or was
+  // last materially amended).
+  uint64 introduced_at_height = 3;
+
+  // LIP id that introduced or last amended this commitment.
+  // Empty for genesis-installed commitments.
+  string introduced_via_lip = 4;
+
+  // True iff this commitment has been formally archived (no longer
+  // load-bearing). Archived commitments remain in the registry as
+  // historical record; new code MUST NOT cite an archived number.
+  bool archived = 5;
+
+  // Block at which this commitment was archived. 0 if not archived.
+  uint64 archived_at_height = 6;
+}
