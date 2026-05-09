@@ -277,11 +277,18 @@ func (k msgServer) StartSession(goCtx context.Context, msg *types.MsgStartSessio
 	home.LastActiveBlock = height
 	k.SetHome(ctx, home)
 
+	// Commitment 7 (skill is current, not historical): session start
+	// marks the moment the agent is currently authorised. Past
+	// sessions are part of the queryable record (commitment 10), but
+	// the panel-weight / spending-power surface reads from the active
+	// session's current state, not from the agent's history of having
+	// once been in good standing.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.home.session_started",
 			sdk.NewAttribute("home_id", msg.HomeId),
 			sdk.NewAttribute("session_id", sessionID),
 			sdk.NewAttribute("key_hash", msg.KeyHash),
+			sdk.NewAttribute("creed_commitment", "7"),
 		),
 	)
 
@@ -317,10 +324,16 @@ func (k msgServer) EndSession(goCtx context.Context, msg *types.MsgEndSession) (
 
 	k.DeleteSession(ctx, msg.HomeId, msg.SessionId)
 
+	// Commitment 7 (skill is current, not historical): session end
+	// is the chain dropping the agent's currently-authorised status.
+	// The audit record of the session remains, but the agent now
+	// reads as "not currently live" — past activity does not extend
+	// authorisation forward.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.home.session_ended",
 			sdk.NewAttribute("home_id", msg.HomeId),
 			sdk.NewAttribute("session_id", msg.SessionId),
+			sdk.NewAttribute("creed_commitment", "7"),
 		),
 	)
 
@@ -422,11 +435,17 @@ func (k msgServer) RevokeKey(goCtx context.Context, msg *types.MsgRevokeKey) (*t
 	}
 	k.SetAlertWithLimit(ctx, alert)
 
+	// Commitment 7 (skill is current, not historical): key revocation
+	// is the chain refusing the previously-authorised key NOW, even
+	// though it was authorised before. Authorisation does not survive
+	// revocation by virtue of having existed; current standing is
+	// what the chain reads.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.home.key_revoked",
 			sdk.NewAttribute("home_id", msg.HomeId),
 			sdk.NewAttribute("owner", msg.Owner),
 			sdk.NewAttribute("key_hash", msg.KeyHash),
+			sdk.NewAttribute("creed_commitment", "7"),
 		),
 	)
 
