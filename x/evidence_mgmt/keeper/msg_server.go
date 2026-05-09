@@ -50,12 +50,18 @@ func (m msgServer) SubmitEvidence(goCtx context.Context, msg *types.MsgSubmitEvi
 
 	m.SetEvidence(ctx, evidence)
 
+	// Commitment 1 (methodology over statement): evidence enters
+	// the chain with a declared methodology and provenance — the
+	// substrate that downstream knowledge claims and disputes ground
+	// in. Without the declared methodology, evidence would be a
+	// bare assertion rather than a testable input.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.evidence_mgmt.evidence_submitted",
 			sdk.NewAttribute("evidence_id", id),
 			sdk.NewAttribute("submitter", msg.Submitter),
 			sdk.NewAttribute("evidence_type", msg.EvidenceType.String()),
+			sdk.NewAttribute("creed_commitment", "1"),
 		),
 	)
 
@@ -91,12 +97,18 @@ func (m msgServer) TransferCustody(goCtx context.Context, msg *types.MsgTransfer
 
 	m.SetEvidence(ctx, evidence)
 
+	// Commitment 10 (forward-only audit): custody transfer adds a
+	// link to the chain of custody — never replaces a prior link.
+	// The lineage of who has held this evidence and when is part
+	// of the chain's permanent record so future verifications can
+	// trace provenance without trusting any single party's account.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.evidence_mgmt.custody_transferred",
 			sdk.NewAttribute("evidence_id", msg.EvidenceId),
 			sdk.NewAttribute("from", msg.CurrentCustodian),
 			sdk.NewAttribute("to", msg.NewCustodian),
+			sdk.NewAttribute("creed_commitment", "10"),
 		),
 	)
 
@@ -165,6 +177,12 @@ func (m msgServer) VerifyEvidence(goCtx context.Context, msg *types.MsgVerifyEvi
 		m.SetEvidence(ctx, evidence)
 	}
 
+	// Commitment 1 (methodology over statement) AND commitment 10
+	// (forward-only audit): the verification verdict is what makes
+	// the evidence's declared methodology live as a testable claim.
+	// The verdict is recorded immutably alongside the verifier's
+	// identity and the confidence — past verifications cannot be
+	// retroactively rewritten to flatter or punish later positions.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.evidence_mgmt.evidence_verified",
@@ -172,6 +190,7 @@ func (m msgServer) VerifyEvidence(goCtx context.Context, msg *types.MsgVerifyEvi
 			sdk.NewAttribute("verifier", msg.Verifier),
 			sdk.NewAttribute("outcome", fmt.Sprintf("%v", msg.Outcome)),
 			sdk.NewAttribute("confidence", fmt.Sprintf("%d", msg.Confidence)),
+			sdk.NewAttribute("creed_commitment", "1,10"),
 		),
 	)
 
@@ -236,6 +255,11 @@ func (m msgServer) ChallengeEvidence(goCtx context.Context, msg *types.MsgChalle
 	})
 	m.SetEvidence(ctx, evidence)
 
+	// Commitment 10 (forward-only audit): challenging evidence
+	// opens a dispute and the relationship (evidence → dispute) is
+	// recorded permanently. The challenge is part of the evidence's
+	// lifecycle record going forward — outcomes will be tied back
+	// to this entry, not to any later post-hoc restatement.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.evidence_mgmt.evidence_challenged",
@@ -243,6 +267,7 @@ func (m msgServer) ChallengeEvidence(goCtx context.Context, msg *types.MsgChalle
 			sdk.NewAttribute("challenger", msg.Challenger),
 			sdk.NewAttribute("dispute_id", disputeID),
 			sdk.NewAttribute("bond", msg.Bond),
+			sdk.NewAttribute("creed_commitment", "10"),
 		),
 	)
 
