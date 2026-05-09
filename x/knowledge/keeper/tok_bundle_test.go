@@ -57,6 +57,33 @@ func TestGatherRootedSubtree_LinearChain(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, []string{"axiom", "b", "c"}, nodeIDs) // sorted
 	require.Len(t, edges, 2)
+	// Assert edge shape (not just cardinality). sortToKEdges sorts by FromFactId,
+	// so b < c lexicographically — edges[0] is b→axiom, edges[1] is c→b.
+	require.Equal(t, "b", edges[0].FromFactId)
+	require.Equal(t, "axiom", edges[0].ToFactId)
+	require.Equal(t, "c", edges[1].FromFactId)
+	require.Equal(t, "b", edges[1].ToFactId)
+}
+
+func TestGatherRootedSubtree_FiltersContradictsRelations(t *testing.T) {
+	// Build: axiom ──SUPPORTS──> b SUPPORTS axiom
+	//                            c CONTRADICTS axiom  (must be excluded)
+	k, ctx := setupKnowledgeWithFacts(t, []factSpec{
+		{id: "axiom", domain: "physics"},
+		{id: "b", domain: "physics", supports: []string{"axiom"}},
+		{id: "c", domain: "physics"}, // CONTRADICTS axiom — added manually below
+	})
+	// Add the CONTRADICTS relation directly (factSpec only supports SUPPORTS).
+	require.NoError(t, k.SetFactRelation(ctx, &types.FactRelation{
+		SourceFactId: "c",
+		TargetFactId: "axiom",
+		Relation:     types.RelationType_RELATION_TYPE_CONTRADICTS,
+	}))
+	sel := &types.RootedSubtreeSelector{RootFactId: "axiom", MaxDepth: 5}
+	nodeIDs, _, err := k.GatherRootedSubtree(ctx, sel)
+	require.NoError(t, err)
+	// c must be excluded because CONTRADICTS is not a support-bearing relation.
+	require.Equal(t, []string{"axiom", "b"}, nodeIDs)
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

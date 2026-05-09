@@ -116,6 +116,21 @@ func (k Keeper) gatherDescendantsRecursive(
 		return err
 	}
 	for _, rel := range incoming {
+		// Only follow support-bearing relations — same filter as walkDescendants.
+		// CONTRADICTS and SUPERSEDES must not appear in a descendant bundle.
+		switch rel.Relation {
+		case types.RelationType_RELATION_TYPE_SUPPORTS,
+			types.RelationType_RELATION_TYPE_REQUIRES,
+			types.RelationType_RELATION_TYPE_REFINES,
+			types.RelationType_RELATION_TYPE_GENERALIZES,
+			types.RelationType_RELATION_TYPE_CITES:
+		default:
+			continue
+		}
+		// Guard against ghost nodes: skip if the source fact no longer exists.
+		if _, ok := k.GetFact(ctx, rel.SourceFactId); !ok {
+			continue
+		}
 		edgeKey := rel.SourceFactId + "→" + rel.TargetFactId + "|" + rel.Relation.String()
 		if _, ok := edges[edgeKey]; !ok {
 			edges[edgeKey] = &types.ToKEdge{
