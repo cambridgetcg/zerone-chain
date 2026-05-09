@@ -176,6 +176,11 @@ func (m msgServer) Claim(goCtx context.Context, msg *types.MsgClaim) (*types.Msg
 			sdk.NewAttribute("pot_id", msg.PotId),
 			sdk.NewAttribute("claimant", msg.Claimant),
 			sdk.NewAttribute("amount", claimable.String()),
+			// Commitment 20: issuance follows participation. Every
+			// uzrn this event announces was minted on demand through
+			// MintWithCap when the agent called MsgClaim — never
+			// pre-funded.
+			sdk.NewAttribute("creed_commitment", "20"),
 		),
 	)
 

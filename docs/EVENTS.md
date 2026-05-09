@@ -523,10 +523,16 @@ Claiming pot created.
 - `total_amount` -- total claimable amount
 
 ### zerone.claiming_pot.pot_claimed
-Tokens claimed from pot.
-- `pot_id` -- pot ID
+Tokens claimed from a pot. Commitment 20 (issuance follows participation):
+every uzrn announced by this event was minted on demand through
+`x/vesting_rewards.MintWithCap` when the agent called `MsgClaim` — never
+pre-funded. The claiming_pot module account is a transient conduit that
+holds the minted coins for the duration of one transaction before
+forwarding to the claimant.
+- `pot_id` -- pot ID (bootstrap pots use the `bootstrap-` prefix)
 - `claimant` -- claimant address
-- `amount` -- claimed amount
+- `amount` -- claimed amount in uzrn
+- `creed_commitment` -- "20"
 
 ### zerone.claiming_pot.update_pot_params
 Governance parameter update.
