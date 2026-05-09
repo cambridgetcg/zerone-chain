@@ -32,6 +32,8 @@ import (
 	autopoiesistypes "github.com/zerone-chain/zerone/x/autopoiesis/types"
 	counterexampleskeeper "github.com/zerone-chain/zerone/x/counterexamples/keeper"
 	counterexamplestypes "github.com/zerone-chain/zerone/x/counterexamples/types"
+	disputeskeeper "github.com/zerone-chain/zerone/x/disputes/keeper"
+	disputestypes "github.com/zerone-chain/zerone/x/disputes/types"
 	emergencytypes "github.com/zerone-chain/zerone/x/emergency/types"
 	inquirykeeper "github.com/zerone-chain/zerone/x/inquiry/keeper"
 	inquirytypes "github.com/zerone-chain/zerone/x/inquiry/types"
@@ -164,6 +166,67 @@ func TestTruthSeeking_TVWScalesWithCorroborationNotConfidence(t *testing.T) {
 		"a fact that has survived 10 falsification attempts must earn more TVW than one that has survived 0; truth is what survives, not what is asserted")
 	require.Greater(t, r10.BaseWeight, r0.BaseWeight,
 		"BaseWeight must scale with CorroborationCount — Popper, not popularity")
+}
+
+// Commitment 3: Popper, not popularity (disputes side). The formal
+// dispute mechanism is where falsification gets a structured hearing.
+// For the falsification test to be MEANINGFUL, each arbiter's
+// judgment must count exactly once — without one-vote-per-arbiter,
+// the same hand could repeatedly stamp the same view and "survival"
+// would lose its independence guarantee. This test asserts the
+// chain refuses repeated stamping with the protecting commitment in
+// the error message.
+func TestTruthSeeking_DisputeArbitersVoteOnce(t *testing.T) {
+	h := NewTestHarness(t)
+
+	// Stand up a dispute manually in arbitration phase. The full
+	// initiate→commit→reveal→arbitrate flow is exercised in dispute-
+	// specific tests; here we focus on the structural invariant
+	// commitment 3 names: independence of arbiter judgments.
+	arbiter := testAddr("ts_dispute_arb_a").String()
+	disputeID := "ts-dispute-popper-1"
+	currentBlock := uint64(h.Ctx.BlockHeight())
+	dispute := &disputestypes.Dispute{
+		Id:               disputeID,
+		TargetId:         "F-TS-DISPUTE-POPPER",
+		TargetType:       disputestypes.DisputeTargetType_DISPUTE_TARGET_TYPE_FACT,
+		Challenger:       testAddr("ts_dispute_challenger").String(),
+		Defender:         testAddr("ts_dispute_defender").String(),
+		Bond:             "1000000",
+		Tier:             1,
+		Phase:            disputestypes.DisputePhase_DISPUTE_PHASE_ARBITRATION,
+		Outcome:          disputestypes.DisputeOutcome_DISPUTE_OUTCOME_UNSPECIFIED,
+		CreatedAt:        currentBlock,
+		EvidenceDeadline: currentBlock + 100,
+		VotingDeadline:   currentBlock + 1000,
+		Arbiters:         []string{arbiter},
+	}
+	h.DisputesKeeper.SetDispute(h.Ctx, dispute)
+
+	ms := disputeskeeper.NewMsgServerImpl(h.DisputesKeeper)
+
+	// First vote — accepted; the arbiter's independent judgment is
+	// recorded.
+	_, err := ms.ArbiterVote(h.Ctx, &disputestypes.MsgArbiterVote{
+		DisputeId: disputeID,
+		Arbiter:   arbiter,
+		Vote:      disputestypes.ArbiterDecision_ARBITER_DECISION_CHALLENGER,
+		Reasoning: "first independent judgment",
+	})
+	require.NoError(t, err, "first arbiter vote must be accepted — Popperian survival depends on independent tests being recorded at all")
+
+	// Second vote from the same arbiter — refused. The chain MUST
+	// cite commitment 3 in the refusal so off-chain observers can see
+	// which principle the chain is protecting.
+	_, err = ms.ArbiterVote(h.Ctx, &disputestypes.MsgArbiterVote{
+		DisputeId: disputeID,
+		Arbiter:   arbiter,
+		Vote:      disputestypes.ArbiterDecision_ARBITER_DECISION_DEFENDER,
+		Reasoning: "second stamp by the same hand",
+	})
+	require.Error(t, err, "the second vote from the same arbiter must be refused — without independence, commitment 3's 'survives challenge' degenerates into 'asserted by the loudest voice'")
+	require.Contains(t, err.Error(), "commitment 3",
+		"the refusal must name the protecting commitment in the chain's voice — silent rejection makes the principle illegible to off-chain observers")
 }
 
 // ════════════════════════════════════════════════════════════════════
