@@ -293,6 +293,37 @@ func TestAssembleToKBundle_RootedSubtree(t *testing.T) {
 	require.Equal(t, bundle.SnapshotRoot, rederived)
 }
 
+// ─── ValidateAndCapToKSelector mutation-safety tests ────────────────────────
+
+func TestValidateAndCapToKSelector_DoesNotMutateInput(t *testing.T) {
+	sel := &types.ToKSelector{Variant: &types.ToKSelector_RootedSubtree{
+		RootedSubtree: &types.RootedSubtreeSelector{RootFactId: "f", MaxDepth: 100},
+	}}
+	_, err := keeper.ValidateAndCapToKSelector(sel)
+	require.NoError(t, err)
+	// Original must be unmodified.
+	require.Equal(t, uint32(100), sel.GetRootedSubtree().MaxDepth, "input must not be mutated")
+}
+
+func TestValidateAndCapToKSelector_DoesNotMutateInput_AncestorCone(t *testing.T) {
+	sel := &types.ToKSelector{Variant: &types.ToKSelector_AncestorCone{
+		AncestorCone: &types.AncestorConeSelector{LeafFactId: "leaf", MaxDepth: 99, MaxPaths: 999},
+	}}
+	_, err := keeper.ValidateAndCapToKSelector(sel)
+	require.NoError(t, err)
+	require.Equal(t, uint32(99), sel.GetAncestorCone().MaxDepth, "MaxDepth must not be mutated")
+	require.Equal(t, uint32(999), sel.GetAncestorCone().MaxPaths, "MaxPaths must not be mutated")
+}
+
+func TestValidateAndCapToKSelector_DoesNotMutateInput_Frontier(t *testing.T) {
+	sel := &types.ToKSelector{Variant: &types.ToKSelector_Frontier{
+		Frontier: &types.FrontierSelector{Domain: "physics", Limit: 9999},
+	}}
+	_, err := keeper.ValidateAndCapToKSelector(sel)
+	require.NoError(t, err)
+	require.Equal(t, uint32(9999), sel.GetFrontier().Limit, "Frontier.Limit must not be mutated")
+}
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
 type factSpec struct {

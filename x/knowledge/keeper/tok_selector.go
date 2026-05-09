@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 
+	protov2 "google.golang.org/protobuf/proto"
+
 	"github.com/zerone-chain/zerone/x/knowledge/types"
 )
 
@@ -50,26 +52,32 @@ func ValidateAndCapToKSelector(s *types.ToKSelector) (*types.ToKSelector, error)
 	if err := ValidateToKSelector(s); err != nil {
 		return nil, err
 	}
-	out := &types.ToKSelector{Variant: s.Variant}
-	switch v := out.Variant.(type) {
+	out := &types.ToKSelector{}
+	switch v := s.Variant.(type) {
 	case *types.ToKSelector_RootedSubtree:
-		if v.RootedSubtree.MaxDepth == 0 || v.RootedSubtree.MaxDepth > ToKMaxDepthCap {
-			v.RootedSubtree.MaxDepth = ToKMaxDepthCap
+		cp := protov2.Clone(v.RootedSubtree).(*types.RootedSubtreeSelector)
+		if cp.MaxDepth == 0 || cp.MaxDepth > ToKMaxDepthCap {
+			cp.MaxDepth = ToKMaxDepthCap
 		}
+		out.Variant = &types.ToKSelector_RootedSubtree{RootedSubtree: cp}
 	case *types.ToKSelector_AncestorCone:
-		if v.AncestorCone.MaxDepth == 0 || v.AncestorCone.MaxDepth > ToKMaxDepthCap {
-			v.AncestorCone.MaxDepth = ToKMaxDepthCap
+		cp := protov2.Clone(v.AncestorCone).(*types.AncestorConeSelector)
+		if cp.MaxDepth == 0 || cp.MaxDepth > ToKMaxDepthCap {
+			cp.MaxDepth = ToKMaxDepthCap
 		}
-		if v.AncestorCone.MaxPaths == 0 || v.AncestorCone.MaxPaths > ToKMaxPathsCap {
-			v.AncestorCone.MaxPaths = ToKMaxPathsCap
+		if cp.MaxPaths == 0 || cp.MaxPaths > ToKMaxPathsCap {
+			cp.MaxPaths = ToKMaxPathsCap
 		}
+		out.Variant = &types.ToKSelector_AncestorCone{AncestorCone: cp}
 	case *types.ToKSelector_Frontier:
-		if v.Frontier.Limit == 0 {
-			v.Frontier.Limit = ToKFrontierLimit
+		cp := protov2.Clone(v.Frontier).(*types.FrontierSelector)
+		if cp.Limit == 0 {
+			cp.Limit = ToKFrontierLimit
 		}
-		if v.Frontier.Limit > ToKFrontierCap {
-			v.Frontier.Limit = ToKFrontierCap
+		if cp.Limit > ToKFrontierCap {
+			cp.Limit = ToKFrontierCap
 		}
+		out.Variant = &types.ToKSelector_Frontier{Frontier: cp}
 	}
 	return out, nil
 }

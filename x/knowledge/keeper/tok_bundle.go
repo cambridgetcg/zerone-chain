@@ -19,6 +19,10 @@ const (
 	tokTokenizerVersion   = "v0"
 )
 
+// tokSerialisationFormatJSONL is the canonical serialisation format tag for
+// ToK bundles. Task 9 references this constant when writing JSONL payloads.
+const tokSerialisationFormatJSONL = "jsonl_adjacency_v1"
+
 // Domain tags for ToK Merkle commitment. Separate tags prevent set-swap
 // collisions: a node-ID set cannot produce the same hash as an edge set.
 const (
@@ -97,6 +101,13 @@ func tokDomainHash(domain string, write func(interface{ Write([]byte) (int, erro
 // materialises payloads, and returns a complete bundle. TC1 (graph is
 // the headline) is bound by exposing this through gRPC + CLI as the
 // trainer-facing default.
+//
+// atBlockHeight: pass 0 to use the current block. Non-zero values are
+// reserved for historical replay (planned for a future wave). Until the
+// keeper supports historical state queries, callers MUST pass 0 — passing
+// any other value will record a SnapshotBlock metadata that does NOT
+// match the actual state the bundle was built from, breaking TC2's
+// re-derivability guarantee.
 func (k Keeper) AssembleToKBundle(
 	ctx context.Context,
 	sel *types.ToKSelector,
@@ -133,7 +144,7 @@ func (k Keeper) AssembleToKBundle(
 		IncludedNodeIds:     nodeIDs,
 		IncludedEdges:       edges,
 		Nodes:               nodes,
-		SerialisationFormat: "jsonl_adjacency_v1",
+		SerialisationFormat: tokSerialisationFormatJSONL,
 		// SerialisedPayload omitted — Task 9 fills this when format requested.
 		Provenance: &types.ToKBundleProvenance{
 			ChainId: sdkCtx.ChainID(),
@@ -164,6 +175,6 @@ func (k Keeper) SelectToKIds(
 	case *types.ToKSelector_Frontier:
 		return k.GatherFrontier(ctx, v.Frontier)
 	default:
-		return nil, nil, fmt.Errorf("selector variant not handled in this plan")
+		return nil, nil, fmt.Errorf("selector variant not recognised: %T", sel.Variant)
 	}
 }
