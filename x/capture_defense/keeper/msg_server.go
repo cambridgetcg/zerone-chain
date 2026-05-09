@@ -65,6 +65,10 @@ func (k msgServer) RecordVerification(goCtx context.Context, msg *types.MsgRecor
 		k.UpdateReputation(ctx, validator, msg.Domain, "", approved)
 	}
 
+	// Commitment 9 (cartel detection has consequence): the
+	// verification record is the upstream substrate that capture
+	// detection reads. Without these recorded observations, cartel
+	// allegations have no evidence base to consume.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.capture_defense.verification_recorded",
@@ -72,6 +76,7 @@ func (k msgServer) RecordVerification(goCtx context.Context, msg *types.MsgRecor
 			sdk.NewAttribute("round_id", msg.RoundId),
 			sdk.NewAttribute("validator_count", fmt.Sprintf("%d", len(msg.Validators))),
 			sdk.NewAttribute("block_height", fmt.Sprintf("%d", ctx.BlockHeight())),
+			sdk.NewAttribute("creed_commitment", "9"),
 		),
 	)
 
@@ -93,6 +98,11 @@ func (k msgServer) AnalyzeDomain(goCtx context.Context, msg *types.MsgAnalyzeDom
 		return &types.MsgAnalyzeDomainResponse{}, nil
 	}
 
+	// Commitment 9 (cartel detection has consequence): the analysis
+	// produces the flagged-domain signal that x/qualification reads
+	// to weight panel votes and that x/capture_challenge consumes
+	// when scoring allegations. The event makes the analysis result
+	// queryable in the same vocabulary as the consequence side.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent(
 			"zerone.capture_defense.domain_analyzed",
@@ -100,6 +110,7 @@ func (k msgServer) AnalyzeDomain(goCtx context.Context, msg *types.MsgAnalyzeDom
 			sdk.NewAttribute("risk_score", fmt.Sprintf("%d", metrics.RiskScore)),
 			sdk.NewAttribute("hhi", fmt.Sprintf("%d", metrics.HerfindahlIndex)),
 			sdk.NewAttribute("flagged", fmt.Sprintf("%t", metrics.Flagged)),
+			sdk.NewAttribute("creed_commitment", "9"),
 		),
 	)
 

@@ -84,6 +84,10 @@ func (k Keeper) AnalyzeCaptureRisk(ctx sdk.Context, domain string, params *types
 		if flagged {
 			formationBonusActive = true
 		}
+		// Commitment 9 (cartel detection has consequence): structural
+		// immunity adjusts the cartel-detection signal so partnership-
+		// dense domains are evaluated on the right baseline. The event
+		// surfaces the adjustment alongside the consequence pathway.
 		ctx.EventManager().EmitEvent(
 			sdk.NewEvent("zerone.capture_defense.structural_immunity_updated",
 				sdk.NewAttribute("domain", domain),
@@ -91,6 +95,7 @@ func (k Keeper) AnalyzeCaptureRisk(ctx sdk.Context, domain string, params *types
 				sdk.NewAttribute("raw_hhi", fmt.Sprintf("%d", hhi)),
 				sdk.NewAttribute("adjusted_hhi", fmt.Sprintf("%d", adjustedHHI)),
 				sdk.NewAttribute("formation_bonus_active", fmt.Sprintf("%t", formationBonusActive)),
+				sdk.NewAttribute("creed_commitment", "9"),
 			),
 		)
 	}
@@ -126,12 +131,18 @@ func (k Keeper) getEffectiveHHIThreshold(ctx sdk.Context, domain string, params 
 
 		// Emit event when activity affects threshold
 		if activity > 0 {
+			// Commitment 9 (cartel detection has consequence): active
+			// verification on a domain is itself a cartel-resistance
+			// signal — busy domains earn a more lenient HHI threshold
+			// because activity diffuses concentration. The event makes
+			// the relaxation visible to off-chain observers.
 			ctx.EventManager().EmitEvent(sdk.NewEvent(
 				"zerone.capture_defense.activity_threshold_relaxation",
 				sdk.NewAttribute("domain", domain),
 				sdk.NewAttribute("base_hhi_threshold", fmt.Sprintf("%d", params.HhiThreshold)),
 				sdk.NewAttribute("effective_hhi_threshold", fmt.Sprintf("%d", baseThreshold)),
 				sdk.NewAttribute("verification_activity_bps", fmt.Sprintf("%d", activity)),
+				sdk.NewAttribute("creed_commitment", "9"),
 			))
 		}
 	}

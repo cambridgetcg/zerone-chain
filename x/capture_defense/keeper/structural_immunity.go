@@ -79,12 +79,18 @@ func (k Keeper) OnDomainFlagged(ctx sdk.Context, domain string) {
 		expiryHeight,
 	)
 
+	// Commitment 9 (cartel detection has consequence): a flagged
+	// domain triggers a structural-immunity formation bonus —
+	// partnerships in flagged domains earn higher rewards, breaking
+	// up concentration through structure rather than mere
+	// punishment. The bonus is the consequence pathway speaking.
 	ctx.EventManager().EmitEvent(
 		sdk.NewEvent("zerone.capture_defense.domain_formation_bonus_set",
 			sdk.NewAttribute("domain", domain),
 			sdk.NewAttribute("bonus_bps", fmt.Sprintf("%d", siParams.CapturedDomainFormationBonusBps)),
 			sdk.NewAttribute("reason", "capture_flagged"),
 			sdk.NewAttribute("expiry_height", fmt.Sprintf("%d", expiryHeight)),
+			sdk.NewAttribute("creed_commitment", "9"),
 		),
 	)
 }
