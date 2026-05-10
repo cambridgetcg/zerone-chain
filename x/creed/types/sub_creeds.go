@@ -84,7 +84,7 @@ var CanonicalSubCreeds = []SubCreedDef{
 	{
 		Phase: LifecyclePhaseSubstrate,
 		Commitments: []SubCreedCommitment{
-			{1, "S1", "Chain-modifying contributions name their depends_on_marker and revert path"},
+			{1, "S1", "Chain-modifying contributions name their `depends_on_marker` and revert path"},
 			{2, "S2", "Contributors recuse on votes affecting their own contributions"},
 			{3, "S3", "Reward-formula changes require simulation against historical contribution data"},
 		},
