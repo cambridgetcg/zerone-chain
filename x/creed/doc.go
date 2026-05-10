@@ -71,4 +71,19 @@
 // "the chain's voice cannot drift faster than its governance" —
 // the same shape as commitment 6 applied to the layer above the
 // corpus.
+//
+// USEFUL_WORK doctrine (docs/USEFUL_WORK.md) — the third in the trio.
+// One commitment (UW: ZERONE is recursive) + seven mechanisms (M1-M7)
+// + six recursive axes (substrate / verification / classification /
+// attribution / tooling / interface). Canonical Go-side registration
+// in x/creed/types/useful_work_creed.go; cross-stack invariant harness
+// in tests/cross_stack/useful_work_invariants_test.go.
+//
+// Phase 0 (this commit's vintage) ships zero behavioral bindings.
+// Phase 1 introduces the x/work module that binds M1-M4, M5 shape, M7;
+// Phase 2+ adds per-class registrations (knowledge migration,
+// counterexamples, training-run attestation, eval-suite execution,
+// dataset curation, alignment artifacts, RL traces, synthetic data,
+// kernel optimization). M6 (recursion-amplified lineage) extends
+// TC6 (Plan 4 of ToK series) cross-class.
 package creed
