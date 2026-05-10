@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"cosmossdk.io/core/store"
 	"cosmossdk.io/log"
@@ -307,9 +308,21 @@ func CalculateClaimable(pot *types.ClaimingPot, currentBlock uint64) *big.Int {
 // ---------- BeginBlocker: Pot Expiry ----------
 
 // ProcessPotExpiry checks active pots and marks expired ones.
+//
+// Bootstrap pots (ID prefix BootstrapPotIDPrefix) are participation seeds
+// — they never auto-expire. Their only terminal state is DEPLETED, set by
+// successful claim. This preserves the doctrine of commitment 20
+// (issuance follows participation): a participation seed must remain
+// claimable for the participant who shows up, regardless of how late.
+// Without this carve-out, the genesis bootstrap pathway is structurally
+// unclaimable — at the start of block 1, BeginBlocker would flip every
+// bootstrap pot to EXPIRED before any MsgClaim tx in block 1 could run.
 func (k Keeper) ProcessPotExpiry(ctx context.Context, currentBlock uint64) {
 	k.IteratePots(ctx, func(pot *types.ClaimingPot) bool {
 		if pot.Status == types.PotStatus_POT_STATUS_ACTIVE && pot.Schedule != nil {
+			if strings.HasPrefix(pot.Id, types.BootstrapPotIDPrefix) {
+				return false
+			}
 			if currentBlock >= pot.Schedule.EndBlock {
 				pot.Status = types.PotStatus_POT_STATUS_EXPIRED
 				k.SetPot(ctx, pot)

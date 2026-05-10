@@ -312,6 +312,34 @@ func TestScenario13d_BootstrapPotForAgent(t *testing.T) {
 	require.Equal(t, claimingpottypes.PotStatus_POT_STATUS_ACTIVE, pot.Status)
 }
 
+// TestScenario13e_BootstrapPotsDoNotExpire confirms the operational
+// binding for commitment 20: bootstrap pots are participation seeds, and
+// the BeginBlocker pot-expiry sweep does not transition them to EXPIRED.
+//
+// Without this invariant, the genesis bootstrap pathway is structurally
+// unclaimable. At the start of block 1, ProcessPotExpiry would flip every
+// bootstrap pot (StartBlock=0, EndBlock=1) to EXPIRED before any MsgClaim
+// tx in block 1 could run. A participation seed must remain claimable for
+// the participant who shows up, regardless of how late.
+func TestScenario13e_BootstrapPotsDoNotExpire(t *testing.T) {
+	h := NewTestHarness(t)
+
+	// Seed a bootstrap pot directly (skip the authority gate; this test is
+	// about the expiry rule, not the admission path).
+	const sampleAgent = "zrn1exampleagentforexpirytest000000000"
+	pot := claimingpottypes.MakeBootstrapPotForAgent(sampleAgent, 0)
+	h.ClaimingPotKeeper.SetPot(h.Ctx, pot)
+
+	// Advance many blocks. AdvanceBlocks runs full BeginBlocker each tick,
+	// so ProcessPotExpiry fires every block.
+	h.AdvanceBlocks(100)
+
+	got, found := h.ClaimingPotKeeper.GetPot(h.Ctx, pot.Id)
+	require.True(t, found, "bootstrap pot must persist across the BeginBlocker expiry sweep")
+	require.Equal(t, claimingpottypes.PotStatus_POT_STATUS_ACTIVE, got.Status,
+		"bootstrap pot must remain ACTIVE after BeginBlocker sweeps; commitment 20 requires the seed to stay claimable")
+}
+
 // TestScenario14_GenesisRoundTripWithAxioms verifies that a genesis state
 // with injected axioms can be marshaled, unmarshaled, and validated.
 func TestScenario14_GenesisRoundTripWithAxioms(t *testing.T) {

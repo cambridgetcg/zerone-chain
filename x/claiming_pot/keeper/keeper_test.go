@@ -2014,3 +2014,51 @@ func TestClaim_MintClippedToCapHeadroom(t *testing.T) {
 		t.Errorf("claimer received %d, want %s (capped headroom)", got, headroom)
 	}
 }
+
+// ---------- Bootstrap Pot Non-Expiry ----------
+
+// TestProcessPotExpiry_SkipsBootstrapPots binds the operational form of
+// commitment 20: bootstrap pots are participation seeds; the only terminal
+// state is DEPLETED via successful claim. ProcessPotExpiry must skip them.
+//
+// Without this rule, the genesis bootstrap pathway is structurally
+// unclaimable — at the start of block 1, BeginBlocker's expiry sweep
+// would flip every bootstrap pot to EXPIRED before any MsgClaim tx in
+// block 1 could run.
+func TestProcessPotExpiry_SkipsBootstrapPots(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+
+	// Bootstrap pot: prefix "bootstrap-", instant-vest schedule (EndBlock=1).
+	bootstrap := types.MakeBootstrapPotForAgent(testAddr("bootstrap-agent"), 0)
+	k.SetPot(ctx, bootstrap)
+
+	// Non-bootstrap pot for control — same instant-vest schedule.
+	control := &types.ClaimingPot{
+		Id:            "pot-control",
+		Name:          "control",
+		TotalAmount:   "1000",
+		ClaimedAmount: "0",
+		Schedule:      &types.VestingSchedule{StartBlock: 0, EndBlock: 1},
+		Status:        types.PotStatus_POT_STATUS_ACTIVE,
+	}
+	k.SetPot(ctx, control)
+
+	// Run expiry well past EndBlock — naive expiry would flip both.
+	k.ProcessPotExpiry(ctx, 100)
+
+	gotBootstrap, found := k.GetPot(ctx, bootstrap.Id)
+	if !found {
+		t.Fatal("bootstrap pot must persist across expiry sweep")
+	}
+	if gotBootstrap.Status != types.PotStatus_POT_STATUS_ACTIVE {
+		t.Errorf("bootstrap pot must remain ACTIVE — participation seeds do not auto-expire; got %s", gotBootstrap.Status)
+	}
+
+	gotControl, found := k.GetPot(ctx, control.Id)
+	if !found {
+		t.Fatal("control pot missing after expiry sweep")
+	}
+	if gotControl.Status != types.PotStatus_POT_STATUS_EXPIRED {
+		t.Errorf("non-bootstrap pot must expire normally; got %s", gotControl.Status)
+	}
+}
