@@ -2062,3 +2062,203 @@ func TestProcessPotExpiry_SkipsBootstrapPots(t *testing.T) {
 		t.Errorf("non-bootstrap pot must expire normally; got %s", gotControl.Status)
 	}
 }
+
+// ---------- MsgAddBootstrapEntry ----------
+
+func TestAddBootstrapEntry_AuthorityGate(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+	authorized := k.GetAuthority()
+
+	wrong := testAddr("not-the-authority")
+	if authorized == wrong {
+		t.Fatalf("test setup: wrong address coincidentally matches authority")
+	}
+
+	_, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: wrong,
+		Addresses: []string{testAddr("agent-auth-test-1")},
+	})
+	if err == nil {
+		t.Fatal("expected error from wrong authority")
+	}
+	if !errors.Is(err, types.ErrUnauthorized) {
+		t.Errorf("expected ErrUnauthorized, got %v", err)
+	}
+}
+
+func TestAddBootstrapEntry_SingleAddressCreatesPot(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+	agent := testAddr("agent-single-test")
+
+	resp, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{agent},
+	})
+	if err != nil {
+		t.Fatalf("AddBootstrapEntry: %v", err)
+	}
+	if resp.AddedCount != 1 || resp.SkippedCount != 0 {
+		t.Errorf("expected added=1 skipped=0, got added=%d skipped=%d", resp.AddedCount, resp.SkippedCount)
+	}
+
+	pot, found := k.GetPot(ctx, types.BootstrapPotIDPrefix+agent)
+	if !found {
+		t.Fatal("bootstrap pot not found after add")
+	}
+	if pot.Status != types.PotStatus_POT_STATUS_ACTIVE {
+		t.Errorf("pot status: want ACTIVE, got %s", pot.Status)
+	}
+	if pot.TotalAmount != types.PerAgentBootstrapUzrn {
+		t.Errorf("pot total: want %s, got %s", types.PerAgentBootstrapUzrn, pot.TotalAmount)
+	}
+	if len(pot.Eligibility.Whitelist) != 1 || pot.Eligibility.Whitelist[0] != agent {
+		t.Errorf("expected single-claimant whitelist for %s, got %v", agent, pot.Eligibility.Whitelist)
+	}
+}
+
+func TestAddBootstrapEntry_MultipleAddressesCreatesPotsEach(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+	a := testAddr("agent-multi-1")
+	b := testAddr("agent-multi-2")
+	c := testAddr("agent-multi-3")
+
+	resp, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{a, b, c},
+	})
+	if err != nil {
+		t.Fatalf("AddBootstrapEntry: %v", err)
+	}
+	if resp.AddedCount != 3 || resp.SkippedCount != 0 {
+		t.Errorf("expected added=3 skipped=0, got added=%d skipped=%d", resp.AddedCount, resp.SkippedCount)
+	}
+	for _, addr := range []string{a, b, c} {
+		if _, found := k.GetPot(ctx, types.BootstrapPotIDPrefix+addr); !found {
+			t.Errorf("pot for %s not found", addr)
+		}
+	}
+}
+
+func TestAddBootstrapEntry_IdempotentSkipsExisting(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+	a := testAddr("agent-idem-a")
+	b := testAddr("agent-idem-b")
+	c := testAddr("agent-idem-c")
+
+	resp1, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{a, b},
+	})
+	if err != nil {
+		t.Fatalf("first add: %v", err)
+	}
+	if resp1.AddedCount != 2 || resp1.SkippedCount != 0 {
+		t.Errorf("first add: expected 2/0, got %d/%d", resp1.AddedCount, resp1.SkippedCount)
+	}
+
+	resp2, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{a, b},
+	})
+	if err != nil {
+		t.Fatalf("re-add: %v", err)
+	}
+	if resp2.AddedCount != 0 || resp2.SkippedCount != 2 {
+		t.Errorf("re-add: expected 0/2, got %d/%d", resp2.AddedCount, resp2.SkippedCount)
+	}
+
+	resp3, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{a, c, b},
+	})
+	if err != nil {
+		t.Fatalf("mixed add: %v", err)
+	}
+	if resp3.AddedCount != 1 || resp3.SkippedCount != 2 {
+		t.Errorf("mixed add: expected 1/2, got %d/%d", resp3.AddedCount, resp3.SkippedCount)
+	}
+}
+
+func TestAddBootstrapEntry_InvalidBech32(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+
+	_, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{testAddr("agent-good"), "not-bech32"},
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid bech32 address in payload")
+	}
+}
+
+func TestAddBootstrapEntry_EmitsCreedCommitmentEvent(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+	agent := testAddr("agent-event-test")
+
+	_, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{agent},
+	})
+	if err != nil {
+		t.Fatalf("AddBootstrapEntry: %v", err)
+	}
+
+	var found bool
+	for _, e := range ctx.EventManager().Events() {
+		if e.Type != "zerone.claiming_pot.bootstrap_entry_added" {
+			continue
+		}
+		var hasCommitment, hasAddr bool
+		for _, attr := range e.Attributes {
+			if attr.Key == "creed_commitment" && attr.Value == "20" {
+				hasCommitment = true
+			}
+			if attr.Key == "address" && attr.Value == agent {
+				hasAddr = true
+			}
+		}
+		if hasCommitment && hasAddr {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected bootstrap_entry_added event with creed_commitment=20 and the agent's address")
+	}
+}
+
+func TestAddBootstrapEntry_SkippedDoesNotEmit(t *testing.T) {
+	k, ctx, _, _, _ := setupKeeper(t)
+	srv := keeper.NewMsgServerImpl(k)
+	agent := testAddr("agent-noemit-test")
+
+	// First add — emits.
+	if _, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{agent},
+	}); err != nil {
+		t.Fatalf("first add: %v", err)
+	}
+
+	// Snapshot event count.
+	beforeRe := len(ctx.EventManager().Events())
+
+	// Re-add — must be no-op, no new event.
+	if _, err := srv.AddBootstrapEntry(ctx, &types.MsgAddBootstrapEntry{
+		Authority: k.GetAuthority(),
+		Addresses: []string{agent},
+	}); err != nil {
+		t.Fatalf("re-add: %v", err)
+	}
+	afterRe := len(ctx.EventManager().Events())
+
+	if afterRe != beforeRe {
+		t.Errorf("re-add must not emit bootstrap_entry_added; before=%d after=%d", beforeRe, afterRe)
+	}
+}

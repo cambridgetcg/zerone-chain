@@ -187,6 +187,64 @@ func (m msgServer) Claim(goCtx context.Context, msg *types.MsgClaim) (*types.Msg
 	return &types.MsgClaimResponse{Amount: claimable.String()}, nil
 }
 
+// AddBootstrapEntry creates one bootstrap pot per address in msg.Addresses.
+// Authority-gated. Idempotent: addresses already represented by a bootstrap
+// pot are silently skipped. The doctrine is commitment 20 extended to
+// continuous, governance-gated entry — the participant set is plural and
+// growing, not closed at genesis.
+//
+// Each created pot is shaped by MakeBootstrapPotForAgent with the current
+// block height, so vesting starts now and the pot remains claimable until
+// claimed (bootstrap pots do not auto-expire — see ProcessPotExpiry).
+func (m msgServer) AddBootstrapEntry(goCtx context.Context, msg *types.MsgAddBootstrapEntry) (*types.MsgAddBootstrapEntryResponse, error) {
+	if m.GetAuthority() != msg.Authority {
+		return nil, fmt.Errorf("%w: expected %s, got %s", types.ErrUnauthorized, m.GetAuthority(), msg.Authority)
+	}
+
+	ctx := sdk.UnwrapSDKContext(goCtx)
+	currentBlock := uint64(ctx.BlockHeight())
+
+	addedCount := uint32(0)
+	skippedCount := uint32(0)
+
+	for i, addr := range msg.Addresses {
+		// Defensive: ValidateBasic catches these too, but msg-server is the
+		// last line and we validate explicitly so a malformed entry can't
+		// reach SetPot.
+		if _, err := sdk.AccAddressFromBech32(addr); err != nil {
+			return nil, fmt.Errorf("addresses[%d] (%q): invalid bech32: %w", i, addr, err)
+		}
+
+		potID := types.BootstrapPotIDPrefix + addr
+		if _, exists := m.GetPot(ctx, potID); exists {
+			skippedCount++
+			continue
+		}
+
+		pot := types.MakeBootstrapPotForAgent(addr, currentBlock)
+		m.SetPot(ctx, pot)
+		addedCount++
+
+		ctx.EventManager().EmitEvent(
+			sdk.NewEvent(
+				"zerone.claiming_pot.bootstrap_entry_added",
+				sdk.NewAttribute("address", addr),
+				sdk.NewAttribute("pot_id", potID),
+				sdk.NewAttribute("block", fmt.Sprintf("%d", currentBlock)),
+				// Commitment 20 (extended): issuance follows participation,
+				// continuously and governance-gated. This event announces a
+				// new participant admitted post-genesis via LIP.
+				sdk.NewAttribute("creed_commitment", "20"),
+			),
+		)
+	}
+
+	return &types.MsgAddBootstrapEntryResponse{
+		AddedCount:   addedCount,
+		SkippedCount: skippedCount,
+	}, nil
+}
+
 // UpdatePotParams updates module parameters (authority-gated).
 func (m msgServer) UpdatePotParams(goCtx context.Context, msg *types.MsgUpdatePotParams) (*types.MsgUpdatePotParamsResponse, error) {
 	if m.GetAuthority() != msg.Authority {
