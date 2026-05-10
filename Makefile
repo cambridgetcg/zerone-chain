@@ -38,6 +38,7 @@ proto-check:
 creed-check:
 	@bash scripts/check_creed_hash.sh
 	@bash scripts/check_useful_work_hash.sh
+	@bash scripts/check_sub_creed_hashes.sh
 
 # ── Cross-compile targets ──────────────────────────────────────────────
 
