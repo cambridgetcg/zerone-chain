@@ -538,6 +538,13 @@ forwarding to the claimant.
 Governance parameter update.
 - `authority` -- governance address
 
+### zerone.claiming_pot.bootstrap_entry_added
+Emitted when governance admits a late participant via `MsgAddBootstrapEntry`. One event per address newly added (not per request). Skipped duplicates emit nothing. Commitment 20 (extended): the participant set is plural and growing, governance-gated, never closed at genesis.
+- `address` -- bech32 address of the newly-admitted agent
+- `pot_id` -- `bootstrap-<address>` (the deterministic per-agent pot ID)
+- `block` -- block height at which the entry was added
+- `creed_commitment` -- "20"
+
 ---
 
 ## compute_pool

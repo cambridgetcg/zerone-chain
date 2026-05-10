@@ -34,6 +34,19 @@
 //     per address in the operator's whitelist.
 //   - Pot configuration is part of GenesisState; the bootstrap
 //     pots are seeded by tools/bootstrap-loader before chain start.
+//   - The whitelist is plural and growing, not closed at genesis.
+//     MsgAddBootstrapEntry — authority-gated, idempotent — admits
+//     late-arriving participants by creating one bootstrap pot per
+//     address. The chain's "no insider position" doctrine is
+//     preserved because admission requires a governance LIP, not
+//     founder fiat (echoes commitment 19: creed is governance-
+//     gated). The participation set is curated by governance, not
+//     frozen.
+//   - Bootstrap pots never auto-expire. ProcessPotExpiry skips any
+//     pot whose ID carries BootstrapPotIDPrefix; the only terminal
+//     state for a bootstrap pot is DEPLETED via successful claim.
+//     A participation seed waits for the participant — late arrival
+//     is not exclusion.
 //
 // What this module is, and is not:
 //
@@ -54,6 +67,11 @@
 //     headroom; cap-clipped mints (when the request exceeds remaining
 //     headroom) honor the clip and the claimer receives less than
 //     the nominal amount rather than the chain breaching its cap.
+//   - It IS the surface through which governance admits late
+//     participants. MsgAddBootstrapEntry is the on-chain expression
+//     of "the participant set grows through deliberate, audited
+//     choice." Direct CLI use is for testnet; mainnet flows through
+//     a governance LIP wrapping the message.
 //
 // Refusal voice (commitment 20):
 //
@@ -65,4 +83,9 @@
 //   - claiming_pot.pot_claimed events carry creed_commitment="20"
 //     to identify the bootstrap pathway alongside other minting
 //     emissions an off-chain indexer might aggregate.
+//   - claiming_pot.bootstrap_entry_added events carry
+//     creed_commitment="20" and announce a governance-gated late
+//     admission — one event per *newly-added* address (skipped
+//     duplicates emit nothing). Off-chain indexers can use this to
+//     visualize the participant set's growth post-genesis.
 package claiming_pot
