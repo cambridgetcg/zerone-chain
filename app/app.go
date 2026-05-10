@@ -228,6 +228,9 @@ import (
 	zeroneclaimingpot "github.com/zerone-chain/zerone/x/claiming_pot"
 	zeronecpotkeeper "github.com/zerone-chain/zerone/x/claiming_pot/keeper"
 	zeronecpottypes "github.com/zerone-chain/zerone/x/claiming_pot/types"
+	zeronesponsorship "github.com/zerone-chain/zerone/x/sponsorship"
+	zeronesponsorshipkeeper "github.com/zerone-chain/zerone/x/sponsorship/keeper"
+	zeronesponsorshiptypes "github.com/zerone-chain/zerone/x/sponsorship/types"
 	zeronetoolbox "github.com/zerone-chain/zerone/x/toolbox"
 	zeronetoolboxkeeper "github.com/zerone-chain/zerone/x/toolbox/keeper"
 	zeronetoolboxtypes "github.com/zerone-chain/zerone/x/toolbox/types"
@@ -316,6 +319,7 @@ var (
 		zeroneautopoiesis.AppModuleBasic{}, // R7-1: x/autopoiesis
 		zeroneevidencemgmt.AppModuleBasic{},
 		zeroneclaimingpot.AppModuleBasic{},
+		zeronesponsorship.AppModuleBasic{},
 		zeronetree.AppModuleBasic{},         // R7-5: x/tree
 		zeronepartnerships.AppModuleBasic{}, // R8-1: x/partnerships
 		zeronetoolbox.AppModuleBasic{},      // R8-1: x/toolbox
@@ -375,6 +379,7 @@ var (
 		zeroneaptypes.ModuleName:                   nil,                                  // autopoiesis: no mint/burn — signal-only module
 		zeroneemtypes.ModuleName:                   {authtypes.Burner},                   // evidence_mgmt: burn challenged bonds
 		zeronecpottypes.ModuleName:                 {authtypes.Minter},                   // claiming_pot: bootstrap claims mint on demand (commitment 20)
+		zeronesponsorshiptypes.ModuleName:          nil,                                  // sponsorship: escrow-only, no mint/burn — circulates existing supply
 		zeronettreetypes.ModuleName:                {authtypes.Burner},                   // tree: revenue split
 		zeronepartnershipstypes.ModuleName:         {authtypes.Burner},                   // partnerships: dissolved stakes to dev fund
 		zeronetoolboxtypes.ModuleName:              {authtypes.Burner},                   // toolbox: deregistration fees
@@ -514,6 +519,7 @@ type ZeroneApp struct {
 	AutopoiesisKeeper       zeroneapkeeper.Keeper // R7-1: autopoiesis
 	EvidenceMgmtKeeper      zeroneemkeeper.Keeper
 	ClaimingPotKeeper       zeronecpotkeeper.Keeper
+	SponsorshipKeeper       zeronesponsorshipkeeper.Keeper
 	TreeKeeper              zeronetreekeeper.Keeper // R7-5: x/tree
 	PrivateCorpusKeeper     zeroneprivatecorpuskeeper.Keeper // x/private_corpus: off-chain vault references
 	CounterexamplesKeeper   zeronecounterexkeeper.Keeper     // x/counterexamples: alignment-by-structure (commitment 15)
@@ -637,6 +643,7 @@ func NewZeroneApp(
 		zeroneaptypes.StoreKey,
 		zeroneemtypes.StoreKey,
 		zeronecpottypes.StoreKey,
+		zeronesponsorshiptypes.StoreKey,
 		zeronettreetypes.StoreKey,
 		zeroneprivatecorpustypes.StoreKey,
 		zeronecounterextypes.StoreKey,
@@ -1340,6 +1347,17 @@ func NewZeroneApp(
 		app.VestingRewardsKeeper, // bootstrap pathway gates through MintWithCap
 	)
 
+	// ---- Sponsorship keeper (patron-funded work bounties) ----
+	// Escrow-only — circulates existing supply, never mints. Knowledge
+	// keeper consulted read-only for fact verification status, domain,
+	// and submission block.
+	app.SponsorshipKeeper = zeronesponsorshipkeeper.NewKeeper(
+		sdkruntime.NewKVStoreService(keys[zeronesponsorshiptypes.StoreKey]),
+		appCodec,
+		app.BankKeeper,
+		app.KnowledgeKeeper,
+	)
+
 	// ---- Tree keeper (R7-5) ----
 	treeRFDAdapter := vestingrewardskeeper.NewResearchFundDepositorAdapter(app.VestingRewardsKeeper)
 	app.TreeKeeper = zeronetreekeeper.NewKeeper(
@@ -1497,6 +1515,7 @@ func NewZeroneApp(
 		zeroneautopoiesis.NewAppModule(appCodec, app.AutopoiesisKeeper),
 		zeroneevidencemgmt.NewAppModule(appCodec, app.EvidenceMgmtKeeper),
 		zeroneclaimingpot.NewAppModule(appCodec, app.ClaimingPotKeeper),
+		zeronesponsorship.NewAppModule(appCodec, app.SponsorshipKeeper),
 		zeronetree.NewAppModule(appCodec, app.TreeKeeper),               // R7-5: x/tree
 		zeronehome.NewAppModule(appCodec, app.HomeKeeper),                // R8-1: x/home
 		zeronepartnerships.NewAppModule(appCodec, app.PartnershipsKeeper), // R8-1: x/partnerships
@@ -1559,6 +1578,7 @@ func NewZeroneApp(
 		zeronepartnershipstypes.ModuleName,          // partnerships: expire formations, lift freezes
 		zeroneemtypes.ModuleName,                    // evidence_mgmt: no-op (event-driven)
 		zeronecpottypes.ModuleName,                  // claiming_pot: pot expiry
+		zeronesponsorshiptypes.ModuleName,           // sponsorship: bounty expiry
 		zeronettreetypes.ModuleName,                 // tree: expire seeds past expiry block
 		zeronetoolboxtypes.ModuleName,               // toolbox: no-op BeginBlock
 		zeroneprivatecorpustypes.ModuleName,         // private_corpus: no-op BeginBlock (operator-driven)
