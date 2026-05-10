@@ -38,7 +38,7 @@ func TestLoadInceptionSubCreedPins_FromRepoRoot(t *testing.T) {
 	}
 
 	// The genesis state composed from these pins must validate.
-	gs := workcreedtypes.GenesisState{PinnedSubCreeds: pins}
+	gs := &workcreedtypes.GenesisState{PinnedSubCreeds: pins}
 	require.NoError(t, gs.Validate(),
 		"inception pins must satisfy the work_creed genesis validator")
 }

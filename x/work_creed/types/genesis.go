@@ -3,6 +3,8 @@ package types
 import (
 	"bytes"
 	"fmt"
+
+	"cosmossdk.io/errors"
 )
 
 // DefaultGenesis returns the default genesis state — empty at Phase 0
@@ -25,7 +27,7 @@ func (g *GenesisState) Validate() error {
 	versionsByPhase := map[uint32]map[uint32]bool{}
 	for i, p := range g.PinnedSubCreeds {
 		if p.Phase > 8 {
-			return fmt.Errorf("PinnedSubCreed[%d]: phase %d out of range [0, 8]", i, p.Phase)
+			return errors.Wrapf(ErrUnknownPhase, "PinnedSubCreed[%d]: phase %d out of range [0, 8]", i, p.Phase)
 		}
 		if p.Phase == 1 {
 			return fmt.Errorf("PinnedSubCreed[%d]: Knowledge phase delegates to x/creed and must not be pinned here", i)

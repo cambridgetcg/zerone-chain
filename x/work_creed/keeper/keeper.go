@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"cosmossdk.io/core/store"
+	"cosmossdk.io/errors"
 	"cosmossdk.io/log"
 
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -91,7 +92,7 @@ func (k Keeper) GetLatestSubCreedPin(ctx context.Context, phase uint32) (*types.
 // version=1; Phase 1+ msg handler will check current+1 before calling.
 func (k Keeper) SetSubCreedPin(ctx context.Context, p *types.PinnedSubCreed) error {
 	if p.Phase > 8 {
-		return fmt.Errorf("phase %d out of range", p.Phase)
+		return errors.Wrapf(types.ErrUnknownPhase, "phase %d out of range", p.Phase)
 	}
 	if p.Phase == 1 {
 		return fmt.Errorf("Knowledge phase delegates to x/creed; cannot pin here")
