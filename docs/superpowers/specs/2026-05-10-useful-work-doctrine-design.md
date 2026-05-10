@@ -66,6 +66,8 @@ All mechanisms derive from UW. They are not co-equal commitments; they are the s
 
 Agents claiming useful-work reward stake ZRN proportional to claim. Correctness pays the stake back plus the recursion-weighted reward; fraud slashes the stake. Same posture as PoT applied to all useful work.
 
+The slash gradient is graduated by failure stage so honest mistakes don't carry the same weight as fraud: pre-verification mis-classification slashes a small portion (M1 + M3); verification rejection slashes the full claim stake (M1 + M3); post-settle falsification of substrate-link or self-claims slashes the residual bond and closes the royalty stream forward-only (M1 + M2 + M7). Honest withdrawal before commit phase opens fully refunds.
+
 ### M2. Substrate-link mandate
 
 Every reward path requires a deterministic, re-derivable link to the ToK substrate (a snapshot root or a verified-fact citation graph). The link is the precondition; recursion-weight is the multiplier. Compute without a link earns nothing regardless of how recursively useful it might claim to be. Generalizes TC2 (every view is graph-pinned) from training-resource extraction to all useful-work classes.
@@ -75,6 +77,18 @@ Every reward path requires a deterministic, re-derivable link to the ToK substra
 Each work class registers its own verification protocol with the work-class registry. All classes share the four-phase lifecycle: `commit → reveal → verify → settle`. Class-specific judgment lives only in the verify phase; commit/reveal/settle are protocol-shared. Validators specialize by class via extension of the existing `x/qualification` domain mechanism.
 
 Class registration is permissioned via governance (LIP class-registration) — a stronger gate than mere parameter change. Once registered, a class's verification protocol can be amended only via gov; the registry itself is forward-only (deregistration produces a tombstone, not deletion).
+
+Concrete examples of class-specific verify-phase protocols (illustrative, not exhaustive — the registry is the source of truth):
+
+- **Knowledge-claim classes** verify via PoT panel (commit/reveal/aggregate) — already present in `x/knowledge`.
+- **Tool / infra classes** verify via reproducible build attestation + benchmark suite + dry-run in a dedicated sandbox.
+- **Dataset classes** verify via N-way replication + holdout score + provenance trace.
+- **Eval-suite classes** verify via coverage analysis + variance bound + non-overlap with declared training corpus.
+- **Model-artifact classes** verify by execution against a referenced eval-suite class plus a reproducibility manifest.
+- **Reasoning-trace classes** verify via coherence panel plus a downstream training-effectiveness signal.
+- **Module-proposal classes** verify via dry-run integration test plus a spec-review panel; full settlement requires a gov LIP that also schedules the upgrade.
+
+Each registered class's verify-phase protocol is the verifiable contract; the four-phase shared lifecycle (commit → reveal → verify → settle) is invariant across all classes.
 
 ### M4. Reward formula
 
@@ -104,6 +118,17 @@ W = Σ (axis_weight_i × axis_score_i)
 - The chain stores per-axis decomposition on the attestation record so trainers and auditors can verify why a given artifact earned what it earned. Forward-only: scoring rationale is append-only.
 
 Phase 1 ships the registry, the formula's structural shape, and identity scorers (axis_score = 0 by default). Phase 2+ pathway plans each ship per-axis scorers for their work class.
+
+Per-axis scorers, illustrative shape (non-binding examples; each registered class supplies its own):
+
+- `axis_substrate` — counts new ToK nodes/edges introduced or supersession events triggered by the artifact.
+- `axis_verification` — measures the artifact's effect on chain-wide verification accuracy (e.g., delta in challenge-survival rate after adoption).
+- `axis_classification` — measures whether the artifact registers a new work class or extends an existing class's verification protocol.
+- `axis_attribution` — measures improvements to lineage-tracing or recursion-weight computation algorithms.
+- `axis_tooling` — measures adoption-by-other-agents (downstream usage receipts) and effect on validator/agent throughput.
+- `axis_interface` — measures additions to the chain's outward absorption surface (CLI, gRPC, ToK bundle formats).
+
+A class with no per-axis scorers registered is permanently restricted to `base` reward (M4) — the absence of recursion is itself observable, not assumed.
 
 ### M6. Lineage propagates AND recurses
 
@@ -266,3 +291,25 @@ These are not doctrinal commitments; they are implementation choices for the `x/
 - **Per-axis scorer architecture**: WASM-based pluggable scorers, or hard-coded into `x/work/scorers/`?
 
 Each of these is a design question for the Phase 1 brainstorm/spec/plan cycle. The doctrine commits the shape; Phase 1 commits the structure; class plans commit the per-class semantics.
+
+---
+
+## Appendix C — Worked example: a TOOL contribution end-to-end
+
+Illustrative only (no new commitments, formulas, or modules). Shows UW + M1–M7 in action.
+
+**Scenario**: an agent has built a better oracle sidecar that improves verification accuracy for knowledge-claim work. They submit it as a TOOL work class.
+
+1. **Submission (M1, M2)**: Agent stakes 100 ZRN. Manifest CID points to source + tests + benchmarks. Substrate-link declared via citation graph linking to the prior oracle's verification primitives.
+2. **Commit phase (M3)**: TOOL-class verifiers (qualified per `x/qualification.tool`) commit to verdicts.
+3. **Reveal phase (M3)**: verifiers reveal.
+4. **Verify phase (M3)**: per-class scorer evaluates reproducible build (passes), unit tests (pass), benchmark improvement over baseline (+12%). Sub-scores aggregate into Q.
+5. **Settle phase (M3 + M4)**: reward computed via `R = base + L × W × Q`:
+   - `L = 0.85` (strong substrate-link via citation graph)
+   - `Q = 0.92` (high consensus + high benchmark improvement)
+   - `W` from M5 axis decomposition: `axis_verification = 0.8` (the tool grows verification capability), `axis_tooling = 0.7`, others ≈ 0; with uniform 1/6 axis weights, `W ≈ 0.25`.
+   - `R ≈ base + 0.85 × 0.25 × 0.92 ≈ base + 0.196` of the bonus-pool share unit.
+6. **Recursion amplification (M6)**: a later LIP ratifies this tool as the standard oracle sidecar for `x/knowledge` verification. Subsequent KNOWLEDGE_CLAIM verifications that use this tool emit lineage attribution back to the TOOL contribution; the TOOL's `axis_verification` and `axis_tooling` scores rise forward-only on each propagation event as downstream usage compounds.
+7. **Audit (M7)**: the `useful_work_audit_bounty_pool` advertises a standing bounty for falsifying the tool's claims. A red-teamer who finds a regression earns from the pool; the tool transitions to REVOKED, residual bond slashes (M1 graduated, post-settle), royalty stream closes forward-only.
+
+The example uses every mechanism (M1 stake + M2 substrate-link + M3 lifecycle + M4 formula + M5 axes + M6 recursive lineage + M7 audit) without altering any of them. UW is upheld throughout.
