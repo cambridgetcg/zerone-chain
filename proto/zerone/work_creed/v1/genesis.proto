@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package zerone.work_creed.v1;
+
+import "zerone/work_creed/v1/types.proto";
+
+option go_package = "github.com/zerone-chain/zerone/x/work_creed/types";
+
+// GenesisState is the genesis state of the x/work_creed module. At
+// chain inception, it contains 8 PinnedSubCreed entries (one per
+// non-Knowledge lifecycle phase, all at version 1).
+message GenesisState {
+  repeated PinnedSubCreed pinned_sub_creeds = 1;
+}

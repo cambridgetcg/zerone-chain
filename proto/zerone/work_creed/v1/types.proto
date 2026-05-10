@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package zerone.work_creed.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/work_creed/types";
+
+// PinnedSubCreed is the on-chain record that anchors a per-phase
+// sub-creed at a specific version. The on-chain history is append-only
+// (commitment 10): amendments produce new versions; prior versions
+// remain queryable. At Phase 0, the genesis state contains the
+// inception pins for the 8 non-Knowledge phases; subsequent amendments
+// are gov-LIP-driven and land in Phase 1+.
+message PinnedSubCreed {
+  // phase is the LifecyclePhase value (0..8). Knowledge (1) is not
+  // pinned here — it delegates to the existing x/creed PinnedCreed.
+  uint32 phase = 1;
+
+  // phase_name is the lowercase name (e.g., "foundation", "tools"),
+  // duplicated for readability in queries / events.
+  string phase_name = 2;
+
+  // version is the monotonically-increasing pin version, starting at 1
+  // for the inception pin.
+  uint32 version = 3;
+
+  // canonical_hash is the sha256 of the normalized
+  // docs/sub_creeds/<phase>.md content.
+  bytes canonical_hash = 4;
+
+  // anchored_at_block is the height at which this pin was recorded.
+  // 0 for the genesis pin (no block at genesis).
+  uint64 anchored_at_block = 5;
+
+  // source_lip references the gov LIP that caused this pin (empty for
+  // genesis pins; required post-genesis per S2 / commitment 19).
+  string source_lip = 6;
+
+  // commitment_codes is the ordered list of commitment codes pinned
+  // at this version (e.g., ["F1", "F2", "F3"] for the inception
+  // Foundation pin). The full commitment text lives in the markdown
+  // doc identified by canonical_hash; the codes provide a fast on-
+  // chain check that names didn't drift even when the binary's
+  // CanonicalSubCreeds is the historical baseline.
+  repeated string commitment_codes = 7;
+}
