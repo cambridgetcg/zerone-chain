@@ -1,0 +1,45 @@
+syntax = "proto3";
+package zerone.sponsorship.v1;
+option go_package = "github.com/zerone-chain/zerone/x/sponsorship/types";
+
+import "cosmos/msg/v1/msg.proto";
+import "zerone/sponsorship/v1/state.proto";
+
+service Msg {
+  option (cosmos.msg.v1.service) = true;
+
+  rpc CreateBountyOrder(MsgCreateBountyOrder) returns (MsgCreateBountyOrderResponse);
+  rpc FulfillBounty(MsgFulfillBounty) returns (MsgFulfillBountyResponse);
+  rpc CancelBountyOrder(MsgCancelBountyOrder) returns (MsgCancelBountyOrderResponse);
+}
+
+message MsgCreateBountyOrder {
+  option (cosmos.msg.v1.signer) = "sponsor";
+  string sponsor             = 1;
+  string domain              = 2;
+  string price_per_artifact  = 3;
+  uint32 target_count        = 4;
+  uint64 duration_blocks     = 5;
+}
+message MsgCreateBountyOrderResponse { string bounty_id = 1; }
+
+message MsgFulfillBounty {
+  option (cosmos.msg.v1.signer) = "caller";
+  string caller    = 1;
+  string bounty_id = 2;
+  string fact_id   = 3;
+}
+message MsgFulfillBountyResponse {
+  string worker               = 1;
+  string amount_paid          = 2;
+  bool   bounty_now_fulfilled = 3;
+}
+
+message MsgCancelBountyOrder {
+  option (cosmos.msg.v1.signer) = "sponsor";
+  string sponsor   = 1;
+  string bounty_id = 2;
+}
+message MsgCancelBountyOrderResponse {
+  string refunded_amount = 1;
+}

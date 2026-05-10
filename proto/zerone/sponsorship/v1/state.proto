@@ -1,0 +1,44 @@
+syntax = "proto3";
+package zerone.sponsorship.v1;
+option go_package = "github.com/zerone-chain/zerone/x/sponsorship/types";
+
+// BountyStatus enumerates the lifecycle states of a BountyOrder.
+enum BountyStatus {
+  BOUNTY_STATUS_UNSPECIFIED = 0;
+  BOUNTY_STATUS_ACTIVE      = 1;  // accepting fulfillments
+  BOUNTY_STATUS_FULFILLED   = 2;  // target_count reached
+  BOUNTY_STATUS_EXPIRED     = 3;  // currentBlock >= end_block, set by BeginBlocker
+  BOUNTY_STATUS_CANCELED    = 4;  // sponsor reclaimed remaining
+}
+
+// BountyOrder is a sponsor's commitment of escrowed funds against a
+// typed bounty for verified work in a specific domain.
+message BountyOrder {
+  string       id                   = 1;
+  string       sponsor              = 2;
+  string       domain               = 3;
+  string       price_per_artifact   = 4;
+  uint32       target_count         = 5;
+  uint32       fulfilled_count      = 6;
+  string       escrow_remaining     = 7;
+  uint64       start_block          = 8;
+  uint64       end_block            = 9;
+  BountyStatus status               = 10;
+}
+
+// BountyFulfillment records a single payout from a bounty to a worker
+// (the submitter of the fulfilling fact).
+message BountyFulfillment {
+  string bounty_id          = 1;
+  string fact_id            = 2;
+  string worker             = 3;
+  string amount_paid        = 4;
+  uint64 fulfilled_at_block = 5;
+}
+
+// Params is the governance-tunable configuration.
+message Params {
+  uint32 min_target_count                  = 1;
+  uint64 min_duration_blocks               = 2;
+  uint32 max_active_bounties_per_sponsor   = 3;
+}

@@ -1,0 +1,20 @@
+syntax = "proto3";
+package zerone.sponsorship.v1;
+option go_package = "github.com/zerone-chain/zerone/x/sponsorship/types";
+
+import "zerone/sponsorship/v1/state.proto";
+
+service Query {
+  rpc Params(QueryParamsRequest) returns (QueryParamsResponse);
+  rpc BountyOrder(QueryBountyOrderRequest) returns (QueryBountyOrderResponse);
+  rpc BountyOrders(QueryBountyOrdersRequest) returns (QueryBountyOrdersResponse);
+}
+
+message QueryParamsRequest {}
+message QueryParamsResponse { Params params = 1; }
+
+message QueryBountyOrderRequest { string id = 1; }
+message QueryBountyOrderResponse { BountyOrder order = 1; }
+
+message QueryBountyOrdersRequest {}
+message QueryBountyOrdersResponse { repeated BountyOrder orders = 1; }

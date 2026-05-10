@@ -1,0 +1,12 @@
+syntax = "proto3";
+package zerone.sponsorship.v1;
+option go_package = "github.com/zerone-chain/zerone/x/sponsorship/types";
+
+import "zerone/sponsorship/v1/state.proto";
+
+message GenesisState {
+  Params                       params         = 1;
+  repeated BountyOrder         orders         = 2;
+  repeated BountyFulfillment   fulfillments   = 3;
+  uint64                       next_bounty_id = 4;
+}
