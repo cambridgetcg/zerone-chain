@@ -40,6 +40,7 @@ import (
 	zeronetreekeeper "github.com/zerone-chain/zerone/x/tree/keeper"
 	zeroneemkeeper "github.com/zerone-chain/zerone/x/evidence_mgmt/keeper"
 	zeronecpotkeeper "github.com/zerone-chain/zerone/x/claiming_pot/keeper"
+	zeronesponsorshipkeeper "github.com/zerone-chain/zerone/x/sponsorship/keeper"
 	zeroneemergencykeeper "github.com/zerone-chain/zerone/x/emergency/keeper"
 	vestingrewardskeeper "github.com/zerone-chain/zerone/x/vesting_rewards/keeper"
 	zeronedisputeskeeper "github.com/zerone-chain/zerone/x/disputes/keeper"
@@ -86,6 +87,7 @@ type TestHarness struct {
 	TreeKeeper           zeronetreekeeper.Keeper
 	EvidenceMgmtKeeper   zeroneemkeeper.Keeper
 	ClaimingPotKeeper    zeronecpotkeeper.Keeper
+	SponsorshipKeeper    zeronesponsorshipkeeper.Keeper
 	EmergencyKeeper      zeroneemergencykeeper.Keeper
 	VestingRewardsKeeper vestingrewardskeeper.Keeper
 	DisputesKeeper       zeronedisputeskeeper.Keeper
@@ -287,6 +289,7 @@ func NewTestHarness(t *testing.T) *TestHarness {
 		TreeKeeper:           app.TreeKeeper,
 		EvidenceMgmtKeeper:   app.EvidenceMgmtKeeper,
 		ClaimingPotKeeper:    app.ClaimingPotKeeper,
+		SponsorshipKeeper:    app.SponsorshipKeeper,
 		EmergencyKeeper:      app.EmergencyKeeper,
 		VestingRewardsKeeper: app.VestingRewardsKeeper,
 		DisputesKeeper:       app.DisputesKeeper,

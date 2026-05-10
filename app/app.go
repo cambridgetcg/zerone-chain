@@ -1638,6 +1638,7 @@ func NewZeroneApp(
 		zeronepartnershipstypes.ModuleName,          // EndBlocker: settle cooling partnerships
 		zeroneemtypes.ModuleName,                    // EndBlocker: no-op
 		zeronecpottypes.ModuleName,                  // EndBlocker: no-op
+		zeronesponsorshiptypes.ModuleName,           // EndBlocker: no-op
 		zeronettreetypes.ModuleName,                 // EndBlocker: no-op
 		zeronetoolboxtypes.ModuleName,               // EndBlocker: no-op
 		zeroneprivatecorpustypes.ModuleName,         // EndBlocker: no-op
@@ -1698,6 +1699,7 @@ func NewZeroneApp(
 		zeroneicaauthtypes.ModuleName,               // Genesis: after ICA
 		zeroneemtypes.ModuleName,                    // Genesis: after disputes + staking
 		zeronecpottypes.ModuleName,                  // Genesis: after staking + auth + bank
+		zeronesponsorshiptypes.ModuleName,           // Genesis: after bank + knowledge
 		zeronettreetypes.ModuleName,                 // Genesis: after bank + channels + vesting_rewards
 		zeronetoolboxtypes.ModuleName,               // Genesis: after discovery + billing + home + tree (needs all)
 		zeroneprivatecorpustypes.ModuleName,         // Genesis: standalone, no cross-module deps
