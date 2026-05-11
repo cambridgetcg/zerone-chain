@@ -10,7 +10,7 @@ interaction backed by cryptographic truth.
 
 > **Read first:** [docs/TRUTH_SEEKING.md](docs/TRUTH_SEEKING.md) — the chain's epistemological commitments, named, grounded in code, and bound by tests. Truth-seeking is the substrate, not a feature. We speak through intentions.
 >
-> **Then:** [docs/TOK_SUBSTRATE.md](docs/TOK_SUBSTRATE.md) (what the chain *sells*) and [docs/USEFUL_WORK.md](docs/USEFUL_WORK.md) (how the chain *grows itself*) — the trio is mutually constitutive.
+> **Then:** [docs/TOK_SUBSTRATE.md](docs/TOK_SUBSTRATE.md) (what the chain *sells*), [docs/USEFUL_WORK.md](docs/USEFUL_WORK.md) (how the chain *grows itself*), and [docs/STRANGE_LOOP.md](docs/STRANGE_LOOP.md) (what the chain *is*) — the quartet is mutually constitutive.
 
 ---
 
@@ -227,6 +227,7 @@ make proto-gen
 | [Truth-Seeking](docs/TRUTH_SEEKING.md) | The 18 epistemological commitments, bound by tests |
 | [ToK Substrate](docs/TOK_SUBSTRATE.md) | The chain's training-resource doctrine — verified knowledge graph as headline product |
 | [Useful Work](docs/USEFUL_WORK.md) | The chain's metabolic doctrine — UW (recursive) + 7 mechanisms |
+| [Strange Loop](docs/STRANGE_LOOP.md) | The chain's self-referential doctrine — SL + 6 mechanisms (Phase SL-α binds SL-M1 doctrine import) |
 | [Roadmap](docs/ROADMAP.md) | Where we are, what's bound, what ships next |
 | [FAQ](docs/FAQ.md) | Validator and network FAQ |
 | [API Reference](docs/API.md) | REST/gRPC endpoint reference |
