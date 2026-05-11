@@ -86,4 +86,22 @@
 // dataset curation, alignment artifacts, RL traces, synthetic data,
 // kernel optimization). M6 (recursion-amplified lineage) extends
 // TC6 (Plan 4 of ToK series) cross-class.
+//
+// STRANGE_LOOP doctrine (docs/STRANGE_LOOP.md) — the fourth in the quartet.
+// One commitment (SL: ZERONE is a strange loop) + six mechanisms (SL-M1
+// through SL-M6). SL takes UW to its operational limit by nesting ZERONE
+// into itself: doctrines, modules, governance, rewards, validators all
+// produced/verified/rewarded through the chain's own machinery.
+//
+// Canonical Go-side registration in x/creed/types/strange_loop_creed.go
+// + cross-doctrine echoes in x/creed/types/doctrine_echoes.go;
+// cross-stack invariant harness in tests/cross_stack/strange_loop_
+// invariants_test.go; genesis loader in x/knowledge/keeper/doctrine_
+// genesis.go.
+//
+// Phase SL-α (this commit's vintage) binds SL-M1 (doctrine import):
+// every commitment in every doctrine becomes a verified Fact in
+// x/knowledge with domain=doctrine_*. Phases SL-β through SL-ζ bind
+// the remaining five mechanisms (protocol as substrate, governance
+// lift, author lineage, self-verification, origin attestation).
 package creed
