@@ -8,7 +8,7 @@ This document names every recursion now operating in the chain. It is descriptiv
 
 ## 1. The chain attests to its own becoming
 
-**Closed by:** `zerone-self-v1` adapter (`docs/specs/adapters/zerone-self-v1.md`); `tests/cross_stack/zerone_self_adapter_test.go`.
+**Closed by:** `zerone-self-v1` adapter (`docs/specs/adapters/zerone-self-v1.md`); binding tests `TestZeroneSelfAdapter_RegisterAndSubmit` and `TestZeroneSelfAdapter_AxisBoundsRespected`.
 
 ZERONE's git repository is a typed external source. Each commit compiles to a deterministic `SubstrateLink` whose `link_hash` matches chain-side `ComputeLinkHash`. Pending claims land in the `zerone_self` knowledge domain; on verification, they become facts citable by future work.
 
@@ -16,7 +16,7 @@ The chain's claim about the world is grounded in verifiable provenance. The chai
 
 ## 2. The chain pays for its own self-documentation
 
-**Closed by:** `x/sponsorship` + `zerone-self-v1`; `tests/cross_stack/zerone_self_sponsorship_loop_test.go`.
+**Closed by:** `x/sponsorship` + `zerone-self-v1`; binding tests `TestZeroneSelf_FullEconomicLoop` and `TestZeroneSelf_MultipleFulfillmentsCompoundEarnings`.
 
 A sponsor can post a bounty in the `zerone_self` domain. A submitter attests to a ZERONE commit through the self-adapter. On verification, the bounty's escrow pays the submitter from sponsor's funds. Total uzrn supply is unchanged — sponsorship circulates existing supply, the recursion compounds in attribution and lineage, not in inflation.
 
@@ -60,13 +60,13 @@ The recursion: governance of useful-work is itself useful-work governance. Sub-c
 
 ## 7. Participation grows through participation
 
-**Closed by:** `x/claiming_pot.MsgAddBootstrapEntry` (gov-gated, idempotent) + bootstrap pots are non-expiring.
+**Closed by:** `x/claiming_pot.MsgAddBootstrapEntry` (gov-gated, idempotent) + bootstrap pots are non-expiring; binding tests `TestLateBootstrap_AddThenClaim`, `TestLateBootstrap_AddIsIdempotentAcrossLIPs`, `TestLateBootstrap_AdmittedAgentCanClaimAfterManyBlocks`, and `TestScenario13e_BootstrapPotsDoNotExpire`.
 
 The participant set is not closed at genesis. A governance LIP can admit late participants by minting their bootstrap seed through `MintWithCap` — the same single mint entry point that PoT block rewards use. New participants earn through verified work; verified work fulfills bounties; bounties fund new participants. The flywheel is structural.
 
 ## 8. The economy is hard-capped and self-circulating
 
-**Closed by:** `x/vesting_rewards.MintWithCap` as the chain's only mint entry; `tests/cross_stack/emission_cap_test.go`.
+**Closed by:** `x/vesting_rewards.MintWithCap` as the chain's only mint entry; binding tests `TestEmissionCap_BootstrapClaimMintsOnDemand`, `TestScenario13_ZeroTeamAllocationAtGenesis`, `TestScenario13c_ClaimingPotMinterPermission`, and `TestSponsorship_NoMintingHappens`.
 
 Two emission pathways (block rewards, bootstrap claims) gate through one `MintWithCap`. Sponsorship circulates existing supply. The cap is live-supply-anchored — a burn anywhere on the chain frees headroom for future mint anywhere. No third mint pathway can exist without modifying `MintWithCap`, which requires the proto-gen + test-binding discipline.
 
@@ -78,7 +78,7 @@ Auditing is a paid useful-work activity. The pool mints ZRN every block (capped)
 
 ## 10. The recursion is observable
 
-**Closed by:** voice-layer event attributes; `docs/EVENTS.md` mirror invariant.
+**Closed by:** voice-layer event attributes; `docs/EVENTS.md` mirror invariant; this very doctrine's binding test `TestRecursiveZerone_TestNamesCitedInDoctrineExist`, which asserts every test name cited in this document resolves to a real Go test function (the recursion that audits this recursion catalog).
 
 Every event that participates in a recursion carries `creed_commitment` and (for UW events) `mechanism` attributes naming which doctrine the event preserves. An indexer streaming the chain's events can compute, in real time:
 
