@@ -1,0 +1,18 @@
+syntax = "proto3";
+package zerone.substrate_bridge.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/substrate_bridge/types";
+
+message Params {
+  uint32 max_pending_claims_per_attestation = 1;
+  string per_pending_claim_bond_uzrn        = 2;
+  string attestation_min_bond_uzrn          = 3;
+  uint64 max_pending_window_blocks          = 4;
+  uint32 pending_claim_rejection_threshold_bps = 5;
+  uint32 min_verified_ratio_for_settle_bps  = 6;
+  uint32 lineage_share_bps        = 7;
+  uint32 decay_bps_per_hop        = 8;
+  uint32 max_propagation_depth    = 9;
+  string min_propagation_uzrn     = 10;
+  uint32 self_citation_cap_bps    = 11;
+}
