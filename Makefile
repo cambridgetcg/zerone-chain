@@ -40,6 +40,10 @@ creed-check:
 	@bash scripts/check_useful_work_hash.sh
 	@bash scripts/check_tok_substrate_hash.sh
 	@bash scripts/check_strange_loop_hash.sh
+	@bash scripts/check_sub_creed_hashes.sh
+	@bash scripts/check_recursion_doctrine_hash.sh
+	@bash scripts/check_phase_1_spec_hash.sh
+	@bash scripts/check_specs_and_plans_hashes.sh
 
 recursion-check:
 	@bash scripts/recursion-check.sh

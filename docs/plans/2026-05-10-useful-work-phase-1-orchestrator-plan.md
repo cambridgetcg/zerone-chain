@@ -3779,3 +3779,9 @@ After implementing all 28 tasks, verify:
 - **No migration script for existing Knowledge claims** — separate one-shot tool if needed.
 
 — *Plan authored 2026-05-10. Phase 1 ships the orchestrator skeleton; subsequent phases progressively wire other classes, lineage propagation, and economic flows.*
+
+---
+
+## This document is a Contribution
+
+This plan is itself a `Contribution` of class `PIPELINE_IMPROVEMENT`, lifecycle phase `SUBSTRATE`. Its content-hash is pinned at `.phase-1-plan-hash`. The chain pays for its own design and execution; this document is among the work.

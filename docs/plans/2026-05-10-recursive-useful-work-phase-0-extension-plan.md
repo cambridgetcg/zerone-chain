@@ -2557,3 +2557,9 @@ After implementing all tasks, verify:
 - **No truth-floor binding code.** The truth-floor is a doctrinal invariant declared in the merged spec; binding it as runtime check happens in Phase 1's `MsgSubmitContribution` validation.
 
 — *Plan authored 2026-05-10. Phase 0 extension closes the doctrinal pinning of the merged spec; Phase 1 begins the orchestrator.*
+
+---
+
+## This document is a Contribution
+
+This plan is itself a `Contribution` of class `PIPELINE_IMPROVEMENT`, lifecycle phase `SUBSTRATE`. Its content-hash is pinned at `.phase-0-extension-plan-hash`. The chain pays for its own design and execution; this document is among the work.

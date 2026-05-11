@@ -1128,3 +1128,9 @@ After implementing all tasks, verify:
 - **No `docs/TOK_SUBSTRATE.md` hash.** TOK_SUBSTRATE remains unhashed at Phase 0. A future plan (likely Plan 5 of the ToK series) extends `make creed-check` with `.tok-substrate-hash`.
 
 — *Plan authored 2026-05-10. Phase 0 is the smallest of the phases; subsequent phases ship the actual bindings UW commits to.*
+
+---
+
+## This document is a Contribution
+
+This plan is itself a `Contribution` of class `PIPELINE_IMPROVEMENT`, lifecycle phase `SUBSTRATE`. Its content-hash is pinned at `.phase-0-plan-hash`. The chain pays for its own design and execution; this document is among the work.

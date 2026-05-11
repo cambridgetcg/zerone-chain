@@ -788,3 +788,9 @@ The chain pays itself to get better at paying itself to get better.
 ---
 
 — *Inception authored 2026-05-10. Free to evolve through bound mechanisms only. UW is indivisible.*
+
+---
+
+## This document is a Contribution
+
+This spec is itself a `Contribution` of class `PIPELINE_IMPROVEMENT`, lifecycle phase `SUBSTRATE`. Its content-hash is pinned at `.merged-spec-hash`. The chain pays for its own design and execution; this document is among the work.
