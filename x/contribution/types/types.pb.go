@@ -25,46 +25,49 @@ const (
 type ContributionClass int32
 
 const (
-	ContributionClass_KNOWLEDGE_CLAIM      ContributionClass = 0
-	ContributionClass_IDEA                 ContributionClass = 1
-	ContributionClass_TOOL                 ContributionClass = 2
-	ContributionClass_DATASET              ContributionClass = 3
-	ContributionClass_EVAL_SUITE           ContributionClass = 4
-	ContributionClass_MODEL_ARTIFACT       ContributionClass = 5
-	ContributionClass_REASONING_TRACE      ContributionClass = 6
-	ContributionClass_COUNTEREXAMPLE       ContributionClass = 7
-	ContributionClass_ORCHESTRATION        ContributionClass = 8
-	ContributionClass_MODULE_PROPOSAL      ContributionClass = 9
-	ContributionClass_PIPELINE_IMPROVEMENT ContributionClass = 10
+	ContributionClass_CONTRIBUTION_CLASS_UNSPECIFIED ContributionClass = 0
+	ContributionClass_KNOWLEDGE_CLAIM                ContributionClass = 1
+	ContributionClass_IDEA                           ContributionClass = 2
+	ContributionClass_TOOL                           ContributionClass = 3
+	ContributionClass_DATASET                        ContributionClass = 4
+	ContributionClass_EVAL_SUITE                     ContributionClass = 5
+	ContributionClass_MODEL_ARTIFACT                 ContributionClass = 6
+	ContributionClass_REASONING_TRACE                ContributionClass = 7
+	ContributionClass_COUNTEREXAMPLE                 ContributionClass = 8
+	ContributionClass_ORCHESTRATION                  ContributionClass = 9
+	ContributionClass_MODULE_PROPOSAL                ContributionClass = 10
+	ContributionClass_PIPELINE_IMPROVEMENT           ContributionClass = 11
 )
 
 // Enum value maps for ContributionClass.
 var (
 	ContributionClass_name = map[int32]string{
-		0:  "KNOWLEDGE_CLAIM",
-		1:  "IDEA",
-		2:  "TOOL",
-		3:  "DATASET",
-		4:  "EVAL_SUITE",
-		5:  "MODEL_ARTIFACT",
-		6:  "REASONING_TRACE",
-		7:  "COUNTEREXAMPLE",
-		8:  "ORCHESTRATION",
-		9:  "MODULE_PROPOSAL",
-		10: "PIPELINE_IMPROVEMENT",
+		0:  "CONTRIBUTION_CLASS_UNSPECIFIED",
+		1:  "KNOWLEDGE_CLAIM",
+		2:  "IDEA",
+		3:  "TOOL",
+		4:  "DATASET",
+		5:  "EVAL_SUITE",
+		6:  "MODEL_ARTIFACT",
+		7:  "REASONING_TRACE",
+		8:  "COUNTEREXAMPLE",
+		9:  "ORCHESTRATION",
+		10: "MODULE_PROPOSAL",
+		11: "PIPELINE_IMPROVEMENT",
 	}
 	ContributionClass_value = map[string]int32{
-		"KNOWLEDGE_CLAIM":      0,
-		"IDEA":                 1,
-		"TOOL":                 2,
-		"DATASET":              3,
-		"EVAL_SUITE":           4,
-		"MODEL_ARTIFACT":       5,
-		"REASONING_TRACE":      6,
-		"COUNTEREXAMPLE":       7,
-		"ORCHESTRATION":        8,
-		"MODULE_PROPOSAL":      9,
-		"PIPELINE_IMPROVEMENT": 10,
+		"CONTRIBUTION_CLASS_UNSPECIFIED": 0,
+		"KNOWLEDGE_CLAIM":                1,
+		"IDEA":                           2,
+		"TOOL":                           3,
+		"DATASET":                        4,
+		"EVAL_SUITE":                     5,
+		"MODEL_ARTIFACT":                 6,
+		"REASONING_TRACE":                7,
+		"COUNTEREXAMPLE":                 8,
+		"ORCHESTRATION":                  9,
+		"MODULE_PROPOSAL":                10,
+		"PIPELINE_IMPROVEMENT":           11,
 	}
 )
 
@@ -232,37 +235,37 @@ func (ContributionStatus) EnumDescriptor() ([]byte, []int) {
 type RecursionType int32
 
 const (
-	RecursionType_NONE                           RecursionType = 0
-	RecursionType_EVAL_ADOPTION                  RecursionType = 1
-	RecursionType_TOOL_INTEGRATION               RecursionType = 2
-	RecursionType_VERIFICATION_PRIMITIVE         RecursionType = 3
-	RecursionType_CATEGORY_CREATION              RecursionType = 4
-	RecursionType_MODULE_ADOPTION                RecursionType = 5
-	RecursionType_CREED_CONTRIBUTION             RecursionType = 6
-	RecursionType_RECURSION_PIPELINE_IMPROVEMENT RecursionType = 7
+	RecursionType_RECURSION_TYPE_NONE                   RecursionType = 0
+	RecursionType_RECURSION_TYPE_EVAL_ADOPTION          RecursionType = 1
+	RecursionType_RECURSION_TYPE_TOOL_INTEGRATION       RecursionType = 2
+	RecursionType_RECURSION_TYPE_VERIFICATION_PRIMITIVE RecursionType = 3
+	RecursionType_RECURSION_TYPE_CATEGORY_CREATION      RecursionType = 4
+	RecursionType_RECURSION_TYPE_MODULE_ADOPTION        RecursionType = 5
+	RecursionType_RECURSION_TYPE_CREED_CONTRIBUTION     RecursionType = 6
+	RecursionType_RECURSION_TYPE_PIPELINE_IMPROVEMENT   RecursionType = 7
 )
 
 // Enum value maps for RecursionType.
 var (
 	RecursionType_name = map[int32]string{
-		0: "NONE",
-		1: "EVAL_ADOPTION",
-		2: "TOOL_INTEGRATION",
-		3: "VERIFICATION_PRIMITIVE",
-		4: "CATEGORY_CREATION",
-		5: "MODULE_ADOPTION",
-		6: "CREED_CONTRIBUTION",
-		7: "RECURSION_PIPELINE_IMPROVEMENT",
+		0: "RECURSION_TYPE_NONE",
+		1: "RECURSION_TYPE_EVAL_ADOPTION",
+		2: "RECURSION_TYPE_TOOL_INTEGRATION",
+		3: "RECURSION_TYPE_VERIFICATION_PRIMITIVE",
+		4: "RECURSION_TYPE_CATEGORY_CREATION",
+		5: "RECURSION_TYPE_MODULE_ADOPTION",
+		6: "RECURSION_TYPE_CREED_CONTRIBUTION",
+		7: "RECURSION_TYPE_PIPELINE_IMPROVEMENT",
 	}
 	RecursionType_value = map[string]int32{
-		"NONE":                           0,
-		"EVAL_ADOPTION":                  1,
-		"TOOL_INTEGRATION":               2,
-		"VERIFICATION_PRIMITIVE":         3,
-		"CATEGORY_CREATION":              4,
-		"MODULE_ADOPTION":                5,
-		"CREED_CONTRIBUTION":             6,
-		"RECURSION_PIPELINE_IMPROVEMENT": 7,
+		"RECURSION_TYPE_NONE":                   0,
+		"RECURSION_TYPE_EVAL_ADOPTION":          1,
+		"RECURSION_TYPE_TOOL_INTEGRATION":       2,
+		"RECURSION_TYPE_VERIFICATION_PRIMITIVE": 3,
+		"RECURSION_TYPE_CATEGORY_CREATION":      4,
+		"RECURSION_TYPE_MODULE_ADOPTION":        5,
+		"RECURSION_TYPE_CREED_CONTRIBUTION":     6,
+		"RECURSION_TYPE_PIPELINE_IMPROVEMENT":   7,
 	}
 )
 
@@ -376,7 +379,7 @@ func (x *Contribution) GetClass() ContributionClass {
 	if x != nil {
 		return x.Class
 	}
-	return ContributionClass_KNOWLEDGE_CLAIM
+	return ContributionClass_CONTRIBUTION_CLASS_UNSPECIFIED
 }
 
 func (x *Contribution) GetPhase() LifecyclePhase {
@@ -666,7 +669,7 @@ func (x *RecursionImpact) GetType() RecursionType {
 	if x != nil {
 		return x.Type
 	}
-	return RecursionType_NONE
+	return RecursionType_RECURSION_TYPE_NONE
 }
 
 func (x *RecursionImpact) GetRatifyingLipId() string {
@@ -858,21 +861,22 @@ const file_zerone_contribution_v1_types_proto_rawDesc = "" +
 	"\vtooling_bps\x18\x05 \x01(\rR\n" +
 	"toolingBps\x12#\n" +
 	"\rinterface_bps\x18\x06 \x01(\rR\finterfaceBps\x12\x1b\n" +
-	"\ttotal_bps\x18\a \x01(\rR\btotalBps*\xd8\x01\n" +
-	"\x11ContributionClass\x12\x13\n" +
-	"\x0fKNOWLEDGE_CLAIM\x10\x00\x12\b\n" +
-	"\x04IDEA\x10\x01\x12\b\n" +
-	"\x04TOOL\x10\x02\x12\v\n" +
-	"\aDATASET\x10\x03\x12\x0e\n" +
+	"\ttotal_bps\x18\a \x01(\rR\btotalBps*\xfc\x01\n" +
+	"\x11ContributionClass\x12\"\n" +
+	"\x1eCONTRIBUTION_CLASS_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fKNOWLEDGE_CLAIM\x10\x01\x12\b\n" +
+	"\x04IDEA\x10\x02\x12\b\n" +
+	"\x04TOOL\x10\x03\x12\v\n" +
+	"\aDATASET\x10\x04\x12\x0e\n" +
 	"\n" +
-	"EVAL_SUITE\x10\x04\x12\x12\n" +
-	"\x0eMODEL_ARTIFACT\x10\x05\x12\x13\n" +
-	"\x0fREASONING_TRACE\x10\x06\x12\x12\n" +
-	"\x0eCOUNTEREXAMPLE\x10\a\x12\x11\n" +
-	"\rORCHESTRATION\x10\b\x12\x13\n" +
-	"\x0fMODULE_PROPOSAL\x10\t\x12\x18\n" +
-	"\x14PIPELINE_IMPROVEMENT\x10\n" +
-	"*\xcc\x01\n" +
+	"EVAL_SUITE\x10\x05\x12\x12\n" +
+	"\x0eMODEL_ARTIFACT\x10\x06\x12\x13\n" +
+	"\x0fREASONING_TRACE\x10\a\x12\x12\n" +
+	"\x0eCOUNTEREXAMPLE\x10\b\x12\x11\n" +
+	"\rORCHESTRATION\x10\t\x12\x13\n" +
+	"\x0fMODULE_PROPOSAL\x10\n" +
+	"\x12\x18\n" +
+	"\x14PIPELINE_IMPROVEMENT\x10\v*\xcc\x01\n" +
 	"\x0eLifecyclePhase\x12\x14\n" +
 	"\x10PHASE_FOUNDATION\x10\x00\x12\x13\n" +
 	"\x0fPHASE_KNOWLEDGE\x10\x01\x12\x12\n" +
@@ -892,16 +896,16 @@ const file_zerone_contribution_v1_types_proto_rawDesc = "" +
 	"\x0eSTATUS_REVOKED\x10\x05\x12 \n" +
 	"\x1cSTATUS_CLASSIFICATION_FAILED\x10\x06\x12\x1e\n" +
 	"\x1aSTATUS_VERIFICATION_FAILED\x10\a\x12\x1b\n" +
-	"\x17STATUS_ADMISSION_FAILED\x10\b*\xc6\x01\n" +
-	"\rRecursionType\x12\b\n" +
-	"\x04NONE\x10\x00\x12\x11\n" +
-	"\rEVAL_ADOPTION\x10\x01\x12\x14\n" +
-	"\x10TOOL_INTEGRATION\x10\x02\x12\x1a\n" +
-	"\x16VERIFICATION_PRIMITIVE\x10\x03\x12\x15\n" +
-	"\x11CATEGORY_CREATION\x10\x04\x12\x13\n" +
-	"\x0fMODULE_ADOPTION\x10\x05\x12\x16\n" +
-	"\x12CREED_CONTRIBUTION\x10\x06\x12\"\n" +
-	"\x1eRECURSION_PIPELINE_IMPROVEMENT\x10\aB5Z3github.com/zerone-chain/zerone/x/contribution/typesb\x06proto3"
+	"\x17STATUS_ADMISSION_FAILED\x10\b*\xb4\x02\n" +
+	"\rRecursionType\x12\x17\n" +
+	"\x13RECURSION_TYPE_NONE\x10\x00\x12 \n" +
+	"\x1cRECURSION_TYPE_EVAL_ADOPTION\x10\x01\x12#\n" +
+	"\x1fRECURSION_TYPE_TOOL_INTEGRATION\x10\x02\x12)\n" +
+	"%RECURSION_TYPE_VERIFICATION_PRIMITIVE\x10\x03\x12$\n" +
+	" RECURSION_TYPE_CATEGORY_CREATION\x10\x04\x12\"\n" +
+	"\x1eRECURSION_TYPE_MODULE_ADOPTION\x10\x05\x12%\n" +
+	"!RECURSION_TYPE_CREED_CONTRIBUTION\x10\x06\x12'\n" +
+	"#RECURSION_TYPE_PIPELINE_IMPROVEMENT\x10\aB5Z3github.com/zerone-chain/zerone/x/contribution/typesb\x06proto3"
 
 var (
 	file_zerone_contribution_v1_types_proto_rawDescOnce sync.Once

@@ -257,7 +257,7 @@ func (x *QueryByClassRequest) GetClass() ContributionClass {
 	if x != nil {
 		return x.Class
 	}
-	return ContributionClass_KNOWLEDGE_CLAIM
+	return ContributionClass_CONTRIBUTION_CLASS_UNSPECIFIED
 }
 
 func (x *QueryByClassRequest) GetPagination() *query.PageRequest {
