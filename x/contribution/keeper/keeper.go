@@ -8,6 +8,7 @@ import (
 	"cosmossdk.io/log"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/zerone-chain/zerone/x/contribution/types"
 )
@@ -76,13 +77,17 @@ func (k Keeper) WriteContribution(ctx context.Context, c *types.Contribution) er
 	var prior *types.Contribution
 	if priorBytes != nil {
 		prior = &types.Contribution{}
-		if err := k.cdc.Unmarshal(priorBytes, prior); err != nil {
+		// Use google.golang.org/protobuf/proto directly: Contribution is a
+		// modern protoc-gen-go message with a oneof Payload field, which
+		// trips the gogoproto table marshaler used by codec.BinaryCodec
+		// (nil deref in computeOneofFieldInfo). Wire-compatible swap.
+		if err := proto.Unmarshal(priorBytes, prior); err != nil {
 			return err
 		}
 	}
 
-	// Write primary record.
-	bz, err := k.cdc.Marshal(c)
+	// Write primary record. See note above re: proto.Marshal vs k.cdc.Marshal.
+	bz, err := proto.Marshal(c)
 	if err != nil {
 		return err
 	}
@@ -138,7 +143,8 @@ func (k Keeper) GetContribution(ctx context.Context, id []byte) (*types.Contribu
 		return nil, false
 	}
 	c := &types.Contribution{}
-	if err := k.cdc.Unmarshal(bz, c); err != nil {
+	// proto.Unmarshal — bypasses gogoproto table marshaler (oneof nil-deref).
+	if err := proto.Unmarshal(bz, c); err != nil {
 		return nil, false
 	}
 	return c, true

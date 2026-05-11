@@ -4,6 +4,7 @@ import (
 	"context"
 
 	corestoretypes "cosmossdk.io/core/store"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/zerone-chain/zerone/x/contribution/types"
 )
@@ -31,7 +32,12 @@ func (k Keeper) ExportGenesis(ctx context.Context) *types.GenesisState {
 
 	for ; iter.Valid(); iter.Next() {
 		var c types.Contribution
-		if err := k.cdc.Unmarshal(iter.Value(), &c); err != nil {
+		// proto.Unmarshal — Contribution carries a oneof Payload; the
+		// gogoproto table marshaler used by codec.BinaryCodec nil-derefs
+		// on oneof closures for modern protoc-gen-go messages. Wire format
+		// is identical, so this is safe alongside WriteContribution's
+		// proto.Marshal.
+		if err := proto.Unmarshal(iter.Value(), &c); err != nil {
 			panic(err)
 		}
 		gs.Contributions = append(gs.Contributions, &c)
