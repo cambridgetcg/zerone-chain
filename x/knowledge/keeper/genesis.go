@@ -230,6 +230,13 @@ func (k Keeper) InitGenesis(ctx context.Context, gs *types.GenesisState) error {
 		}
 	}
 
+	// Load doctrine Facts (SL-M1): every commitment in every doctrine
+	// becomes a verified Fact under domain=doctrine_*. Cross-doctrine
+	// "Echoes:" become real SUPPORTS/REQUIRES/REFINES edges.
+	if err := k.LoadDoctrineFacts(ctx); err != nil {
+		return fmt.Errorf("load doctrine facts: %w", err)
+	}
+
 	return nil
 }
 
