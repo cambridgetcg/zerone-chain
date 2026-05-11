@@ -33,6 +33,10 @@ type Keeper struct {
 	pacingKeeper               types.PacingKeeper               // nil until R29-6
 	counterexampleKeeper       types.CounterexampleKeeper       // nil until counterexamples wired
 	substrateBridgeKeeper      types.SubstrateBridgeKeeper      // nil until substrate_bridge wired (SB-22)
+
+	// hooks dispatches lifecycle events to external consumers (e.g., x/contribution).
+	// Set via SetHooks at app init; defaults to no-op (MultiKnowledgeHooks{}).
+	hooks types.KnowledgeHooks
 }
 
 // NewKeeper creates a new knowledge Keeper.
