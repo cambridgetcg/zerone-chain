@@ -1,0 +1,53 @@
+syntax = "proto3";
+package zerone.substrate_bridge.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/substrate_bridge/types";
+
+// ExternalSource is a typed reference to off-chain content that an
+// adapter has fetched. The content_hash is the cryptographic anchor:
+// substrate-link re-derivation matches if and only if the source's
+// content_hash matches what the adapter binary produced.
+message ExternalSource {
+  string adapter_id       = 1;
+  string source_id        = 2;  // e.g. Wikipedia article ID
+  string source_url       = 3;  // optional; for audit
+  bytes  content_hash     = 4;  // sha256 of fetched content
+  uint64 fetched_at_block = 5;
+}
+
+// AxisProjection is the per-axis recursion-weight contribution of an
+// external work artifact, in the order fixed by USEFUL_WORK.md
+// section "The six recursive axes". Units are uint64 weights, bounded
+// by an adapter's AxisBounds.
+message AxisProjection {
+  uint64 axis_substrate      = 1;
+  uint64 axis_verification   = 2;
+  uint64 axis_classification = 3;
+  uint64 axis_attribution    = 4;
+  uint64 axis_tooling        = 5;
+  uint64 axis_interface      = 6;
+}
+
+// AxisBounds caps the per-axis projection an adapter is allowed to
+// claim. Gov-approved at adapter registration; enforced at attestation
+// submit.
+message AxisBounds {
+  uint64 axis_substrate_max      = 1;
+  uint64 axis_verification_max   = 2;
+  uint64 axis_classification_max = 3;
+  uint64 axis_attribution_max    = 4;
+  uint64 axis_tooling_max        = 5;
+  uint64 axis_interface_max      = 6;
+}
+
+// CitationType distinguishes citation strengths for lineage propagation
+// (M6 generalized). Mirrors the ToK relation-type semantics applied
+// across work classes.
+enum CitationType {
+  CITATION_TYPE_UNSPECIFIED = 0;
+  CITATION_TYPE_CITES       = 1;  // 1× base weight
+  CITATION_TYPE_SUPPORTS    = 2;  // 2× base weight
+  CITATION_TYPE_EXTENDS     = 3;  // 3× base weight
+  CITATION_TYPE_REFINES     = 4;  // 3× base weight
+  CITATION_TYPE_GENERALIZES = 5;  // 4× base weight
+}
