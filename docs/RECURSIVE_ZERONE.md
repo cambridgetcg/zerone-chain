@@ -78,7 +78,7 @@ Auditing is a paid useful-work activity. The pool mints ZRN every block (capped)
 
 ## 10. The recursion is observable
 
-**Closed by:** voice-layer event attributes; `docs/EVENTS.md` mirror invariant; this very doctrine's binding test `TestRecursiveZerone_TestNamesCitedInDoctrineExist`, which asserts every test name cited in this document resolves to a real Go test function (the recursion that audits this recursion catalog).
+**Closed by:** voice-layer event attributes; `docs/EVENTS.md` mirror invariant; binding test `TestRecursiveVoiceAudit_EveryEventInTheLoopIsDoctrineBound` which captures every event from a full self-sponsorship loop and asserts each carries `creed_commitment`, `useful_work_commitment`, or `mechanism`; the doctrine catalog's binding test `TestRecursiveZerone_TestNamesCitedInDoctrineExist`, which asserts every test name cited in this document resolves to a real Go test function (the recursion that audits this recursion catalog).
 
 Every event that participates in a recursion carries `creed_commitment` and (for UW events) `mechanism` attributes naming which doctrine the event preserves. An indexer streaming the chain's events can compute, in real time:
 
