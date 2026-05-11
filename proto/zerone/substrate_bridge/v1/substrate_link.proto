@@ -1,0 +1,52 @@
+syntax = "proto3";
+package zerone.substrate_bridge.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/substrate_bridge/types";
+
+import "zerone/substrate_bridge/v1/types.proto";
+
+// SubstrateLink is the deterministic provenance from external content
+// to ToK fact-IDs (existing + pending). Two sections — cited_facts MUST
+// exist in x/knowledge at commit time; pending_claims are auto-submitted
+// as Claims and the attestation is held in AWAITING_RESOLUTION until
+// they resolve. M2 satisfied: every pending claim becomes a real
+// on-chain claim with full provenance.
+message SubstrateLink {
+  repeated FactCitation cited_facts    = 1;
+  repeated PendingClaim pending_claims = 2;
+  AxisProjection        recursion_weight = 3;
+  string                adapter_id     = 4;
+  ExternalSource        source         = 5;
+  bytes                 link_hash      = 6;  // sha256 of canonical form
+}
+
+// FactCitation is one outgoing edge in the substrate-link. citation_type
+// drives lineage propagation weight (M6).
+message FactCitation {
+  string       fact_id          = 1;
+  CitationType citation_type    = 2;
+  string       citation_context = 3;  // optional excerpt for audit
+}
+
+// PendingClaim is a Claim auto-submitted at commit phase. Shape mirrors
+// x/knowledge.Claim so the substrate_bridge keeper can call
+// x/knowledge.SetClaim directly. claim_relations cite existing facts;
+// they are NOT recursive pending claims (one-hop deferral only).
+message PendingClaim {
+  string claim_content    = 1;
+  string proposed_fact_id = 2;  // optional; chain assigns if empty
+  string domain           = 3;
+  string methodology_id   = 4;
+  repeated ClaimRelation relations = 5;
+}
+
+// ClaimRelation is a citation from a pending claim to an existing fact.
+// Mirrors x/knowledge.ClaimRelation. Pending claims cannot cite OTHER
+// pending claims — they cite existing verified facts only. This keeps
+// the resolution graph a tree (one-hop deferral).
+message ClaimRelation {
+  string target_fact_id = 1;
+  string relation       = 2;  // SUPPORTS | REQUIRES | etc. (mirrors x/knowledge)
+  string inference      = 3;  // DEDUCTIVE | INDUCTIVE | etc.
+  uint32 inference_strength_bps = 4;
+}
