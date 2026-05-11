@@ -40,6 +40,9 @@ creed-check:
 	@bash scripts/check_useful_work_hash.sh
 	@bash scripts/check_sub_creed_hashes.sh
 
+recursion-check:
+	@bash scripts/recursion-check.sh
+
 # ── Cross-compile targets ──────────────────────────────────────────────
 
 build-linux-amd64:
