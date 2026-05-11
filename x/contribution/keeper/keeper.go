@@ -39,8 +39,8 @@ func NewKeeper(
 	}
 }
 
-// GetAuthority returns the gov authority address.
-func (k Keeper) GetAuthority() string { return k.authority }
+// Authority returns the gov authority address.
+func (k Keeper) Authority() string { return k.authority }
 
 // Logger returns a sub-logger.
 func (k Keeper) Logger(ctx context.Context) log.Logger {
@@ -92,12 +92,22 @@ func (k Keeper) WriteContribution(ctx context.Context, c *types.Contribution) er
 
 	// Refresh secondary indexes.
 	if prior != nil {
-		_ = store.Delete(byContributorIdxKey(prior.Contributor, prior.Id))
-		_ = store.Delete(byClassIdxKey(prior.Class, prior.Id))
-		_ = store.Delete(byPhaseIdxKey(prior.Phase, prior.Id))
-		_ = store.Delete(byStatusIdxKey(prior.Status, prior.Id))
+		if err := store.Delete(byContributorIdxKey(prior.Contributor, prior.Id)); err != nil {
+			return err
+		}
+		if err := store.Delete(byClassIdxKey(prior.Class, prior.Id)); err != nil {
+			return err
+		}
+		if err := store.Delete(byPhaseIdxKey(prior.Phase, prior.Id)); err != nil {
+			return err
+		}
+		if err := store.Delete(byStatusIdxKey(prior.Status, prior.Id)); err != nil {
+			return err
+		}
 		if prior.BackRef != "" {
-			_ = store.Delete(byBackRefKey(prior.BackRef))
+			if err := store.Delete(byBackRefKey(prior.BackRef)); err != nil {
+				return err
+			}
 		}
 	}
 	if err := store.Set(byContributorIdxKey(c.Contributor, c.Id), []byte{}); err != nil {

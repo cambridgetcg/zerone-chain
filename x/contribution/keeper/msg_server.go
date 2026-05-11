@@ -61,7 +61,14 @@ func (s *msgServer) SubmitContribution(ctx context.Context, msg *types.MsgSubmit
 		},
 	}
 
-	// Stage ② — Classify.
+	// Stage ② — Write SUBMITTED record, then Classify.
+	// Emit contribution_submitted while status is still SUBMITTED so indexers
+	// see consistent state per event.
+	if err := s.keeper.WriteContribution(ctx, c); err != nil {
+		return nil, err
+	}
+	s.keeper.EmitContributionSubmitted(ctx, c)
+
 	if err := adapter.Classify(ctx, c); err != nil {
 		c.Status = types.ContributionStatus_STATUS_CLASSIFICATION_FAILED
 		_ = s.keeper.WriteContribution(ctx, c)
@@ -80,7 +87,6 @@ func (s *msgServer) SubmitContribution(ctx context.Context, msg *types.MsgSubmit
 	if err := s.keeper.WriteContribution(ctx, c); err != nil {
 		return nil, err
 	}
-	s.keeper.EmitContributionSubmitted(ctx, c)
 	s.keeper.EmitContributionClassified(ctx, c)
 
 	// Stage ③ — Verify.
