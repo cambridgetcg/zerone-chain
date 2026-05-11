@@ -103,6 +103,25 @@ func (k Keeper) SuspendAdapter(ctx context.Context, adapterID, reason string) er
 	return k.WriteAdapter(ctx, a)
 }
 
+// WriteAdapterFromGov is the governance-dispatch entry point for the
+// CategoryAdapterRegistration LIP class. It deserialises the proto-encoded
+// AdapterRegistration bytes that were attached to the LIP and delegates to
+// WriteAdapter. lipID is stored on the adapter record for on-chain audit
+// (it overrides any LipId already present in the payload).
+//
+// Phase-0 note: full payload-attachment wiring is deferred to Phase-1.
+// The method is present so that x/gov.SubstrateBridgeKeeper is satisfied
+// and the gov keeper can hold a typed reference now.
+func (k Keeper) WriteAdapterFromGov(ctx context.Context, lipID string, adapterProtoBytes []byte) error {
+	var a types.AdapterRegistration
+	if err := k.cdc.Unmarshal(adapterProtoBytes, &a); err != nil {
+		return err
+	}
+	// Stamp the authorising LIP ID on the record for auditability.
+	a.RegisteredViaLipId = lipID
+	return k.WriteAdapter(ctx, &a)
+}
+
 // TombstoneAdapter permanently retires an adapter (commitment 10: forward-only).
 // Sets TombstonedAtBlock = current block height. After tombstoning, WriteAdapter
 // will refuse any re-registration with the same adapter ID.

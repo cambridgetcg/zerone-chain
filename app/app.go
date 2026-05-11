@@ -237,6 +237,9 @@ import (
 	zeronetree "github.com/zerone-chain/zerone/x/tree"
 	zeronetreekeeper "github.com/zerone-chain/zerone/x/tree/keeper"
 	zeronettreetypes "github.com/zerone-chain/zerone/x/tree/types"
+	substratebridge "github.com/zerone-chain/zerone/x/substrate_bridge"
+	substratebridgekeeper "github.com/zerone-chain/zerone/x/substrate_bridge/keeper"
+	substratebridgetypes "github.com/zerone-chain/zerone/x/substrate_bridge/types"
 
 	// Swagger UI (embedded)
 	swagger "github.com/zerone-chain/zerone/docs/swagger-ui"
@@ -330,6 +333,7 @@ var (
 		zeronedialectic.AppModuleBasic{},     // x/dialectic: disagreement-shape synthesizer (commitment 17)
 		zeronecreed.AppModuleBasic{},         // x/creed: on-chain anchor for TRUTH_SEEKING.md (commitments 6, 10)
 		zeroneworkcreed.AppModuleBasic{},     // x/work_creed: on-chain anchor for per-phase docs/sub_creeds/*.md (commitments 6, 10 — useful-work scope)
+		substratebridge.AppModuleBasic{},    // x/substrate_bridge: Tier-1 external recursive work foundation
 	)
 
 	// Module account permissions.
@@ -384,6 +388,8 @@ var (
 		zeronepartnershipstypes.ModuleName:         {authtypes.Burner},                   // partnerships: dissolved stakes to dev fund
 		zeronetoolboxtypes.ModuleName:              {authtypes.Burner},                   // toolbox: deregistration fees
 		"treasury_protocol":                        nil,                                  // treasury_protocol: receive-only
+		substratebridgetypes.ModuleName:              nil,                                  // substrate_bridge: bond escrow — no autonomous mint
+		substratebridgetypes.AuditBountyPoolModuleName: {authtypes.Minter},                // useful_work_audit_bounty_pool: chain-minted audit rewards
 	}
 )
 
@@ -528,6 +534,7 @@ type ZeroneApp struct {
 	DialecticKeeper          zeronedialectickeeper.Keeper    // x/dialectic: disagreement-shape synthesizer (commitment 17)
 	CreedKeeper              zeronecreedkeeper.Keeper        // x/creed: on-chain creed anchor (commitments 6, 10)
 	WorkCreedKeeper          zeroneworkcreedkeeper.Keeper    // x/work_creed: per-phase sub-creed anchor (commitments 6, 10 — useful-work scope)
+	SubstrateBridgeKeeper    substratebridgekeeper.Keeper    // x/substrate_bridge: Tier-1 external recursive work foundation
 
 	// ABCI++ vote extension config (nil until validator is configured)
 	VoteExtConfig *VoteExtensionConfig
@@ -652,6 +659,7 @@ func NewZeroneApp(
 		zeronedialectictypes.StoreKey,
 		zeronecreedtypes.StoreKey,
 		zeroneworkcreedtypes.StoreKey,
+		substratebridgetypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
 	memKeys := storetypes.NewMemoryStoreKeys(capabilitytypes.MemStoreKey)
@@ -1193,6 +1201,24 @@ func NewZeroneApp(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
+	// ---- Substrate Bridge keeper (SB-25) ----
+	// Depends on KnowledgeKeeper and QualificationKeeper (both already
+	// constructed above). The keeper takes a raw StoreKey (not KVStoreService)
+	// because its store access uses sdk.UnwrapSDKContext().KVStore().
+	app.SubstrateBridgeKeeper = substratebridgekeeper.NewKeeper(
+		appCodec,
+		keys[substratebridgetypes.StoreKey],
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+		&app.KnowledgeKeeper,
+		zeronequalificationkeeper.NewSubstrateBridgeQualificationAdapter(app.QualificationKeeper),
+		app.BankKeeper,
+		app.AccountKeeper,
+	)
+	// Post-init wire-back: knowledge calls OnClaimResolved on each completed round.
+	app.KnowledgeKeeper.SetSubstrateBridgeKeeper(&app.SubstrateBridgeKeeper)
+	// Wire substrate_bridge into governance for CategoryAdapterRegistration LIP dispatch.
+	app.ZeroneGovKeeper.SetSubstrateBridgeKeeper(&app.SubstrateBridgeKeeper)
+
 	// Frontier-query wiring: now that inquiry, counterexamples, and
 	// ontology keepers all exist, register the adapters with
 	// governance_synthesis so its Frontier query can compose
@@ -1527,6 +1553,7 @@ func NewZeroneApp(
 		zeronecreed.NewAppModule(appCodec, app.CreedKeeper),
 		zeroneworkcreed.NewAppModule(appCodec, app.WorkCreedKeeper),
 		zeronedialectic.NewAppModule(appCodec, app.DialecticKeeper),
+		substratebridge.NewAppModule(appCodec, app.SubstrateBridgeKeeper),
 	)
 
 	app.ModuleManager.SetOrderBeginBlockers(
@@ -1553,8 +1580,9 @@ func NewZeroneApp(
 		zeronestakingtypes.ModuleName,
 		zeronegovtypes.ModuleName,       // gov: after staking (needs bonded stake)
 		zeroneontologytypes.ModuleName,
-		zeroneknowledgetypes.ModuleName, // LAST: depends on staking + ontology state
-		zeronetokenstypes.ModuleName,    // tokens: emission period processing
+		zeroneknowledgetypes.ModuleName,       // LAST knowledge: depends on staking + ontology state
+		substratebridgetypes.ModuleName,       // substrate_bridge: after knowledge so OnClaimResolved hooks fire before BeginBlocker scans
+		zeronetokenstypes.ModuleName,          // tokens: emission period processing
 		zeronebillingtypes.ModuleName,   // billing: no-op
 		zeronelptypes.ModuleName,        // liquiditypool: TWAP accumulator updates
 		zeronechannelstypes.ModuleName,      // channels: auto-settle expired + periodic settlements
@@ -1612,8 +1640,9 @@ func NewZeroneApp(
 		zeronegovtypes.ModuleName,       // EndBlocker: no-op
 		vestingrewardstypes.ModuleName,
 		zeroneontologytypes.ModuleName,  // EndBlocker: expire proposals
-		zeroneknowledgetypes.ModuleName, // EndBlocker: no-op for now
-		zeronetokenstypes.ModuleName,    // EndBlocker: no-op
+		zeroneknowledgetypes.ModuleName,       // EndBlocker: no-op for now
+		substratebridgetypes.ModuleName,       // EndBlocker: no-op (timeout scan in BeginBlocker)
+		zeronetokenstypes.ModuleName,          // EndBlocker: no-op
 		zeronebillingtypes.ModuleName,   // EndBlocker: no-op
 		zeronelptypes.ModuleName,        // EndBlocker: no-op
 		zeronechannelstypes.ModuleName,      // EndBlocker: no-op
@@ -1673,8 +1702,9 @@ func NewZeroneApp(
 		zeronegovtypes.ModuleName,       // Genesis: after staking (needs staking data for quorum)
 		vestingrewardstypes.ModuleName,
 		zeroneontologytypes.ModuleName,  // Genesis: after bank (needs bank for stake escrow)
-		zeroneknowledgetypes.ModuleName, // Genesis: after ontology + staking (needs both)
-		zeronetokenstypes.ModuleName,    // Genesis: after bank (needs bank for wrap)
+		zeroneknowledgetypes.ModuleName,       // Genesis: after ontology + staking (needs both)
+		substratebridgetypes.ModuleName,       // Genesis: after knowledge (depends on knowledge + qualification + bank + account)
+		zeronetokenstypes.ModuleName,          // Genesis: after bank (needs bank for wrap)
 		zeronebillingtypes.ModuleName,   // Genesis: after knowledge (depends on knowledge for fact queries)
 		zeronelptypes.ModuleName,        // Genesis: after bank (needs bank for LP minting)
 		zeronechannelstypes.ModuleName,      // Genesis: after bank (needs bank for escrow)
