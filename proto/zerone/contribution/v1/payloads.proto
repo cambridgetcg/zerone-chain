@@ -1,0 +1,45 @@
+syntax = "proto3";
+package zerone.contribution.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/contribution/types";
+
+// ContributionPayload wraps the per-class payload oneof. Phase 1
+// fully defines KnowledgeClaim; the other 10 variants are minimal
+// stubs that future phases will expand.
+message ContributionPayload {
+  oneof payload {
+    KnowledgeClaim       knowledge            = 1;
+    Idea                 idea                 = 2;
+    Tool                 tool                 = 3;
+    Dataset              dataset              = 4;
+    EvalSuite            eval                 = 5;
+    ModelArtifact        model                = 6;
+    ReasoningTrace       trace                = 7;
+    Counterexample       counterex            = 8;
+    Orchestration        orch                 = 9;
+    ModuleProposal       mod_proposal         = 10;
+    PipelineImprovement  pipeline_improvement = 11;
+  }
+}
+
+// KnowledgeClaim — fully defined at Phase 1 (the only adapter wired).
+message KnowledgeClaim {
+  string claim_id           = 1;  // back-reference to x/knowledge.Claim.id
+  string domain             = 2;  // epistemic domain
+  bytes  statement_hash     = 3;  // sha256 of the claim statement
+  bytes  methodology_trace  = 4;  // serialized reasoning path (commitment 14)
+  repeated string axiom_refs = 5; // foundational axiom IDs the claim derives from
+  string tok_manifest_cid   = 6;  // for M2 substrate-link
+}
+
+// Stubs — expanded by future phases as adapters land.
+message Idea               { bytes opaque_payload = 1; }  // Phase 2
+message Tool               { bytes opaque_payload = 1; }  // Phase 2
+message Dataset            { bytes opaque_payload = 1; }  // Phase 3
+message EvalSuite          { bytes opaque_payload = 1; }  // Phase 3
+message ModelArtifact      { bytes opaque_payload = 1; }  // Phase 4
+message ReasoningTrace     { bytes opaque_payload = 1; }  // Phase 4
+message Counterexample     { bytes opaque_payload = 1; }  // Phase 2 or 3
+message Orchestration      { bytes opaque_payload = 1; }  // Phase 4 or 5
+message ModuleProposal     { bytes opaque_payload = 1; }  // Phase 5
+message PipelineImprovement { bytes opaque_payload = 1; } // Phase 5
