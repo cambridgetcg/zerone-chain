@@ -36,7 +36,7 @@ A verified self-attestation that fulfills a self-sponsorship bounty satisfies bo
 
 ## 4. The chain's lineage graph includes its own commits
 
-**Closed by:** `x/substrate_bridge` cross-class lineage propagator (M6).
+**Closed by:** `x/substrate_bridge` cross-class lineage propagator (M6); binding tests `TestRecursiveLineage_DownstreamWorkPaysUpstreamSelfAttester` and `TestRecursiveLineage_MultipleCitationsCompound`.
 
 When a future fact (in any domain) cites a verified self-fact (in `zerone_self`), downstream royalty propagates backward through the substrate-bridge `LineageRoyaltyAccumulator` to the original attester — even years later, even at depths many hops back.
 
