@@ -890,3 +890,9 @@ genesisModuleOrder = append(genesisModuleOrder, contribtypes.ModuleName)
 ---
 
 — *Inception authored 2026-05-10. Phase 1 is the orchestrator skeleton; subsequent phases (2-6) progressively wire other classes, lineage propagation, and economic flows.*
+
+---
+
+## The spec is a Contribution
+
+This specification is itself a `Contribution` of class `PIPELINE_IMPROVEMENT`, lifecycle phase `SUBSTRATE`. Its content-hash is pinned at `.phase-1-spec-hash`. The chain's own design is among the work the chain pays for.
