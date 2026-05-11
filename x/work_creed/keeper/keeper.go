@@ -29,6 +29,14 @@ type Keeper struct {
 	// authority is the gov module address. Used by Phase 1+ msg
 	// handlers; Phase 0 stores it but doesn't enforce it.
 	authority string
+
+	// contributionWrapper records privileged sub-creed pin writes as
+	// Substrate-class Contributions in x/contribution. Wired post-init
+	// (app.go) to break the import cycle (x/contribution depends on
+	// x/work_creed via the contribution adapter path). Nil-safe:
+	// callers no-op when the wrapper is not yet set. Phase 1 layer of
+	// the UW recursion stack (Layer 2 — runtime self-application).
+	contributionWrapper types.ContributionWrapper
 }
 
 // NewKeeper constructs the Keeper.
@@ -42,6 +50,13 @@ func NewKeeper(
 		storeService: storeService,
 		authority:    authority,
 	}
+}
+
+// SetContributionWrapper wires the x/contribution-side helper that
+// records pin writes as Substrate Contributions. Called from app.go
+// after both keepers exist. Layer 2 of the recursion stack.
+func (k *Keeper) SetContributionWrapper(w types.ContributionWrapper) {
+	k.contributionWrapper = w
 }
 
 // Authority returns the gov authority address (used by Phase 1+ msg
@@ -90,6 +105,18 @@ func (k Keeper) GetLatestSubCreedPin(ctx context.Context, phase uint32) (*types.
 // SetSubCreedPin writes a pin as the latest for its phase. Caller is
 // responsible for monotonicity of (phase, version) — InitGenesis writes
 // version=1; Phase 1+ msg handler will check current+1 before calling.
+//
+// Recursion layer 2: before writing the pin, wraps the action as a
+// Substrate-class Contribution in x/contribution if the wrapper has
+// been set (post-init in app.go). UW: ZERONE is recursive — the chain
+// records its own doctrinal amendments as Contributions reviewed by
+// itself.
+//
+// The wrap is best-effort at Phase 1: failure to record the
+// Contribution does not block the pin write because the recording is
+// observational (the action is the source of truth; the Contribution
+// is the audit trail). Phase 6 will tighten this so wrap failures
+// reject the write, paired with a real verifier + revert window.
 func (k Keeper) SetSubCreedPin(ctx context.Context, p *types.PinnedSubCreed) error {
 	if p.Phase > 8 {
 		return errors.Wrapf(types.ErrUnknownPhase, "phase %d out of range", p.Phase)
@@ -100,6 +127,24 @@ func (k Keeper) SetSubCreedPin(ctx context.Context, p *types.PinnedSubCreed) err
 	if len(p.CanonicalHash) != 32 {
 		return fmt.Errorf("canonical_hash must be 32 bytes, got %d", len(p.CanonicalHash))
 	}
+
+	if k.contributionWrapper != nil {
+		// Best-effort marshal of the pin into the description bytes.
+		// The Contribution carries the canonical pin record; off-chain
+		// indexers can replay sub-creed amendments by reading the
+		// PIPELINE_IMPROVEMENT/SUBSTRATE class+phase combination.
+		desc, mErr := k.cdc.Marshal(p)
+		if mErr == nil {
+			_, _ = k.contributionWrapper.WrapAsSubstrateContribution(
+				ctx,
+				"doctrine",
+				k.authority,
+				desc,
+				nil, // top-level pin; no parent Contribution to nest under
+			)
+		}
+	}
+
 	kvStore := k.storeService.OpenKVStore(ctx)
 	return kvStore.Set(latestPinKey(p.Phase), k.cdc.MustMarshal(p))
 }

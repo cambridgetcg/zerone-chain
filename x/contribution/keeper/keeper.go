@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/binary"
 
 	corestoretypes "cosmossdk.io/core/store"
@@ -133,6 +134,140 @@ func (k Keeper) WriteContribution(ctx context.Context, c *types.Contribution) er
 		}
 	}
 	return nil
+}
+
+// WrapAsSubstrateContribution constructs a Substrate-class Contribution
+// describing a privileged action being taken, writes it through the
+// orchestrator at STATUS_ADMITTED (Phase 1 stub: skip the full pipeline;
+// just persist + emit event), and returns the resulting Contribution.id
+// for cross-reference.
+//
+// This is the self-application primitive: the chain treats its own
+// privileged state changes as Contributions reviewed by itself. UW
+// states that ZERONE is recursive; this helper is the runtime expression
+// of that doctrine. Phase 6 will wire real verification + a revert
+// window; at Phase 1 the recording is unconditional so the principle
+// is structurally observable.
+//
+// subClass is one of: "doctrine", "taxonomy", "parameter", "code",
+// "ops", "audit". It is stored in claims_about_self alongside the
+// caller's description so off-chain tooling can route by category.
+//
+// parentContributionID is optional. When non-nil, the new Contribution
+// is nested under that parent via payload.nested — the proto-layer
+// recursion (Layer 1) becomes a runtime relationship. When nil, the
+// payload is a stub PipelineImprovement carrying the description bytes.
+//
+// Returns ErrNestingDepthExceeded if the parent + new layer would
+// breach MaxNestingDepth — the recursion is bounded, not unbounded.
+func (k Keeper) WrapAsSubstrateContribution(
+	ctx context.Context,
+	subClass string,
+	actor string,
+	description []byte,
+	parentContributionID []byte,
+) ([]byte, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	height := uint64(sdkCtx.BlockHeight())
+
+	// Build the claims_about_self envelope. Prefix with subClass so the
+	// description carries the route in-band; off-chain tooling reads
+	// the first \n-delimited token as the category.
+	claims := append([]byte(subClass+"\n"), description...)
+
+	// Optional payload.nested: if a parent id was supplied, look it up
+	// and embed it as the nested Contribution. Falls back to a stub
+	// PipelineImprovement when no parent is given, so the payload
+	// oneof is never empty (downstream code may assume payload != nil).
+	var payload *types.ContributionPayload
+	if len(parentContributionID) > 0 {
+		parent, ok := k.GetContribution(ctx, parentContributionID)
+		if !ok {
+			// Defensive: parent must exist. Without it the nested chain
+			// would be malformed. Fall through to the stub payload so
+			// the caller still gets a recorded action.
+			payload = &types.ContributionPayload{
+				Payload: &types.ContributionPayload_PipelineImprovement{
+					PipelineImprovement: &types.PipelineImprovement{
+						OpaquePayload: description,
+					},
+				},
+			}
+		} else {
+			// Depth-check: parent_depth + 1 must not exceed
+			// MaxNestingDepth. The recursion is structural but bounded.
+			parentDepth, err := types.ContributionNestingDepth(parent)
+			if err != nil {
+				return nil, err
+			}
+			if parentDepth+1 > types.MaxNestingDepth {
+				return nil, types.ErrNestingDepthExceeded
+			}
+			payload = &types.ContributionPayload{
+				Payload: &types.ContributionPayload_Nested{Nested: parent},
+			}
+		}
+	} else {
+		payload = &types.ContributionPayload{
+			Payload: &types.ContributionPayload_PipelineImprovement{
+				PipelineImprovement: &types.PipelineImprovement{
+					OpaquePayload: description,
+				},
+			},
+		}
+	}
+
+	// Deterministic id derived from class+phase+actor+description+height.
+	// Distinct from the user-submission id (which hashes payload bytes)
+	// because two Substrate Contributions emitted in the same block from
+	// the same actor with the same description must still be unique —
+	// they describe distinct privileged actions.
+	h := sha256.New()
+	classBz := make([]byte, 4)
+	binary.BigEndian.PutUint32(classBz, uint32(types.ContributionClass_PIPELINE_IMPROVEMENT))
+	h.Write(classBz)
+	phaseBz := make([]byte, 4)
+	binary.BigEndian.PutUint32(phaseBz, uint32(types.LifecyclePhase_PHASE_SUBSTRATE))
+	h.Write(phaseBz)
+	h.Write([]byte(subClass))
+	h.Write([]byte(actor))
+	h.Write(description)
+	heightBz := make([]byte, 8)
+	binary.BigEndian.PutUint64(heightBz, height)
+	h.Write(heightBz)
+	if len(parentContributionID) > 0 {
+		h.Write(parentContributionID)
+	}
+	id := h.Sum(nil)
+
+	c := &types.Contribution{
+		Id:              id,
+		Contributor:     actor,
+		Class:           types.ContributionClass_PIPELINE_IMPROVEMENT,
+		Phase:           types.LifecyclePhase_PHASE_SUBSTRATE,
+		Status:          types.ContributionStatus_STATUS_ADMITTED,
+		ClaimsAboutSelf: claims,
+		CreatedAtBlock:  height,
+		AdmittedAtBlock: height,
+		Payload:         payload,
+		Recursion: &types.RecursionImpact{
+			Type:          types.RecursionType_RECURSION_TYPE_NONE,
+			MultiplierBps: 10_000, // 1× at Phase 1; Phase 6 ratifies via LIP
+			Revocable:     true,
+			Axes:          &types.RecursionAxisScores{},
+		},
+	}
+
+	if err := k.WriteContribution(ctx, c); err != nil {
+		return nil, err
+	}
+	// Emit submitted then admitted so indexers see the same stage flow
+	// they expect from the regular submission path, even though Phase 1
+	// shortcuts the pipeline. Phase 6 will replace this with the real
+	// Classify+Verify pass once the substrate verifier is wired.
+	k.EmitContributionSubmitted(ctx, c)
+	k.EmitContributionAdmitted(ctx, c, "")
+	return id, nil
 }
 
 // GetContribution reads a Contribution by id.

@@ -33,6 +33,14 @@ type Keeper struct {
 	cdc          codec.BinaryCodec
 	storeService store.KVStoreService
 	authority    string
+
+	// contributionWrapper records privileged AnchorPin writes as
+	// Substrate-class Contributions in x/contribution. Wired post-init
+	// in app.go to break the import cycle (x/contribution imports
+	// x/creed via the contribution adapter). Nil-safe: callers no-op
+	// when the wrapper is not yet set. Layer 2 of the UW recursion
+	// stack (runtime self-application).
+	contributionWrapper types.ContributionWrapper
 }
 
 func NewKeeper(
@@ -45,6 +53,13 @@ func NewKeeper(
 		storeService: storeService,
 		authority:    authority,
 	}
+}
+
+// SetContributionWrapper wires the x/contribution helper that records
+// creed amendments as Substrate Contributions. Called from app.go
+// after both keepers exist. Layer 2 of the recursion stack.
+func (k *Keeper) SetContributionWrapper(w types.ContributionWrapper) {
+	k.contributionWrapper = w
 }
 
 func (k Keeper) Logger(ctx context.Context) log.Logger {
@@ -182,6 +197,14 @@ func (k Keeper) CurrentCommitment(ctx context.Context, number uint32) (*types.Co
 // AnchorPin records a new pin at version+1. The handler in
 // msg_server.go validates the pin's structural invariants before
 // calling this.
+//
+// Recursion layer 2: before writing the pin, wraps the action as a
+// Substrate-class Contribution in x/contribution if the wrapper is
+// set. UW: ZERONE is recursive — the chain records canonical creed
+// amendments as Contributions reviewed by itself. Best-effort at
+// Phase 1: failure to record the Contribution does not block the pin
+// write because the recording is observational at this layer; Phase 6
+// will tighten so wrap failures reject the write.
 func (k Keeper) AnchorPin(ctx context.Context, p *types.PinnedCreed) error {
 	if p == nil {
 		return fmt.Errorf("nil pin")
@@ -190,6 +213,22 @@ func (k Keeper) AnchorPin(ctx context.Context, p *types.PinnedCreed) error {
 	if p.Version != cur+1 {
 		return types.ErrVersionNotMonotonic.Wrapf("expected version %d, got %d", cur+1, p.Version)
 	}
+
+	if k.contributionWrapper != nil {
+		// Carry the canonical hash + version into the description so
+		// off-chain indexers can correlate creed pin writes with the
+		// resulting Substrate Contributions.
+		if desc, mErr := k.cdc.Marshal(p); mErr == nil {
+			_, _ = k.contributionWrapper.WrapAsSubstrateContribution(
+				ctx,
+				"doctrine",
+				k.authority,
+				desc,
+				nil, // top-level pin; no parent Contribution to nest under
+			)
+		}
+	}
+
 	return k.SetPin(ctx, p)
 }
 

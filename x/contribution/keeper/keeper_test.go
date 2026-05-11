@@ -118,6 +118,56 @@ func TestKeeper_GenesisRoundtrip(t *testing.T) {
 	require.Len(t, exported.Contributions, 2)
 }
 
+// TestKeeper_WrapAsSubstrateContribution_LeafAndNested exercises the
+// self-application primitive (Layer 2). A privileged action becomes a
+// Contribution about itself; nesting under a parent surfaces the
+// proto-level recursion at the runtime layer.
+func TestKeeper_WrapAsSubstrateContribution_LeafAndNested(t *testing.T) {
+	k, ctx := setupKeeper(t)
+
+	// Leaf case: no parent. The Contribution is recorded at ADMITTED
+	// with a stub PipelineImprovement payload.
+	id1, err := k.WrapAsSubstrateContribution(
+		ctx,
+		"code",
+		"gov-authority",
+		[]byte("adapter registered: knowledgeclaim"),
+		nil,
+	)
+	require.NoError(t, err)
+	c1, ok := k.GetContribution(ctx, id1)
+	require.True(t, ok)
+	require.Equal(t, types.ContributionClass_PIPELINE_IMPROVEMENT, c1.Class)
+	require.Equal(t, types.LifecyclePhase_PHASE_SUBSTRATE, c1.Phase)
+	require.Equal(t, types.ContributionStatus_STATUS_ADMITTED, c1.Status)
+	require.Equal(t, "gov-authority", c1.Contributor)
+	require.NotNil(t, c1.Payload.GetPipelineImprovement())
+
+	// Nested case: parent → nested. The runtime relationship rides
+	// the proto-level oneof variant.
+	id2, err := k.WrapAsSubstrateContribution(
+		ctx,
+		"doctrine",
+		"gov-authority",
+		[]byte("doctrine doc pinned: truth-seeking"),
+		id1,
+	)
+	require.NoError(t, err)
+	c2, ok := k.GetContribution(ctx, id2)
+	require.True(t, ok)
+	require.NotNil(t, c2.Payload.GetNested(), "parent must be embedded as nested")
+	require.Equal(t, c1.Id, c2.Payload.GetNested().Id)
+
+	// Depth check: chaining further must respect MaxNestingDepth.
+	id3, err := k.WrapAsSubstrateContribution(ctx, "doctrine", "gov-authority", []byte("amend"), id2)
+	require.NoError(t, err)
+	id4, err := k.WrapAsSubstrateContribution(ctx, "doctrine", "gov-authority", []byte("ratify"), id3)
+	require.NoError(t, err)
+	// id4 has depth 4 (id4 → id3 → id2 → id1). One more must fail.
+	_, err = k.WrapAsSubstrateContribution(ctx, "doctrine", "gov-authority", []byte("further"), id4)
+	require.ErrorIs(t, err, types.ErrNestingDepthExceeded, "5-deep wrap must be refused")
+}
+
 // ── helpers ──
 
 type fakeAdapter struct {

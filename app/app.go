@@ -1236,6 +1236,23 @@ func NewZeroneApp(
 		app.KnowledgeKeeper.SetHooks(knowledgeHooksAdapter)
 	}
 
+	// Layer 2 of the UW recursion stack (runtime self-application):
+	// x/work_creed and x/creed gain a back-reference to the contribution
+	// keeper so they can record their own privileged pin writes as
+	// Substrate-class Contributions. The wire is post-init to avoid the
+	// import cycle (x/contribution imports x/work_creed/x/creed via the
+	// contribution adapter path). The wrapper satisfies the
+	// ContributionWrapper interface declared in each module's types
+	// package.
+	//
+	// At Phase 1 the recording is observational: pin writes succeed
+	// even if the Contribution write fails. Phase 6 tightens this so
+	// wrap failures reject the action (paired with a real verifier
+	// and a revert window). UW: the chain is recursive structurally;
+	// at Phase 1 we land the wire so the structure is observable.
+	app.WorkCreedKeeper.SetContributionWrapper(&app.ContributionKeeper)
+	app.CreedKeeper.SetContributionWrapper(&app.ContributionKeeper)
+
 	// ---- Substrate Bridge keeper (SB-25) ----
 	// Depends on KnowledgeKeeper and QualificationKeeper (both already
 	// constructed above). The keeper takes a raw StoreKey (not KVStoreService)
