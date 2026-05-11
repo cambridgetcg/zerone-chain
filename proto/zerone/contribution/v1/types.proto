@@ -93,14 +93,14 @@ message RecursionImpact {
 }
 
 enum RecursionType {
-  NONE                   = 0;
-  EVAL_ADOPTION          = 1;
-  TOOL_INTEGRATION       = 2;
-  VERIFICATION_PRIMITIVE = 3;
-  CATEGORY_CREATION      = 4;
-  MODULE_ADOPTION        = 5;
-  CREED_CONTRIBUTION     = 6;
-  PIPELINE_IMPROVEMENT   = 7;
+  NONE                             = 0;
+  EVAL_ADOPTION                    = 1;
+  TOOL_INTEGRATION                 = 2;
+  VERIFICATION_PRIMITIVE           = 3;
+  CATEGORY_CREATION                = 4;
+  MODULE_ADOPTION                  = 5;
+  CREED_CONTRIBUTION               = 6;
+  RECURSION_PIPELINE_IMPROVEMENT   = 7;
 }
 
 message RecursionAxisScores {
