@@ -213,6 +213,10 @@ import (
 	zeroneworkcreed "github.com/zerone-chain/zerone/x/work_creed"
 	zeroneworkcreedkeeper "github.com/zerone-chain/zerone/x/work_creed/keeper"
 	zeroneworkcreedtypes "github.com/zerone-chain/zerone/x/work_creed/types"
+	zerocontribmodule "github.com/zerone-chain/zerone/x/contribution"
+	zerocontribknowledge "github.com/zerone-chain/zerone/x/contribution/adapter/knowledgeclaim"
+	zerocontribkeeper "github.com/zerone-chain/zerone/x/contribution/keeper"
+	zerocontribtypes "github.com/zerone-chain/zerone/x/contribution/types"
 	zeroneagentu "github.com/zerone-chain/zerone/x/agent_understanding"
 	zeroneagentukeeper "github.com/zerone-chain/zerone/x/agent_understanding/keeper"
 	zeroneagentutypes "github.com/zerone-chain/zerone/x/agent_understanding/types"
@@ -333,6 +337,7 @@ var (
 		zeronedialectic.AppModuleBasic{},     // x/dialectic: disagreement-shape synthesizer (commitment 17)
 		zeronecreed.AppModuleBasic{},         // x/creed: on-chain anchor for TRUTH_SEEKING.md (commitments 6, 10)
 		zeroneworkcreed.AppModuleBasic{},     // x/work_creed: on-chain anchor for per-phase docs/sub_creeds/*.md (commitments 6, 10 — useful-work scope)
+		zerocontribmodule.AppModuleBasic{},   // x/contribution: useful-work orchestrator (Phase 1 — KNOWLEDGE_CLAIM mirror)
 		substratebridge.AppModuleBasic{},    // x/substrate_bridge: Tier-1 external recursive work foundation
 	)
 
@@ -534,6 +539,7 @@ type ZeroneApp struct {
 	DialecticKeeper          zeronedialectickeeper.Keeper    // x/dialectic: disagreement-shape synthesizer (commitment 17)
 	CreedKeeper              zeronecreedkeeper.Keeper        // x/creed: on-chain creed anchor (commitments 6, 10)
 	WorkCreedKeeper          zeroneworkcreedkeeper.Keeper    // x/work_creed: per-phase sub-creed anchor (commitments 6, 10 — useful-work scope)
+	ContributionKeeper       zerocontribkeeper.Keeper        // x/contribution: useful-work orchestrator (Phase 1 — KNOWLEDGE_CLAIM mirror)
 	SubstrateBridgeKeeper    substratebridgekeeper.Keeper    // x/substrate_bridge: Tier-1 external recursive work foundation
 
 	// ABCI++ vote extension config (nil until validator is configured)
@@ -659,6 +665,7 @@ func NewZeroneApp(
 		zeronedialectictypes.StoreKey,
 		zeronecreedtypes.StoreKey,
 		zeroneworkcreedtypes.StoreKey,
+		zerocontribtypes.StoreKey,
 		substratebridgetypes.StoreKey,
 	)
 	tkeys := storetypes.NewTransientStoreKeys(paramstypes.TStoreKey)
@@ -1201,6 +1208,34 @@ func NewZeroneApp(
 		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
 	)
 
+	// x/contribution: Phase 1 useful-work orchestrator. Owns the
+	// Contribution envelope + per-class adapter registry. Adapters
+	// (KNOWLEDGE_CLAIM here, others in later phases) implement the
+	// Classify → SubstrateLink → Verify pipeline against existing
+	// substrate-module state. Authority is the gov module account.
+	app.ContributionKeeper = zerocontribkeeper.NewKeeper(
+		sdkruntime.NewKVStoreService(keys[zerocontribtypes.StoreKey]),
+		appCodec,
+		authtypes.NewModuleAddress(govtypes.ModuleName).String(),
+	)
+
+	// Wire x/contribution KNOWLEDGE_CLAIM adapter and register the
+	// claim-lifecycle hooks into x/knowledge so claim transitions
+	// mirror into Contribution records (Phase 1 useful-work scope).
+	{
+		knowledgeClaimAdapter := zerocontribknowledge.NewAdapter(
+			&app.KnowledgeKeeper,
+			&app.CreedKeeper,
+		)
+		app.ContributionKeeper.RegisterAdapter(knowledgeClaimAdapter)
+
+		knowledgeHooksAdapter := zerocontribknowledge.NewKnowledgeHooksAdapter(
+			&app.ContributionKeeper,
+			knowledgeClaimAdapter,
+		)
+		app.KnowledgeKeeper.SetHooks(knowledgeHooksAdapter)
+	}
+
 	// ---- Substrate Bridge keeper (SB-25) ----
 	// Depends on KnowledgeKeeper and QualificationKeeper (both already
 	// constructed above). The keeper takes a raw StoreKey (not KVStoreService)
@@ -1552,6 +1587,7 @@ func NewZeroneApp(
 		zeroneagentu.NewAppModule(appCodec, app.AgentUnderstandingKeeper),
 		zeronecreed.NewAppModule(appCodec, app.CreedKeeper),
 		zeroneworkcreed.NewAppModule(appCodec, app.WorkCreedKeeper),
+		zerocontribmodule.NewAppModule(appCodec, &app.ContributionKeeper),
 		zeronedialectic.NewAppModule(appCodec, app.DialecticKeeper),
 		substratebridge.NewAppModule(appCodec, app.SubstrateBridgeKeeper),
 	)
@@ -1616,6 +1652,7 @@ func NewZeroneApp(
 		zeronedialectictypes.ModuleName,             // dialectic: no-op BeginBlock (pure synthesizer)
 		zeronecreedtypes.ModuleName,                 // creed: no-op BeginBlock (pure registry)
 		zeroneworkcreedtypes.ModuleName,             // work_creed: no-op BeginBlock (pure registry)
+		zerocontribtypes.ModuleName,                 // contribution: no-op BeginBlock (Phase 1 — hooks-driven only)
 	)
 
 	app.ModuleManager.SetOrderEndBlockers(
@@ -1677,6 +1714,7 @@ func NewZeroneApp(
 		zeronedialectictypes.ModuleName,             // EndBlocker: no-op
 		zeronecreedtypes.ModuleName,                 // EndBlocker: no-op (pure registry)
 		zeroneworkcreedtypes.ModuleName,             // EndBlocker: no-op (pure registry)
+		zerocontribtypes.ModuleName,                 // EndBlocker: no-op (Phase 1 — hooks-driven only)
 	)
 
 	genesisOrder := []string{
@@ -1739,6 +1777,7 @@ func NewZeroneApp(
 		zeronedialectictypes.ModuleName,             // Genesis: after knowledge (pure synthesizer)
 		zeronecreedtypes.ModuleName,                 // Genesis: standalone (pure registry, no cross-module deps)
 		zeroneworkcreedtypes.ModuleName,             // Genesis: after creed (creed pin in place when sub-creed enforcement starts)
+		zerocontribtypes.ModuleName,                 // Genesis: after knowledge + creed (adapters and truth-floor reference must exist)
 	}
 	app.ModuleManager.SetOrderInitGenesis(genesisOrder...)
 	app.ModuleManager.SetOrderExportGenesis(genesisOrder...)
