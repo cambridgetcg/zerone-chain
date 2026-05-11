@@ -195,7 +195,7 @@ var File_zerone_contribution_v1_tx_proto protoreflect.FileDescriptor
 
 const file_zerone_contribution_v1_tx_proto_rawDesc = "" +
 	"\n" +
-	"\x1fzerone/contribution/v1/tx.proto\x12\x16zerone.contribution.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\x1ecosmos/base/v1beta1/coin.proto\x1a\"zerone/contribution/v1/types.proto\x1a%zerone/contribution/v1/payloads.proto\"\xf3\x04\n" +
+	"\x1fzerone/contribution/v1/tx.proto\x12\x16zerone.contribution.v1\x1a\x17cosmos/msg/v1/msg.proto\x1a\x1ecosmos/base/v1beta1/coin.proto\x1a\"zerone/contribution/v1/types.proto\"\xf3\x04\n" +
 	"\x15MsgSubmitContribution\x12 \n" +
 	"\vcontributor\x18\x01 \x01(\tR\vcontributor\x12?\n" +
 	"\x05class\x18\x02 \x01(\x0e2).zerone.contribution.v1.ContributionClassR\x05class\x12<\n" +
@@ -261,7 +261,6 @@ func file_zerone_contribution_v1_tx_proto_init() {
 		return
 	}
 	file_zerone_contribution_v1_types_proto_init()
-	file_zerone_contribution_v1_payloads_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

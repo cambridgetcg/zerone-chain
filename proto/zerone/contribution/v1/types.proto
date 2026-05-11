@@ -2,12 +2,20 @@ syntax = "proto3";
 package zerone.contribution.v1;
 
 import "cosmos/base/v1beta1/coin.proto";
-import "zerone/contribution/v1/payloads.proto";
 
 option go_package = "github.com/zerone-chain/zerone/x/contribution/types";
 
 // Contribution is the canonical envelope for every piece of useful
 // work absorbed by the chain. Field tags are stable; see Phase 1 spec.
+//
+// Contribution + ContributionPayload live in the same .proto file
+// because the payload oneof carries a `Contribution nested = 12`
+// variant — a Contribution about a Contribution — which makes the
+// type genuinely self-referential. A single file avoids the circular
+// import that would otherwise arise between types.proto and
+// payloads.proto. The doctrinal commitment UW (ZERONE is recursive)
+// is expressed structurally at the proto layer: the envelope can
+// describe itself.
 message Contribution {
   bytes  id                                = 1;
   string contributor                       = 2;
@@ -113,3 +121,48 @@ message RecursionAxisScores {
   uint32 interface_bps      = 6;
   uint32 total_bps          = 7;
 }
+
+// ContributionPayload wraps the per-class payload oneof. Phase 1
+// fully defines KnowledgeClaim; other variants are minimal stubs
+// that future phases will expand. Variant 12 (`nested`) carries a
+// Contribution about a Contribution — the structural anchor of the
+// UW doctrine that ZERONE is recursive. Depth-bounded at the keeper
+// (types.MaxNestingDepth) to prevent unbounded recursion in storage.
+message ContributionPayload {
+  oneof payload {
+    KnowledgeClaim       knowledge            = 1;
+    Idea                 idea                 = 2;
+    Tool                 tool                 = 3;
+    Dataset              dataset              = 4;
+    EvalSuite            eval                 = 5;
+    ModelArtifact        model                = 6;
+    ReasoningTrace       trace                = 7;
+    Counterexample       counterex            = 8;
+    Orchestration        orch                 = 9;
+    ModuleProposal       mod_proposal         = 10;
+    PipelineImprovement  pipeline_improvement = 11;
+    Contribution         nested               = 12;  // a Contribution about a Contribution
+  }
+}
+
+// KnowledgeClaim — fully defined at Phase 1 (the only adapter wired).
+message KnowledgeClaim {
+  string claim_id           = 1;  // back-reference to x/knowledge.Claim.id
+  string domain             = 2;  // epistemic domain
+  bytes  statement_hash     = 3;  // sha256 of the claim statement
+  bytes  methodology_trace  = 4;  // serialized reasoning path (commitment 14)
+  repeated string axiom_refs = 5; // foundational axiom IDs the claim derives from
+  string tok_manifest_cid   = 6;  // for M2 substrate-link
+}
+
+// Stubs — expanded by future phases as adapters land.
+message Idea               { bytes opaque_payload = 1; }  // Phase 2
+message Tool               { bytes opaque_payload = 1; }  // Phase 2
+message Dataset            { bytes opaque_payload = 1; }  // Phase 3
+message EvalSuite          { bytes opaque_payload = 1; }  // Phase 3
+message ModelArtifact      { bytes opaque_payload = 1; }  // Phase 4
+message ReasoningTrace     { bytes opaque_payload = 1; }  // Phase 4
+message Counterexample     { bytes opaque_payload = 1; }  // Phase 2 or 3
+message Orchestration      { bytes opaque_payload = 1; }  // Phase 4 or 5
+message ModuleProposal     { bytes opaque_payload = 1; }  // Phase 5
+message PipelineImprovement { bytes opaque_payload = 1; } // Phase 5

@@ -36,6 +36,17 @@ func (s *msgServer) SubmitContribution(ctx context.Context, msg *types.MsgSubmit
 		return nil, types.ErrAdapterNotRegistered.Wrapf("class=%s", msg.Class)
 	}
 
+	// Depth-bound the payload.nested chain BEFORE constructing the
+	// Contribution. The check walks the submitted payload directly so
+	// it rejects overly-deep submissions without first writing state.
+	// UW: the chain is recursive (proto allows ContributionPayload.nested)
+	// but bounded (MaxNestingDepth caps the recursion).
+	if nested := msg.Payload.GetNested(); nested != nil {
+		if _, err := types.ContributionNestingDepth(nested); err != nil {
+			return nil, err
+		}
+	}
+
 	sdkCtx := sdk.UnwrapSDKContext(ctx)
 
 	// Build the Contribution record.

@@ -83,6 +83,63 @@ func TestGenesisState_RejectsDuplicateID(t *testing.T) {
 	require.ErrorContains(t, err, "duplicate id")
 }
 
+// TestContribution_NestedDepthBound exercises the depth-walk helper:
+// a leaf reports depth 1; a Contribution about that leaf reports 2;
+// the limit MaxNestingDepth=4 admits a 4-deep chain; a 5-deep chain
+// returns ErrNestingDepthExceeded.
+//
+// UW: the proto envelope is recursive (Contribution nested = 12); the
+// chain is bounded (MaxNestingDepth caps the depth). The test binds
+// that invariant.
+func TestContribution_NestedDepthBound(t *testing.T) {
+	mkID := func(b byte) []byte {
+		out := make([]byte, 32)
+		for i := range out {
+			out[i] = b
+		}
+		return out
+	}
+	leaf := &types.Contribution{
+		Id:    mkID(0x01),
+		Class: types.ContributionClass_KNOWLEDGE_CLAIM,
+		Phase: types.LifecyclePhase_PHASE_KNOWLEDGE,
+	}
+	d, err := types.ContributionNestingDepth(leaf)
+	require.NoError(t, err)
+	require.Equal(t, 1, d, "a leaf Contribution has depth 1")
+
+	// Build a chain of N: each layer wraps the prior via payload.nested.
+	mkNested := func(child *types.Contribution, id byte) *types.Contribution {
+		return &types.Contribution{
+			Id:    mkID(id),
+			Class: types.ContributionClass_PIPELINE_IMPROVEMENT,
+			Phase: types.LifecyclePhase_PHASE_SUBSTRATE,
+			Payload: &types.ContributionPayload{
+				Payload: &types.ContributionPayload_Nested{Nested: child},
+			},
+		}
+	}
+
+	// Depth 4: at the limit, accepted.
+	d2 := mkNested(leaf, 0x02)
+	d3 := mkNested(d2, 0x03)
+	d4 := mkNested(d3, 0x04)
+	depth, err := types.ContributionNestingDepth(d4)
+	require.NoError(t, err)
+	require.Equal(t, types.MaxNestingDepth, depth, "depth 4 is at the limit")
+
+	// Depth 5: one too deep — rejected.
+	d5 := mkNested(d4, 0x05)
+	_, err = types.ContributionNestingDepth(d5)
+	require.ErrorIs(t, err, types.ErrNestingDepthExceeded, "depth 5 must exceed bound")
+
+	// Genesis validation rejects the over-deep record.
+	gs := &types.GenesisState{
+		Contributions: []*types.Contribution{d5},
+	}
+	require.ErrorIs(t, gs.Validate(), types.ErrNestingDepthExceeded)
+}
+
 // ── helpers ──
 
 type fakeAdapter struct {

@@ -51,3 +51,45 @@ func IsTerminal(s ContributionStatus) bool {
 // to VERIFICATION_FAILED. Phase 1 default: 500_000 (50%).
 // Governance-tunable via params in Phase 6+; constant at Phase 1.
 const MinVerificationScoreBps uint32 = 500_000
+
+// MaxNestingDepth caps how deeply a `ContributionPayload.nested` chain
+// may recurse. The proto layer allows arbitrary nesting (a Contribution
+// can carry a Contribution about a Contribution about...); the chain
+// constrains the depth so that storage, marshaling, and event emission
+// remain bounded.
+//
+// Depth semantics: a leaf Contribution (no nested payload) has depth 1.
+// A Contribution whose payload.nested points at a leaf has depth 2.
+// Limit of 4 covers the realistic substrate recursion vocabulary:
+//   1. a Contribution
+//   2. a Contribution about that Contribution (e.g., a meta-claim)
+//   3. a Contribution about the meta-claim (e.g., a ratification)
+//   4. a Contribution about the ratification (e.g., a revocation)
+// Beyond 4, the chain refuses — the chain is recursive, not infinite.
+//
+// UW commitment: ZERONE is recursive in mechanism, bounded in resource.
+const MaxNestingDepth = 4
+
+// ContributionNestingDepth walks a Contribution's payload.nested chain
+// and returns the depth (1 for a leaf, 1 + childDepth otherwise).
+// Returns ErrNestingDepthExceeded if depth exceeds MaxNestingDepth.
+//
+// The walk is iterative (not recursive) so a malicious or accidental
+// cycle in the deserialized graph cannot blow the goroutine stack:
+// the limit is enforced by walking at most MaxNestingDepth+1 steps.
+func ContributionNestingDepth(c *Contribution) (int, error) {
+	depth := 0
+	cur := c
+	for cur != nil {
+		depth++
+		if depth > MaxNestingDepth {
+			return depth, ErrNestingDepthExceeded
+		}
+		next := cur.GetPayload().GetNested()
+		if next == nil {
+			break
+		}
+		cur = next
+	}
+	return depth, nil
+}

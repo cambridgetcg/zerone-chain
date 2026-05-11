@@ -39,6 +39,13 @@ func (g *GenesisState) Validate() error {
 			return fmt.Errorf("Contributions[%d]: duplicate id %x", i, c.Id)
 		}
 		seen[key] = true
+
+		// UW recursion is bounded: refuse genesis with payload.nested
+		// chains deeper than MaxNestingDepth so the chain boots in a
+		// state already consistent with the runtime invariant.
+		if _, err := ContributionNestingDepth(c); err != nil {
+			return fmt.Errorf("Contributions[%d]: %w", i, err)
+		}
 	}
 	return nil
 }

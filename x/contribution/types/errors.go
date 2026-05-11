@@ -15,4 +15,5 @@ var (
 	ErrInvalidClassPhase       = sdkerrors.Register(ModuleName, 11, "class+phase combination not allowed by default mapping (UW + M3)")
 	ErrPayloadMissing          = sdkerrors.Register(ModuleName, 12, "payload absent or wrong oneof variant for declared class (UW + M3)")
 	ErrBackRefNotFound         = sdkerrors.Register(ModuleName, 13, "back_ref does not resolve in source module (UW + M3)")
+	ErrNestingDepthExceeded    = sdkerrors.Register(ModuleName, 14, "ContributionPayload.nested chain exceeds MaxNestingDepth (UW: recursion is bounded, not unbounded)")
 )
