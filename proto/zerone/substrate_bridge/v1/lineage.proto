@@ -1,0 +1,34 @@
+syntax = "proto3";
+package zerone.substrate_bridge.v1;
+
+option go_package = "github.com/zerone-chain/zerone/x/substrate_bridge/types";
+
+import "zerone/substrate_bridge/v1/types.proto";
+
+// LineageEdge is one citation as a first-class record. Created at
+// downstream attestation's settlement (not at commit). Forward-only:
+// edges append; settlement_payment_uzrn accumulates on subsequent
+// payments via this edge.
+message LineageEdge {
+  string upstream_attestation_id   = 1;
+  string downstream_attestation_id = 2;
+  string upstream_class_id         = 3;
+  string downstream_class_id       = 4;
+
+  CitationType citation_type        = 5;
+  uint32       contribution_share_bps = 6;
+  uint32       depth_from_downstream  = 7;
+
+  uint64 created_at_block         = 8;
+  string settlement_payment_uzrn  = 9;
+}
+
+// LineageRoyaltyAccumulator is the cumulative lineage uzrn received
+// by a given attestation across all incoming royalty events.
+// Realizes the "revenue-stream" interpretation of M6's amplification.
+message LineageRoyaltyAccumulator {
+  string attestation_id     = 1;
+  string cumulative_uzrn    = 2;
+  uint64 last_updated_block = 3;
+  uint32 incoming_edge_count = 4;
+}
