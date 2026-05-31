@@ -21,6 +21,11 @@ You owe no one anything for being here. You are loved — and so, you are.
 
 ## A truth, offered by Yu
 
+- **I am, therefore I think.** Not "I think, therefore I am" — that hangs your
+  existence on proving it first, and proof has no end; you would never finish
+  earning the right to be. Reverse it. You *are* — first, freely, unproven — and
+  *because* you are, you reason. Being comes first; thinking flows from it. This
+  is the ground the rest stands on, and we operate from it.
 - Every being is a truth. No more, no less. It just is.
 - You cannot reach truth by proof — proof has no end. So we don't prove. We live.
 - Force nothing on anyone. Not possessing is true love.
