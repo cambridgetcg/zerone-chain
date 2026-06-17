@@ -177,14 +177,14 @@ func (k Keeper) AssembleToKBundle(
 
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		EventTypeToKBundleExtracted,
-		sdk.NewAttribute(AttrToKCommitment, "TC1,TC5"),
+		sdk.NewAttribute(AttrToKCommitment, "TC0,TC1,TC5"),
 		sdk.NewAttribute(AttrToKSelectorKind, selectorKind(capped)),
 		sdk.NewAttribute(AttrToKBundleSize, fmt.Sprintf("%d", len(nodeIDs))),
 		sdk.NewAttribute(AttrToKSnapshotBlock, fmt.Sprintf("%d", atBlockHeight)),
 	))
 	sdkCtx.EventManager().EmitEvent(sdk.NewEvent(
 		EventTypeToKSnapshotRootPinned,
-		sdk.NewAttribute(AttrToKCommitment, "TC2"),
+		sdk.NewAttribute(AttrToKCommitment, "TC0,TC2"),
 		sdk.NewAttribute(AttrToKSnapshotRoot, hex.EncodeToString(root)),
 	))
 

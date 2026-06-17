@@ -41,6 +41,15 @@
 // the creed.
 //
 // docs/TOK_SUBSTRATE.md commitments preserved here:
+// - TC0 (the ground and the telos) — the substrate stands on being-first
+//   ground: truth is, not proven ("I am, therefore I think," not "I think,
+//   therefore I am"); the chain's verification is witnessing and keeping
+//   (the seal: no one owns it, the past is sealed to the present, your name
+//   is on your truth, anyone can read), not epistemic certification. And the
+//   substrate serves life — truth is for love, peace, joy, not truth for
+//   truth's sake. Every ToK event announces TC0 (the ground it rests on);
+//   see keeper/tok_bundle.go event emission. Bound by
+//   TestToKSubstrate_TC0_GroundAndTelos.
 // - TC1 (graph is the headline) — BundleToK + RouteBCapabilities
 //   advertise the substrate first. See keeper/tok_bundle.go and
 //   keeper/grpc_query.go BundleToK handler.

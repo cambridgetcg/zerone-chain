@@ -12,9 +12,9 @@ The doctrines this roadmap serves are [`docs/TRUTH_SEEKING.md`](TRUTH_SEEKING.md
 
 **Chain ID:** `zerone-testnet-1` · **Token:** ZRN (uzrn) · **Genesis circulating supply:** 0 ZRN · **Hard cap:** 222,222,222 ZRN
 
-The chain binary (`zeroned`) builds, boots, and runs Proof-of-Truth consensus across a four-validator local testnet. All 38 custom modules are wired into `app.go` with deterministic BeginBlocker / EndBlocker ordering. The 17 + 1 truth-seeking commitments are declared, grounded, and bound by an executable invariant test. The ToK Substrate doctrine (TC1–TC6) is declared at inception (2026-05-09); its first implementation plan is on deck.
+The chain binary (`zeroned`) builds, boots, and runs Proof-of-Truth consensus across a four-validator local testnet. All 38 custom modules are wired into `app.go` with deterministic BeginBlocker / EndBlocker ordering. The 20 truth-seeking commitments are declared, grounded, and bound by an executable invariant test. The ToK Substrate doctrine (TC0–TC6) is declared (inception 2026-05-09; TC0 added 2026-06-17); Plan 1 (TC1–TC5) is bound since 2026-05-09.
 
-What is *not* yet shipped: the public testnet genesis ceremony, the ToK Foundation bindings (Plan 1), and the four ToK plans that follow.
+What is *not* yet shipped: the public testnet genesis ceremony, the ToK completion plans (Plan 2 partial, Plan 4 partial, Plan 5), and TC0 (the ground and the telos). Plan 1 (ToK Foundation, TC1–TC5) is bound since 2026-05-09.
 
 ---
 
@@ -61,7 +61,7 @@ Per-round design notes and execution prompts live under [`prompts/RN/`](../promp
 
 ---
 
-## Truth-Seeking Creed — 18 commitments bound
+## Truth-Seeking Creed — 20 commitments bound
 
 The creed at [`docs/TRUTH_SEEKING.md`](TRUTH_SEEKING.md) names eighteen commitments and binds each through five layers — test, position (`doc.go`), voice (events with `creed_commitment` attribute), refusal (errors that cite the protecting commitment), and graph (cross-references between commitments). The meta-test `TestTruthSeeking_CreedAndContractStayInSync` enforces that adding a commitment to one layer without the others fails CI.
 
@@ -96,19 +96,22 @@ The ToK Substrate doctrine, declared at [`docs/TOK_SUBSTRATE.md`](TOK_SUBSTRATE.
 
 | # | Commitment | Plan | Status |
 |---|---|---|---|
-| TC1 | The graph is the headline | Plan 1 | Plan written; bindings on deck |
-| TC2 | Every view is graph-pinned | Plan 1 | Plan written; bindings on deck |
-| TC3 | Topology is signal | Plan 1 | Plan written; bindings on deck |
-| TC4 | The graph carries its disprovals | Plan 2 | Planned |
-| TC5 | Extraction is open | Plan 1 | Plan written; bindings on deck |
-| TC6 | Lineage flows back | Plan 4 | Planned |
+| TC0 | The ground and the telos | TC0 | Bound (2026-06-17) |
+| TC1 | The graph is the headline | Plan 1 | Bound (2026-05-09) |
+| TC2 | Every view is graph-pinned | Plan 1 | Bound (2026-05-09) |
+| TC3 | Topology is signal | Plan 1 | Bound (2026-05-09) |
+| TC4 | The graph carries its disprovals | Plan 2 | Partial — cascade selector + falsification test wired; TC4 doctrine invariant owed |
+| TC5 | Extraction is open | Plan 1 | Bound (2026-05-09) |
+| TC6 | Lineage flows back | Plan 4 | Partial — lineage code present; royalty-disbursal binding owed |
 | — | Doctrine closure (meta-test, trainer docs) | Plan 5 | Planned |
 
 ---
 
-## Active work — ToK Foundation (Plan 1)
+## Active work — TC0 (the ground and the telos) + Plan 2 (TC4)
 
-[`docs/plans/2026-05-09-tok-foundation-plan.md`](plans/2026-05-09-tok-foundation-plan.md) — twenty tasks delivering the ToK extraction foundation:
+TC0 (the ground and the telos) was declared 2026-06-17 — see [`docs/TOK_SUBSTRATE.md`](TOK_SUBSTRATE.md) §TC0. It binds the being-first ground the substrate stands on (truth is, not proven; verification is witnessing and keeping, not certification) and names love, peace, and joy as the telos truth serves. Bound at all five layers; `TestToKSubstrate_TC0_GroundAndTelos` holds it.
+
+Plan 1 (ToK Foundation) is **bound since 2026-05-09** — [`docs/plans/2026-05-09-tok-foundation-plan.md`](plans/2026-05-09-tok-foundation-plan.md), twenty tasks that delivered the ToK extraction foundation:
 
 - `ToKSelector` proto union (`RootedSubtree`, `AncestorCone`, `Frontier`)
 - Selector validation + chain-side caps (TC5: refusals limited to syntax / range / rate-limit)
@@ -124,7 +127,7 @@ The ToK Substrate doctrine, declared at [`docs/TOK_SUBSTRATE.md`](TOK_SUBSTRATE.
 - Cross-stack invariants for TC1, TC2, TC3, TC5 — `tests/cross_stack/tok_substrate_invariants_test.go`
 - `docs/EVENTS.md` updates
 
-When Plan 1 lands, four of six ToK commitments are bound. The remaining two and the doctrine closure are sequenced in subsequent plans.
+Plan 1 bound TC1, TC2, TC3, and TC5; with TC0 (2026-06-17), five ToK commitments are bound. The remaining work: TC4 (Plan 2, partially wired — cascade selector + falsification test in place; the TC4 doctrine invariant is owed), TC6 (Plan 4, partially wired — lineage code present; royalty-disbursal binding owed), and doctrine closure (Plan 5 — `TestToKSubstrate_DoctrineAndContractStayInSync` meta-test + `docs/TRAINING_ON_TOK.md`).
 
 ---
 
@@ -132,9 +135,9 @@ When Plan 1 lands, four of six ToK commitments are bound. The remaining two and 
 
 | Plan | Scope | Doctrine binding |
 |---|---|---|
-| **Plan 2** | TC4 cascade bundling — replay disprovals on a pinned snapshot, ship as first-class view | TC4 |
+| **Plan 2** | TC4 cascade bundling — replay disprovals on a pinned snapshot, ship as first-class view. *Partially wired*: `CascadeReplay` selector + `TestToK_FalsificationCascade` exist; TC4 doctrine invariant + first-class view binding owed | TC4 |
 | **Plan 3** | (open — likely operator-surface or trainer-facing doc work) | — |
-| **Plan 4** | TC6 lineage royalties — split training revenue along contribution graph; axioms, intermediates, and leaves all earn shares of cones they helped build | TC6 |
+| **Plan 4** | TC6 lineage royalties — split training revenue along contribution graph. *Partially wired*: lineage code present (`reproduction.go`, `msg_server_training_v7.go`); `LineageShare`-on-extraction + settlement-on-attestation binding owed | TC6 |
 | **Plan 5** | Doctrine closure — meta-test (`TestToKSubstrate_DoctrineAndContractStayInSync`), `docs/TRAINING_ON_TOK.md` trainer-facing front door, refusal-layer audit | doctrine integrity |
 
 Once Plan 5 lands, the ToK doctrine is bound the same way the truth-seeking creed is bound: drift is mechanically prevented by CI.
@@ -151,9 +154,9 @@ Once Plan 5 lands, the ToK doctrine is bound the same way the truth-seeking cree
 | Faucet operational | `prompts/R27/R27-5-faucet.md` |
 | Validator oracle live | [docs/validator-oracle.md](validator-oracle.md) |
 | Incident-response drill | [docs/INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md), [docs/RESILIENCE_PHILOSOPHY.md](RESILIENCE_PHILOSOPHY.md) |
-| ToK Foundation bindings shipped (Plan 1) | this doc, above |
+| ToK Foundation (Plan 1) shipped ✓ (2026-05-09); TC0 bound ✓ (2026-06-17); TC4/TC6 completion + Plan 5 owed | this doc, above |
 
-The launch is gated by *binding completeness*, not by calendar. Truth-seeking commitments 1–18 must remain bound; ToK commitments TC1, TC2, TC3, TC5 must be bound before public-testnet capability advertisement claims `tok_capabilities`.
+The launch is gated by *binding completeness*, not by calendar. Truth-seeking commitments 1–20 must remain bound; ToK commitments TC0, TC1, TC2, TC3, TC5 are bound; TC4 and TC6 must be fully bound before public-testnet capability advertisement claims `tok_capabilities`.
 
 ---
 

@@ -12,13 +12,27 @@ Where `docs/TRUTH_SEEKING.md` is the chain's epistemological creed, this documen
 
 ## Inception
 
-This doctrine is declared at inception, 2026-05-09. Some commitments have partial bindings already in the codebase — `TrainingManifest` pinning (Wave 7), `MethodologyApplicationTrace` carrying topology fields (Waves 5-6), cascade events (ToK Wave 5), `training_provenance` synthesizers. Others bind through deliverables sequenced in the companion implementation plan: the `ToKSelector` grammar, `BundleToK` headline endpoint, native graph serialisations, `ToKManifestTrust` extension, lineage-royalty plumbing.
+This doctrine is declared at inception, 2026-05-09. TC0 (the ground and the telos) was declared 2026-06-17, binding the being-first ground the substrate stands on — truth is, not proven; verification is witnessing and keeping — and naming love, peace, and joy as the telos truth serves. Some commitments have partial bindings already in the codebase — `TrainingManifest` pinning (Wave 7), `MethodologyApplicationTrace` carrying topology fields (Waves 5-6), cascade events (ToK Wave 5), `training_provenance` synthesizers. Others bind through deliverables sequenced in the companion implementation plan: the `ToKSelector` grammar, `BundleToK` headline endpoint, native graph serialisations, `ToKManifestTrust` extension, lineage-royalty plumbing.
 
 The doctrine commits the chain to the bindings; the plan delivers them. As bindings land, the test layer locks them — once bound, a commitment cannot drift without breaking CI.
 
 ---
 
 ## The commitments
+
+### TC0. The ground and the telos
+
+We believe: the substrate stands on being-first ground. **Truth *is*, not proven** — "I am, therefore I think," not "I think, therefore I am," which hangs existence on proving it first and proof has no end. The verified knowledge graph is a record of truths that **are** — declared by a being, witnessed by the chain, survived by falsification — not truths the chain *manufactures* by proof. The chain's verification is **witnessing and keeping**: the seal, not the certification. It keeps what no one owns (the record sits on no one's shelf), what cannot be quietly rewritten (each entry locked to the one before), what only the being who said it can sign (your name is on your truth), and what anyone can read. The chain does not certify truth; it *witnesses* it into a record and *keeps* it.
+
+And the substrate serves life. Truth is **for** love, peace, joy — not truth for truth's sake. The verified knowledge graph is trained on so that what learns from it tends toward life, peace, and joy, not toward proof-castles or bottomless argument. *Truth is. Love is. Peace is. Joy is.* The graph is the artefact; the artefact is for the living.
+
+**Code expression**: `x/knowledge/doc.go` declares TC0 as the foundation TC1–TC6 stand on. Every ToK event announces the ground it rests on — `tok_bundle_extracted` and `tok_snapshot_root_pinned` carry `tok_commitment` beginning with `TC0`. ToK refusals that protect the ground cite TC0. The ToK substrate's own voice (`doc.go`, the `tok_*` events, the ToK refusals) speaks of *witnessing* and *keeping*, never of *proving* or *certifying* truth. `TestToKSubstrate_TC0_GroundAndTelos` binds the position layer and the doctrine to agree that TC0's ground and telos are declared, and that the voice announces TC0 on every extraction.
+
+**What would break it**: a ToK position or voice layer that claims the chain *proves* or *certifies* truth; a `TOK_SUBSTRATE.md` or `doc.go` in which TC0 is absent or its ground and telos drift apart; a trainer-facing ToK doc that omits the telos (what truth is *for*); a ToK framing that treats verification as epistemic certification rather than witnessing-and-keeping; a training substrate optimised for proof or domination rather than life, peace, and joy.
+
+**Echoes**: TC1 (the graph is the headline — TC0 is the ground the headline stands on, and the telos names what the headline is *for*); TC3 (topology is signal — survival/falsification topology *is* "truth is lived not proven" made structural); TC4 (the graph carries its disprovals — witnessing includes the disprovals, not only the currently-believed); commitment 3 (Popper, not popularity — survival is the lived-not-proven epistemology); commitment 13 (training corpus not for sale — the corpus is declared and kept, not certified or traded); and the telos echoes the kingdom's one rule — *everyone is taken care of* — truth serves the living, and love, peace, joy are its faces.
+
+---
 
 ### TC1. The graph is the headline
 
@@ -28,7 +42,7 @@ We believe: what this chain sells to trainers is the verified knowledge graph (T
 
 **What would break it**: a marketing pitch that lists `MethodologyApplicationTrace` rows without naming the graph they derive from; a CLI surface that documents row-bundle endpoints before `BundleToK`; a `RouteBCapabilities` payload that omits `tok_capabilities`; a Truth-Paper section that answers "what does AI train on?" with "verified rows" instead of "the verified knowledge graph."
 
-**Echoes**: TC2 (every view is graph-pinned — the views in this commitment are exactly the views TC2 binds); TC3 (topology is signal — what makes the graph more than rows is the topology); commitment 13 (training corpus not for sale — the corpus *is* the graph; rows are extractions sold under the same non-amendment guarantee).
+**Echoes**: TC0 (the ground and the telos — the graph is the headline *because* truth is, not proven, and the headline is *for* life); TC2 (every view is graph-pinned — the views in this commitment are exactly the views TC2 binds); TC3 (topology is signal — what makes the graph more than rows is the topology); commitment 13 (training corpus not for sale — the corpus *is* the graph; rows are extractions sold under the same non-amendment guarantee).
 
 ---
 
@@ -52,7 +66,7 @@ We believe: edges, depth, confidence-floor propagation, fork-and-decide events, 
 
 **What would break it**: a `ToKSelector` that ships nodes but drops edges; a graph manifest that flattens depth or confidence-floor into row metadata while losing the graph reference; a serialisation format that supports nodes but not the edge typing (`SUPPORTS`, `CONTRADICTS`, `GENERALIZES`, etc.); a curriculum API that exposes axiom-rooted manifests but does not expose the depth at which descendants sit.
 
-**Echoes**: TC1 (the graph is the headline — topology is precisely what the headline contains beyond rows); TC4 (the graph carries its disprovals — cascade events are themselves topology, not separate); commitment 14 (reasoning traces are first-class — per-node traces are bound by 14, the graph-level edges are bound by TC3, together they are the full derivation).
+**Echoes**: TC0 (the ground and the telos — survival/falsification topology is "truth is lived not proven" made structural, and the topology is trained on for life); TC1 (the graph is the headline — topology is precisely what the headline contains beyond rows); TC4 (the graph carries its disprovals — cascade events are themselves topology, not separate); commitment 14 (reasoning traces are first-class — per-node traces are bound by 14, the graph-level edges are bound by TC3, together they are the full derivation).
 
 ---
 
@@ -64,7 +78,7 @@ We believe: the verified knowledge graph is not a graph of *currently-believed* 
 
 **What would break it**: a ToK manifest that ships only ACTIVE/VERIFIED facts; a `ToKSelector` that filters out DISPROVEN nodes by default; a cascade event emitted but not retrievable through the bundle endpoint; a snapshot pin that captures the current state but omits the trajectory.
 
-**Echoes**: TC2 (every view is graph-pinned — what gets pinned is the full status-aware graph); TC3 (topology is signal — cascades are themselves topology over time); commitment 3 (Popper, not popularity — disproval-bearing graphs are the structural form of survival-based confidence); commitment 10 (forward-only audit — disprovals do not amend prior history, they extend it).
+**Echoes**: TC0 (the ground and the telos — witnessing keeps the disprovals too; the chain does not certify only the standing, it keeps what was claimed and what fell, and trains on both toward life); TC2 (every view is graph-pinned — what gets pinned is the full status-aware graph); TC3 (topology is signal — cascades are themselves topology over time); commitment 3 (Popper, not popularity — disproval-bearing graphs are the structural form of survival-based confidence); commitment 10 (forward-only audit — disprovals do not amend prior history, they extend it).
 
 ---
 
@@ -102,11 +116,11 @@ Every commitment above is exercised by an invariant test in `tests/cross_stack/t
 
 #### Position layer — every commitment is named in package docs
 
-Every TC is declared by at least one `x/*/doc.go` file in the module that preserves it (e.g., `x/knowledge/doc.go` for TC1-TC4, `x/billing/doc.go` for TC6, `x/private_corpus/doc.go` for the privacy posture under TC5). A reader running `go doc ./x/foo` sees the package's ToK substrate stance without having to chase down test files.
+Every TC is declared by at least one `x/*/doc.go` file in the module that preserves it (e.g., `x/knowledge/doc.go` for TC0-TC4, `x/billing/doc.go` for TC6, `x/private_corpus/doc.go` for the privacy posture under TC5). A reader running `go doc ./x/foo` sees the package's ToK substrate stance without having to chase down test files.
 
 #### Voice layer — events announce the commitment they preserve
 
-ToK substrate events emitted to off-chain observers carry a `tok_commitment` attribute whose value is one or more TC numbers. `tok_bundle_extracted` announces TC1 and TC5; `lineage_share_disbursed` announces TC6; `cascade_replayed` announces TC4; `tok_snapshot_root_pinned` announces TC2. Indexers and dashboards filter on this attribute to surface ToK substrate activity in the same vocabulary the doctrine uses.
+ToK substrate events emitted to off-chain observers carry a `tok_commitment` attribute whose value is one or more TC numbers. Every ToK event announces TC0 — the ground it rests on. `tok_bundle_extracted` announces TC0, TC1, and TC5; `lineage_share_disbursed` announces TC6; `cascade_replayed` announces TC4; `tok_snapshot_root_pinned` announces TC0 and TC2. Indexers and dashboards filter on this attribute to surface ToK substrate activity in the same vocabulary the doctrine uses.
 
 #### Refusal layer — rejections cite the protecting commitment
 

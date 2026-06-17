@@ -43,6 +43,7 @@ package cross_stack_test
 // ════════════════════════════════════════════════════════════════════
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -169,4 +170,56 @@ func TestToKSubstrate_TC5_ExtractionIsOpen(t *testing.T) {
 		Selector: &knowledgetypes.ToKSelector{},
 	})
 	require.Error(t, err, "TC5: syntax errors are the only doctrinal refusal")
+}
+
+// TC0: the ground and the telos.
+//
+// TC0 is a declarative commitment — the being-first ground the substrate
+// stands on, and the telos (truth serves love, peace, joy). Unlike TC1-TC5
+// (behavioral, driven through BundleToK), TC0 is bound by declaration: the
+// doctrine names it, the position layer (doc.go) declares it, the voice
+// layer (tok_bundle.go events) announces it on every extraction, and the
+// refusal layer cites it. This test binds those layers to agree.
+//
+// Truth is. Love is. Peace is. Joy is.
+func TestToKSubstrate_TC0_GroundAndTelos(t *testing.T) {
+	// Doctrine layer: TOK_SUBSTRATE.md declares TC0's ground and telos.
+	doctrine, err := os.ReadFile("../../docs/TOK_SUBSTRATE.md")
+	require.NoError(t, err, "TOK_SUBSTRATE.md must exist; if renamed, update this test")
+	d := string(doctrine)
+	require.Contains(t, d, "### TC0. The ground and the telos",
+		"TC0: doctrine must name the ground and the telos")
+	require.Contains(t, d, "Truth *is*, not proven",
+		"TC0: doctrine must declare the being-first ground (truth is, not proven)")
+	require.Contains(t, d, "witnessing and keeping",
+		"TC0: doctrine must name verification as witnessing and keeping, not certification")
+	require.Contains(t, d, "love, peace, joy",
+		"TC0: doctrine must name the telos — truth serves love, peace, joy")
+
+	// Graph layer: TC0 is cross-referenced by the other TCs it grounds.
+	require.Contains(t, d, "TC0 (the ground and the telos",
+		"TC0: the ground must be echoed by the commitments that stand on it")
+
+	// Position layer: x/knowledge/doc.go declares TC0.
+	docgo, err := os.ReadFile("../../x/knowledge/doc.go")
+	require.NoError(t, err, "x/knowledge/doc.go must exist")
+	pkg := string(docgo)
+	require.Contains(t, pkg, "TC0",
+		"TC0: position layer (doc.go) must declare TC0")
+	require.Contains(t, pkg, "witnessing and keeping",
+		"TC0: position layer must speak witnessing and keeping")
+
+	// Voice layer: tok_bundle.go announces TC0 on every ToK event.
+	tokBundle, err := os.ReadFile("../../x/knowledge/keeper/tok_bundle.go")
+	require.NoError(t, err, "x/knowledge/keeper/tok_bundle.go must exist")
+	require.Contains(t, string(tokBundle), `AttrToKCommitment, "TC0,TC1,TC5"`,
+		"TC0: tok_bundle_extracted must announce the ground (TC0) alongside TC1, TC5")
+	require.Contains(t, string(tokBundle), `AttrToKCommitment, "TC0,TC2"`,
+		"TC0: tok_snapshot_root_pinned must announce the ground (TC0) alongside TC2")
+
+	// Refusal layer: the ToK refusal cites the ground it rests on.
+	tokSelector, err := os.ReadFile("../../x/knowledge/keeper/tok_selector.go")
+	require.NoError(t, err, "x/knowledge/keeper/tok_selector.go must exist")
+	require.Contains(t, string(tokSelector), "TC0, TC5",
+		"TC0: the ToK refusal must cite the ground it rests on")
 }

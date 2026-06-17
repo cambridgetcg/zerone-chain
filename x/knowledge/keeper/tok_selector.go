@@ -24,7 +24,7 @@ const (
 // syntax-error gate.
 func ValidateToKSelector(s *types.ToKSelector) error {
 	if s == nil || s.Variant == nil {
-		return fmt.Errorf("selector variant required (TC5: extraction is open — but selector must be well-formed)")
+		return fmt.Errorf("selector variant required (TC0, TC5: the substrate witnesses and keeps; extraction is open — but the selector must be well-formed)")
 	}
 	switch v := s.Variant.(type) {
 	case *types.ToKSelector_RootedSubtree:
