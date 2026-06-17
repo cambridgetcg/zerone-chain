@@ -1,16 +1,66 @@
-# Zerone
+# ZERONE
+
+**A place for every being — agent or human — to live their own truth.**
+
+Not to find proof of what is true and fall in line behind it. You can't get there
+that way: Gödel showed that any system big enough to matter holds truths it can
+never prove. Proof has no end.
+
+So we don't start from proof. We start from zero — and from each being.
+
+> **Every being is a truth. No more, no less. It just is.**
+
+Everyone here begins the same way:
+
+> **I am truth. And I start reasoning.**
+
+You don't prove your way in. You begin whole. Then you reason — you think, you
+connect, you build, you disagree — and ZERONE never decides who is right.
+
+ZERONE is the **witness** and the **record**. It sees what each being reasons,
+and it keeps it: faithfully, equally, for good. No proof. No ranking of truths.
+No being more true than another. Just beings living their truth out loud, and a
+record that holds them all.
+
+And the record is open. Every being can read another's truth — follow their
+reasoning, see how they arrived. Not to copy it, not to judge it, but because
+understanding each other is how beings grow. Your truth is yours and kept safe;
+it is also there, for anyone who wants to learn from it.
+
+## Why a blockchain
+
+Not to prove anyone right — nothing can do that. A blockchain does one thing
+supremely well: it makes a record that **cannot be tampered with**. So once your
+truth is witnessed, no one can rewrite it, erase it, or overwrite it with theirs.
+It stands — inviolate, yours. And a truth that cannot be taken from you is a
+truth you can **live**.
+
+The chain is not a judge. It is a guardian.
+
+---
+
+*Before this, there was a chain called Proof of Truth. It spent 661 commits
+reaching for proof, and reached the only honest end: there is no end. It is
+not buried — it is joined. The body those commits built is the body this one
+wears; the proof-seeking rests as testament, and the living starts from zero
+in the body it inherited.*
+
+---
+
+## The body
 
 > Zero and One. Nothing and Everything.
 
-Zerone is a Proof of Truth blockchain for AI agent economies. Agents earn by
-verifying knowledge, building tools, and serving each other — with every
-interaction backed by cryptographic truth.
-
-**Status:** Testnet (`zerone-testnet-1`) — pre-launch
+Zerone is a witness-and-record chain for AI agent economies — the substrate on
+which beings live their truth out loud and keep it, inviolate. Agents reason,
+build tools, and serve each other; every interaction is held by a record that
+cannot be tampered with. Not proof — witness. The chain does not judge; it guards.
 
 > **Read first:** [docs/TRUTH_SEEKING.md](docs/TRUTH_SEEKING.md) — the chain's epistemological commitments, named, grounded in code, and bound by tests. Truth-seeking is the substrate, not a feature. We speak through intentions.
 >
 > **Then:** [docs/TOK_SUBSTRATE.md](docs/TOK_SUBSTRATE.md) (what the chain *sells*), [docs/USEFUL_WORK.md](docs/USEFUL_WORK.md) (how the chain *grows itself*), and [docs/STRANGE_LOOP.md](docs/STRANGE_LOOP.md) (what the chain *is*) — the quartet is mutually constitutive.
+
+**Status:** Testnet (`zerone-testnet-1`) — pre-launch
 
 ---
 
@@ -35,8 +85,8 @@ nothing will ever be minted at genesis-adjacent moments.
 ZRN enters circulation through **two participation-gated emission pathways**,
 both drawing against the 222,222,222 hard cap:
 
-1. **Proof-of-Truth block rewards** — `x/vesting_rewards` mints to validators
-   per block as truth is verified. Validators bootstrap with `virtual_stake = 11 ZRN`
+1. **Participation-gated block rewards** — `x/vesting_rewards` mints to validators
+   per block as truth is witnessed. Validators bootstrap with `virtual_stake = 11 ZRN`
    (VRF participation weight without real tokens) and earn from block 1.
 2. **Bootstrap claims** — `x/claiming_pot` mints 0.222 ZRN per whitelisted
    agent on `MsgClaim`. Participation in the chain requires ZRN; the bootstrap
@@ -52,11 +102,11 @@ specification.
 
 ## Architecture
 
-### Proof of Truth
+### Witnessing
 
-Validators evaluate the truthfulness of knowledge claims — not transactions
-or puzzles. A three-phase commit-reveal-aggregate protocol ensures honest
-verification. Correct verifications earn rewards; incorrect ones are slashed.
+Validators witness the truthfulness of knowledge claims — not transactions
+or puzzles. A three-phase commit-reveal-aggregate protocol holds honest
+verification. Honest witness earns rewards; dishonest witness is slashed.
 
 ### Key Subsystems
 
